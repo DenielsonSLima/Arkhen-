@@ -621,10 +621,23 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  background: radial-gradient(circle at 80% 20%, rgba(197, 146, 53, 0.08) 0%, transparent 60%),
-              linear-gradient(135deg, #090d16 0%, #151d30 100%); /* Dark gold/blue gradient */
+  background-image: url('../../../assets/login-bg.jpg');
+  background-size: cover;
+  background-position: center;
   position: relative;
   overflow-y: auto;
+}
+
+.signup-page-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 15, 10, 0.85) 100%);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .signup-page-card {
@@ -884,4 +897,44 @@
     left: 0;
     margin-bottom: 16px;
   }
+}
+
+.signup-developer-signature {
+  position: fixed;
+  bottom: 24px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2; /* Behind the card which is z-index 5 */
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.signup-signature-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.8;
+}
+
+.signup-signature-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.signup-signature-brand {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.signup-signature-text {
+  font-size: 0.52rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.05em;
+  margin-top: 1px;
 }
