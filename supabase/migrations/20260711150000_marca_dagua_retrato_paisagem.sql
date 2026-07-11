@@ -1,10 +1,16 @@
 -- Migration: Add portrait and landscape watermark columns, size column and update onboarding / upsert RPCs.
 
--- 1. Add columns to configuracoes_marca_dagua
+-- 1. Add columns to configuracoes_marca_dagua and alter opacity check constraint
 ALTER TABLE public.configuracoes_marca_dagua
   ADD COLUMN IF NOT EXISTS file_url_paisagem text,
   ADD COLUMN IF NOT EXISTS file_url_retrato text,
   ADD COLUMN IF NOT EXISTS tamanho integer DEFAULT 35;
+
+ALTER TABLE public.configuracoes_marca_dagua 
+  DROP CONSTRAINT IF EXISTS configuracoes_marca_dagua_opacidade_check;
+
+ALTER TABLE public.configuracoes_marca_dagua
+  ADD CONSTRAINT configuracoes_marca_dagua_opacidade_check CHECK (opacidade >= 0 AND opacidade <= 100);
 
 -- 2. Update upsert_configuracoes_marca_dagua function
 CREATE OR REPLACE FUNCTION public.upsert_configuracoes_marca_dagua(p_payload jsonb)
