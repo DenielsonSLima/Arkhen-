@@ -29,14 +29,22 @@ export const useMarcaDagua = () => {
     setConfig({ ...config, habilitado: val });
   };
 
-  const handlePosChange = (val: MarcaDaguaDados['posicao']) => {
+  const handlePosChange = (val: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita', mode: 'landscape' | 'portrait') => {
     if (!config) return;
-    setConfig({ ...config, posicao: val });
+    if (mode === 'landscape') {
+      setConfig({ ...config, posicaoPaisagem: val });
+    } else {
+      setConfig({ ...config, posicaoRetrato: val });
+    }
   };
 
-  const handleOpacityChange = (val: number) => {
+  const handleOpacityChange = (val: number, mode: 'landscape' | 'portrait') => {
     if (!config) return;
-    setConfig({ ...config, opacidade: val });
+    if (mode === 'landscape') {
+      setConfig({ ...config, opacidadePaisagem: val });
+    } else {
+      setConfig({ ...config, opacidadeRetrato: val });
+    }
   };
 
   const handleUploadLandscape = async (file: File) => {
@@ -71,9 +79,13 @@ export const useMarcaDagua = () => {
     }
   };
 
-  const handleSizeChange = (val: number) => {
+  const handleSizeChange = (val: number, mode: 'landscape' | 'portrait') => {
     if (!config) return;
-    setConfig({ ...config, tamanho: val });
+    if (mode === 'landscape') {
+      setConfig({ ...config, tamanhoPaisagem: val });
+    } else {
+      setConfig({ ...config, tamanhoRetrato: val });
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {

@@ -1089,10 +1089,12 @@ export const SimulacoesCalculosPage: React.FC = () => {
                 {/* Marca d'água Configurada */}
                 {marcaDagua?.habilitado && (marcaDagua.fileUrlRetrato || marcaDagua.fileUrlPaisagem || marcaDagua.fileUrl) && (() => {
                   const watermarkUrl = marcaDagua.fileUrlRetrato || marcaDagua.fileUrl || marcaDagua.fileUrlPaisagem;
-                  const sizeVal = marcaDagua.tamanho ?? 35;
+                  const sizeVal = marcaDagua.tamanhoRetrato ?? marcaDagua.tamanho ?? 35;
+                  const activePos = marcaDagua.posicaoRetrato ?? marcaDagua.posicao ?? 'centro';
+                  const activeOpacity = marcaDagua.opacidadeRetrato ?? marcaDagua.opacidade ?? 15;
                   
                   let positionStyle: React.CSSProperties = {};
-                  if (marcaDagua.posicao === 'centro' || !marcaDagua.posicao) {
+                  if (activePos === 'centro' || !activePos) {
                     positionStyle = {
                       top: '50%',
                       left: '50%',
@@ -1100,21 +1102,21 @@ export const SimulacoesCalculosPage: React.FC = () => {
                       maxWidth: `${sizeVal}%`,
                       maxHeight: `${sizeVal}%`,
                     };
-                  } else if (marcaDagua.posicao === 'topo-esquerda') {
+                  } else if (activePos === 'topo-esquerda') {
                     positionStyle = {
                       top: '24px',
                       left: '24px',
                       maxWidth: `${sizeVal * 0.6}%`,
                       maxHeight: `${sizeVal * 0.6}%`,
                     };
-                  } else if (marcaDagua.posicao === 'topo-direita') {
+                  } else if (activePos === 'topo-direita') {
                     positionStyle = {
                       top: '24px',
                       right: '24px',
                       maxWidth: `${sizeVal * 0.6}%`,
                       maxHeight: `${sizeVal * 0.6}%`,
                     };
-                  } else if (marcaDagua.posicao === 'rodape-direita') {
+                  } else if (activePos === 'rodape-direita') {
                     positionStyle = {
                       bottom: '24px',
                       right: '24px',
@@ -1129,7 +1131,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
                       alt="Marca d'Água" 
                       style={{
                         position: 'absolute',
-                        opacity: (marcaDagua.opacidade ?? 15) / 100,
+                        opacity: activeOpacity / 100,
                         pointerEvents: 'none',
                         objectFit: 'contain',
                         mixBlendMode: 'multiply',

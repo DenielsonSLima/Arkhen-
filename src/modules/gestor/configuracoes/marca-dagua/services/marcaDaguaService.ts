@@ -2,32 +2,50 @@ import { supabase } from '../../../../../lib/supabase';
 
 export interface MarcaDaguaDados {
   habilitado: boolean;
-  posicao: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita';
-  opacidade: number; // 0 to 100
   fileUrl: string | null;
   fileUrlPaisagem: string | null;
   fileUrlRetrato: string | null;
-  tamanho: number; // 10 to 100
+  posicao: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita'; // legacy fallback
+  opacidade: number; // legacy fallback
+  tamanho: number; // legacy fallback
+  posicaoPaisagem: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita';
+  posicaoRetrato: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita';
+  opacidadePaisagem: number;
+  opacidadeRetrato: number;
+  tamanhoPaisagem: number;
+  tamanhoRetrato: number;
 }
 
 interface MarcaDaguaRow {
   habilitado: boolean;
-  posicao: MarcaDaguaDados['posicao'];
-  opacidade: number;
   file_url: string | null;
   file_url_paisagem: string | null;
   file_url_retrato: string | null;
+  posicao: MarcaDaguaDados['posicao'];
+  opacidade: number;
   tamanho: number;
+  posicao_paisagem: MarcaDaguaDados['posicaoPaisagem'];
+  posicao_retrato: MarcaDaguaDados['posicaoRetrato'];
+  opacidade_paisagem: number;
+  opacidade_retrato: number;
+  tamanho_paisagem: number;
+  tamanho_retrato: number;
 }
 
 const emptyMarcaDagua: MarcaDaguaDados = {
   habilitado: false,
-  posicao: 'centro',
-  opacidade: 15,
   fileUrl: null,
   fileUrlPaisagem: null,
   fileUrlRetrato: null,
+  posicao: 'centro',
+  opacidade: 15,
   tamanho: 35,
+  posicaoPaisagem: 'centro',
+  posicaoRetrato: 'centro',
+  opacidadePaisagem: 15,
+  opacidadeRetrato: 15,
+  tamanhoPaisagem: 35,
+  tamanhoRetrato: 35,
 };
 
 const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {
@@ -35,12 +53,18 @@ const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {
 
   return {
     habilitado: row.habilitado,
-    posicao: row.posicao,
-    opacidade: row.opacidade,
     fileUrl: row.file_url,
     fileUrlPaisagem: row.file_url_paisagem,
     fileUrlRetrato: row.file_url_retrato,
+    posicao: row.posicao,
+    opacidade: row.opacidade,
     tamanho: row.tamanho ?? 35,
+    posicaoPaisagem: row.posicao_paisagem ?? 'centro',
+    posicaoRetrato: row.posicao_retrato ?? 'centro',
+    opacidadePaisagem: row.opacidade_paisagem ?? row.opacidade ?? 15,
+    opacidadeRetrato: row.opacidade_retrato ?? row.opacidade ?? 15,
+    tamanhoPaisagem: row.tamanho_paisagem ?? row.tamanho ?? 35,
+    tamanhoRetrato: row.tamanho_retrato ?? row.tamanho ?? 35,
   };
 };
 
@@ -48,7 +72,7 @@ export const marcaDaguaService = {
   async getMarcaDaguaConfig(): Promise<MarcaDaguaDados> {
     const { data, error } = await supabase
       .from('configuracoes_marca_dagua')
-      .select('habilitado,posicao,opacidade,file_url,file_url_paisagem,file_url_retrato,tamanho')
+      .select('habilitado,file_url,file_url_paisagem,file_url_retrato,posicao,opacidade,tamanho,posicao_paisagem,posicao_retrato,opacidade_paisagem,opacidade_retrato,tamanho_paisagem,tamanho_retrato')
       .maybeSingle<MarcaDaguaRow>();
 
     if (error) throw error;
@@ -58,12 +82,15 @@ export const marcaDaguaService = {
     const { data, error } = await supabase.rpc('upsert_configuracoes_marca_dagua', {
       p_payload: {
         habilitado: dados.habilitado,
-        posicao: dados.posicao,
-        opacidade: dados.opacidade,
         file_url: dados.fileUrl,
         file_url_paisagem: dados.fileUrlPaisagem,
         file_url_retrato: dados.fileUrlRetrato,
-        tamanho: dados.tamanho,
+        posicao_paisagem: dados.posicaoPaisagem,
+        posicao_retrato: dados.posicaoRetrato,
+        opacidade_paisagem: dados.opacidadePaisagem,
+        opacidade_retrato: dados.opacidadeRetrato,
+        tamanho_paisagem: dados.tamanhoPaisagem,
+        tamanho_retrato: dados.tamanhoRetrato,
       },
     });
 

@@ -29,11 +29,13 @@ export const MarcaDaguaConfig: React.FC = () => {
   const renderPreviewMockup = () => {
     const isLandscape = activeModeTab === 'landscape';
     const watermarkUrl = isLandscape ? config.fileUrlPaisagem : config.fileUrlRetrato;
-    const sizeVal = config.tamanho ?? 35;
+    const sizeVal = isLandscape ? (config.tamanhoPaisagem ?? 35) : (config.tamanhoRetrato ?? 35);
+    const activePos = isLandscape ? (config.posicaoPaisagem ?? 'centro') : (config.posicaoRetrato ?? 'centro');
+    const activeOpacity = isLandscape ? (config.opacidadePaisagem ?? 15) : (config.opacidadeRetrato ?? 15);
     
     // Position style mapping
     let positionStyle: React.CSSProperties = {};
-    if (config.posicao === 'centro') {
+    if (activePos === 'centro') {
       positionStyle = {
         top: '50%',
         left: '50%',
@@ -41,21 +43,21 @@ export const MarcaDaguaConfig: React.FC = () => {
         maxWidth: `${sizeVal}%`,
         maxHeight: `${sizeVal}%`,
       };
-    } else if (config.posicao === 'topo-esquerda') {
+    } else if (activePos === 'topo-esquerda') {
       positionStyle = {
         top: '12px',
         left: '12px',
         maxWidth: `${sizeVal * 0.6}%`,
         maxHeight: `${sizeVal * 0.6}%`,
       };
-    } else if (config.posicao === 'topo-direita') {
+    } else if (activePos === 'topo-direita') {
       positionStyle = {
         top: '12px',
         right: '12px',
         maxWidth: `${sizeVal * 0.6}%`,
         maxHeight: `${sizeVal * 0.6}%`,
       };
-    } else if (config.posicao === 'rodape-direita') {
+    } else if (activePos === 'rodape-direita') {
       positionStyle = {
         bottom: '12px',
         right: '12px',
@@ -130,7 +132,7 @@ export const MarcaDaguaConfig: React.FC = () => {
             alt="Watermark Preview" 
             style={{
               position: 'absolute',
-              opacity: config.opacidade / 100,
+              opacity: activeOpacity / 100,
               pointerEvents: 'none',
               objectFit: 'contain',
               mixBlendMode: 'multiply',
@@ -298,8 +300,8 @@ export const MarcaDaguaConfig: React.FC = () => {
                   <div className="form-item-group">
                     <label style={{ fontWeight: 600 }}>Posição da Marca</label>
                     <select
-                      value={config.posicao}
-                      onChange={(e) => handlePosChange(e.target.value as any)}
+                      value={activeModeTab === 'landscape' ? config.posicaoPaisagem : config.posicaoRetrato}
+                      onChange={(e) => handlePosChange(e.target.value as any, activeModeTab)}
                       disabled={isSaving}
                     >
                       <option value="centro">Centralizado (Fundo)</option>
@@ -310,14 +312,14 @@ export const MarcaDaguaConfig: React.FC = () => {
                   </div>
 
                   <div className="form-item-group">
-                    <label style={{ fontWeight: 600 }}>Opacidade ({config.opacidade}%)</label>
+                    <label style={{ fontWeight: 600 }}>Opacidade ({activeModeTab === 'landscape' ? config.opacidadePaisagem : config.opacidadeRetrato}%)</label>
                     <div className="opacity-slider-wrapper">
                       <input
                         type="range"
                         min="0"
                         max="100"
-                        value={config.opacidade}
-                        onChange={(e) => handleOpacityChange(parseInt(e.target.value))}
+                        value={activeModeTab === 'landscape' ? config.opacidadePaisagem : config.opacidadeRetrato}
+                        onChange={(e) => handleOpacityChange(parseInt(e.target.value), activeModeTab)}
                         disabled={isSaving}
                         className="opacity-slider"
                       />
@@ -325,14 +327,14 @@ export const MarcaDaguaConfig: React.FC = () => {
                   </div>
 
                   <div className="form-item-group">
-                    <label style={{ fontWeight: 600 }}>Tamanho ({config.tamanho ?? 35}%)</label>
+                    <label style={{ fontWeight: 600 }}>Tamanho ({activeModeTab === 'landscape' ? config.tamanhoPaisagem : config.tamanhoRetrato}%)</label>
                     <div className="opacity-slider-wrapper">
                       <input
                         type="range"
                         min="10"
                         max="100"
-                        value={config.tamanho ?? 35}
-                        onChange={(e) => handleSizeChange(parseInt(e.target.value))}
+                        value={activeModeTab === 'landscape' ? config.tamanhoPaisagem : config.tamanhoRetrato}
+                        onChange={(e) => handleSizeChange(parseInt(e.target.value), activeModeTab)}
                         disabled={isSaving}
                         className="opacity-slider"
                       />
