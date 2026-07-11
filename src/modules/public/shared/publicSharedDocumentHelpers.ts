@@ -184,6 +184,7 @@ export const checkPassword = async (
   return {
     ok: Boolean(unlocked && unlocked.documents.some((doc) => doc.storage_bucket && doc.storage_path)),
     share: unlocked,
+    passwordHash,
   };
 };
 

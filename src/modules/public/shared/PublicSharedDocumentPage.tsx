@@ -3,15 +3,15 @@ import { Download, Loader2, Timer, Calendar, Building2, Shield, Info, FileText }
 import signatureLogoImg from '../../../assets/chatgpt-login.png';
 import loginLogoImg from '../../../assets/camada-o.png';
 import {
-  fetchPublicShare,
   checkPassword,
   createDocumentAccessUrl,
   formatCountdownLabel,
   getDocumentMode,
 } from './publicSharedDocumentHelpers';
 import type { PublicSharedDocumentPayload } from './types';
-import { parseShareDurationMs } from '../../gestor/documentos/services/documentShareService';
 import { usePublicSharedDownloads } from './hooks/usePublicSharedDownloads';
+import { usePublicSharedRealtime } from './hooks/usePublicSharedRealtime';
+import { usePublicSharedDocumentQuery } from './queries/usePublicSharedDocumentQuery';
 import { SharedDocumentViewer } from './components/SharedDocumentViewer';
 import './PublicSharedDocument.css';
 
@@ -37,14 +37,17 @@ const getFileExtension = (filename: string) => {
 
 export const PublicSharedDocumentPage: React.FC = () => {
   const [shareData, setShareData] = useState<PublicSharedDocumentPayload | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [passwordError, setPasswordError] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passwordHash, setPasswordHash] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [documentUrls, setDocumentUrls] = useState<Record<string, string | null>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
+  const expiredRefetchDoneRef = React.useRef(false);
+  const publicShareQuery = usePublicSharedDocumentQuery(passwordHash);
+  usePublicSharedRealtime();
 
   const documents = useMemo(() => {
     const normalized = shareData?.documents || [];
@@ -86,25 +89,28 @@ export const PublicSharedDocumentPage: React.FC = () => {
   };
 
   useEffect(() => {
-    let mounted = true;
-    setIsLoading(true);
-    fetchPublicShare()
-      .then((share) => {
-        if (!mounted) return;
-        const cleanShare = sanitizeShare(share);
-        setShareData(cleanShare);
-        setIsUnlocked(Boolean(cleanShare && !cleanShare.senhaObrigatoria));
-        const firstDocument = cleanShare?.documents?.[0];
-        if (firstDocument) {
-          setSelectedIds([firstDocument.id]);
-          setActiveId(firstDocument.id);
-        }
-      })
-      .finally(() => mounted && setIsLoading(false));
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    if (publicShareQuery.isLoading) return;
+    const cleanShare = sanitizeShare(publicShareQuery.data || null);
+    setShareData(cleanShare);
+    setIsUnlocked(Boolean(cleanShare && (!cleanShare.senhaObrigatoria || passwordHash)));
+
+    if (!cleanShare) {
+      setDocumentUrls({});
+      setSelectedIds([]);
+      setActiveId(null);
+      return;
+    }
+
+    const validIds = new Set(cleanShare.documents.map((doc) => doc.id));
+    const firstDocumentId = cleanShare.documents[0]?.id || null;
+    setSelectedIds((current) => {
+      const next = current.filter((id) => validIds.has(id));
+      return next.length > 0 ? next : (firstDocumentId ? [firstDocumentId] : []);
+    });
+    setActiveId((current) => (current && validIds.has(current) ? current : firstDocumentId));
+  }, [passwordHash, publicShareQuery.data, publicShareQuery.isLoading]);
+
+  const isLoading = publicShareQuery.isLoading && !shareData;
 
   useEffect(() => {
     if (!shareData) return;
@@ -137,11 +143,33 @@ export const PublicSharedDocumentPage: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [shareData?.dataExpiracaoIso]);
 
+  useEffect(() => {
+    if (!isExpired) {
+      expiredRefetchDoneRef.current = false;
+      return;
+    }
+    if (expiredRefetchDoneRef.current) return;
+    expiredRefetchDoneRef.current = true;
+    setDocumentUrls({});
+    setPreviewError(false);
+    void publicShareQuery.refetch();
+  }, [isExpired, publicShareQuery.refetch]);
+
   // Carrega links assinados para download temporário seguro
   useEffect(() => {
-    if (!shareData || !isUnlocked || shareData.isLegacy) return;
+    if (!shareData || !isUnlocked || shareData.isLegacy || isExpired) {
+      setDocumentUrls({});
+      return;
+    }
     let mounted = true;
-    const durationSeconds = Math.max(Math.floor(parseShareDurationMs(shareData.tempoLimite) / 1000), 60);
+    const expiry = new Date(shareData.dataExpiracaoIso).getTime();
+    const durationSeconds = Math.floor((expiry - Date.now()) / 1000);
+
+    if (Number.isNaN(expiry) || durationSeconds <= 0) {
+      setDocumentUrls({});
+      return;
+    }
+
     const load = async () => {
       const entries = await Promise.all(
         documents.map(async (doc) => [doc.id, await createDocumentAccessUrl(doc, durationSeconds)] as const),
@@ -153,7 +181,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [shareData, isUnlocked, documents]);
+  }, [shareData, isUnlocked, isExpired, documents]);
 
   const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
   const activeDocument = documents.find((doc) => doc.id === activeId) || documents[0] || null;
@@ -185,6 +213,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
     }
     const cleanShare = sanitizeShare(result.share);
     setPasswordError('');
+    setPasswordHash(result.passwordHash || null);
     setShareData(cleanShare);
     setIsUnlocked(true);
     const firstDocument = cleanShare?.documents?.[0];
@@ -300,9 +329,10 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                   <SharedDocumentViewer
                     activeDocument={activeDocument}
-                    activePreviewUrl={shareData.isLegacy ? shareData.legacyUrl || null : (activeDocument ? documentUrls[activeDocument.id] : null)}
+                    activePreviewUrl={isExpired ? null : (shareData.isLegacy ? shareData.legacyUrl || null : (activeDocument ? documentUrls[activeDocument.id] : null))}
                     activeMode={activeDocument ? getDocumentMode(activeDocument.documento) : 'generic'}
                     activePreviewUnavailable={previewError}
+                    isAccessBlocked={isExpired}
                     onPreviewError={() => setPreviewError(true)}
                   />
                 </div>

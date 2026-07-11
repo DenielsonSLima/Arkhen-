@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, FileText } from 'lucide-react';
+import { Loader2, FileText, ShieldOff } from 'lucide-react';
 import type { SharedDocumentForPublicView } from '../types';
 
 interface SharedDocumentViewerProps {
@@ -7,6 +7,7 @@ interface SharedDocumentViewerProps {
   activePreviewUrl: string | null;
   activeMode: 'pdf' | 'image' | 'generic';
   activePreviewUnavailable: boolean;
+  isAccessBlocked?: boolean;
   onPreviewError: () => void;
 }
 
@@ -15,6 +16,7 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
   activePreviewUrl,
   activeMode,
   activePreviewUnavailable,
+  isAccessBlocked = false,
   onPreviewError,
 }) => {
   const isLoadingSource = !activePreviewUrl;
@@ -37,6 +39,18 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
         flex: 1
       }}
     >
+      {isAccessBlocked ? (
+        <div style={{ padding: '40px', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', textAlign: 'center', color: '#64748b' }}>
+          <div style={{ width: '58px', height: '58px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fecaca', color: '#dc2626' }}>
+            <ShieldOff size={25} />
+          </div>
+          <strong style={{ color: '#991b1b', fontSize: '0.94rem' }}>Acesso expirado</strong>
+          <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', maxWidth: '270px', lineHeight: 1.5 }}>
+            O prazo deste compartilhamento venceu. Solicite um novo link ao responsável pelo envio.
+          </p>
+        </div>
+      ) : (
+        <>
       {/* Loading spinner */}
       {isLoadingSource ? (
         <div style={{ padding: '40px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexDirection: 'column' }}>
@@ -76,6 +90,8 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
               </p>
             </div>
           ) : null}
+        </>
+      )}
         </>
       )}
     </div>
