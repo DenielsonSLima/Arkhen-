@@ -5,14 +5,10 @@ import { formatShareDateTime, hashSharePassword, type SharedDocumentLink } from 
 
 type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao'> & {
   senhaObrigatoria: boolean;
+  dataGeracaoIso: string;
+  dataExpiracaoIso: string;
   storageBucket?: string;
   storagePath?: string;
-};
-
-const parseExpiration = (value: string) => {
-  const [datePart, timePart = '00:00'] = value.split(' ');
-  const [day, month, year] = datePart.split('/');
-  return new Date(`${year}-${month}-${day}T${timePart}:00`);
 };
 
 interface PublicShareRow {
@@ -35,7 +31,9 @@ const mapPublicShareRow = (row: PublicShareRow): PublicLinkPayload => ({
   empresa: row.empresa,
   tempoLimite: row.tempo_limite,
   dataGeracao: formatShareDateTime(new Date(row.data_geracao)),
+  dataGeracaoIso: row.data_geracao,
   dataExpiracao: formatShareDateTime(new Date(row.data_expiracao)),
+  dataExpiracaoIso: row.data_expiracao,
   senhaObrigatoria: row.senha_obrigatoria,
   storageBucket: row.storage_bucket || undefined,
   storagePath: row.storage_path || undefined,
@@ -96,8 +94,8 @@ export const PublicSharedDocumentPage: React.FC = () => {
   }, [linkData]);
 
   const isExpired = useMemo(() => {
-    if (!linkData?.dataExpiracao) return true;
-    const parsed = parseExpiration(linkData.dataExpiracao);
+    if (!linkData?.dataExpiracaoIso) return true;
+    const parsed = new Date(linkData.dataExpiracaoIso);
     return Number.isNaN(parsed.getTime()) || parsed.getTime() < Date.now();
   }, [linkData]);
 

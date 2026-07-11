@@ -8,6 +8,7 @@ import type { Company, CompanyDocument } from '../gestao-empresarial/services/ge
 import type { DocumentCategory } from './services/documentosService';
 import type { ShareableDocument } from './services/documentShareService';
 import type { DocumentGroupBy, DocumentSortBy } from './utils/documentOrganization';
+import { documentosService } from './services/documentosService';
 
 const MeusDocumentosTab = React.lazy(() => import('./components/MeusDocumentosTab').then((module) => ({ default: module.MeusDocumentosTab })));
 const DocumentosEmpresasTab = React.lazy(() => import('./components/DocumentosEmpresasTab').then((module) => ({ default: module.DocumentosEmpresasTab })));
@@ -183,6 +184,18 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
         .filter(d => selectedDocIds.includes(d.id)));
     }
   }, [activeTab, handleBulkDownload, personalDocuments, companies, selectedDocIds]);
+
+  const handleDownloadDocument = useCallback(async (document: CompanyDocument) => {
+    try {
+      await documentosService.downloadDocument(document);
+    } catch (error) {
+      setQuickModal({
+        title: 'Falha ao baixar',
+        message: error instanceof Error ? error.message : 'Não foi possível baixar este arquivo.',
+        confirmLabel: 'Fechar',
+      });
+    }
+  }, []);
 
   const handleBulkDeleteSelected = useCallback(() => {
     const selectedIds = new Set(selectedDocIds);
@@ -598,6 +611,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 groupBy={groupBy}
                 sortBy={sortBy}
                 onDownloadFolder={(folderPath) => handleDownloadFolderZip('meus', folderPath)}
+                onDownload={handleDownloadDocument}
                 onNotify={showSuccessToast}
               />
             ) : activeTab === 'empresas' ? (
@@ -617,6 +631,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 groupBy={groupBy}
                 sortBy={sortBy}
                 onDownloadFolder={(folderPath) => handleDownloadFolderZip('empresas', folderPath)}
+                onDownload={handleDownloadDocument}
                 onNotify={showSuccessToast}
               />
             ) : activeTab === 'todos' ? (
@@ -627,6 +642,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 toggleSelectDoc={toggleSelectDoc}
                 selectAllDocs={selectAllDocs}
                 onBulkDownload={handleBulkDownload}
+                onDownload={handleDownloadDocument}
                 searchTerm={searchTerm}
                 selectedCategoryFilter={selectedCategoryFilter}
                 fileTypeFilter={fileTypeFilter}

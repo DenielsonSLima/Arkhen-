@@ -13,6 +13,7 @@ interface OrganizedDocumentListProps {
   onRename?: (docId: string, newName: string) => Promise<void> | void;
   onMove?: (docId: string) => void;
   onDelete?: (docId: string) => void;
+  onDownload?: (doc: CompanyDocument) => void;
   selectedDocIds: string[];
   onToggleSelect: (docId: string) => void;
 }
@@ -26,6 +27,7 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
   onRename,
   onMove,
   onDelete,
+  onDownload,
   selectedDocIds,
   onToggleSelect,
 }) => {
@@ -44,6 +46,7 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
         onRename={onRename}
         onMove={onMove}
         onDelete={onDelete}
+        onDownload={onDownload}
         selectedDocIds={selectedDocIds}
         onToggleSelect={onToggleSelect}
         showCheckboxes={true}
@@ -56,6 +59,7 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
         onRename={onRename}
         onMove={onMove}
         onDelete={onDelete}
+        onDownload={onDownload}
         selectedDocIds={selectedDocIds}
         onToggleSelect={onToggleSelect}
         showCheckboxes={true}

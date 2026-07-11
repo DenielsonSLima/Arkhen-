@@ -7,8 +7,10 @@ export interface SharedDocumentLink {
   empresa: string;
   geradoPor: string;
   dataGeracao: string;
+  dataGeracaoIso?: string;
   tempoLimite: string;
   dataExpiracao: string;
+  dataExpiracaoIso?: string;
   senha?: string;
   senhaHash?: string;
   link: string;
@@ -58,17 +60,28 @@ export const parseShareDurationMs = (duration: string) => {
   return 3 * 60 * 60 * 1000;
 };
 
-export const formatShareDateTime = (date: Date) => (
+export const formatShareDateTime = (date: Date, timeZone: string = 'America/Sao_Paulo') => (
   date.toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone,
   })
 );
 
 const makeId = () => crypto.randomUUID();
+
+const parseLocalizedDateTime = (value: string) => {
+  if (!value) return null;
+  const normalized = value.replace(',', '').trim();
+  const [datePart, timePart = '00:00'] = normalized.split(' ');
+  const [day, month, year] = datePart.split('/');
+  if (!day || !month || !year) return null;
+
+  return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
+};
 
 export const hashSharePassword = async (password: string) => {
   const data = new TextEncoder().encode(password.trim());
@@ -86,8 +99,10 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
     empresa: row.empresa_nome,
     geradoPor: row.gerado_por,
     dataGeracao: formatShareDateTime(new Date(row.created_at)),
+    dataGeracaoIso: row.created_at,
     tempoLimite: row.tempo_limite,
     dataExpiracao: formatShareDateTime(new Date(row.expires_at)),
+    dataExpiracaoIso: row.expires_at,
     status: row.status,
   };
 
@@ -136,11 +151,11 @@ export const documentShareService = {
     localStorage.setItem(LINKS_STORAGE_KEY, JSON.stringify(links));
   },
 
-  resolveStatus(link: Pick<SharedDocumentLink, 'dataExpiracao' | 'status'>): 'Ativo' | 'Expirado' {
-    const [datePart, timePart = '00:00'] = link.dataExpiracao.split(' ');
-    const [day, month, year] = datePart.split('/');
-    const parsed = new Date(`${year}-${month}-${day}T${timePart}:00`);
-    if (!Number.isNaN(parsed.getTime()) && parsed.getTime() < Date.now()) return 'Expirado';
+  resolveStatus(link: Pick<SharedDocumentLink, 'dataExpiracao' | 'dataExpiracaoIso' | 'status'>): 'Ativo' | 'Expirado' {
+    const parsed = link.dataExpiracaoIso
+      ? new Date(link.dataExpiracaoIso)
+      : parseLocalizedDateTime(link.dataExpiracao);
+    if (!parsed || Number.isNaN(parsed.getTime()) || parsed.getTime() < Date.now()) return 'Expirado';
     return link.status === 'Expirado' ? 'Expirado' : 'Ativo';
   },
 
@@ -168,8 +183,10 @@ export const documentShareService = {
         empresa: doc.empresaNome || (doc.scope === 'empresa' ? 'Empresa vinculada' : 'Biblioteca pessoal'),
         geradoPor: input.geradoPor || 'João Silva',
         dataGeracao: formatShareDateTime(now),
+        dataGeracaoIso: now.toISOString(),
         tempoLimite: input.tempoLimite,
         dataExpiracao: formatShareDateTime(expiresAt),
+        dataExpiracaoIso: expiresAt.toISOString(),
         senha,
         senhaHash,
         status: 'Ativo' as const,

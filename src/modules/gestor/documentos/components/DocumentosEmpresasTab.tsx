@@ -28,6 +28,7 @@ interface DocumentosEmpresasTabProps {
   groupBy: DocumentGroupBy;
   sortBy: DocumentSortBy;
   onDownloadFolder?: (folderPath: string) => void;
+  onDownload?: (doc: CompanyDocument) => void;
   onNotify?: (message: string) => void;
 }
 
@@ -51,6 +52,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   groupBy,
   sortBy,
   onDownloadFolder,
+  onDownload,
   onNotify,
 }) => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(() => initialSelectedCompanyId || null);
@@ -565,6 +567,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
                 setRenameDocId(docId);
                 setRenameDocName(currentName);
               } : undefined}
+              onDownload={onDownload}
               onMove={selectedCompanyId !== null ? () => undefined : undefined}
               onDelete={selectedCompanyId !== null ? handleDeleteFile : undefined}
               selectedDocIds={selectedDocIds}

@@ -21,6 +21,7 @@ interface TodosDocumentosTabProps {
   viewMode: 'list' | 'grid' | 'compact';
   groupBy: DocumentGroupBy;
   sortBy: DocumentSortBy;
+  onDownload?: (doc: CompanyDocument) => void;
 }
 
 export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
@@ -36,6 +37,7 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
   viewMode: initialViewMode,
   groupBy,
   sortBy,
+  onDownload,
 }) => {
   const [previewDoc, setPreviewDoc] = useState<CompanyDocument | null>(null);
 
@@ -167,6 +169,7 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
           sortBy={sortBy}
           viewMode={viewMode}
           onPreview={setPreviewDoc}
+          onDownload={onDownload}
           selectedDocIds={selectedDocIds}
           onToggleSelect={toggleSelectDoc}
         />

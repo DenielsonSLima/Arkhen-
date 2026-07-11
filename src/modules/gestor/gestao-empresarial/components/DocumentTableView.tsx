@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Eye, Edit2, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
+import { Eye, Edit2, Download, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 
 interface DocumentTableViewProps {
@@ -8,6 +8,7 @@ interface DocumentTableViewProps {
   onRename?: (docId: string, currentName: string) => void;
   onMove?: (docId: string) => void;
   onDelete?: (docId: string) => void;
+  onDownload?: (doc: CompanyDocument) => void;
   selectedDocIds?: string[];
   onToggleSelect?: (docId: string) => void;
   showCheckboxes?: boolean;
@@ -20,6 +21,7 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
   onRename,
   onMove,
   onDelete,
+  onDownload,
   selectedDocIds = [],
   onToggleSelect,
   showCheckboxes = false,
@@ -212,6 +214,19 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
                       style={{ border: 'none', background: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
                     >
                       <Edit2 size={14} />
+                    </button>
+                  )}
+                  {onDownload && (
+                    <button
+                      className="btn-action-responsavel"
+                      title="Baixar"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDownload(doc);
+                      }}
+                      style={{ border: 'none', background: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+                    >
+                      <Download size={14} />
                     </button>
                   )}
                   {onDelete && (

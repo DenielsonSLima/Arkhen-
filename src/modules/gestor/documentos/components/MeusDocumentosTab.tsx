@@ -28,6 +28,7 @@ interface MeusDocumentosTabProps {
   groupBy: DocumentGroupBy;
   sortBy: DocumentSortBy;
   onDownloadFolder?: (folderPath: string) => void;
+  onDownload?: (doc: CompanyDocument) => void;
   onNotify?: (message: string) => void;
 }
 
@@ -45,6 +46,7 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
   groupBy,
   sortBy,
   onDownloadFolder,
+  onDownload,
   onNotify,
 }) => {
   // path completo da pasta atual (null = raiz)
@@ -381,6 +383,7 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
           sortBy={sortBy}
           viewMode={viewMode}
           onPreview={setPreviewDoc}
+          onDownload={onDownload}
           onRename={(docId, currentName) => {
             setRenameDocId(docId);
             setRenameDocName(currentName);

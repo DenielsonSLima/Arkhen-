@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { Eye, Edit2, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Eye, Edit2, Download, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
+import { documentosService } from '../../documentos/services/documentosService';
 
 interface DocumentGridViewProps {
   documents: CompanyDocument[];
@@ -8,6 +9,7 @@ interface DocumentGridViewProps {
   onRename?: (docId: string, currentName: string) => void;
   onMove?: (docId: string) => void;
   onDelete?: (docId: string) => void;
+  onDownload?: (document: CompanyDocument) => void;
   selectedDocIds?: string[];
   onToggleSelect?: (docId: string) => void;
   showCheckboxes?: boolean;
@@ -34,13 +36,121 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
   onRename,
   onMove,
   onDelete,
+  onDownload,
   selectedDocIds = [],
   onToggleSelect,
   showCheckboxes = false,
 }) => {
   const selectedDocIdSet = useMemo(() => new Set(selectedDocIds), [selectedDocIds]);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [pdfPreviewUrls, setPdfPreviewUrls] = useState<Record<string, string>>({});
+  const loadingPreviewIds = useRef(new Set<string>());
+  const loadedPreviewIds = useRef(new Set<string>());
+  const loadedPdfPreviewIds = useRef(new Set<string>());
 
-  const getFileMeta = (filename: string) => {
+  useEffect(() => {
+    loadedPreviewIds.current = new Set(Object.keys(previewUrls));
+  }, [previewUrls]);
+
+  useEffect(() => {
+    loadedPdfPreviewIds.current = new Set(Object.keys(pdfPreviewUrls));
+  }, [pdfPreviewUrls]);
+
+  const renderPdfFirstPage = async (url: string, docId: string) => {
+    if (loadedPdfPreviewIds.current.has(docId)) return;
+    if (loadingPreviewIds.current.has(docId)) return;
+    loadingPreviewIds.current.add(docId);
+
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
+
+      const pdf = await pdfjsLib.getDocument({ url }).promise;
+      const page = await pdf.getPage(1);
+
+      const baseViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 180;
+      const targetHeight = 98;
+      const targetScale = Math.max(
+        0.7,
+        Math.min(1.8, Math.min(targetWidth / baseViewport.width, targetHeight / baseViewport.height)),
+      );
+      const viewport = page.getViewport({ scale: targetScale });
+
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+
+      if (!context) {
+        return;
+      }
+
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      await page.render({
+        canvas,
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      const imageSrc = canvas.toDataURL('image/png');
+      setPdfPreviewUrls((previous) => {
+        if (previous[docId]) return previous;
+        return {
+          ...previous,
+          [docId]: imageSrc,
+        };
+      });
+
+      page.cleanup();
+      await pdf.destroy();
+    } finally {
+      loadingPreviewIds.current.delete(docId);
+    }
+  };
+
+  useEffect(() => {
+      const previewDocs = documents.filter((doc) => {
+        const extension = doc.nome.split('.').pop()?.toLowerCase() || '';
+        const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
+        const isPdf = extension === 'pdf';
+        if (!isPdf && !isImage) return false;
+        if (loadedPreviewIds.current.has(doc.id)) return false;
+        if (loadingPreviewIds.current.has(doc.id)) return false;
+        return Boolean(doc.storagePath || doc.url);
+      });
+
+    if (previewDocs.length === 0) return undefined;
+
+    let cancelled = false;
+    void (async () => {
+      await Promise.all(previewDocs.map(async (doc) => {
+        loadingPreviewIds.current.add(doc.id);
+        try {
+          const accessUrl = await documentosService.getDocumentAccessUrl(doc);
+          if (!cancelled && accessUrl) {
+            setPreviewUrls((previous) => {
+              if (previous[doc.id]) return previous;
+              return { ...previous, [doc.id]: accessUrl };
+            });
+
+            if (doc.nome.split('.').pop()?.toLowerCase() === 'pdf' && !loadedPdfPreviewIds.current.has(doc.id)) {
+              void renderPdfFirstPage(accessUrl, doc.id);
+            }
+          }
+        } catch {
+          loadingPreviewIds.current.delete(doc.id);
+        } finally {
+          loadingPreviewIds.current.delete(doc.id);
+        }
+      }));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [documents]);
+
+const getFileMeta = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || '';
     if (ext === 'pdf') return { label: 'PDF', icon: FileText, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
     if (['xlsx', 'xls'].includes(ext)) return { label: 'Planilha', icon: Table2, color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' };
@@ -50,20 +160,23 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
     if (ext === 'xml') return { label: 'XML', icon: FileCode2, color: '#c59235', bg: '#fffbeb', border: '#fde68a' };
     if (ext === 'ofx') return { label: 'OFX', icon: CreditCard, color: '#0f172a', bg: '#f8fafc', border: '#cbd5e1' };
     if (ext === 'txt') return { label: 'Texto', icon: FileCode2, color: '#475569', bg: '#f8fafc', border: '#cbd5e1' };
-    return { label: ext ? ext.toUpperCase() : 'Arquivo', icon: FileText, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
-  };
+  return { label: ext ? ext.toUpperCase() : 'Arquivo', icon: FileText, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
+};
 
-  const renderThumbnail = (doc: CompanyDocument) => {
+const renderThumbnail = (doc: CompanyDocument) => {
     const ext = doc.nome.split('.').pop()?.toLowerCase() || '';
     const meta = getFileMeta(doc.nome);
     const Icon = meta.icon;
     const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
     const isPdf = ext === 'pdf';
 
-    if (isImage && doc.url) {
+    const previewUrl = previewUrls[doc.id] || doc.url;
+    const pdfPreviewUrl = pdfPreviewUrls[doc.id];
+
+    if (isImage && previewUrl) {
       return (
         <img
-          src={doc.url}
+          src={previewUrl}
           alt={doc.nome}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
@@ -71,6 +184,16 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
     }
 
     if (isPdf) {
+      if (pdfPreviewUrl) {
+        return (
+          <img
+            src={pdfPreviewUrl}
+            alt={`Prévia do documento ${doc.nome}`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        );
+      }
+
       return <PdfStaticCover />;
     }
 
@@ -232,22 +355,34 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
               })()}
             </div>
 
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '10px', justifyContent: 'space-between' }}>
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onPreview(doc);
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '10px', justifyContent: 'space-between' }}>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onPreview(doc);
                 }}
                 style={{ flex: 1, padding: '5px', fontSize: '0.72rem', background: 'var(--color-gold-gradient)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
               >
                 <Eye size={12} /> Abrir
               </button>
-              {(onRename || onDelete) && (
+              {(onDownload || onRename || onDelete) && (
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  {onRename && (
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
+                    {onDownload && (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDownload(doc);
+                        }}
+                        style={{ border: '1px solid #e2e8f0', background: '#fff', padding: '5px', borderRadius: '6px', color: '#0f172a', cursor: 'pointer', display: 'flex' }}
+                        title="Baixar"
+                      >
+                        <Download size={12} />
+                      </button>
+                    )}
+                    {onRename && (
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
                         onRename(doc.id, doc.nome);
                       }}
                       style={{ border: '1px solid #e2e8f0', background: '#fff', padding: '5px', borderRadius: '6px', color: '#64748b', cursor: 'pointer', display: 'flex' }}
