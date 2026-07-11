@@ -1,3 +1,70 @@
 @import './styles/InicioBase.css';
 @import './styles/InicioDashboard.css';
 @import './styles/InicioTeam.css';
+
+/* Warning Banner for Incomplete Company Config */
+.company-config-warning-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background-color: rgba(197, 146, 53, 0.08);
+  border: 1.5px solid rgba(197, 146, 53, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.warning-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--color-text-dark);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.warning-banner-content strong {
+  color: var(--color-gold-primary);
+  font-weight: 700;
+}
+
+.warning-icon {
+  color: var(--color-gold-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.btn-complete-config {
+  background: var(--color-gold-gradient);
+  border: none;
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-normal);
+  box-shadow: 0 4px 10px rgba(197, 146, 53, 0.15);
+}
+
+.btn-complete-config:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(197, 146, 53, 0.25);
+}
+
+@media (max-width: 768px) {
+  .company-config-warning-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  
+  .btn-complete-config {
+    text-align: center;
+    width: 100%;
+  }
+}

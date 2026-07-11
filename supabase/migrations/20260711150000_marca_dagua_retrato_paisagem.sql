@@ -46,7 +46,7 @@ BEGIN
 END;
 $$;
 
--- 3. Update finalizar_cadastro_auth function to support saving logo and watermarks, as well as user cpf/phone
+-- 3. Update finalizar_cadastro_auth function to support saving logo and watermarks, as well as user cpf/phone and company address details
 CREATE OR REPLACE FUNCTION public.finalizar_cadastro_auth(p_payload jsonb DEFAULT '{}'::jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -66,6 +66,13 @@ DECLARE
   v_file_url_retrato text := NULLIF(p_payload->>'file_url_retrato', '');
   v_cpf text := NULLIF(p_payload->>'cpf', '');
   v_telefone text := NULLIF(p_payload->>'telefone', '');
+  
+  -- Address fields
+  v_cep text := COALESCE(NULLIF(p_payload->>'cep', ''), '49000-000');
+  v_endereco text := COALESCE(NULLIF(p_payload->>'endereco', ''), 'Rua Fictícia da Contabilidade');
+  v_cidade text := COALESCE(NULLIF(p_payload->>'cidade', ''), 'Aracaju');
+  v_estado text := COALESCE(NULLIF(p_payload->>'estado', ''), 'SE');
+  
   v_empresa_id uuid;
   v_perfil_id uuid;
 BEGIN
@@ -90,7 +97,7 @@ BEGIN
     VALUES (v_user_id, v_empresa_id, v_nome, 'admin', true)
     RETURNING id INTO v_perfil_id;
 
-    -- Insert configurations with logo_url
+    -- Insert configurations with logo_url and address
     INSERT INTO public.configuracoes_empresa (
       empresa_id,
       razao_social,
@@ -112,15 +119,19 @@ BEGIN
       v_cnpj,
       COALESCE(v_email, ''),
       COALESCE(v_telefone, '(79) 99999-0000'),
-      '49000-000',
-      'Rua Fictícia da Contabilidade',
+      v_cep,
+      v_endereco,
       '100',
-      'Aracaju',
-      'SE',
+      v_cidade,
+      v_estado,
       v_logo_url
     )
     ON CONFLICT (empresa_id) DO UPDATE SET
-      logo_url = COALESCE(v_logo_url, configuracoes_empresa.logo_url);
+      logo_url = COALESCE(v_logo_url, configuracoes_empresa.logo_url),
+      cep = COALESCE(EXCLUDED.cep, configuracoes_empresa.cep),
+      endereco = COALESCE(EXCLUDED.endereco, configuracoes_empresa.endereco),
+      cidade = COALESCE(EXCLUDED.cidade, configuracoes_empresa.cidade),
+      estado = COALESCE(EXCLUDED.estado, configuracoes_empresa.estado);
 
     -- Insert configurations with watermarks
     INSERT INTO public.configuracoes_marca_dagua (
@@ -172,12 +183,15 @@ BEGIN
       telefone = COALESCE(EXCLUDED.telefone, configuracoes_usuarios.telefone),
       updated_at = now();
   ELSE
-    -- If company already exists, update logo and watermarks if passed
-    IF v_logo_url IS NOT NULL THEN
-      UPDATE public.configuracoes_empresa
-      SET logo_url = v_logo_url
-      WHERE empresa_id = v_empresa_id;
-    END IF;
+    -- If company already exists, update logo, address and watermarks if passed
+    UPDATE public.configuracoes_empresa
+    SET 
+      logo_url = COALESCE(v_logo_url, logo_url),
+      cep = CASE WHEN v_cep <> '49000-000' THEN v_cep ELSE cep END,
+      endereco = CASE WHEN v_endereco <> 'Rua Fictícia da Contabilidade' THEN v_endereco ELSE endereco END,
+      cidade = CASE WHEN v_cidade <> 'Aracaju' THEN v_cidade ELSE cidade END,
+      estado = CASE WHEN v_estado <> 'SE' THEN v_estado ELSE estado END
+    WHERE empresa_id = v_empresa_id;
 
     IF v_file_url_paisagem IS NOT NULL OR v_file_url_retrato IS NOT NULL THEN
       INSERT INTO public.configuracoes_marca_dagua (

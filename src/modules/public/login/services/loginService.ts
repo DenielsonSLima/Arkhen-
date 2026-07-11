@@ -26,6 +26,10 @@ export interface SignupPayload {
   watermarkRetratoUrl?: string;
   cpf?: string;
   telefone?: string;
+  cep?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 export interface LoginResponse {
@@ -81,6 +85,10 @@ const completeOnboarding = async (payload?: Partial<SignupPayload>) => {
       file_url_retrato: payload?.watermarkRetratoUrl || '',
       cpf: payload?.cpf || '',
       telefone: payload?.telefone || '',
+      cep: payload?.cep || '',
+      endereco: payload?.endereco || '',
+      cidade: payload?.cidade || '',
+      estado: payload?.estado || '',
     },
   });
 

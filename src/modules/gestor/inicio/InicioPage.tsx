@@ -11,6 +11,8 @@ import {
   ShieldAlert,
   Users,
 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import officeBackground from '../../../assets/office-scene-meeting.png';
 import { getEventosPorIntervalo, getEventoOrigemConfig, type Evento } from '../agenda/services/agenda.service';
 import {
@@ -63,6 +65,39 @@ export const InicioPage: React.FC = () => {
   const { stats, vencimentosProximos, isLoading } = useInicio();
   const [tarefasWorkspace, setTarefasWorkspace] = useState<TarefaGestor[]>([]);
   const [eventosAgenda, setEventosAgenda] = useState<Evento[]>([]);
+  const [showConfigNotice, setShowConfigNotice] = useState(false);
+  const { openTab } = useInternalTabs();
+
+  useEffect(() => {
+    let active = true;
+    const checkCompanyDetails = async () => {
+      try {
+        const { data } = await supabase
+          .from('configuracoes_empresa')
+          .select('endereco, cep')
+          .maybeSingle();
+
+        if (data && active) {
+          const isMissingDetails = 
+            !data.endereco || 
+            data.endereco.includes('Rua Fictícia') || 
+            !data.cep || 
+            data.cep === '49000-000';
+          
+          if (isMissingDetails) {
+            setShowConfigNotice(true);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao verificar dados da empresa:', err);
+      }
+    };
+
+    checkCompanyDetails();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const hoje = todayKey();
   const fimSemana = addDays(hoje, 6);
@@ -168,6 +203,28 @@ export const InicioPage: React.FC = () => {
 
   return (
     <div className="inicio-page">
+      {showConfigNotice && (
+        <div className="company-config-warning-banner animate-fade-in">
+          <div className="warning-banner-content">
+            <AlertTriangle className="warning-icon" size={20} />
+            <span>
+              <strong>Cadastro da Empresa Incompleto:</strong> Os dados de endereço e contato de sua empresa ainda estão usando valores de demonstração ou incompletos. Complete o cadastro para que saiam corretos nos cabeçalhos de seus documentos.
+            </span>
+          </div>
+          <button 
+            className="btn-complete-config"
+            onClick={() => {
+              openTab('configuracoes', 'Configurações', 'Settings');
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: 'empresa' } }));
+              }, 100);
+            }}
+          >
+            Completar Cadastro
+          </button>
+        </div>
+      )}
+
       <section className="inicio-motivation-card">
         <div
           className="inicio-motivation-card__backdrop"

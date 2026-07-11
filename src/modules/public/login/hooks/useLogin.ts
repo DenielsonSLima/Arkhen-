@@ -19,6 +19,10 @@ export const useLogin = () => {
   const [signupWatermarkRetratoUrl, setSignupWatermarkRetratoUrl] = useState('');
   const [signupCpf, setSignupCpf] = useState('');
   const [signupTelefone, setSignupTelefone] = useState('');
+  const [signupCep, setSignupCep] = useState('');
+  const [signupEndereco, setSignupEndereco] = useState('');
+  const [signupCidade, setSignupCidade] = useState('');
+  const [signupEstado, setSignupEstado] = useState('');
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +95,10 @@ export const useLogin = () => {
         watermarkRetratoUrl: signupWatermarkRetratoUrl,
         cpf: signupCpf,
         telefone: signupTelefone,
+        cep: signupCep,
+        endereco: signupEndereco,
+        cidade: signupCidade,
+        estado: signupEstado,
       });
 
       if (!response.success) {
@@ -172,6 +180,10 @@ export const useLogin = () => {
       setSignupEmpresa(data.razaoSocial || data.nome || '');
       if (data.email) setSignupEmail(data.email);
       if (data.telefone) setSignupTelefone(data.telefone);
+      if (data.cep) setSignupCep(data.cep);
+      if (data.endereco) setSignupEndereco(data.endereco);
+      if (data.cidade) setSignupCidade(data.cidade);
+      if (data.uf) setSignupEstado(data.uf);
       setSuccessMessage('Dados da empresa carregados com sucesso!');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
