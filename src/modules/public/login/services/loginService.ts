@@ -144,8 +144,14 @@ export const loginService = {
       return { success: false, message: 'Preencha nome, empresa, e-mail e senha.' };
     }
 
-    if (payload.senha.length < 8) {
-      return { success: false, message: 'A senha deve conter pelo menos 8 caracteres.' };
+    if (payload.senha.length < 6) {
+      return { success: false, message: 'A senha deve conter pelo menos 6 caracteres.' };
+    }
+
+    const hasLetter = /[a-zA-Z]/.test(payload.senha);
+    const hasNumber = /[0-9]/.test(payload.senha);
+    if (!hasLetter || !hasNumber) {
+      return { success: false, message: 'A senha deve conter letras e números.' };
     }
 
     const { data, error } = await supabase.auth.signUp({

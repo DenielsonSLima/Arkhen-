@@ -13,6 +13,7 @@ export const useLogin = () => {
   const [signupCnpj, setSignupCnpj] = useState(DEMO_AUTH.cnpj);
   const [signupEmail, setSignupEmail] = useState(DEMO_AUTH.email);
   const [signupSenha, setSignupSenha] = useState(DEMO_AUTH.senha);
+  const [signupConfirmSenha, setSignupConfirmSenha] = useState(DEMO_AUTH.senha);
   const [signupLogoUrl, setSignupLogoUrl] = useState('');
   const [signupWatermarkPaisagemUrl, setSignupWatermarkPaisagemUrl] = useState('');
   const [signupWatermarkRetratoUrl, setSignupWatermarkRetratoUrl] = useState('');
@@ -64,6 +65,18 @@ export const useLogin = () => {
     setError(null);
     setAccessBlockMessage(null);
     setSuccessMessage(null);
+    if (signupSenha !== signupConfirmSenha) {
+      setError('As senhas digitadas não são iguais.');
+      return null;
+    }
+
+    const hasLetter = /[a-zA-Z]/.test(signupSenha);
+    const hasNumber = /[0-9]/.test(signupSenha);
+    if (signupSenha.length < 6 || !hasLetter || !hasNumber) {
+      setError('A senha não atende aos requisitos mínimos de segurança.');
+      return null;
+    }
+
     setIsLoading(true);
 
     try {
@@ -185,6 +198,8 @@ export const useLogin = () => {
     setSignupEmail,
     signupSenha,
     setSignupSenha,
+    signupConfirmSenha,
+    setSignupConfirmSenha,
     signupLogoUrl,
     setSignupLogoUrl,
     signupWatermarkPaisagemUrl,

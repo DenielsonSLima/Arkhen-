@@ -938,3 +938,51 @@
   letter-spacing: 0.05em;
   margin-top: 1px;
 }
+
+/* Password Strength Checklist */
+.password-strength-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafbfc;
+  border: 1.5px solid #eef1f5;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 6px;
+}
+
+.strength-requirement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.strength-requirement.fulfilled {
+  color: #34a853; /* System green */
+}
+
+.requirement-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.strength-requirement.fulfilled .requirement-dot {
+  background-color: #34a853;
+  transform: scale(1.15);
+}
+
+@media (max-width: 576px) {
+  .password-strength-container {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}

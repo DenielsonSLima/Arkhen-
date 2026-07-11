@@ -22,6 +22,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
     setSignupEmail,
     signupSenha,
     setSignupSenha,
+    signupConfirmSenha,
+    setSignupConfirmSenha,
     signupLogoUrl,
     setSignupLogoUrl,
     signupWatermarkPaisagemUrl,
@@ -303,28 +305,63 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="signupSenha" className="form-label">Senha</label>
-                <div className="input-wrapper">
-                  <span className="input-icon"><Lock size={18} /></span>
-                  <input
-                    id="signupSenha"
-                    type={showPassword ? 'text' : 'password'}
-                    className="form-input"
-                    placeholder="Crie uma senha de acesso"
-                    value={signupSenha}
-                    onChange={(e) => setSignupSenha(e.target.value)}
-                    disabled={isLoading}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={togglePasswordVisibility}
-                    aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              <div className="form-group-row">
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="signupSenha" className="form-label">Senha</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon"><Lock size={18} /></span>
+                    <input
+                      id="signupSenha"
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-input"
+                      placeholder="Crie sua senha"
+                      value={signupSenha}
+                      onChange={(e) => setSignupSenha(e.target.value)}
+                      disabled={isLoading}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="signupConfirmSenha" className="form-label">Confirmar Senha</label>
+                  <div className="input-wrapper">
+                    <span className="input-icon"><Lock size={18} /></span>
+                    <input
+                      id="signupConfirmSenha"
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-input"
+                      placeholder="Repita a senha"
+                      value={signupConfirmSenha}
+                      onChange={(e) => setSignupConfirmSenha(e.target.value)}
+                      disabled={isLoading}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={togglePasswordVisibility}
+                      aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Strength Checklist */}
+              <div className="password-strength-container">
+                <div className={`strength-requirement ${signupSenha.length >= 6 ? 'fulfilled' : ''}`}>
+                  <span className="requirement-dot"></span>
+                  <span className="requirement-text">Mínimo 6 caracteres</span>
+                </div>
+                <div className={`strength-requirement ${(signupSenha && /[a-zA-Z]/.test(signupSenha) && /[0-9]/.test(signupSenha)) ? 'fulfilled' : ''}`}>
+                  <span className="requirement-dot"></span>
+                  <span className="requirement-text">Letras e números</span>
+                </div>
+                <div className={`strength-requirement ${(signupSenha && signupSenha === signupConfirmSenha) ? 'fulfilled' : ''}`}>
+                  <span className="requirement-dot"></span>
+                  <span className="requirement-text">Senhas coincidem</span>
                 </div>
               </div>
             </div>
