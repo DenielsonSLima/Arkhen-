@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, ShieldCheck, Timer, Calendar, Clock } from 'lucide-react';
+import { Download, Loader2, Building2 } from 'lucide-react';
 import sharedBackground from '../../../assets/office-scene-meeting.png';
 import signatureLogoImg from '../../../assets/chatgpt-login.png';
+import loginLogoImg from '../../../assets/camada-o.png';
 import { PublicSharedDocumentCard } from './PublicSharedDocumentCard';
 import './PublicSharedDocument.css';
 import {
@@ -17,8 +18,6 @@ import { parseShareDurationMs } from '../../gestor/documentos/services/documentS
 import { usePublicSharedDownloads } from './hooks/usePublicSharedDownloads';
 
 // Subcomponentes modulares
-import { SharedDocumentHeader } from './components/SharedDocumentHeader';
-import { SharedDocumentSidebar } from './components/SharedDocumentSidebar';
 import { SharedDocumentUnlockForm } from './components/SharedDocumentUnlockForm';
 import { SharedDocumentViewer } from './components/SharedDocumentViewer';
 
@@ -192,7 +191,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const hasSelected = selectedIds.length > 0;
   const canDownloadSelection = hasSelected && selectedIds.every(canDownloadDocument);
   const canDownloadAll = shareData ? documents.every((doc) => canDownloadDocument(doc.id)) : false;
-  const fileGridColumns = shareData ? Math.min(Math.max(documents.length, 1), 4) : 1;
+
   const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
   const activeLoadingPdfPreview = activeMode === 'pdf' && (activePdfPreviewStatus === 'loading' || (activeHasPdfSource && activePdfPreviewStatus === undefined));
   
@@ -286,220 +285,146 @@ export const PublicSharedDocumentPage: React.FC = () => {
   }
 
   return (
-    <main style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', boxSizing: 'border-box', background: '#090b0f' }}>
-      {/* Background desfocado premium */}
-      <div className="public-shared-page-bg" style={{ backgroundImage: `url(${sharedBackground})` }} />
-      <div className="public-shared-page-overlay" />
+    <main className="public-shared-container">
+      {/* Lado Esquerdo: Visualizador de Documentos */}
+      <div className="public-shared-viewer-pane" style={{ backgroundImage: `url(${sharedBackground})` }}>
+        <div className="public-shared-viewer-overlay" />
+        
+        {/* Brand Header da Arkhen no topo esquerdo */}
+        <div className="brand-header animate-fade-in" style={{ position: 'absolute', top: '24px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+          <div className="brand-title-group" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+            <span className="brand-name" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', letterSpacing: '1px' }}>Arkhen</span>
+            <span className="brand-subtitle" style={{ fontSize: '0.76rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
+          </div>
+        </div>
 
-      <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', padding: '24px 16px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-        <SharedDocumentHeader
-          empresaLogo={shareData.empresaLogo}
-          empresaNome={shareData.empresa}
-          empresaCnpj={shareData.empresaCnpj}
-          isSingleFile={isSingleFile}
-        />
+        {/* Visualizador de Arquivo */}
+        <div className="public-shared-viewer-content">
+          <SharedDocumentViewer
+            activeDocument={activeDocument}
+            activePreviewUrl={activePreviewUrl || null}
+            activeMode={activeMode}
+            activePdfPreviewUrl={activePdfPreviewUrl}
+            activePdfPreviewStatus={activePdfPreviewStatus}
+            activeLoadingPreview={activeLoadingPreview}
+            activePdfFailedToPreview={activePdfFailedToPreview}
+            activePreviewUnavailable={activePreviewUnavailable}
+            activePreviewError={activePreviewError}
+            onPreviewError={() => setActivePreviewError(true)}
+          />
+        </div>
+      </div>
 
-        <section
-          style={{
-            maxWidth: '1200px', // Reduzido de 1440px para deixar as bordas e visualizar o background
-            width: 'calc(100% - 48px)',
-            margin: '40px auto', // Margem maior para centralizar como card flutuante na página
-            background: 'linear-gradient(165deg, rgba(22, 22, 26, 0.94), rgba(9, 11, 15, 0.98))', // Preto/cinza escuro do sistema
-            borderRadius: '16px',
-            overflow: 'hidden',
-            border: '1px solid rgba(197, 146, 53, 0.25)', // Borda dourada sutil do sistema
-            boxShadow: '0 35px 90px rgba(0, 0, 0, 0.75)',
-            display: 'flex',
-            flexDirection: 'column',
-            flex: isSingleFile ? '0 0 auto' : '1'
-          }}
-        >
-          {/* Layout de Arquivo Único (Visualizador Completo) */}
-          {isSingleFile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-              {/* Barra de Status Horizontal para Arquivo Único */}
+      {/* Lado Direito: Informações e Ações */}
+      <div className="public-shared-info-pane">
+        <div className="login-card animate-fade-in-right" style={{ maxHeight: '90%', display: 'flex', flexDirection: 'column' }}>
+          {/* Topo do Card: Logotipo da Empresa e Nome + CNPJ ao lado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px', borderBottom: '1px solid #eeeeee', paddingBottom: '16px' }}>
+            {shareData.empresaLogo ? (
+              <img
+                src={shareData.empresaLogo}
+                alt={shareData.empresa}
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  objectFit: 'contain',
+                  borderRadius: '8px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  padding: '2px'
+                }}
+              />
+            ) : (
               <div 
                 style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '8px', 
+                  background: 'rgba(197, 146, 53, 0.1)', 
+                  border: '1px solid rgba(197, 146, 53, 0.3)', 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  gap: '16px', 
-                  padding: '16px 20px', 
-                  background: 'rgba(15, 15, 18, 0.7)', 
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                  flexWrap: 'wrap'
+                  justifyContent: 'center', 
+                  color: 'var(--color-gold-primary)' 
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(197, 146, 53, 0.12)', border: '1px solid rgba(197, 146, 53, 0.35)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gold-primary)' }}>
-                    <ShieldCheck size={18} />
-                  </div>
-                  <strong style={{ color: '#ffffff', fontSize: '0.96rem' }}>
-                    {activeDocument?.documento || 'Documento'}
-                  </strong>
-                </div>
+                <Building2 size={22} />
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, textAlign: 'left' }}>
+              <span style={{ fontSize: '0.62rem', color: '#888888', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Empresa Emissora
+              </span>
+              <strong style={{ color: 'var(--color-text-dark)', fontSize: '1.05rem', fontWeight: 800 }}>
+                {shareData.empresa}
+              </strong>
+              {shareData.empresaCnpj && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-gold-primary)', fontFamily: 'monospace', fontWeight: 700 }}>
+                  CNPJ: {shareData.empresaCnpj}
+                </span>
+              )}
+            </div>
+          </div>
 
-                {/* Dados de Expiração Compactos */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '18px', fontSize: '0.76rem', color: '#cbd5e1', flexWrap: 'wrap' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}>
-                    <Clock size={13} /> Disp. por: <strong style={{ color: '#fff' }}>{shareData.tempoLimite}</strong>
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}>
-                    <Calendar size={13} /> Expira em: <strong style={{ color: '#fff' }}>{shareData.dataExpiracao}</strong>
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ color: '#94a3b8' }}><Timer size={13} /> Restante:</span>
-                    <strong 
-                      style={{ 
-                        color: isExpired ? '#f87171' : 'var(--color-gold-primary)', 
-                        fontFamily: 'monospace', 
-                        fontSize: '0.85rem',
-                        background: 'rgba(197, 146, 53, 0.08)',
-                        border: '1px solid rgba(197, 146, 53, 0.25)',
-                        padding: '2px 8px',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      {remainingLabel || '...'}
-                    </strong>
-                  </div>
-                </div>
+          {/* Conteúdo rolável se necessário */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingRight: '4px' }}>
+            {/* Nome do Arquivo Principal */}
+            <div>
+              <span style={{ fontSize: '0.62rem', color: '#888888', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Arquivo Ativo
+              </span>
+              <strong style={{ color: 'var(--color-text-dark)', fontSize: '0.92rem', display: 'block', marginTop: '3px', lineHeight: 1.3 }}>
+                {activeDocument?.documento || 'Documento Compartilhado'}
+              </strong>
+            </div>
 
-                {/* Botão de Download */}
-                <button
-                  type="button"
-                  onClick={handleDownloadSelected}
-                  disabled={isExpired || isBatchDownloading}
+            {/* Metadados de Tempo */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: '#fafafa', border: '1px solid #eeeeee', borderRadius: '10px', padding: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                <span style={{ color: '#666666', fontWeight: 500 }}>Gerado em:</span>
+                <strong style={{ color: 'var(--color-text-dark)' }}>{shareData.dataGeracao}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                <span style={{ color: '#666666', fontWeight: 500 }}>Disponível por:</span>
+                <strong style={{ color: 'var(--color-text-dark)' }}>{shareData.tempoLimite}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                <span style={{ color: '#666666', fontWeight: 500 }}>Expira em:</span>
+                <strong style={{ color: '#dc2626', fontWeight: 700 }}>{shareData.dataExpiracao}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eaeaea', paddingTop: '8px', marginTop: '2px', fontSize: '0.78rem' }}>
+                <span style={{ color: '#666666', fontWeight: 500 }}>Restante:</span>
+                <strong 
                   style={{ 
-                    border: 'none', 
-                    borderRadius: '8px', 
-                    padding: '8px 16px', 
-                    background: (isExpired || isBatchDownloading) ? '#1e293b' : 'var(--color-gold-gradient)', 
-                    color: '#ffffff', 
-                    fontWeight: 700, 
-                    fontSize: '0.74rem', 
-                    cursor: (isExpired || isBatchDownloading) ? 'not-allowed' : 'pointer', 
-                    display: 'inline-flex', 
-                    gap: '6px', 
-                    alignItems: 'center', 
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)' 
+                    color: isExpired ? '#ef4444' : 'var(--color-gold-primary)', 
+                    fontFamily: 'monospace', 
+                    fontSize: '0.9rem',
+                    background: isExpired ? 'rgba(239, 68, 68, 0.06)' : 'rgba(197, 146, 53, 0.06)',
+                    border: isExpired ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(197, 146, 53, 0.2)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
                   }}
                 >
-                  {isBatchDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-                  Baixar Arquivo
-                </button>
-              </div>
-
-              {/* Visualizador de Arquivo Único Completo */}
-              <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                <SharedDocumentViewer
-                  activeDocument={activeDocument}
-                  activePreviewUrl={activePreviewUrl || null}
-                  activeMode={activeMode}
-                  activePdfPreviewUrl={activePdfPreviewUrl}
-                  activePdfPreviewStatus={activePdfPreviewStatus}
-                  activeLoadingPreview={activeLoadingPreview}
-                  activePdfFailedToPreview={activePdfFailedToPreview}
-                  activePreviewUnavailable={activePreviewUnavailable}
-                  activePreviewError={activePreviewError}
-                  onPreviewError={() => setActivePreviewError(true)}
-                />
+                  {remainingLabel || '...'}
+                </strong>
               </div>
             </div>
-          ) : (
-            /* Layout de Múltiplos Arquivos (Lote) */
-            <>
-              {/* Card Header Informativo */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', background: 'rgba(15, 15, 18, 0.6)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(197, 146, 53, 0.16)', border: '1px solid rgba(197, 146, 53, 0.4)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gold-primary)' }}>
-                  <ShieldCheck size={20} />
-                </div>
-                <div>
-                  <h1 style={{ margin: 0, fontSize: '1.04rem', color: '#ffffff', fontWeight: 800 }}>
-                    {activeDocument?.documento || 'Documento compartilhado'}
-                  </h1>
-                </div>
-                {isExpired && (
-                  <span style={{ marginLeft: 'auto', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#f87171', borderRadius: '999px', padding: '4px 12px', fontSize: '0.7rem', fontWeight: 800 }}>
-                    Expirado
+
+            {/* Layout para Múltiplos Arquivos */}
+            {!isSingleFile && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-dark)', fontWeight: 800 }}>
+                    Lote de Documentos
+                  </h4>
+                  <span style={{ fontSize: '0.68rem', color: '#888888' }}>
+                    {selectedIds.length} de {documents.length} selecionado(s)
                   </span>
-                )}
-              </div>
-
-              {/* Grid de Duas Colunas */}
-              <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '20px', flex: 1, boxSizing: 'border-box' }} className="public-shared-grid">
-                {/* Visualizador de Arquivo */}
-                <SharedDocumentViewer
-                  activeDocument={activeDocument}
-                  activePreviewUrl={activePreviewUrl || null}
-                  activeMode={activeMode}
-                  activePdfPreviewUrl={activePdfPreviewUrl}
-                  activePdfPreviewStatus={activePdfPreviewStatus}
-                  activeLoadingPreview={activeLoadingPreview}
-                  activePdfFailedToPreview={activePdfFailedToPreview}
-                  activePreviewUnavailable={activePreviewUnavailable}
-                  activePreviewError={activePreviewError}
-                  onPreviewError={() => setActivePreviewError(true)}
-                />
-
-                {/* Painel Lateral */}
-                <SharedDocumentSidebar
-                  shareData={shareData}
-                  remainingLabel={remainingLabel}
-                  isExpired={isExpired}
-                />
-              </div>
-
-              {/* Área de Documentos e Downloads */}
-              <div style={{ padding: '0 20px 20px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(9, 11, 15, 0.5)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', padding: '16px 0', flexWrap: 'wrap' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '0.94rem', color: '#ffffff', fontWeight: 800 }}>Documentos no Link</h3>
-                    <p style={{ margin: '3px 0 0', color: '#94a3b8', fontSize: '0.74rem' }}>
-                      {documents.length} arquivo(s) disponível(is) · {selectedIds.length} selecionado(s)
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={selectAll}
-                      style={{ border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={handleDownloadSelected}
-                      disabled={isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading}
-                      style={{ border: 'none', borderRadius: '8px', padding: '8px 16px', background: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? '#1e293b' : 'var(--color-gold-gradient)', color: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? '#64748b' : '#ffffff', fontWeight: 700, fontSize: '0.74rem', cursor: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '6px', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
-                    >
-                      {isBatchDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                      {isBatchDownloading ? 'Baixando...' : `Baixar selecionado(s) ${selectedIds.length > 1 ? '(ZIP)' : ''}`}
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={handleDownloadAll}
-                      disabled={isExpired || !canDownloadAll || isBatchDownloading}
-                      style={{ border: '1px solid rgba(197, 146, 53, 0.4)', borderRadius: '8px', padding: '8px 16px', background: 'rgba(197, 146, 53, 0.1)', color: '#dfb35e', fontWeight: 700, fontSize: '0.74rem', cursor: (isExpired || !canDownloadAll || isBatchDownloading) ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '6px', alignItems: 'center' }}
-                    >
-                      {isBatchDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                      {isBatchDownloading ? 'Baixando...' : 'Baixar todos (ZIP)'}
-                    </button>
-                  </div>
                 </div>
 
-                {/* Listagem de Cards de Arquivos */}
-                <div 
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${fileGridColumns}, minmax(220px, 1fr))`,
-                    gap: '12px',
-                    marginTop: '10px'
-                  }}
-                >
+                {/* Grid de Cards no rodapé do card */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px', border: '1px solid #eeeeee', borderRadius: '8px', padding: '6px', background: '#fafafa' }}>
                   {documents.map((doc) => (
                     <PublicSharedDocumentCard
                       key={doc.id}
@@ -517,19 +442,84 @@ export const PublicSharedDocumentPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-            </>
-          )}
-        </section>
+            )}
+          </div>
 
-          {/* Assinatura do desenvolvedor */}
-          <div className="developer-signature" style={{ color: '#cbd5e1', opacity: 0.55 }}>
-            <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
-            <div className="developer-signature-copy">
-              <span className="developer-signature-brand">DAILABS</span>
-              <span className="developer-signature-subtitle">CREATIVE AI & SOFTWARES</span>
-            </div>
+          {/* Botões de Ação na base do card */}
+          <div style={{ borderTop: '1px solid #eeeeee', paddingTop: '16px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {isSingleFile ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleDownloadSelected}
+                disabled={isExpired || isBatchDownloading}
+              >
+                {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                Baixar Arquivo
+              </button>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    style={{ 
+                      flex: 1, 
+                      border: '1px solid #dcdcdc', 
+                      borderRadius: '8px', 
+                      padding: '10px', 
+                      background: '#ffffff', 
+                      color: 'var(--color-text-dark)', 
+                      fontSize: '0.78rem',
+                      fontWeight: 700, 
+                      cursor: 'pointer' 
+                    }}
+                    onClick={selectAll}
+                  >
+                    {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ flex: 2, margin: 0 }}
+                    onClick={handleDownloadSelected}
+                    disabled={isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading}
+                  >
+                    {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {isBatchDownloading ? 'Processando...' : `Baixar selecionado(s) ZIP`}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  style={{ 
+                    width: '100%', 
+                    border: '1px solid rgba(197, 146, 53, 0.4)', 
+                    borderRadius: '8px', 
+                    padding: '10px', 
+                    background: 'rgba(197, 146, 53, 0.08)', 
+                    color: 'var(--color-gold-primary)', 
+                    fontSize: '0.78rem',
+                    fontWeight: 700, 
+                    cursor: (isExpired || !canDownloadAll || isBatchDownloading) ? 'not-allowed' : 'pointer' 
+                  }}
+                  onClick={handleDownloadAll}
+                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
+                >
+                  Baixar Todos (ZIP)
+                </button>
+              </>
+            )}
           </div>
         </div>
-      </main>
+      </div>
+
+      {/* Assinatura Dailabs no canto inferior direito da tela */}
+      <div className="developer-signature" style={{ color: '#cbd5e1', opacity: 0.55 }}>
+        <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
+        <div className="developer-signature-copy">
+          <span className="developer-signature-brand">DAILABS</span>
+          <span className="developer-signature-subtitle">CREATIVE AI & SOFTWARES</span>
+        </div>
+      </div>
+    </main>
   );
 };
