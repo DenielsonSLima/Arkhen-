@@ -53,6 +53,8 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Expirado'>('Ativo');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
+  const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+  const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [revokingGroupIds, setRevokingGroupIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
@@ -356,14 +358,52 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                   <td style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>{batch.dataExpiracao}</td>
                   <td>
                     {batch.senha ? (
-                      <button
-                        type="button"
-                        onClick={() => handleTogglePassword(batch.groupId)}
-                        style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#b45309', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800 }}
+                      <div 
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        onMouseEnter={() => setHoveredGroupId(batch.groupId)}
+                        onMouseLeave={() => {
+                          setHoveredGroupId(null);
+                          setCopiedPasswordId(null);
+                        }}
                       >
-                        <Key size={13} />
-                        {isPasswordVisible ? batch.senha : '••••••••'}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePassword(batch.groupId)}
+                          style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#b45309', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800 }}
+                          title="Clique para fixar visualização"
+                        >
+                          <Key size={13} />
+                          {hoveredGroupId === batch.groupId || isPasswordVisible ? batch.senha : '••••••••'}
+                        </button>
+                        {(hoveredGroupId === batch.groupId || isPasswordVisible) && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (batch.senha) {
+                                await navigator.clipboard.writeText(batch.senha);
+                                setCopiedPasswordId(batch.groupId);
+                                setTimeout(() => setCopiedPasswordId(null), 1500);
+                              }
+                            }}
+                            title="Copiar senha"
+                            style={{
+                              border: '1px solid #cbd5e1',
+                              background: copiedPasswordId === batch.groupId ? '#f0fdf4' : '#ffffff',
+                              color: copiedPasswordId === batch.groupId ? '#166534' : '#475569',
+                              borderRadius: '4px',
+                              padding: '4px 7px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.68rem',
+                              fontWeight: 850
+                            }}
+                          >
+                            {copiedPasswordId === batch.groupId ? <Check size={12} /> : <Clipboard size={12} />}
+                          </button>
+                        )}
+                      </div>
                     ) : batch.senhaHash ? (
                       <span
                         title="Link protegido por senha (gerado em outro dispositivo)"

@@ -235,7 +235,7 @@ export const documentShareService = {
       const local = localMap.get(link.id);
       return {
         ...link,
-        senha: local?.senha || undefined,
+        senha: link.senha || local?.senha || undefined,
         senhaHash: link.senhaHash || local?.senhaHash || undefined,
         link: sanitizeSharedLink(link.link),
         status: this.resolveStatus(link),
