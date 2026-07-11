@@ -51,6 +51,61 @@ interface SharedDocumentRow {
   created_at: string;
 }
 
+export interface LegacySharedPayload {
+  id: string;
+  documento: string;
+  empresa: string;
+  tempoLimite: string;
+  dataGeracao: string;
+  dataExpiracao: string;
+  arquivoUrl: string;
+}
+
+const normalizeBase64ForDecode = (value: string) => value
+  .replace(/-/g, '+')
+  .replace(/_/g, '/')
+  .replace(/\s+/g, '');
+
+export const parseLegacySharedPayload = (encoded: string): LegacySharedPayload | null => {
+  const padding = '='.repeat((4 - (encoded.length % 4)) % 4);
+  const normalized = `${encoded}${padding}`;
+  try {
+    const decoded = atob(normalizeBase64ForDecode(normalized));
+    const parsed = JSON.parse(decoded) as Partial<LegacySharedPayload>;
+    if (!parsed?.id || !parsed?.arquivoUrl) return null;
+    return {
+      id: parsed.id,
+      documento: parsed.documento || 'Documento compartilhado',
+      empresa: parsed.empresa || 'Biblioteca pessoal',
+      tempoLimite: parsed.tempoLimite || '1 hora',
+      dataGeracao: parsed.dataGeracao || '',
+      dataExpiracao: parsed.dataExpiracao || '',
+      arquivoUrl: parsed.arquivoUrl,
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const sanitizeSharedLink = (link: string) => {
+  if (!link) return '';
+  const withoutHash = link.replace(/#.*$/, '');
+  if (!withoutHash) return '';
+
+  try {
+    const parsed = new URL(withoutHash);
+    const pathParts = parsed.pathname.split('/').filter(Boolean);
+    const hasSharePath = pathParts.some((part) => part === 's' || part === 'shared');
+    if (!hasSharePath) return withoutHash;
+
+    const shareId = pathParts.at(-1);
+    if (!shareId) return withoutHash;
+    return `${parsed.origin}/s/${shareId}`;
+  } catch {
+    return withoutHash;
+  }
+};
+
 export const parseShareDurationMs = (duration: string) => {
   const [rawAmount, unit = ''] = duration.split(' ');
   const amount = Number(rawAmount) || 1;
@@ -126,6 +181,7 @@ export const documentShareService = {
       if (links.length !== (JSON.parse(data) as SharedDocumentLink[]).length) this.save(links);
       return links.map((link) => ({
         ...link,
+        link: sanitizeSharedLink(link.link),
         status: this.resolveStatus(link),
       }));
     } catch {
@@ -143,6 +199,7 @@ export const documentShareService = {
 
     return ((data || []) as SharedDocumentRow[]).map(mapRowToLink).map((link) => ({
       ...link,
+      link: sanitizeSharedLink(link.link),
       status: this.resolveStatus(link),
     }));
   },

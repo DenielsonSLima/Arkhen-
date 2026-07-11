@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import { formatShareDateTime, hashSharePassword, type SharedDocumentLink } from '../../gestor/documentos/services/documentShareService';
+import {
+  formatShareDateTime,
+  hashSharePassword,
+  parseLegacySharedPayload,
+  type SharedDocumentLink,
+} from '../../gestor/documentos/services/documentShareService';
+import { parseShareDurationMs } from '../../gestor/documentos/services/documentShareService';
 
 type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao'> & {
   senhaObrigatoria: boolean;
@@ -9,6 +15,7 @@ type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa'
   dataExpiracaoIso: string;
   storageBucket?: string;
   storagePath?: string;
+  legacyUrl?: string;
 };
 
 interface PublicShareRow {
@@ -39,6 +46,37 @@ const mapPublicShareRow = (row: PublicShareRow): PublicLinkPayload => ({
   storagePath: row.storage_path || undefined,
 });
 
+const parseLegacyDateTime = (value: string) => {
+  if (!value) return null;
+  const cleaned = value.replace(',', '').trim();
+  const [datePart, timePart = '00:00'] = cleaned.split(' ');
+  const [day, month, year] = datePart.split('/');
+  if (!day || !month || !year) return null;
+  return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
+};
+
+const mapLegacyPayload = (payload: ReturnType<typeof parseLegacySharedPayload>) => {
+  if (!payload) return null;
+
+  const created = parseLegacyDateTime(payload.dataGeracao);
+  const expires = parseLegacyDateTime(payload.dataExpiracao);
+
+  return {
+    id: payload.id,
+    documento: payload.documento,
+    empresa: payload.empresa || 'Biblioteca pessoal',
+    tempoLimite: payload.tempoLimite || '1 hora',
+    dataGeracao: formatShareDateTime(created || new Date()),
+    dataGeracaoIso: created ? created.toISOString() : '',
+    dataExpiracao: formatShareDateTime(expires || new Date()),
+    dataExpiracaoIso: expires ? expires.toISOString() : '',
+    senhaObrigatoria: false,
+    storageBucket: undefined,
+    storagePath: undefined,
+    legacyUrl: payload.arquivoUrl,
+  };
+};
+
 const fetchPublicShare = async (passwordHash?: string) => {
   const shareId = getShareIdFromPath();
   if (!shareId) return null;
@@ -47,13 +85,17 @@ const fetchPublicShare = async (passwordHash?: string) => {
     p_share_id: shareId,
     p_password_hash: passwordHash || null,
   });
-  if (error || !data?.[0]) return null;
-  return mapPublicShareRow(data[0] as PublicShareRow);
+  if (!error && data?.[0]) return mapPublicShareRow(data[0] as PublicShareRow);
+
+  const legacyPayload = parseLegacySharedPayload(window.location.hash.replace(/^#/, ''));
+  return mapLegacyPayload(legacyPayload);
 };
 
 const createDownloadUrl = async (share: PublicLinkPayload) => {
+  if (share.legacyUrl) return share.legacyUrl;
   if (!share.storageBucket || !share.storagePath) return null;
-  const { data, error } = await supabase.storage.from(share.storageBucket).createSignedUrl(share.storagePath, 60);
+  const duration = Math.max(parseShareDurationMs(share.tempoLimite), 60) / 1000;
+  const { data, error } = await supabase.storage.from(share.storageBucket).createSignedUrl(share.storagePath, duration);
   if (error) return null;
   return data?.signedUrl || null;
 };
@@ -104,7 +146,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
     if (!linkData?.senhaObrigatoria) return;
     const passwordHash = await hashSharePassword(password);
     const share = await fetchPublicShare(passwordHash);
-    if (!share?.storagePath) {
+    if (!share || (!share.storagePath && !share.legacyUrl)) {
       setPasswordError('Senha incorreta. Confira o código recebido e tente novamente.');
       return;
     }
