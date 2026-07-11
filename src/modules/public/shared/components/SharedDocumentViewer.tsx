@@ -6,12 +6,7 @@ interface SharedDocumentViewerProps {
   activeDocument: SharedDocumentForPublicView | null;
   activePreviewUrl: string | null;
   activeMode: 'pdf' | 'image' | 'generic';
-  activePdfPreviewUrl: string | null;
-  activePdfPreviewStatus?: 'loading' | 'ready' | 'error';
-  activeLoadingPreview: boolean;
-  activePdfFailedToPreview: boolean;
   activePreviewUnavailable: boolean;
-  activePreviewError: boolean;
   onPreviewError: () => void;
 }
 
@@ -27,14 +22,14 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
   return (
     <div 
       style={{
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid #e2e8f0',
         borderRadius: '12px',
-        background: '#121212',
+        background: '#f8fafc', /* Fundo cinza prancheta profissional */
         width: '100%',
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.03)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -44,9 +39,9 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
     >
       {/* Loading spinner */}
       {isLoadingSource ? (
-        <div style={{ padding: '40px', color: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexDirection: 'column' }}>
-          <Loader2 size={32} className="animate-spin" style={{ color: 'var(--color-gold-primary)' }} />
-          <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>Carregando arquivo...</span>
+        <div style={{ padding: '40px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexDirection: 'column' }}>
+          <Loader2 size={32} className="animate-spin" style={{ color: '#2563eb' }} />
+          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Carregando visualização...</span>
         </div>
       ) : (
         <>
@@ -65,19 +60,19 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
               src={activePreviewUrl}
               alt={activeDocument?.documento || 'Visualizador de Imagem'}
               onError={onPreviewError}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#121212', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#f8fafc', display: 'block' }}
             />
           ) : null}
 
-          {/* Fallback */}
+          {/* Fallback para formatos sem prévia ou erros */}
           {activePreviewUnavailable || (activeMode === 'generic' && activePreviewUrl) ? (
-            <div style={{ padding: '40px', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', textAlign: 'center', color: '#94a3b8' }}>
-              <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.06)', color: '#cbd5e1' }}>
+            <div style={{ padding: '40px', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ width: '54px', height: '54px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bfdbfe', color: '#2563eb' }}>
                 <FileText size={24} />
               </div>
-              <strong style={{ color: '#ffffff', fontSize: '0.92rem' }}>Prévia indisponível</strong>
-              <p style={{ margin: 0, fontSize: '0.76rem', color: '#94a3b8', maxWidth: '240px', lineHeight: 1.5 }}>
-                Use o botão de download para abrir o arquivo em seu dispositivo.
+              <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>Prévia indisponível para este formato</strong>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', maxWidth: '240px', lineHeight: 1.5 }}>
+                Use o botão de download no painel lateral para abrir o arquivo em seu dispositivo.
               </p>
             </div>
           ) : null}

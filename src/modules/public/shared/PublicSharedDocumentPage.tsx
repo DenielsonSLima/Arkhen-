@@ -7,10 +7,12 @@ import {
   checkPassword,
   createDocumentAccessUrl,
   formatCountdownLabel,
+  getDocumentMode,
 } from './publicSharedDocumentHelpers';
 import type { PublicSharedDocumentPayload } from './types';
 import { parseShareDurationMs } from '../../gestor/documentos/services/documentShareService';
 import { usePublicSharedDownloads } from './hooks/usePublicSharedDownloads';
+import { SharedDocumentViewer } from './components/SharedDocumentViewer';
 import './PublicSharedDocument.css';
 
 // Subcomponentes modulares
@@ -42,6 +44,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const [documentUrls, setDocumentUrls] = useState<Record<string, string | null>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
 
   const documents = useMemo(() => {
     const normalized = shareData?.documents || [];
@@ -107,6 +110,11 @@ export const PublicSharedDocumentPage: React.FC = () => {
     if (!shareData) return;
     document.title = buildPageTitle(shareData);
   }, [shareData]);
+
+  // Resetar erro ao mudar de arquivo
+  useEffect(() => {
+    setPreviewError(false);
+  }, [activeId]);
 
   // Contador regressivo do tempo restante
   useEffect(() => {
@@ -272,36 +280,31 @@ export const PublicSharedDocumentPage: React.FC = () => {
           {/* ================= COLUNA ESQUERDA ================= */}
           <div className="public-shared-body-left">
             {isSingleFile && activeDocument ? (
-              /* Layout Arquivo Único (Imagem 3) */
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', justifyContent: 'center', height: '100%' }}>
-                {/* Ícone Gigante do Formato */}
-                <div style={{ width: '96px', height: '96px', borderRadius: '16px', background: getFileExtension(activeDocument.documento) === 'pdf' ? '#fef2f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)', color: getFileExtension(activeDocument.documento) === 'pdf' ? '#ef4444' : '#64748b', boxShadow: '0 8px 16px rgba(0,0,0,0.03)' }}>
-                  <FileText size={48} />
+              /* Layout Arquivo Único com Visualização Real (Preview) */
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', textAlign: 'left' }}>
+                {/* Cabeçalho do arquivo único */}
+                <div style={{ marginBottom: '14px' }}>
+                  <h2 style={{ margin: '0 0 2px', fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument.documento}>
+                    {activeDocument.documento}
+                  </h2>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                    {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
+                  </span>
                 </div>
 
-                {/* Nome do Arquivo */}
-                <h2 style={{ margin: '8px 0 2px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument.documento}>
-                  {activeDocument.documento}
-                </h2>
-                <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 600 }}>
-                  {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
-                </span>
-
-                {/* Botão de Download Direto (Sem Google Drive e sem divisor "ou") */}
-                <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
-                  <button
-                    type="button"
-                    className="btn-primary-blue"
-                    onClick={handleDownloadSelected}
-                    disabled={isExpired || isBatchDownloading}
-                  >
-                    {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                    Baixar arquivo
-                  </button>
+                {/* Área de Visualização Real (Preview) */}
+                <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                  <SharedDocumentViewer
+                    activeDocument={activeDocument}
+                    activePreviewUrl={shareData.isLegacy ? shareData.legacyUrl || null : (activeDocument ? documentUrls[activeDocument.id] : null)}
+                    activeMode={activeDocument ? getDocumentMode(activeDocument.documento) : 'generic'}
+                    activePreviewUnavailable={previewError}
+                    onPreviewError={() => setPreviewError(true)}
+                  />
                 </div>
 
-                {/* Rodapé do arquivo único */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.9, textAlign: 'left' }}>
+                {/* Rodapé do arquivo único com escudo alinhado */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '16px', opacity: 0.9 }}>
                   <Shield size={15} style={{ color: '#2563eb', minWidth: '15px', marginTop: '2px' }} />
                   <span style={{ lineHeight: 1.4 }}>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
                 </div>
@@ -374,20 +377,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-
-                {/* Botão de download do zip */}
-                <button
-                  type="button"
-                  className="btn-primary-blue"
-                  onClick={handleDownloadAll}
-                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
-                >
-                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                  Baixar todos os arquivos (.zip)
-                </button>
-                <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginTop: '6px' }}>
-                  Todos os arquivos serão baixados compactados em um único arquivo .zip
-                </span>
               </div>
             )}
           </div>
@@ -396,29 +385,29 @@ export const PublicSharedDocumentPage: React.FC = () => {
           <div className="public-shared-body-right">
             <div className="sidebar-scroll-content">
               {/* 1. Empresa Emissora Destacada */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px', textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px', textAlign: 'left' }}>
                 {shareData.empresaLogo ? (
                   <img 
                     src={shareData.empresaLogo} 
                     alt={shareData.empresa} 
                     style={{ 
-                      width: '52px', 
-                      height: '52px', 
+                      width: '82px', 
+                      height: '82px', 
                       objectFit: 'contain', 
-                      borderRadius: '8px', 
+                      borderRadius: '50%', 
                       background: '#ffffff', 
                       border: '1px solid #e2e8f0', 
-                      padding: '3px',
+                      padding: '4px',
                       boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-                      minWidth: '52px'
+                      minWidth: '82px'
                     }} 
                   />
                 ) : (
                   <div 
                     style={{ 
-                      width: '52px', 
-                      height: '52px', 
-                      borderRadius: '8px', 
+                      width: '82px', 
+                      height: '82px', 
+                      borderRadius: '50%', 
                       background: '#eff6ff', 
                       border: '1px solid #bfdbfe', 
                       display: 'flex', 
@@ -426,10 +415,10 @@ export const PublicSharedDocumentPage: React.FC = () => {
                       justifyContent: 'center', 
                       color: '#2563eb',
                       boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-                      minWidth: '52px'
+                      minWidth: '82px'
                     }}
                   >
-                    <Building2 size={24} />
+                    <Building2 size={40} />
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
@@ -444,11 +433,15 @@ export const PublicSharedDocumentPage: React.FC = () => {
                       CNPJ {shareData.empresaCnpj}
                     </span>
                   )}
+                  {/* Mensagem de Responsabilidade da Empresa */}
+                  <span style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '4px', lineHeight: 1.3, fontWeight: 500 }}>
+                    A responsabilidade pelo conteúdo e integridade deste arquivo é exclusiva da empresa emissora.
+                  </span>
                 </div>
               </div>
 
               {/* 2. Compartilhado em */}
-              <div className="info-row">
+              <div className="info-row" style={{ marginBottom: '14px' }}>
                 <div className="info-icon-wrapper">
                   <Calendar size={18} />
                 </div>
@@ -459,7 +452,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
 
               {/* 3. Prazo de acesso */}
-              <div className="info-row">
+              <div className="info-row" style={{ marginBottom: '14px' }}>
                 <div className="info-icon-wrapper">
                   <Timer size={18} />
                 </div>
@@ -470,7 +463,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
 
               {/* 4. Tempo restante (Azul para único e Vermelho para lote, tamanho grande) */}
-              <div className="info-row">
+              <div className="info-row" style={{ marginBottom: '14px' }}>
                 <div className="info-icon-wrapper">
                   <Timer size={18} />
                 </div>
@@ -492,7 +485,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
 
               {/* 5. Expira em (Vermelho) */}
-              <div className="info-row">
+              <div className="info-row" style={{ marginBottom: '20px' }}>
                 <div className="info-icon-wrapper danger">
                   <Calendar size={18} />
                 </div>
@@ -503,20 +496,47 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Caixas de Aviso no Rodapé do Card da Direita */}
+            {/* BOTÃO DE BAIXAR E AVISOS (Renderizados acima do aviso final) */}
             {isSingleFile ? (
-              <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-                <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-                <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                  Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
+                <button
+                  type="button"
+                  className="btn-primary-blue"
+                  onClick={handleDownloadSelected}
+                  disabled={isExpired || isBatchDownloading}
+                >
+                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  Baixar arquivo
+                </button>
+
+                <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                  <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+                  <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                    Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
+                  </span>
+                </div>
               </div>
             ) : (
-              <div className="sidebar-warning-box">
-                <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-                <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                  <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
+                <button
+                  type="button"
+                  className="btn-primary-blue"
+                  onClick={handleDownloadAll}
+                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
+                >
+                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  Baixar todos os arquivos (.zip)
+                </button>
+                <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: '-6px', textAlign: 'center' }}>
+                  Todos os arquivos serão baixados compactados em um único arquivo .zip
                 </span>
+
+                <div className="sidebar-warning-box">
+                  <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+                  <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                    <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -524,12 +544,12 @@ export const PublicSharedDocumentPage: React.FC = () => {
       </div>
 
       {/* 3. Rodapé Centralizado com copyright */}
-      <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, color: '#64748b', fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+      <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 1, color: '#64748b', fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
         <span>© 2026 | Arkhen Gestão Contábil</span>
       </div>
 
       {/* 4. Assinatura Dailabs no canto inferior direito da tela */}
-      <div className="developer-signature" style={{ color: '#0f172a', opacity: 0.8, right: '30px', bottom: '24px', position: 'absolute', zIndex: 10 }}>
+      <div className="developer-signature" style={{ color: '#0f172a', opacity: 0.8, right: '30px', bottom: '24px', position: 'absolute', zIndex: 1 }}>
         <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
         <div className="developer-signature-copy">
           <span className="developer-signature-brand">DAILABS</span>
