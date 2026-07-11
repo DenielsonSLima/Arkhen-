@@ -89,11 +89,13 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
         <label>URL do Webhook</label>
         <input
           type="text"
-          value={config.webhookUrl}
-          onChange={(event) => onChange('webhookUrl', event.target.value)}
-          placeholder="https://sua-api.com/webhooks/asaas"
-          disabled={isSaving}
+          value={asaasService.getWebhookUrl(environment)}
+          readOnly
+          aria-readonly="true"
+          placeholder="URL gerada automaticamente pelo Supabase"
+          style={{ background: '#f8fafc', color: '#475569', cursor: 'not-allowed' }}
         />
+        <span className="input-helper-text">URL travada e gerada automaticamente pela Edge Function do Supabase.</span>
       </div>
       <div className="form-item-group">
         <label>Token de Validação</label>

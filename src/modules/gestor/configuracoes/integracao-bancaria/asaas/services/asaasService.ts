@@ -59,13 +59,10 @@ const normalizeEnvironment = (
     ? rawValue as Partial<AsaasEnvironmentConfig>
     : {};
 
-  const webhookUrl = typeof candidate.webhookUrl === 'string' ? candidate.webhookUrl.trim() : '';
-  const legacyPlaceholderUrl = webhookUrl.includes('api.contabil.com/webhooks/asaas');
-
   return {
     apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : '',
     apiKeyConfigured: Boolean(candidate.apiKeyConfigured || candidate.apiKey),
-    webhookUrl: webhookUrl && !legacyPlaceholderUrl ? webhookUrl : fallback.webhookUrl,
+    webhookUrl: fallback.webhookUrl,
     webhookToken: typeof candidate.webhookToken === 'string' ? candidate.webhookToken : '',
     webhookTokenConfigured: Boolean(candidate.webhookTokenConfigured || candidate.webhookToken),
     emailNotificacao: typeof candidate.emailNotificacao === 'boolean' ? candidate.emailNotificacao : fallback.emailNotificacao,
@@ -96,8 +93,14 @@ const normalizeAsaasConfig = (rawValue: unknown): AsaasIntegrationConfig => {
 const toSecurePayload = (config: AsaasIntegrationConfig) => ({
   activeEnvironment: config.activeEnvironment,
   environments: {
-    producao: config.environments.producao,
-    homologacao: config.environments.homologacao,
+    producao: {
+      ...config.environments.producao,
+      webhookUrl: getAsaasWebhookUrl('producao'),
+    },
+    homologacao: {
+      ...config.environments.homologacao,
+      webhookUrl: getAsaasWebhookUrl('homologacao'),
+    },
   },
 });
 
