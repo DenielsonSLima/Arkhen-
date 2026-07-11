@@ -46,6 +46,28 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
           queryClient.invalidateQueries({ queryKey: configuracoesKeys.xmlModelos() });
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'configuracoes_contas_bancarias' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.contasBancarias() });
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.contasBancariasResumo() });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'configuracoes_contadores' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.contadores() });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'configuracoes_eventos_logs' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.logsEventos() });
+        },
+      )
       .subscribe();
 
     return () => {

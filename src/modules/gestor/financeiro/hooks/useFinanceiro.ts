@@ -1,36 +1,79 @@
-import { useState, useEffect, useMemo } from 'react';
-import { financeiroService } from '../services/financeiroService';
-import type { ContratoFinanceiro, CobrancaFinanceira, DashboardStats } from '../services/financeiroService';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { ContratoFinanceiro, CobrancaFinanceira, DashboardStats, LancamentoFinanceiro } from '../services/financeiroService';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import {
+  useCancelBoletoFinanceiroMutation,
+  useCancelCobrancaFinanceiraMutation,
+  useCobrancasFinanceirasQuery,
+  useConfirmarRecebimentoFinanceiroMutation,
+  useContratosFinanceirosQuery,
+  useCreateCobrancaFinanceiraMutation,
+  useDeleteContratoFinanceiroMutation,
+  useEmitirNfseFinanceiraMutation,
+  useFinanceiroDashboardQuery,
+  useLancamentosFinanceirosQuery,
+  useSaveLancamentoFinanceiroMutation,
+  useSaveContratoFinanceiroMutation,
+} from '../queries/useFinanceiroQueries';
+
+const emptyStats: DashboardStats = {
+  totalFaturado: 0,
+  totalRecebido: 0,
+  totalPendente: 0,
+  taxaInadimplencia: 0,
+  patrimonioLiquido: 0,
+  saldoDisponivel: 0,
+  contasReceber: 0,
+  contasPagar: 0,
+  lucroMes: 0,
+  receitasRecebidas: 0,
+  despesasPagas: 0,
+  desempenho: [],
+  contas: [],
+  receitasPorParceiro: [],
+  despesasPorCategoria: [],
+};
+const emptyContratos: ContratoFinanceiro[] = [];
+const emptyCobrancas: CobrancaFinanceira[] = [];
+const emptyLancamentos: LancamentoFinanceiro[] = [];
+const emptyCompanies: Company[] = [];
 
 export const useFinanceiro = () => {
-  // Data States
-  const [contratos, setContratos] = useState<ContratoFinanceiro[]>([]);
-  const [cobranças, setCobranças] = useState<CobrancaFinanceira[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalFaturado: 0,
-    totalRecebido: 0,
-    totalPendente: 0,
-    taxaInadimplencia: 0
+  const contratosQuery = useContratosFinanceirosQuery();
+  const cobrancasQuery = useCobrancasFinanceirasQuery();
+  const lancamentosQuery = useLancamentosFinanceirosQuery();
+  const statsQuery = useFinanceiroDashboardQuery(6);
+  const companiesQuery = useQuery({
+    queryKey: ['gestao-empresarial', 'companies'],
+    queryFn: gestaoEmpresarialService.getCompanies,
   });
 
-  // UI / Navigation States
+  const saveContratoMutation = useSaveContratoFinanceiroMutation();
+  const deleteContratoMutation = useDeleteContratoFinanceiroMutation();
+  const cancelCobrancaMutation = useCancelCobrancaFinanceiraMutation();
+  const cancelBoletoMutation = useCancelBoletoFinanceiroMutation();
+  const emitirNfseMutation = useEmitirNfseFinanceiraMutation();
+  const confirmarRecebimentoMutation = useConfirmarRecebimentoFinanceiroMutation();
+  const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
+  const saveLancamentoMutation = useSaveLancamentoFinanceiroMutation();
+
+  const contratos = contratosQuery.data || emptyContratos;
+  const cobranças = cobrancasQuery.data || emptyCobrancas;
+  const lancamentos = lancamentosQuery.data || emptyLancamentos;
+  const companies = (companiesQuery.data || emptyCompanies) as Company[];
+  const stats = statsQuery.data || emptyStats;
+
   const [activeTab, setActiveTab] = useState<'contratos' | 'cobranças'>('cobranças');
-  const [isLoading, setIsLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [subTab, setSubTab] = useState<'atual' | 'pendentes' | 'atraso' | 'todos'>('todos');
-
-  // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Pendente' | 'Pago' | 'Vencido' | 'Cancelado'>('Todos');
-
-  // Modal / Confirm States
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddCobrancaModal, setShowAddCobrancaModal] = useState(false);
   const [editingContract, setEditingContract] = useState<ContratoFinanceiro | null>(null);
@@ -38,169 +81,138 @@ export const useFinanceiro = () => {
   const [boletoToCancel, setBoletoToCancel] = useState<CobrancaFinanceira | null>(null);
   const [contractToDelete, setContractToDelete] = useState<ContratoFinanceiro | null>(null);
 
-  // Initialize and load data
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      const [cList, bList, comps, dashboardStats] = await Promise.all([
-        financeiroService.getContratos(),
-        financeiroService.getCobranças(),
-        gestaoEmpresarialService.getCompanies(),
-        financeiroService.getStats()
-      ]);
-      setContratos(cList);
-      setCobranças(bList);
-      setCompanies(comps);
-      setStats(dashboardStats);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg('Falha ao carregar dados do módulo financeiro.');
-    } finally {
-      setIsLoading(false);
-    }
+  const setTransientSuccess = (message: string, timeout = 3000) => {
+    setSuccessMsg(message);
+    setTimeout(() => setSuccessMsg(null), timeout);
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const setTransientError = (message: string) => {
+    setErrorMsg(message);
+    setTimeout(() => setErrorMsg(null), 4000);
+  };
 
-  // Map to easily lookup company details
   const companyMap = useMemo(() => {
     const map = new Map<string, { nome: string; cnpj: string }>();
-    companies.forEach(c => {
-      map.set(c.id, { nome: c.nome, cnpj: c.cnpj });
+    companies.forEach((company) => {
+      map.set(company.id, { nome: company.nome, cnpj: company.cnpj });
     });
     return map;
   }, [companies]);
 
-  // Filters and Computes
   const filteredContratos = useMemo(() => {
-    return contratos.filter(c => {
-      const details = companyMap.get(c.clienteEmpresaId);
+    return contratos.filter((contrato) => {
+      const details = companyMap.get(contrato.clienteEmpresaId);
       const cName = details?.nome.toLowerCase() || '';
       const cCnpj = details?.cnpj.replace(/\D/g, '') || '';
       const q = searchQuery.toLowerCase();
       const qClean = q.replace(/\D/g, '');
-
-      const matchesSearch = cName.includes(q) || cCnpj.includes(qClean);
-      return matchesSearch;
+      return cName.includes(q) || cCnpj.includes(qClean);
     });
   }, [contratos, searchQuery, companyMap]);
 
   const filteredCobranças = useMemo(() => {
-    return cobranças.filter(c => {
-      const details = companyMap.get(c.clienteEmpresaId);
+    return cobranças.filter((cobranca) => {
+      const details = companyMap.get(cobranca.clienteEmpresaId);
       const cName = details?.nome.toLowerCase() || '';
       const cCnpj = details?.cnpj.replace(/\D/g, '') || '';
       const q = searchQuery.toLowerCase();
       const qClean = q.replace(/\D/g, '');
-
-      // Search Query Filter
       const matchesSearch = cName.includes(q) || cCnpj.includes(qClean);
+      const matchesStatus = statusFilter === 'Todos' || cobranca.status === statusFilter;
+      const matchesStart = !startDate || cobranca.dataVencimento >= startDate;
+      const matchesEnd = !endDate || cobranca.dataVencimento <= endDate;
 
-      // Status Filter
-      const matchesStatus = statusFilter === 'Todos' || c.status === statusFilter;
-
-      // Date Range Filter (based on dataVencimento)
-      let matchesDates = true;
-      if (startDate) {
-        matchesDates = matchesDates && c.dataVencimento >= startDate;
-      }
-      if (endDate) {
-        matchesDates = matchesDates && c.dataVencimento <= endDate;
-      }
-
-      // Sub-tab Filter
       let matchesSubTab = true;
       if (subTab === 'atual') {
         const today = new Date();
         const yyyyMm = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
-        matchesSubTab = c.dataVencimento.startsWith(yyyyMm);
+        matchesSubTab = cobranca.dataVencimento.startsWith(yyyyMm);
       } else if (subTab === 'pendentes') {
-        matchesSubTab = c.status === 'Pendente';
+        matchesSubTab = cobranca.status === 'Pendente';
       } else if (subTab === 'atraso') {
-        matchesSubTab = c.status === 'Vencido';
+        matchesSubTab = cobranca.status === 'Vencido';
       }
 
-      return matchesSearch && matchesStatus && matchesDates && matchesSubTab;
+      return matchesSearch && matchesStatus && matchesStart && matchesEnd && matchesSubTab;
     });
   }, [cobranças, searchQuery, statusFilter, startDate, endDate, subTab, companyMap]);
 
-  // Operations
+  const contasPagar = useMemo(
+    () => lancamentos.filter((item) => item.tipo === 'despesa' && item.origem === 'conta_pagar'),
+    [lancamentos],
+  );
+
+  const transferencias = useMemo(
+    () => lancamentos.filter((item) => item.origem === 'transferencia'),
+    [lancamentos],
+  );
+
+  const outrosCreditos = useMemo(
+    () => lancamentos.filter((item) => item.tipo === 'receita' && item.origem === 'outro_credito'),
+    [lancamentos],
+  );
+
+  const outrosDebitos = useMemo(
+    () => lancamentos.filter((item) => item.tipo === 'despesa' && item.origem === 'outro_debito'),
+    [lancamentos],
+  );
+
   const handleSaveContract = async (contractData: Omit<ContratoFinanceiro, 'id' | 'empresaId' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
     try {
-      await financeiroService.saveContrato(contractData);
-      setSuccessMsg(contractData.id ? 'Contrato atualizado com sucesso!' : 'Contrato e faturamento criados com sucesso!');
+      await saveContratoMutation.mutateAsync(contractData);
+      setTransientSuccess(contractData.id ? 'Contrato atualizado com sucesso!' : 'Contrato e faturamento criados com sucesso!');
       setShowAddModal(false);
       setEditingContract(null);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao salvar contrato.');
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao salvar contrato.');
     }
   };
 
   const handleDeleteContract = async (id: string) => {
     try {
-      await financeiroService.deleteContrato(id);
-      setSuccessMsg('Contrato excluído com sucesso!');
+      await deleteContratoMutation.mutateAsync(id);
+      setTransientSuccess('Contrato excluído com sucesso!');
       setContractToDelete(null);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao excluir contrato.');
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Erro ao excluir contrato.');
     }
   };
 
   const handleCancelCobranca = async (id: string) => {
     try {
-      await financeiroService.cancelarCobrança(id);
-      setSuccessMsg('Cobrança cancelada com sucesso no Asaas e no sistema.');
+      await cancelCobrancaMutation.mutateAsync(id);
+      setTransientSuccess('Cobrança cancelada com sucesso no Asaas e no sistema.');
       setCobrancaToCancel(null);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao cancelar cobrança.');
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar cobrança.');
     }
   };
 
   const handleCancelBoleto = async (id: string) => {
     try {
-      await financeiroService.cancelarBoleto(id);
-      setSuccessMsg('Boleto cancelado no Asaas. Link de faturamento removido.');
+      await cancelBoletoMutation.mutateAsync(id);
+      setTransientSuccess('Boleto cancelado no Asaas. Link de faturamento removido.');
       setBoletoToCancel(null);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao cancelar boleto.');
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar boleto.');
     }
   };
 
   const handleEmitirNfseManual = async (id: string) => {
     try {
-      const nfseId = await financeiroService.emitirNfseManual(id);
-      setSuccessMsg(`Nota Fiscal de Serviço (NFS-e) emitida com sucesso! ID: ${nfseId}`);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao emitir NFS-e.');
-      setTimeout(() => setErrorMsg(null), 4000);
+      const nfseId = await emitirNfseMutation.mutateAsync(id);
+      setTransientSuccess(`Nota Fiscal de Serviço (NFS-e) emitida com sucesso! ID: ${nfseId}`, 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao emitir NFS-e.');
     }
   };
 
   const handleSimularRecebimento = async (id: string) => {
     try {
-      await financeiroService.simularRecebimento(id);
-      setSuccessMsg('Pagamento confirmado via simulação de webhook.');
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao liquidar cobrança.');
-      setTimeout(() => setErrorMsg(null), 4000);
+      await confirmarRecebimentoMutation.mutateAsync(id);
+      setTransientSuccess('Pagamento confirmado via webhook.');
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao liquidar cobrança.');
     }
   };
 
@@ -212,38 +224,48 @@ export const useFinanceiro = () => {
     meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
   }) => {
     try {
-      await financeiroService.gerarCobrançaManual(dados);
-      setSuccessMsg('Cobrança avulsa gerada com sucesso no Asaas!');
+      await createCobrancaMutation.mutateAsync(dados);
+      setTransientSuccess('Cobrança avulsa gerada com sucesso no Asaas!');
       setShowAddCobrancaModal(false);
-      await loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao gerar cobrança avulsa.');
-      setTimeout(() => setErrorMsg(null), 4000);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao gerar cobrança avulsa.');
+    }
+  };
+
+  const handleCreateLancamento = async (dados: Pick<
+    LancamentoFinanceiro,
+    'tipo' | 'origem' | 'descricao' | 'categoria' | 'valor' | 'dataCompetencia' | 'status'
+  > & Partial<Pick<LancamentoFinanceiro, 'contaBancariaId' | 'clienteEmpresaId' | 'dataPagamento' | 'referenciaId' | 'metadados'>>) => {
+    try {
+      await saveLancamentoMutation.mutateAsync(dados);
+      setTransientSuccess('Lançamento financeiro registrado com sucesso.');
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao registrar lançamento financeiro.');
     }
   };
 
   return {
     contratos,
     cobranças,
+    lancamentos,
+    contasPagar,
+    transferencias,
+    outrosCreditos,
+    outrosDebitos,
     filteredContratos,
     filteredCobranças,
     companies,
     stats,
     companyMap,
-
-    // UI States
     activeTab,
     setActiveTab,
-    isLoading,
+    isLoading: contratosQuery.isLoading || cobrancasQuery.isLoading || lancamentosQuery.isLoading || statsQuery.isLoading || companiesQuery.isLoading,
     successMsg,
     errorMsg,
     viewMode,
     setViewMode,
     subTab,
     setSubTab,
-
-    // Filters
     searchQuery,
     setSearchQuery,
     startDate,
@@ -252,8 +274,6 @@ export const useFinanceiro = () => {
     setEndDate,
     statusFilter,
     setStatusFilter,
-
-    // Modais
     showAddModal,
     setShowAddModal,
     showAddCobrancaModal,
@@ -266,8 +286,6 @@ export const useFinanceiro = () => {
     setBoletoToCancel,
     contractToDelete,
     setContractToDelete,
-
-    // Actions
     handleSaveContract,
     handleDeleteContract,
     handleCancelCobranca,
@@ -275,5 +293,6 @@ export const useFinanceiro = () => {
     handleEmitirNfseManual,
     handleSimularRecebimento,
     handleCreateCobranca,
+    handleCreateLancamento,
   };
 };

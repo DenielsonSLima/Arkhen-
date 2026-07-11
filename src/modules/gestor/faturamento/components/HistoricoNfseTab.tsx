@@ -1,40 +1,33 @@
 
 import { useState } from 'react';
 import { Eye, Download, XCircle, Play, Edit3, Trash2, RotateCcw } from 'lucide-react';
+import { useFaturamentoNfseQuery } from '../queries/useFaturamentoQueries';
+import type { FaturamentoNfseStatus } from '../services/faturamentoService';
 
-type NfseStatus = 'A Emitir' | 'Emitida' | 'Cancelada' | 'Rejeitada' | 'Rascunho';
 type TabType = 'A Emitir' | 'Emitidas' | 'Canceladas' | 'Rejeitadas' | 'Todas';
-
-interface Nfse {
-  id: string;
-  numero: string;
-  parceiro: string;
-  emissao: string;
-  valor: string;
-  status: NfseStatus;
-  tipo: 'Automática' | 'Manual';
-}
-
-const mockNfse: Nfse[] = [
-  { id: '1', numero: '#2026', parceiro: 'Tech Solutions SA', emissao: '01/07/2026', valor: 'R$ 1.500,00', status: 'Emitida', tipo: 'Automática' },
-  { id: '2', numero: '-', parceiro: 'Agência XYZ', emissao: '10/07/2026', valor: 'R$ 3.200,00', status: 'A Emitir', tipo: 'Automática' },
-  { id: '3', numero: '-', parceiro: 'Consultoria ABC', emissao: '15/07/2026', valor: 'R$ 800,00', status: 'Rascunho', tipo: 'Manual' },
-  { id: '4', numero: '#2025', parceiro: 'Marketing Digital', emissao: '28/06/2026', valor: 'R$ 2.100,00', status: 'Rejeitada', tipo: 'Automática' },
-  { id: '5', numero: '#2024', parceiro: 'Locação Imóveis', emissao: '25/06/2026', valor: 'R$ 4.500,00', status: 'Cancelada', tipo: 'Manual' },
-];
 
 export const HistoricoNfseTab = () => {
   const [activeTab, setActiveTab] = useState<TabType>('Todas');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todas');
+  const [origemFilter, setOrigemFilter] = useState('Todas');
+  const selectedStatus = statusFilter === 'Todos' ? 'Todas' : statusFilter;
+  const queryStatus = activeTab === 'Emitidas'
+    ? 'Emitida'
+    : activeTab === 'Canceladas'
+      ? 'Cancelada'
+      : activeTab === 'Rejeitadas'
+        ? 'Rejeitada'
+        : activeTab === 'A Emitir'
+          ? 'A Emitir'
+          : selectedStatus;
+  const nfseQuery = useFaturamentoNfseQuery({ status: queryStatus, search });
+  const nfse = nfseQuery.data || [];
+  const filteredNfse = origemFilter === 'Todas' ? nfse : nfse.filter((item) => item.tipo === origemFilter);
 
-  const filteredNfse = mockNfse.filter((nfse) => {
-    if (activeTab === 'A Emitir') return nfse.status === 'A Emitir' || nfse.status === 'Rascunho';
-    if (activeTab === 'Emitidas') return nfse.status === 'Emitida';
-    if (activeTab === 'Canceladas') return nfse.status === 'Cancelada';
-    if (activeTab === 'Rejeitadas') return nfse.status === 'Rejeitada';
-    return true; // Todas
-  });
+  const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const getStatusStyle = (status: NfseStatus) => {
+  const getStatusStyle = (status: FaturamentoNfseStatus) => {
     switch (status) {
       case 'Emitida': return { bg: '#ecfdf5', color: '#10b981' };
       case 'Cancelada': return { bg: '#fef2f2', color: '#ef4444' };
@@ -74,12 +67,12 @@ export const HistoricoNfseTab = () => {
       <div className="faturamento-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}>
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '200px' }}>
             <label>Buscar</label>
-            <input type="text" placeholder="Número, parceiro..." />
+            <input type="text" placeholder="Número, parceiro..." value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
           <div className="faturamento-form-group" style={{ width: '150px' }}>
             <label>Status</label>
-            <select>
-              <option>Todos</option>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} disabled={activeTab !== 'Todas'}>
+              <option value="Todas">Todos</option>
               <option>A Emitir</option>
               <option>Rascunho</option>
               <option>Emitida</option>
@@ -89,14 +82,14 @@ export const HistoricoNfseTab = () => {
           </div>
           <div className="faturamento-form-group" style={{ width: '150px' }}>
             <label>Origem</label>
-            <select>
+            <select value={origemFilter} onChange={(event) => setOrigemFilter(event.target.value)}>
               <option>Todas</option>
               <option>Automática</option>
               <option>Manual</option>
             </select>
           </div>
-          <button className="faturamento-btn-primary">
-            Filtrar
+          <button className="faturamento-btn-primary" disabled={nfseQuery.isFetching}>
+            {nfseQuery.isFetching ? 'Filtrando...' : 'Filtrar'}
           </button>
       </div>
 
@@ -127,7 +120,7 @@ export const HistoricoNfseTab = () => {
                         {nfse.tipo}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{nfse.valor}</td>
+                    <td style={{ fontWeight: 500 }}>{formatCurrency(nfse.valor)}</td>
                     <td>
                       <span style={{ 
                         padding: '4px 8px', 
@@ -176,6 +169,13 @@ export const HistoricoNfseTab = () => {
                   </tr>
                 )
               })}
+              {!nfseQuery.isLoading && filteredNfse.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                    Nenhuma NFS-e encontrada.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

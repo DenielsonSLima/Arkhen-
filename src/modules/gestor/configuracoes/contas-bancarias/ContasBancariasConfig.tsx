@@ -7,6 +7,7 @@ import './ContasBancariasConfig.css';
 export const ContasBancariasConfig: React.FC = () => {
   const {
     contas,
+    resumoContas,
     isLoadingContas,
     isSavingConta,
     successMsgConta,
@@ -64,9 +65,6 @@ export const ContasBancariasConfig: React.FC = () => {
     currency: 'BRL',
   }).format(val);
 
-  const totalSaldoInicial = contas.reduce((acc, curr) => acc + curr.saldoInicial, 0);
-  const totalSaldoAtual = contas.reduce((acc, curr) => acc + curr.saldoAtual, 0);
-
   return (
     <div className="submodule-content-card">
       <div className="submodule-card-header flex-header">
@@ -89,15 +87,15 @@ export const ContasBancariasConfig: React.FC = () => {
       <div className="bancaria-summary-grid">
         <div className="bancaria-summary-card gold-border">
           <span className="summary-label">Saldo Inicial Acumulado</span>
-          <span className="summary-value gold-text">{formatCurrency(totalSaldoInicial)}</span>
+          <span className="summary-value gold-text">{formatCurrency(resumoContas.saldoInicial)}</span>
         </div>
         <div className="bancaria-summary-card">
           <span className="summary-label">Saldo Atual Disponível</span>
-          <span className="summary-value">{formatCurrency(totalSaldoAtual)}</span>
+          <span className="summary-value">{formatCurrency(resumoContas.saldoAtual)}</span>
         </div>
         <div className="bancaria-summary-card">
           <span className="summary-label">Total de Contas</span>
-          <span className="summary-value">{contas.length}</span>
+          <span className="summary-value">{resumoContas.totalContas}</span>
         </div>
       </div>
 

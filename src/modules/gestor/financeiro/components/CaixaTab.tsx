@@ -17,68 +17,14 @@ type CaixaTabProps = {
   onFormatCurrency: (value: number) => string;
 };
 
-const getMockData = (period: string) => {
-  const base = [
-    { name: 'Jan', receita: 45000, despesas: 32000, lucro: 13000 },
-    { name: 'Fev', receita: 48000, despesas: 31500, lucro: 16500 },
-    { name: 'Mar', receita: 52000, despesas: 35000, lucro: 17000 },
-    { name: 'Abr', receita: 49000, despesas: 34000, lucro: 15000 },
-    { name: 'Mai', receita: 56000, despesas: 38000, lucro: 18000 },
-    { name: 'Jun', receita: 61000, despesas: 41000, lucro: 20000 },
-    { name: 'Jul', receita: 58000, despesas: 39000, lucro: 19000 },
-    { name: 'Ago', receita: 63000, despesas: 40000, lucro: 23000 },
-    { name: 'Set', receita: 65000, despesas: 42000, lucro: 23000 },
-    { name: 'Out', receita: 68000, despesas: 45000, lucro: 23000 },
-    { name: 'Nov', receita: 72000, despesas: 48000, lucro: 24000 },
-    { name: 'Dez', receita: 80000, despesas: 50000, lucro: 30000 },
-  ];
-
-  if (period === '1') return [base[base.length - 1]];
-  if (period === '3') return base.slice(base.length - 3);
-  if (period === '6') return base.slice(base.length - 6);
-  return base;
-};
-
-const mockContas = [
-  { id: 1, banco: 'Banco do Brasil', agencia: '0001', conta: '12345-6', saldo: 145000, color: '#fbbf24' },
-  { id: 2, banco: 'Itaú Unibanco', agencia: '0001', conta: '98765-4', saldo: 32500, color: '#f97316' },
-  { id: 3, banco: 'Caixa Econômica', agencia: '1044', conta: '44556-7', saldo: 12400, color: '#3b82f6' },
-];
-
-const mockExtrato = [
-  { id: 1, data: '2026-07-08', descricao: 'Honorários (TechCorp)', tipo: 'entrada', valor: 15000 },
-  { id: 2, data: '2026-07-07', descricao: 'Pagamento Internet', tipo: 'saida', valor: 250 },
-  { id: 3, data: '2026-07-06', descricao: 'Honorários (Loja A)', tipo: 'entrada', valor: 3500 },
-  { id: 4, data: '2026-07-05', descricao: 'Folha de Pagamento', tipo: 'saida', valor: 22000 },
-  { id: 5, data: '2026-07-04', descricao: 'Impostos (DAS)', tipo: 'saida', valor: 4500 },
-];
-
-
-const mockReceitasPorParceiro = [
-  { id: 1, nome: 'TechCorp', valor: 35000, percentual: 45.0 },
-  { id: 2, nome: 'Loja A', valor: 15000, percentual: 19.2 },
-  { id: 3, nome: 'Mercado B', valor: 12000, percentual: 15.4 },
-  { id: 4, nome: 'Padaria C', valor: 9000, percentual: 11.5 },
-  { id: 5, nome: 'Outros', valor: 7000, percentual: 8.9 },
-];
-
-const mockCategoriasDespesas = [
-  { id: 1, nome: 'Folha de Pagamento', valor: 22000, percentual: 63.7 },
-  { id: 2, nome: 'Impostos', valor: 4500, percentual: 13.0 },
-  { id: 3, nome: 'Infraestrutura (Aluguel, Luz, Internet)', valor: 3500, percentual: 10.1 },
-  { id: 4, nome: 'Software e Sistemas', valor: 2500, percentual: 7.2 },
-  { id: 5, nome: 'Material de Escritório', valor: 1200, percentual: 3.5 },
-  { id: 6, nome: 'Marketing', valor: 800, percentual: 2.5 },
-];
-
 export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) => {
   const [periodo, setPeriodo] = useState('6');
-  const chartData = getMockData(periodo);
-  
-  const totalSaldoBancos = mockContas.reduce((acc, conta) => acc + conta.saldo, 0);
-  const lucroMock = 30000;
-  const despesasMock = 34500;
-  const aPagarMock = 12500;
+  const chartData = stats.desempenho.slice(-Number(periodo));
+  const contas = stats.contas;
+  const receitasPorParceiro = stats.receitasPorParceiro;
+  const despesasPorCategoria = stats.despesasPorCategoria;
+  const entradasRecentes: { id: string; data: string; descricao: string; valor: number }[] = [];
+  const saidasRecentes: { id: string; data: string; descricao: string; valor: number }[] = [];
 
   const KpiCard = ({ title, value, icon, variant = 'white' }: any) => {
     const isColored = variant !== 'white';
@@ -111,6 +57,30 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         </div>
       </div>
     );
+  };
+
+  const renderBreakdown = (
+    items: { id: string | null; nome: string; valor: number; percentual: number }[],
+    color: string,
+  ) => {
+    if (items.length === 0) {
+      return <div className="financeiro-empty-state">Nenhum dado no período.</div>;
+    }
+
+    return items.map((cat, i) => (
+      <div key={`${cat.id || cat.nome}-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{i + 1}. {cat.nome}</span>
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ display: 'block', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(cat.valor)}</span>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{cat.percentual}%</span>
+          </div>
+        </div>
+        <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.min(cat.percentual, 100)}%`, height: '100%', background: color, borderRadius: '99px' }} />
+        </div>
+      </div>
+    ));
   };
 
   return (
@@ -149,14 +119,14 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
 
       {/* KPIs Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        <KpiCard title="Patrimônio Líquido" value={onFormatCurrency(totalSaldoBancos + stats.totalRecebido - despesasMock)} icon={<Wallet size={24} />} variant="purple" />
-        <KpiCard title="Saldo Disponível" value={onFormatCurrency(totalSaldoBancos)} icon={<Building2 size={24} />} variant="green" />
-        <KpiCard title="Contas a Receber" value={onFormatCurrency(stats.totalPendente)} icon={<Receipt size={24} color="#f59e0b" />} />
-        <KpiCard title="Contas a Pagar" value={onFormatCurrency(aPagarMock)} icon={<CreditCard size={24} color="#ef4444" />} />
+        <KpiCard title="Patrimônio Líquido" value={onFormatCurrency(stats.patrimonioLiquido)} icon={<Wallet size={24} />} variant="purple" />
+        <KpiCard title="Saldo Disponível" value={onFormatCurrency(stats.saldoDisponivel)} icon={<Building2 size={24} />} variant="green" />
+        <KpiCard title="Contas a Receber" value={onFormatCurrency(stats.contasReceber)} icon={<Receipt size={24} color="#f59e0b" />} />
+        <KpiCard title="Contas a Pagar" value={onFormatCurrency(stats.contasPagar)} icon={<CreditCard size={24} color="#ef4444" />} />
         
-        <KpiCard title="Lucro do Mês" value={onFormatCurrency(lucroMock)} icon={<TrendingUp size={24} color="#6366f1" />} />
-        <KpiCard title="Receitas (Recebidas)" value={onFormatCurrency(stats.totalRecebido)} icon={<ArrowUpCircle size={24} color="#10b981" />} />
-        <KpiCard title="Despesas (Pagas)" value={onFormatCurrency(despesasMock)} icon={<ArrowDownCircle size={24} color="#ef4444" />} />
+        <KpiCard title="Lucro do Mês" value={onFormatCurrency(stats.lucroMes)} icon={<TrendingUp size={24} color="#6366f1" />} />
+        <KpiCard title="Receitas (Recebidas)" value={onFormatCurrency(stats.receitasRecebidas)} icon={<ArrowUpCircle size={24} color="#10b981" />} />
+        <KpiCard title="Despesas (Pagas)" value={onFormatCurrency(stats.despesasPagas)} icon={<ArrowDownCircle size={24} color="#ef4444" />} />
         <KpiCard title="Inadimplência" value={`${stats.taxaInadimplencia.toFixed(1)}%`} icon={<AlertTriangle size={24} color="#f97316" />} />
       </div>
 
@@ -196,9 +166,10 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-              {mockContas.map(conta => (
+              {contas.length === 0 && <div className="financeiro-empty-state">Nenhuma conta cadastrada.</div>}
+              {contas.map(conta => (
                 <div key={conta.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.02)' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: conta.color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#c59235', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>
                     {conta.banco.substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -221,7 +192,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px dashed #cbd5e1' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Disponibilidade Total</span>
               <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#6366f1' }}>
-                {onFormatCurrency(totalSaldoBancos)}
+                {onFormatCurrency(stats.saldoDisponivel)}
               </span>
             </div>
           </div>
@@ -236,20 +207,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {mockReceitasPorParceiro.map((cat, i) => (
-                <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{i + 1}. {cat.nome}</span>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ display: 'block', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(cat.valor)}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{cat.percentual}%</span>
-                    </div>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                    <div style={{ width: `${cat.percentual}%`, height: '100%', background: '#10b981', borderRadius: '99px' }} />
-                  </div>
-                </div>
-              ))}
+              {renderBreakdown(receitasPorParceiro, '#10b981')}
             </div>
           </div>
         {/* Despesas por Categoria */}
@@ -260,20 +218,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {mockCategoriasDespesas.map((cat, i) => (
-                <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{i + 1}. {cat.nome}</span>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ display: 'block', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(cat.valor)}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{cat.percentual}%</span>
-                    </div>
-                  </div>
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
-                    <div style={{ width: `${cat.percentual}%`, height: '100%', background: '#ef4444', borderRadius: '99px' }} />
-                  </div>
-                </div>
-              ))}
+              {renderBreakdown(despesasPorCategoria, '#ef4444')}
             </div>
           </div>
       </div>
@@ -288,12 +233,13 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Total Período</span>
-                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(mockExtrato.filter(m => m.tipo === 'entrada').reduce((acc, m) => acc + m.valor, 0))}</strong>
+                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(stats.receitasRecebidas)}</strong>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {mockExtrato.filter(m => m.tipo === 'entrada').map((mov) => (
+              {entradasRecentes.length === 0 && <div className="financeiro-empty-state">Nenhuma entrada recente.</div>}
+              {entradasRecentes.map((mov) => (
                 <div key={mov.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ 
@@ -323,12 +269,13 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Total Período</span>
-                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(mockExtrato.filter(m => m.tipo === 'saida').reduce((acc, m) => acc + m.valor, 0))}</strong>
+                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(stats.despesasPagas)}</strong>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {mockExtrato.filter(m => m.tipo === 'saida').map((mov) => (
+              {saidasRecentes.length === 0 && <div className="financeiro-empty-state">Nenhuma saída recente.</div>}
+              {saidasRecentes.map((mov) => (
                 <div key={mov.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ 

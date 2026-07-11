@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import type { LancamentoFinanceiro } from '../services/financeiroService';
 import { OutrosDebitosCard } from './OutrosDebitosCard';
 import { OutrosDebitosFormModal } from './OutrosDebitosFormModal';
 
@@ -14,6 +15,11 @@ type OutrosDebitoItem = {
 };
 
 type OutrosDebitosTabProps = {
+  dados: LancamentoFinanceiro[];
+  onCreateLancamento: (dados: Pick<
+    LancamentoFinanceiro,
+    'tipo' | 'origem' | 'descricao' | 'categoria' | 'valor' | 'dataCompetencia' | 'status'
+  > & Partial<Pick<LancamentoFinanceiro, 'contaBancariaId' | 'clienteEmpresaId' | 'dataPagamento' | 'referenciaId' | 'metadados'>>) => Promise<void>;
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
 };
@@ -23,36 +29,26 @@ const SUBTABS: { id: FiltroStatus; label: string }[] = [
   { id: 'todos', label: 'Todos' },
 ];
 
-const OUTROS_DEBITOS_INICIAIS: OutrosDebitoItem[] = [
-  {
-    id: 'od-1',
-    data: '2026-07-02',
-    descricao: 'Taxa de manutenção bancária',
-    categoria: 'Taxas',
-    valor: 98,
-    status: 'Concluído',
-  },
-  {
-    id: 'od-2',
-    data: '2026-07-09',
-    descricao: 'Multa administrativa',
-    categoria: 'Multa',
-    valor: 56,
-    status: 'Concluído',
-  },
-];
-
 export const OutrosDebitosTab: React.FC<OutrosDebitosTabProps> = ({
+  dados,
+  onCreateLancamento,
   onFormatCurrency,
   onFormatDate,
 }) => {
-  const [itens, setItens] = useState<OutrosDebitoItem[]>(OUTROS_DEBITOS_INICIAIS);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<FiltroStatus>('mesAtual');
   
+  const itens = useMemo<OutrosDebitoItem[]>(() => dados.map((item) => ({
+    id: item.id,
+    data: item.dataCompetencia,
+    descricao: item.descricao,
+    categoria: item.categoria,
+    valor: item.valor,
+    status: item.status === 'Pendente' ? 'Pendente' : 'Concluído',
+  })), [dados]);
 
   const baseFiltrado = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -86,13 +82,17 @@ export const OutrosDebitosTab: React.FC<OutrosDebitosTabProps> = ({
     });
   }, [baseFiltrado, activeSubTab]);
 
-  const onSubmit = (item: Omit<OutrosDebitoItem, 'id' | 'status'> & { descricao: string }) => {
-    const novoItem: OutrosDebitoItem = {
-      ...item,
-      id: `od-${Date.now()}`,
-      status: 'Concluído',
-    };
-    setItens((prev) => [novoItem, ...prev]);
+  const onSubmit = async (item: Omit<OutrosDebitoItem, 'id' | 'status'> & { descricao: string }) => {
+    await onCreateLancamento({
+      tipo: 'despesa',
+      origem: 'outro_debito',
+      descricao: item.descricao,
+      categoria: item.categoria,
+      valor: item.valor,
+      dataCompetencia: item.data,
+      dataPagamento: item.data,
+      status: 'Pago',
+    });
     setShowForm(false);
   };
 

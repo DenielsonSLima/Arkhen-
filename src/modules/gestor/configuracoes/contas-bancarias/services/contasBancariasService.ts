@@ -1,3 +1,5 @@
+import { supabase } from '../../../../../lib/supabase';
+
 export interface ContaBancaria {
   id: string;
   banco: string;
@@ -8,85 +10,85 @@ export interface ContaBancaria {
   saldoAtual: number;
 }
 
-const LOCAL_STORAGE_ACCOUNTS_KEY = 'contabil_contas_bancarias';
+export interface ContasBancariasResumo {
+  saldoInicial: number;
+  saldoAtual: number;
+  totalContas: number;
+}
 
-const defaultAccounts: ContaBancaria[] = [
-  {
-    id: 'conta-1',
-    banco: 'Banco do Brasil',
-    agencia: '1234-5',
-    numeroConta: '98765-4',
-    tipoConta: 'corrente',
-    saldoInicial: 15000,
-    saldoAtual: 15000,
-  },
-  {
-    id: 'conta-2',
-    banco: 'Itaú Unibanco',
-    agencia: '0345',
-    numeroConta: '44332-1',
-    tipoConta: 'corrente',
-    saldoInicial: 85200.5,
-    saldoAtual: 85200.5,
-  },
-  {
-    id: 'conta-3',
-    banco: 'Asaas Conta Digital',
-    agencia: '0001',
-    numeroConta: '112233-4',
-    tipoConta: 'corrente',
-    saldoInicial: 3200,
-    saldoAtual: 3200,
-  },
-];
+interface ContaBancariaRow {
+  id: string;
+  banco: string;
+  agencia: string;
+  numero_conta: string;
+  tipo_conta: 'corrente' | 'poupanca';
+  saldo_inicial: number | string;
+  saldo_atual: number | string;
+}
+
+const fromRow = (row: ContaBancariaRow): ContaBancaria => ({
+  id: row.id,
+  banco: row.banco,
+  agencia: row.agencia,
+  numeroConta: row.numero_conta,
+  tipoConta: row.tipo_conta === 'poupanca' ? 'poupança' : 'corrente',
+  saldoInicial: Number(row.saldo_inicial || 0),
+  saldoAtual: Number(row.saldo_atual || 0),
+});
+
+const toPayload = (conta: Omit<ContaBancaria, 'saldoAtual'>) => ({
+  id: conta.id || '',
+  banco: conta.banco.trim(),
+  agencia: conta.agencia.trim(),
+  numero_conta: conta.numeroConta.trim(),
+  tipo_conta: conta.tipoConta === 'poupança' ? 'poupanca' : 'corrente',
+  saldo_inicial: conta.saldoInicial,
+});
+
+const emptyResumo: ContasBancariasResumo = {
+  saldoInicial: 0,
+  saldoAtual: 0,
+  totalContas: 0,
+};
 
 export const contasBancariasService = {
   async getContas(): Promise<ContaBancaria[]> {
-    const data = localStorage.getItem(LOCAL_STORAGE_ACCOUNTS_KEY);
-    if (data) {
-      try {
-        return JSON.parse(data);
-      } catch {
-        return defaultAccounts;
-      }
-    }
-    localStorage.setItem(LOCAL_STORAGE_ACCOUNTS_KEY, JSON.stringify(defaultAccounts));
-    return defaultAccounts;
+    const { data, error } = await supabase
+      .from('configuracoes_contas_bancarias')
+      .select('id,banco,agencia,numero_conta,tipo_conta,saldo_inicial,saldo_atual')
+      .order('banco', { ascending: true });
+
+    if (error) throw new Error(`Erro ao carregar contas bancárias: ${error.message}`);
+    return ((data || []) as ContaBancariaRow[]).map(fromRow);
+  },
+
+  async getResumo(): Promise<ContasBancariasResumo> {
+    const { data, error } = await supabase.rpc('get_contas_bancarias_resumo');
+    if (error) throw new Error(`Erro ao carregar resumo bancário: ${error.message}`);
+
+    const resumo = (data || emptyResumo) as Partial<ContasBancariasResumo>;
+    return {
+      saldoInicial: Number(resumo.saldoInicial || 0),
+      saldoAtual: Number(resumo.saldoAtual || 0),
+      totalContas: Number(resumo.totalContas || 0),
+    };
   },
 
   async saveConta(conta: Omit<ContaBancaria, 'saldoAtual'>): Promise<ContaBancaria> {
-    const contas = await this.getContas();
-    const isNew = !conta.id;
-    let targetAccount: ContaBancaria;
+    const { data, error } = await supabase.rpc('salvar_conta_bancaria', {
+      p_payload: toPayload(conta),
+    });
 
-    if (isNew) {
-      targetAccount = {
-        ...conta,
-        id: `conta-${Date.now()}`,
-        saldoAtual: conta.saldoInicial,
-      };
-      contas.push(targetAccount);
-    } else {
-      const index = contas.findIndex((item) => item.id === conta.id);
-      if (index === -1) throw new Error('Conta não encontrada.');
-      const diff = conta.saldoInicial - contas[index].saldoInicial;
-      targetAccount = {
-        ...contas[index],
-        ...conta,
-        saldoAtual: contas[index].saldoAtual + diff,
-      };
-      contas[index] = targetAccount;
-    }
-
-    localStorage.setItem(LOCAL_STORAGE_ACCOUNTS_KEY, JSON.stringify(contas));
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    return targetAccount;
+    if (error) throw new Error(`Erro ao salvar conta bancária: ${error.message}`);
+    return fromRow(data as ContaBancariaRow);
   },
 
-  async deleteConta(id: string): Promise<boolean> {
-    const contas = await this.getContas();
-    localStorage.setItem(LOCAL_STORAGE_ACCOUNTS_KEY, JSON.stringify(contas.filter((item) => item.id !== id)));
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    return true;
+  async deleteConta(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('configuracoes_contas_bancarias')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(`Erro ao remover conta bancária: ${error.message}`);
   },
 };

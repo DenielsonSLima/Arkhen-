@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { X, ArrowRight, ArrowLeft, Check, FileText, DollarSign } from 'lucide-react';
+import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { useCreateCobrancaFinanceiraMutation } from '../../financeiro/queries/useFinanceiroQueries';
 
 interface ModalNovoLancamentoAvulsoProps {
   isOpen: boolean;
@@ -8,10 +11,49 @@ interface ModalNovoLancamentoAvulsoProps {
 }
 
 export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps> = ({ isOpen, onClose }) => {
+  const clientesQuery = useQuery({
+    queryKey: ['gestao-empresarial', 'companies'],
+    queryFn: gestaoEmpresarialService.getCompanies,
+    enabled: isOpen,
+  });
+  const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const [step, setStep] = useState(1);
   const [tipo, setTipo] = useState<'nfse' | 'cobranca' | 'ambos' | null>(null);
+  const [clienteEmpresaId, setClienteEmpresaId] = useState('');
+  const [valor, setValor] = useState('');
+  const [dataVencimento, setDataVencimento] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [meioPagamento, setMeioPagamento] = useState<'Pix' | 'Boleto' | 'Ambos'>('Ambos');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const parseCurrency = (value: string) => Number(value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+
+  const handleSubmit = async () => {
+    const parsedValor = parseCurrency(valor);
+    if (!tipo || !clienteEmpresaId || parsedValor <= 0 || !dataVencimento) {
+      setErrorMsg('Selecione o tipo, parceiro, valor e data.');
+      return;
+    }
+
+    setErrorMsg(null);
+    await createCobrancaMutation.mutateAsync({
+      clienteEmpresaId,
+      valor: parsedValor,
+      dataVencimento,
+      descricao: descricao.trim() || (tipo === 'nfse' ? 'NFS-e avulsa' : 'Cobrança avulsa'),
+      meioPagamento: tipo === 'nfse' ? 'Boleto' : meioPagamento,
+    });
+    setStep(1);
+    setTipo(null);
+    setClienteEmpresaId('');
+    setValor('');
+    setDataVencimento('');
+    setDescricao('');
+    setMeioPagamento('Ambos');
+    onClose();
+  };
 
   const modalContent = (
     <div style={{
@@ -100,20 +142,22 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Parceiro / Cliente</label>
-              <select>
+              <select value={clienteEmpresaId} onChange={(event) => setClienteEmpresaId(event.target.value)}>
                 <option value="">Selecione o parceiro...</option>
-                <option value="1">Tech Solutions SA</option>
+                {(clientesQuery.data || []).map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
+                ))}
               </select>
             </div>
             
             <div className="faturamento-form-group">
               <label>Valor (R$)</label>
-              <input type="text" placeholder="0,00" />
+              <input type="text" placeholder="0,00" value={valor} onChange={(event) => setValor(event.target.value)} />
             </div>
 
             <div className="faturamento-form-group">
               <label>Data</label>
-              <input type="date" />
+              <input type="date" value={dataVencimento} onChange={(event) => setDataVencimento(event.target.value)} />
             </div>
 
             {(tipo === 'nfse' || tipo === 'ambos') && (
@@ -126,7 +170,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
                 </div>
                 <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
                   <label>Anotações / Descrição do Serviço</label>
-                  <textarea rows={3} placeholder="Descreva o serviço para a NFS-e..."></textarea>
+                  <textarea rows={3} placeholder="Descreva o serviço para a NFS-e..." value={descricao} onChange={(event) => setDescricao(event.target.value)}></textarea>
                 </div>
               </>
             )}
@@ -134,15 +178,17 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
             {(tipo === 'cobranca' || tipo === 'ambos') && (
               <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
                 <label>Forma de Pagamento</label>
-                <select>
-                  <option>Boleto + Pix</option>
-                  <option>Apenas Pix</option>
-                  <option>Cartão de Crédito</option>
+                <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
+                  <option value="Ambos">Boleto + Pix</option>
+                  <option value="Pix">Apenas Pix</option>
+                  <option value="Boleto">Boleto</option>
                 </select>
               </div>
             )}
           </div>
         )}
+
+        {errorMsg && <div style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>{errorMsg}</div>}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
           {step > 1 ? (
@@ -165,13 +211,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
             </button>
           ) : (
             <button 
-              onClick={() => {
-                alert('Gerado com sucesso!');
-                onClose();
-              }}
+              onClick={() => void handleSubmit()}
+              disabled={createCobrancaMutation.isPending}
               className="faturamento-btn-primary"
             >
-              <Check size={16} /> Confirmar Geração
+              <Check size={16} /> {createCobrancaMutation.isPending ? 'Gerando...' : 'Confirmar Geração'}
             </button>
           )}
         </div>

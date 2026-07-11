@@ -7,6 +7,7 @@ import { HistoricoFinanceiroTab } from './components/HistoricoFinanceiroTab';
 import { ConfiguracoesTab } from './components/ConfiguracoesTab';
 import { ModalNovoLancamentoAvulso } from './components/ModalNovoLancamentoAvulso';
 import { Calendar, Repeat, Search, AlertCircle, Activity, Plus, Settings } from 'lucide-react';
+import { useFinanceiroRealtime } from '../financeiro/hooks/useFinanceiroRealtime';
 import './Faturamento.css';
 
 export type FaturamentoTab = 'dashboard' | 'recorrencias' | 'historico-nfse' | 'inadimplencia' | 'historico-financeiro' | 'configuracoes';
@@ -22,6 +23,7 @@ export const FaturamentoPage: React.FC<FaturamentoPageProps> = ({
   initialActiveTab = 'dashboard',
   onViewContextChange
 }) => {
+  useFinanceiroRealtime();
   const [activeTab, setActiveTab] = useState<FaturamentoTab>(initialActiveTab);
   const [isModalOpen, setIsModalOpen] = useState(false);
 

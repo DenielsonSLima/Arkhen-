@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import type { LancamentoFinanceiro } from '../services/financeiroService';
 import { OutrosCreditosCard } from './OutrosCreditosCard';
 import { OutrosCreditosFormModal } from './OutrosCreditosFormModal';
 
@@ -14,6 +15,11 @@ type OutrosCreditoItem = {
 };
 
 type OutrosCreditosTabProps = {
+  dados: LancamentoFinanceiro[];
+  onCreateLancamento: (dados: Pick<
+    LancamentoFinanceiro,
+    'tipo' | 'origem' | 'descricao' | 'categoria' | 'valor' | 'dataCompetencia' | 'status'
+  > & Partial<Pick<LancamentoFinanceiro, 'contaBancariaId' | 'clienteEmpresaId' | 'dataPagamento' | 'referenciaId' | 'metadados'>>) => Promise<void>;
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
 };
@@ -23,36 +29,26 @@ const SUBTABS: { id: FiltroStatus; label: string }[] = [
   { id: 'todos', label: 'Todos' },
 ];
 
-const OUTROS_CREDITOS_INICIAIS: OutrosCreditoItem[] = [
-  {
-    id: 'oc-1',
-    data: '2026-07-06',
-    descricao: 'Estorno de TED',
-    categoria: 'Ajuste',
-    valor: 420,
-    status: 'Concluído',
-  },
-  {
-    id: 'oc-2',
-    data: '2026-07-14',
-    descricao: 'Reembolso de despesa corporativa',
-    categoria: 'Reembolso',
-    valor: 315,
-    status: 'Concluído',
-  },
-];
-
 export const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({
+  dados,
+  onCreateLancamento,
   onFormatCurrency,
   onFormatDate,
 }) => {
-  const [itens, setItens] = useState<OutrosCreditoItem[]>(OUTROS_CREDITOS_INICIAIS);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<FiltroStatus>('mesAtual');
   
+  const itens = useMemo<OutrosCreditoItem[]>(() => dados.map((item) => ({
+    id: item.id,
+    data: item.dataCompetencia,
+    descricao: item.descricao,
+    categoria: item.categoria,
+    valor: item.valor,
+    status: item.status === 'Pendente' ? 'Pendente' : 'Concluído',
+  })), [dados]);
 
   const baseFiltrado = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -86,13 +82,17 @@ export const OutrosCreditosTab: React.FC<OutrosCreditosTabProps> = ({
     });
   }, [baseFiltrado, activeSubTab]);
 
-  const onSubmit = (item: Omit<OutrosCreditoItem, 'id' | 'status'> & { descricao: string }) => {
-    const novoItem: OutrosCreditoItem = {
-      ...item,
-      id: `oc-${Date.now()}`,
-      status: 'Concluído',
-    };
-    setItens((prev) => [novoItem, ...prev]);
+  const onSubmit = async (item: Omit<OutrosCreditoItem, 'id' | 'status'> & { descricao: string }) => {
+    await onCreateLancamento({
+      tipo: 'receita',
+      origem: 'outro_credito',
+      descricao: item.descricao,
+      categoria: item.categoria,
+      valor: item.valor,
+      dataCompetencia: item.data,
+      dataPagamento: item.data,
+      status: 'Pago',
+    });
     setShowForm(false);
   };
 

@@ -1,10 +1,10 @@
-// Serviço de simulação backend para o Módulo Financeiro
-// Simula comportamento de tabelas do Supabase, RLS e RPCs (cálculos e chamadas Asaas)
+import { supabase } from '../../../../lib/supabase';
 
 export interface ContratoFinanceiro {
   id: string;
-  empresaId: string; // Tenant (escritório contábil logado)
-  clienteEmpresaId: string; // Empresa cliente vinculada
+  empresaId: string;
+  clienteEmpresaId: string;
+  descricaoServico?: string;
   valorMensal: number;
   diaVencimento: number;
   emissaoAutomaticaNfse: boolean;
@@ -16,10 +16,14 @@ export interface ContratoFinanceiro {
 export interface CobrancaFinanceira {
   id: string;
   empresaId: string;
+  contratoId?: string;
   clienteEmpresaId: string;
+  descricao: string;
+  categoria: string;
   valor: number;
   dataVencimento: string;
   status: 'Pendente' | 'Pago' | 'Vencido' | 'Cancelado';
+  meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
   asaasCobrancaId?: string;
   asaasNfseId?: string;
   asaasBoletoUrl?: string;
@@ -29,356 +33,340 @@ export interface CobrancaFinanceira {
   updatedAt: string;
 }
 
+export interface LancamentoFinanceiro {
+  id: string;
+  empresaId: string;
+  contaBancariaId?: string;
+  clienteEmpresaId?: string;
+  tipo: 'receita' | 'despesa' | 'transferencia_entrada' | 'transferencia_saida';
+  origem: 'cobranca' | 'conta_pagar' | 'outro_credito' | 'outro_debito' | 'transferencia' | 'manual';
+  descricao: string;
+  categoria: string;
+  valor: number;
+  dataCompetencia: string;
+  dataPagamento?: string;
+  status: 'Pendente' | 'Pago' | 'Cancelado';
+  referenciaId?: string;
+  metadados: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FinanceiroChartPoint {
+  name: string;
+  receita: number;
+  despesas: number;
+  lucro: number;
+}
+
+export interface FinanceiroContaSaldo {
+  id: string;
+  banco: string;
+  agencia: string;
+  conta: string;
+  saldo: number;
+}
+
+export interface FinanceiroBreakdown {
+  id: string | null;
+  nome: string;
+  valor: number;
+  percentual: number;
+}
+
 export interface DashboardStats {
   totalFaturado: number;
   totalRecebido: number;
   totalPendente: number;
   taxaInadimplencia: number;
+  patrimonioLiquido: number;
+  saldoDisponivel: number;
+  contasReceber: number;
+  contasPagar: number;
+  lucroMes: number;
+  receitasRecebidas: number;
+  despesasPagas: number;
+  desempenho: FinanceiroChartPoint[];
+  contas: FinanceiroContaSaldo[];
+  receitasPorParceiro: FinanceiroBreakdown[];
+  despesasPorCategoria: FinanceiroBreakdown[];
 }
 
-const LOCAL_STORAGE_CONTRATOS_KEY = 'contabil_financeiro_contratos';
-const LOCAL_STORAGE_COBRANCAS_KEY = 'contabil_financeiro_cobrancas';
+interface ContratoRow {
+  id: string;
+  empresa_id: string;
+  cliente_empresa_id: string | null;
+  descricao_servico: string;
+  valor_mensal: number | string;
+  dia_vencimento: number;
+  emissao_automatica_nfse: boolean;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-const DEFAULT_CONTRATOS: ContratoFinanceiro[] = [
-  {
-    id: 'cont-1',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-1', // Tech Solutions Ltda
-    valorMensal: 1200.00,
-    diaVencimento: 10,
-    emissaoAutomaticaNfse: true,
-    ativo: true,
-    createdAt: new Date(2026, 4, 10).toISOString(),
-    updatedAt: new Date(2026, 4, 10).toISOString()
-  },
-  {
-    id: 'cont-2',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-2', // Outra empresa mockada
-    valorMensal: 850.00,
-    diaVencimento: 15,
-    emissaoAutomaticaNfse: false,
-    ativo: true,
-    createdAt: new Date(2026, 4, 12).toISOString(),
-    updatedAt: new Date(2026, 4, 12).toISOString()
-  }
-];
+interface CobrancaRow {
+  id: string;
+  empresa_id: string;
+  contrato_id: string | null;
+  cliente_empresa_id: string | null;
+  descricao: string;
+  categoria: string;
+  valor: number | string;
+  data_vencimento: string;
+  status: CobrancaFinanceira['status'];
+  meio_pagamento: CobrancaFinanceira['meioPagamento'];
+  asaas_cobranca_id: string | null;
+  asaas_nfse_id: string | null;
+  asaas_boleto_url: string | null;
+  data_pagamento: string | null;
+  data_cancelamento: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-const DEFAULT_COBRANCAS: CobrancaFinanceira[] = [
-  {
-    id: 'cob-1',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-1',
-    valor: 1200.00,
-    dataVencimento: '2026-05-10',
-    status: 'Pago',
-    asaasCobrancaId: 'pay_637281920192',
-    asaasNfseId: 'nfse_98127391238',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_637281920192',
-    dataPagamento: new Date(2026, 4, 9, 14, 30).toISOString(),
-    createdAt: new Date(2026, 4, 1).toISOString(),
-    updatedAt: new Date(2026, 4, 9).toISOString()
-  },
-  {
-    id: 'cob-2',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-1',
-    valor: 1200.00,
-    dataVencimento: '2026-06-10',
-    status: 'Pago',
-    asaasCobrancaId: 'pay_738192039122',
-    asaasNfseId: 'nfse_02910392012',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_738192039122',
-    dataPagamento: new Date(2026, 5, 10, 10, 15).toISOString(),
-    createdAt: new Date(2026, 5, 1).toISOString(),
-    updatedAt: new Date(2026, 5, 10).toISOString()
-  },
-  {
-    id: 'cob-3',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-1',
-    valor: 1200.00,
-    dataVencimento: '2026-07-10',
-    status: 'Pendente',
-    asaasCobrancaId: 'pay_839203918239',
-    asaasNfseId: 'nfse_73928172938',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_839203918239',
-    createdAt: new Date(2026, 6, 1).toISOString(),
-    updatedAt: new Date(2026, 6, 1).toISOString()
-  },
-  {
-    id: 'cob-4',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-2',
-    valor: 850.00,
-    dataVencimento: '2026-05-15',
-    status: 'Pago',
-    asaasCobrancaId: 'pay_123984719283',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_123984719283',
-    dataPagamento: new Date(2026, 4, 15, 16, 40).toISOString(),
-    createdAt: new Date(2026, 4, 1).toISOString(),
-    updatedAt: new Date(2026, 4, 15).toISOString()
-  },
-  {
-    id: 'cob-5',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-2',
-    valor: 850.00,
-    dataVencimento: '2026-06-15',
-    status: 'Vencido',
-    asaasCobrancaId: 'pay_928172839102',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_928172839102',
-    createdAt: new Date(2026, 5, 1).toISOString(),
-    updatedAt: new Date(2026, 5, 1).toISOString()
-  },
-  {
-    id: 'cob-6',
-    empresaId: 'office-1',
-    clienteEmpresaId: 'emp-2',
-    valor: 850.00,
-    dataVencimento: '2026-07-15',
-    status: 'Pendente',
-    asaasCobrancaId: 'pay_019283746562',
-    asaasBoletoUrl: 'https://asaas.com/b/pay_019283746562',
-    createdAt: new Date(2026, 6, 1).toISOString(),
-    updatedAt: new Date(2026, 6, 1).toISOString()
-  }
-];
+interface LancamentoRow {
+  id: string;
+  empresa_id: string;
+  conta_bancaria_id: string | null;
+  cliente_empresa_id: string | null;
+  tipo: LancamentoFinanceiro['tipo'];
+  origem: LancamentoFinanceiro['origem'];
+  descricao: string;
+  categoria: string;
+  valor: number | string;
+  data_competencia: string;
+  data_pagamento: string | null;
+  status: LancamentoFinanceiro['status'];
+  referencia_id: string | null;
+  metadados: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+type ContratoSaveInput = Omit<ContratoFinanceiro, 'id' | 'empresaId' | 'createdAt' | 'updatedAt'> & { id?: string; gerarCobranca?: boolean };
+type LancamentoSaveInput = Pick<
+  LancamentoFinanceiro,
+  'tipo' | 'origem' | 'descricao' | 'categoria' | 'valor' | 'dataCompetencia' | 'status'
+> & Partial<Pick<LancamentoFinanceiro, 'contaBancariaId' | 'clienteEmpresaId' | 'dataPagamento' | 'referenciaId' | 'metadados'>>;
+
+const emptyStats: DashboardStats = {
+  totalFaturado: 0,
+  totalRecebido: 0,
+  totalPendente: 0,
+  taxaInadimplencia: 0,
+  patrimonioLiquido: 0,
+  saldoDisponivel: 0,
+  contasReceber: 0,
+  contasPagar: 0,
+  lucroMes: 0,
+  receitasRecebidas: 0,
+  despesasPagas: 0,
+  desempenho: [],
+  contas: [],
+  receitasPorParceiro: [],
+  despesasPorCategoria: [],
+};
+
+const fromContratoRow = (row: ContratoRow): ContratoFinanceiro => ({
+  id: row.id,
+  empresaId: row.empresa_id,
+  clienteEmpresaId: row.cliente_empresa_id || '',
+  descricaoServico: row.descricao_servico,
+  valorMensal: Number(row.valor_mensal || 0),
+  diaVencimento: row.dia_vencimento,
+  emissaoAutomaticaNfse: row.emissao_automatica_nfse,
+  ativo: row.ativo,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
+  id: row.id,
+  empresaId: row.empresa_id,
+  contratoId: row.contrato_id || undefined,
+  clienteEmpresaId: row.cliente_empresa_id || '',
+  descricao: row.descricao,
+  categoria: row.categoria,
+  valor: Number(row.valor || 0),
+  dataVencimento: row.data_vencimento,
+  status: row.status,
+  meioPagamento: row.meio_pagamento,
+  asaasCobrancaId: row.asaas_cobranca_id || undefined,
+  asaasNfseId: row.asaas_nfse_id || undefined,
+  asaasBoletoUrl: row.asaas_boleto_url || undefined,
+  dataPagamento: row.data_pagamento || undefined,
+  dataCancelamento: row.data_cancelamento || undefined,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const fromLancamentoRow = (row: LancamentoRow): LancamentoFinanceiro => ({
+  id: row.id,
+  empresaId: row.empresa_id,
+  contaBancariaId: row.conta_bancaria_id || undefined,
+  clienteEmpresaId: row.cliente_empresa_id || undefined,
+  tipo: row.tipo,
+  origem: row.origem,
+  descricao: row.descricao,
+  categoria: row.categoria,
+  valor: Number(row.valor || 0),
+  dataCompetencia: row.data_competencia,
+  dataPagamento: row.data_pagamento || undefined,
+  status: row.status,
+  referenciaId: row.referencia_id || undefined,
+  metadados: row.metadados || {},
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const toContratoPayload = (contrato: ContratoSaveInput) => ({
+  id: contrato.id || '',
+  cliente_empresa_id: contrato.clienteEmpresaId || '',
+  descricao_servico: contrato.descricaoServico || 'Honorários contábeis',
+  valor_mensal: contrato.valorMensal,
+  dia_vencimento: contrato.diaVencimento,
+  emissao_automatica_nfse: contrato.emissaoAutomaticaNfse,
+  ativo: contrato.ativo,
+  gerar_cobranca: contrato.gerarCobranca ?? true,
+});
+
+const toLancamentoPayload = (lancamento: LancamentoSaveInput) => ({
+  conta_bancaria_id: lancamento.contaBancariaId || '',
+  cliente_empresa_id: lancamento.clienteEmpresaId || '',
+  tipo: lancamento.tipo,
+  origem: lancamento.origem,
+  descricao: lancamento.descricao,
+  categoria: lancamento.categoria,
+  valor: lancamento.valor,
+  data_competencia: lancamento.dataCompetencia,
+  data_pagamento: lancamento.dataPagamento || '',
+  status: lancamento.status,
+  referencia_id: lancamento.referenciaId || '',
+  metadados: lancamento.metadados || {},
+});
+
+const normalizeStats = (data: Partial<DashboardStats> | null): DashboardStats => ({
+  ...emptyStats,
+  ...(data || {}),
+  totalFaturado: Number(data?.totalFaturado || 0),
+  totalRecebido: Number(data?.totalRecebido || 0),
+  totalPendente: Number(data?.totalPendente || 0),
+  taxaInadimplencia: Number(data?.taxaInadimplencia || 0),
+  patrimonioLiquido: Number(data?.patrimonioLiquido || 0),
+  saldoDisponivel: Number(data?.saldoDisponivel || 0),
+  contasReceber: Number(data?.contasReceber || 0),
+  contasPagar: Number(data?.contasPagar || 0),
+  lucroMes: Number(data?.lucroMes || 0),
+  receitasRecebidas: Number(data?.receitasRecebidas || 0),
+  despesasPagas: Number(data?.despesasPagas || 0),
+  desempenho: data?.desempenho || [],
+  contas: data?.contas || [],
+  receitasPorParceiro: data?.receitasPorParceiro || [],
+  despesasPorCategoria: data?.despesasPorCategoria || [],
+});
 
 export const financeiroService = {
-  // MOCK TENANT ID (Simulando RLS)
-  getTenantId(): string {
-    return 'office-1';
-  },
-
   async getContratos(): Promise<ContratoFinanceiro[]> {
-    const data = localStorage.getItem(LOCAL_STORAGE_CONTRATOS_KEY);
-    if (data) {
-      try {
-        const parsed = JSON.parse(data) as ContratoFinanceiro[];
-        return parsed.filter(c => c.empresaId === this.getTenantId());
-      } catch {
-        return DEFAULT_CONTRATOS;
-      }
-    }
-    localStorage.setItem(LOCAL_STORAGE_CONTRATOS_KEY, JSON.stringify(DEFAULT_CONTRATOS));
-    return DEFAULT_CONTRATOS;
+    const { data, error } = await supabase
+      .from('financeiro_configuracoes')
+      .select('id,empresa_id,cliente_empresa_id,descricao_servico,valor_mensal,dia_vencimento,emissao_automatica_nfse,ativo,created_at,updated_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(`Erro ao carregar contratos financeiros: ${error.message}`);
+    return ((data || []) as ContratoRow[]).map(fromContratoRow);
   },
 
-  async saveContrato(contrato: Omit<ContratoFinanceiro, 'id' | 'empresaId' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<ContratoFinanceiro> {
-    const list = await this.getContratos();
-    const isNew = !contrato.id;
-    let target: ContratoFinanceiro;
+  async saveContrato(contrato: ContratoSaveInput): Promise<ContratoFinanceiro> {
+    const { data, error } = await supabase.rpc('salvar_contrato_financeiro', {
+      p_payload: toContratoPayload(contrato),
+    });
 
-    if (isNew) {
-      target = {
-        ...contrato,
-        id: `cont-${Date.now()}`,
-        empresaId: this.getTenantId(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      list.push(target);
-    } else {
-      const idx = list.findIndex(c => c.id === contrato.id);
-      if (idx === -1) throw new Error('Contrato não encontrado');
-      target = {
-        ...list[idx],
-        ...contrato,
-        updatedAt: new Date().toISOString()
-      };
-      list[idx] = target;
-    }
-
-    const allData = await this.getAllContratosRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_CONTRATOS_KEY, JSON.stringify([...otherTenants, ...list]));
-
-    // Se for um novo contrato, gera a primeira cobrança pendente para este mês
-    if (isNew) {
-      await this.gerarCobrançaParaContrato(target);
-    }
-
-    return target;
+    if (error) throw new Error(`Erro ao salvar contrato financeiro: ${error.message}`);
+    return fromContratoRow(data as ContratoRow);
   },
 
   async deleteContrato(id: string): Promise<void> {
-    const list = await this.getContratos();
-    const filtered = list.filter(c => c.id !== id);
-    const allData = await this.getAllContratosRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_CONTRATOS_KEY, JSON.stringify([...otherTenants, ...filtered]));
+    const { error } = await supabase
+      .from('financeiro_configuracoes')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error(`Erro ao excluir contrato financeiro: ${error.message}`);
   },
 
   async getCobranças(): Promise<CobrancaFinanceira[]> {
-    const data = localStorage.getItem(LOCAL_STORAGE_COBRANCAS_KEY);
-    if (data) {
-      try {
-        const parsed = JSON.parse(data) as CobrancaFinanceira[];
-        return parsed.filter(c => c.empresaId === this.getTenantId());
-      } catch {
-        return DEFAULT_COBRANCAS;
-      }
-    }
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify(DEFAULT_COBRANCAS));
-    return DEFAULT_COBRANCAS;
+    const { data, error } = await supabase
+      .from('financeiro_cobrancas')
+      .select('id,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,data_pagamento,data_cancelamento,created_at,updated_at')
+      .order('data_vencimento', { ascending: false });
+
+    if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
+    return ((data || []) as CobrancaRow[]).map(fromCobrancaRow);
   },
 
-  // Simula RPC: cancelar_cobranca_financeira
+  async getLancamentos(): Promise<LancamentoFinanceiro[]> {
+    const { data, error } = await supabase
+      .from('financeiro_lancamentos')
+      .select('id,empresa_id,conta_bancaria_id,cliente_empresa_id,tipo,origem,descricao,categoria,valor,data_competencia,data_pagamento,status,referencia_id,metadados,created_at,updated_at')
+      .order('data_competencia', { ascending: false });
+
+    if (error) throw new Error(`Erro ao carregar lançamentos financeiros: ${error.message}`);
+    return ((data || []) as LancamentoRow[]).map(fromLancamentoRow);
+  },
+
+  async salvarLancamento(lancamento: LancamentoSaveInput): Promise<LancamentoFinanceiro> {
+    const { data, error } = await supabase.rpc('salvar_lancamento_financeiro', {
+      p_payload: toLancamentoPayload(lancamento),
+    });
+
+    if (error) throw new Error(`Erro ao salvar lançamento financeiro: ${error.message}`);
+    return fromLancamentoRow(data as LancamentoRow);
+  },
+
   async cancelarCobrança(cobrancaId: string): Promise<void> {
-    const list = await this.getCobranças();
-    const idx = list.findIndex(c => c.id === cobrancaId);
-    if (idx === -1) throw new Error('Cobrança não encontrada.');
-    if (list[idx].status === 'Pago') throw new Error('Não é possível cancelar uma cobrança já paga.');
+    const { data, error } = await supabase.rpc('cancelar_cobranca_financeira', {
+      p_cobranca_id: cobrancaId,
+    });
 
-    list[idx] = {
-      ...list[idx],
-      status: 'Cancelado',
-      dataCancelamento: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
+    if (error) throw new Error(`Erro ao cancelar cobrança: ${error.message}`);
+    if (!data) throw new Error('Cobrança não encontrada ou já paga.');
   },
 
-  // Simula RPC: cancelar_boleto_financeiro
   async cancelarBoleto(cobrancaId: string): Promise<void> {
-    const list = await this.getCobranças();
-    const idx = list.findIndex(c => c.id === cobrancaId);
-    if (idx === -1) throw new Error('Cobrança não encontrada.');
-    if (list[idx].status !== 'Pendente') throw new Error('Apenas boletos pendentes podem ser cancelados.');
+    const { data, error } = await supabase.rpc('cancelar_boleto_financeiro', {
+      p_cobranca_id: cobrancaId,
+    });
 
-    // Remove o link do boleto asaas_boleto_url para simular cancelamento no Asaas
-    list[idx] = {
-      ...list[idx],
-      asaasBoletoUrl: undefined,
-      updatedAt: new Date().toISOString()
-    };
-
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
+    if (error) throw new Error(`Erro ao cancelar boleto: ${error.message}`);
+    if (!data) throw new Error('Apenas boletos pendentes podem ser cancelados.');
   },
 
-  // Simula RPC: emitir_nfse_asaas
   async emitirNfseManual(cobrancaId: string): Promise<string> {
-    const list = await this.getCobranças();
-    const idx = list.findIndex(c => c.id === cobrancaId);
-    if (idx === -1) throw new Error('Cobrança não encontrada.');
-    if (list[idx].status === 'Cancelado') throw new Error('Não é possível emitir NFS-e para cobranças canceladas.');
+    const { data, error } = await supabase.rpc('emitir_nfse_asaas', {
+      p_cobranca_id: cobrancaId,
+    });
 
-    const nfseId = `nfse_${Math.random().toString(36).substring(2, 15)}`;
-    list[idx] = {
-      ...list[idx],
-      asaasNfseId: nfseId,
-      updatedAt: new Date().toISOString()
-    };
-
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
-    return nfseId;
+    if (error) throw new Error(`Erro ao emitir NFS-e: ${error.message}`);
+    return String(data);
   },
 
-  // Função helper de auxílio ao protótipo: Simular recebimento (pagamento da fatura)
   async simularRecebimento(cobrancaId: string): Promise<void> {
-    const list = await this.getCobranças();
-    const idx = list.findIndex(c => c.id === cobrancaId);
-    if (idx === -1) throw new Error('Cobrança não encontrada.');
-    if (list[idx].status === 'Cancelado') throw new Error('Não é possível liquidar cobrança cancelada.');
+    const { data, error } = await supabase.rpc('confirmar_recebimento_financeiro', {
+      p_cobranca_id: cobrancaId,
+    });
 
-    list[idx] = {
-      ...list[idx],
-      status: 'Pago',
-      dataPagamento: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // Se a emissão for automática e ainda não tiver nota, emite a NFS-e
-    const contratos = await this.getContratos();
-    const contrato = contratos.find(c => c.clienteEmpresaId === list[idx].clienteEmpresaId);
-    if (contrato?.emissaoAutomaticaNfse && !list[idx].asaasNfseId) {
-      list[idx].asaasNfseId = `nfse_${Math.random().toString(36).substring(2, 15)}`;
-    }
-
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
+    if (error) throw new Error(`Erro ao confirmar recebimento: ${error.message}`);
+    if (!data) throw new Error('Cobrança não encontrada ou cancelada.');
   },
 
-  // Calcula estatísticas para o dashboard (Business Logic simulada no banco de dados)
-  async getStats(): Promise<DashboardStats> {
-    const cobrancas = await this.getCobranças();
-    const validCob = cobrancas.filter(c => c.status !== 'Cancelado');
+  async getStats(meses = 6): Promise<DashboardStats> {
+    const { data, error } = await supabase.rpc('get_financeiro_dashboard', {
+      p_meses: meses,
+    });
 
-    const totalFaturado = validCob.reduce((acc, curr) => acc + curr.valor, 0);
-    const totalRecebido = validCob.filter(c => c.status === 'Pago').reduce((acc, curr) => acc + curr.valor, 0);
-    const totalPendente = validCob.filter(c => c.status === 'Pendente').reduce((acc, curr) => acc + curr.valor, 0);
-    const totalVencido = validCob.filter(c => c.status === 'Vencido').reduce((acc, curr) => acc + curr.valor, 0);
-
-    const totalDevido = totalRecebido + totalVencido;
-    const taxaInadimplencia = totalDevido > 0 ? (totalVencido / totalDevido) * 100 : 0;
-
-    return {
-      totalFaturado,
-      totalRecebido,
-      totalPendente: totalPendente + totalVencido,
-      taxaInadimplencia
-    };
-  },
-
-  // Helper Privados de gerenciamento global do LocalStorage
-  async getAllContratosRaw(): Promise<ContratoFinanceiro[]> {
-    const data = localStorage.getItem(LOCAL_STORAGE_CONTRATOS_KEY);
-    return data ? JSON.parse(data) : DEFAULT_CONTRATOS;
-  },
-
-  async getAllCobrançasRaw(): Promise<CobrancaFinanceira[]> {
-    const data = localStorage.getItem(LOCAL_STORAGE_COBRANCAS_KEY);
-    return data ? JSON.parse(data) : DEFAULT_COBRANCAS;
-  },
-
-  async gerarCobrançaParaContrato(contrato: ContratoFinanceiro): Promise<void> {
-    const list = await this.getCobranças();
-    const today = new Date();
-    
-    // Gera data de vencimento correspondente ao mês atual ou próximo
-    let vencimentoAno = today.getFullYear();
-    let vencimentoMes = today.getMonth() + 1; // 1-indexed
-
-    // Formata o vencimento (se o dia já passou este mês, gera para o próximo mês)
-    if (today.getDate() > contrato.diaVencimento) {
-      vencimentoMes += 1;
-      if (vencimentoMes > 12) {
-        vencimentoMes = 1;
-        vencimentoAno += 1;
-      }
-    }
-
-    const mesStr = vencimentoMes.toString().padStart(2, '0');
-    const diaStr = contrato.diaVencimento.toString().padStart(2, '0');
-    const dataVencimento = `${vencimentoAno}-${mesStr}-${diaStr}`;
-
-    const cobId = `cob-${Date.now()}`;
-    const novaCobranca: CobrancaFinanceira = {
-      id: cobId,
-      empresaId: contrato.empresaId,
-      clienteEmpresaId: contrato.clienteEmpresaId,
-      valor: contrato.valorMensal,
-      dataVencimento,
-      status: 'Pendente',
-      asaasCobrancaId: `pay_${Math.random().toString(36).substring(2, 14)}`,
-      asaasBoletoUrl: `https://asaas.com/b/pay_${cobId}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    list.push(novaCobranca);
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
+    if (error) throw new Error(`Erro ao carregar dashboard financeiro: ${error.message}`);
+    return normalizeStats(data as Partial<DashboardStats>);
   },
 
   async gerarCobrançaManual(dados: {
@@ -388,28 +376,16 @@ export const financeiroService = {
     descricao: string;
     meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
   }): Promise<void> {
-    const list = await this.getCobranças();
-    const cobId = `cob-${Date.now()}`;
-    const asaasId = `pay_${Math.random().toString(36).substring(2, 14)}`;
+    const { error } = await supabase.rpc('gerar_cobranca_manual_financeira', {
+      p_payload: {
+        cliente_empresa_id: dados.clienteEmpresaId,
+        valor: dados.valor,
+        data_vencimento: dados.dataVencimento,
+        descricao: dados.descricao,
+        meio_pagamento: dados.meioPagamento,
+      },
+    });
 
-    const novaCobranca: CobrancaFinanceira = {
-      id: cobId,
-      empresaId: this.getTenantId(),
-      clienteEmpresaId: dados.clienteEmpresaId,
-      valor: dados.valor,
-      dataVencimento: dados.dataVencimento,
-      status: 'Pendente',
-      asaasCobrancaId: asaasId,
-      asaasBoletoUrl: dados.meioPagamento === 'Pix' 
-        ? `https://asaas.com/pix/pay_${cobId}` 
-        : `https://asaas.com/b/pay_${cobId}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    list.push(novaCobranca);
-    const allData = await this.getAllCobrançasRaw();
-    const otherTenants = allData.filter(c => c.empresaId !== this.getTenantId());
-    localStorage.setItem(LOCAL_STORAGE_COBRANCAS_KEY, JSON.stringify([...otherTenants, ...list]));
-  }
+    if (error) throw new Error(`Erro ao gerar cobrança avulsa: ${error.message}`);
+  },
 };

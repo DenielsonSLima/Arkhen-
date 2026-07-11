@@ -10,12 +10,8 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
   const [activeTab, setActiveTab] = useState<'historico' | 'configuracoes'>('historico');
   const [emitNfse, setEmitNfse] = useState(true);
   const [emitCobranca, setEmitCobranca] = useState(true);
-
-  const historico = [
-    { id: 101, data: '05/07/2026', valor: 'R$ 1.500,00', status: 'Pago', tipo: 'NFS-e + Cobrança' },
-    { id: 102, data: '05/06/2026', valor: 'R$ 1.500,00', status: 'Pago', tipo: 'NFS-e + Cobrança' },
-    { id: 103, data: '05/05/2026', valor: 'R$ 1.500,00', status: 'Pago', tipo: 'NFS-e + Cobrança' },
-  ];
+  const historico = recorrencia.historico || [];
+  const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
@@ -36,7 +32,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
             {recorrencia.cliente}
           </h2>
           <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-            {recorrencia.servico} • {recorrencia.valor} / mês
+            {recorrencia.servico} • {formatCurrency(recorrencia.valor)} / mês
           </p>
         </div>
       </div>
@@ -108,7 +104,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
                 </tr>
               </thead>
               <tbody>
-                {historico.map((item) => (
+                {historico.map((item: { id: string; data: string; valor: number; status: string; tipo: string }) => (
                   <tr key={item.id}>
                     <td>{item.data}</td>
                     <td>
@@ -116,7 +112,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
                         <FileText size={14} color="#64748b" /> {item.tipo}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{item.valor}</td>
+                    <td style={{ fontWeight: 500 }}>{formatCurrency(item.valor)}</td>
                     <td>
                       <span style={{ 
                         padding: '4px 8px', 

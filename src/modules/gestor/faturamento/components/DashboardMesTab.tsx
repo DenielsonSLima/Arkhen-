@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { FileText, XCircle, CheckCircle, FilePlus, AlertCircle, DollarSign, Activity, TrendingUp } from 'lucide-react';
+import { useFaturamentoDashboardQuery } from '../queries/useFaturamentoQueries';
 
 export const DashboardMesTab = () => {
   const { firstDay, lastDay } = React.useMemo(() => {
@@ -9,17 +10,31 @@ export const DashboardMesTab = () => {
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
     return { firstDay, lastDay };
   }, []);
+  const [dataInicial, setDataInicial] = React.useState(firstDay);
+  const [dataFinal, setDataFinal] = React.useState(lastDay);
+  const [status, setStatus] = React.useState('Todos');
+  const dashboardQuery = useFaturamentoDashboardQuery({
+    dataInicial,
+    dataFinal,
+    status,
+  });
+  const data = dashboardQuery.data;
+
+  const formatCurrency = (value = 0) => value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 
   const stats = [
-    { label: 'NFS-e a emitir', value: '45', icon: FilePlus, color: '#3b82f6', bg: '#eff6ff' },
-    { label: 'NFS-e emitidas', value: '128', icon: CheckCircle, color: '#10b981', bg: '#ecfdf5' },
-    { label: 'NFS-e canceladas', value: '3', icon: XCircle, color: '#f43f5e', bg: '#fff1f2' },
-    { label: 'Cobranças geradas', value: '156', icon: FileText, color: '#6366f1', bg: '#eef2ff' },
-    { label: 'Contas a receber', value: '89', icon: DollarSign, color: '#f59e0b', bg: '#fffbeb' },
-    { label: 'Total previsto', value: 'R$ 145.000', icon: Activity, color: '#06b6d4', bg: '#ecfeff' },
-    { label: 'Total recebido', value: 'R$ 98.500', icon: TrendingUp, color: '#10b981', bg: '#ecfdf5' },
-    { label: 'Total em aberto', value: 'R$ 46.500', icon: DollarSign, color: '#3b82f6', bg: '#eff6ff' },
-    { label: 'Total em atraso', value: 'R$ 12.300', icon: AlertCircle, color: '#f43f5e', bg: '#fff1f2' },
+    { label: 'NFS-e a emitir', value: String(data?.nfseAEmitir || 0), icon: FilePlus, color: '#3b82f6', bg: '#eff6ff' },
+    { label: 'NFS-e emitidas', value: String(data?.nfseEmitidas || 0), icon: CheckCircle, color: '#10b981', bg: '#ecfdf5' },
+    { label: 'NFS-e canceladas', value: String(data?.nfseCanceladas || 0), icon: XCircle, color: '#f43f5e', bg: '#fff1f2' },
+    { label: 'Cobranças geradas', value: String(data?.cobrancasGeradas || 0), icon: FileText, color: '#6366f1', bg: '#eef2ff' },
+    { label: 'Contas a receber', value: String(data?.contasReceber || 0), icon: DollarSign, color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Total previsto', value: formatCurrency(data?.totalPrevisto), icon: Activity, color: '#06b6d4', bg: '#ecfeff' },
+    { label: 'Total recebido', value: formatCurrency(data?.totalRecebido), icon: TrendingUp, color: '#10b981', bg: '#ecfdf5' },
+    { label: 'Total em aberto', value: formatCurrency(data?.totalAberto), icon: DollarSign, color: '#3b82f6', bg: '#eff6ff' },
+    { label: 'Total em atraso', value: formatCurrency(data?.totalAtraso), icon: AlertCircle, color: '#f43f5e', bg: '#fff1f2' },
   ];
 
   return (
@@ -27,11 +42,11 @@ export const DashboardMesTab = () => {
       <div className="faturamento-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}>
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '150px' }}>
             <label>Data Inicial</label>
-            <input type="date" defaultValue={firstDay} />
+            <input type="date" value={dataInicial} onChange={(event) => setDataInicial(event.target.value)} />
           </div>
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '150px' }}>
             <label>Data Final</label>
-            <input type="date" defaultValue={lastDay} />
+            <input type="date" value={dataFinal} onChange={(event) => setDataFinal(event.target.value)} />
           </div>
           <div className="faturamento-form-group" style={{ flex: '2', minWidth: '200px' }}>
             <label>Parceiro/Empresa</label>
@@ -39,15 +54,16 @@ export const DashboardMesTab = () => {
           </div>
           <div className="faturamento-form-group" style={{ width: '150px' }}>
             <label>Status Pagamento</label>
-            <select>
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
               <option>Todos</option>
-              <option>Pagos</option>
-              <option>Em Aberto</option>
-              <option>Em Atraso</option>
+              <option value="Pago">Pagos</option>
+              <option value="Pendente">Em Aberto</option>
+              <option value="Vencido">Em Atraso</option>
+              <option value="Cancelado">Cancelados</option>
             </select>
           </div>
-          <button className="faturamento-btn-primary">
-            Filtrar
+          <button className="faturamento-btn-primary" disabled={dashboardQuery.isFetching}>
+            {dashboardQuery.isFetching ? 'Filtrando...' : 'Filtrar'}
           </button>
       </div>
 

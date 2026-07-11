@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import type { LancamentoFinanceiro } from '../services/financeiroService';
 import { TransferenciaEntreContasCard } from './TransferenciaEntreContasCard';
 
 type FiltroStatus = 'mesAtual' | 'todos';
@@ -15,6 +16,7 @@ type TransferenciaEntreContasItem = {
 };
 
 type TransferenciaEntreContasTabProps = {
+  dados: LancamentoFinanceiro[];
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
 };
@@ -24,50 +26,8 @@ const SUBTABS: { id: FiltroStatus; label: string }[] = [
   { id: 'todos', label: 'Todos' },
 ];
 
-const TRANSFERENCIAS: TransferenciaEntreContasItem[] = [
-  {
-    id: 'tr-1',
-    data: '2026-07-03',
-    bancoOrigem: 'Bradesco',
-    origem: 'Conta Corrente Bradesco',
-    bancoDestino: 'Santander',
-    destino: 'Caixa Institucional Santander',
-    valor: 2500,
-    status: 'Concluída',
-  },
-  {
-    id: 'tr-2',
-    data: '2026-07-12',
-    bancoOrigem: 'Santander',
-    origem: 'Caixa Institucional Santander',
-    bancoDestino: 'Bradesco',
-    destino: 'Conta Corrente Bradesco',
-    valor: 1200,
-    status: 'Concluída',
-  },
-  {
-    id: 'tr-3',
-    data: '2026-07-20',
-    bancoOrigem: 'Nubank',
-    origem: 'Conta Emergência Nubank',
-    bancoDestino: 'Bradesco',
-    destino: 'Conta Corrente Bradesco',
-    valor: 1850,
-    status: 'Concluída',
-  },
-  {
-    id: 'tr-4',
-    data: '2026-06-25',
-    bancoOrigem: 'Bradesco',
-    origem: 'Conta Poupança Bradesco',
-    bancoDestino: 'Nubank',
-    destino: 'Conta Corrente Nubank',
-    valor: 680,
-    status: 'Pendente',
-  },
-];
-
 export const TransferenciaEntreContasTab: React.FC<TransferenciaEntreContasTabProps> = ({
+  dados,
   onFormatCurrency,
   onFormatDate,
 }) => {
@@ -77,20 +37,37 @@ export const TransferenciaEntreContasTab: React.FC<TransferenciaEntreContasTabPr
   const [selectedBanco, setSelectedBanco] = useState('Todos os bancos');
   const [activeSubTab, setActiveSubTab] = useState<FiltroStatus>('mesAtual');
   
+  const transferencias = useMemo<TransferenciaEntreContasItem[]>(() => {
+    return dados.map((item) => {
+      const meta = item.metadados || {};
+      const bancoOrigem = String(meta.bancoOrigem || meta.banco_origem || 'Conta origem');
+      const bancoDestino = String(meta.bancoDestino || meta.banco_destino || 'Conta destino');
+      return {
+        id: item.id,
+        data: item.dataCompetencia,
+        bancoOrigem,
+        origem: String(meta.origem || bancoOrigem),
+        bancoDestino,
+        destino: String(meta.destino || bancoDestino),
+        valor: item.valor,
+        status: item.status === 'Pendente' ? 'Pendente' : 'Concluída',
+      };
+    });
+  }, [dados]);
 
   const bancos = useMemo(() => {
     const values = new Set<string>();
-    TRANSFERENCIAS.forEach((item) => {
+    transferencias.forEach((item) => {
       values.add(item.bancoOrigem);
       values.add(item.bancoDestino);
     });
     return ['Todos os bancos', ...Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
-  }, []);
+  }, [transferencias]);
 
   const baseFiltrado = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    return TRANSFERENCIAS.filter((item) => {
+    return transferencias.filter((item) => {
       const matchesSearch =
         !term ||
         item.id.toLowerCase().includes(term) ||
@@ -108,7 +85,7 @@ export const TransferenciaEntreContasTab: React.FC<TransferenciaEntreContasTabPr
 
       return matchesSearch && isAfterStart && isBeforeEnd && matchesBanco;
     });
-  }, [search, startDate, endDate, selectedBanco, onFormatDate]);
+  }, [transferencias, search, startDate, endDate, selectedBanco, onFormatDate]);
 
   const filtered = useMemo(() => {
     if (activeSubTab === 'todos') return baseFiltrado;

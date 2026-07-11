@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import type { LancamentoFinanceiro } from '../services/financeiroService';
 import { ContasAPagarCard } from './ContasAPagarCard';
 
 type ContasPagarItem = {
@@ -11,45 +12,6 @@ type ContasPagarItem = {
   valor: number;
   status: 'Pendente' | 'Pago' | 'Vencido' | 'Cancelado';
 };
-
-const CONTAS_PAGAR: ContasPagarItem[] = [
-  {
-    id: 'pag-1',
-    descricao: 'Aluguel do escritório',
-    categoria: 'Custos Fixos',
-    dataVencimento: '2026-07-10',
-    dataLancamento: '2026-07-01',
-    valor: 4200,
-    status: 'Pendente',
-  },
-  {
-    id: 'pag-2',
-    descricao: 'Folha interna',
-    categoria: 'Pessoal',
-    dataVencimento: '2026-07-05',
-    dataLancamento: '2026-06-28',
-    valor: 18500,
-    status: 'Pago',
-  },
-  {
-    id: 'pag-3',
-    descricao: 'Softwares e certificados',
-    categoria: 'Tecnologia',
-    dataVencimento: '2026-07-20',
-    dataLancamento: '2026-07-02',
-    valor: 1290,
-    status: 'Pendente',
-  },
-  {
-    id: 'pag-4',
-    descricao: 'Taxa de cartório',
-    categoria: 'Tributos',
-    dataVencimento: '2026-06-15',
-    dataLancamento: '2026-06-10',
-    valor: 870,
-    status: 'Vencido',
-  },
-];
 
 type FiltroStatus = 'mesAtual' | 'aberto' | 'atrasado' | 'todos';
 const SUBTABS: { id: FiltroStatus; label: string }[] = [
@@ -89,11 +51,22 @@ const statusToLabel = (status: ContasPagarItem['status']) => {
 };
 
 type ContasAPagarTabProps = {
+  dados: LancamentoFinanceiro[];
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
 };
 
-export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({ onFormatCurrency, onFormatDate }) => {
+const toContasPagarItem = (item: LancamentoFinanceiro): ContasPagarItem => ({
+  id: item.id,
+  descricao: item.descricao,
+  categoria: item.categoria,
+  dataVencimento: item.dataCompetencia,
+  dataLancamento: item.createdAt.slice(0, 10),
+  valor: item.valor,
+  status: item.status,
+});
+
+export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({ dados, onFormatCurrency, onFormatDate }) => {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -104,15 +77,16 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({ onFormatCurren
 
   const hoje = new Date().toISOString().slice(0, 10);
   const hojeDate = toDate(hoje);
+  const contasPagar = useMemo(() => dados.map(toContasPagarItem), [dados]);
 
   const categories = useMemo(() => {
-    const values = new Set<string>(CONTAS_PAGAR.map((item) => item.categoria || 'Despesas diversas'));
+    const values = new Set<string>(contasPagar.map((item) => item.categoria || 'Despesas diversas'));
     return ['Todas as categorias', ...Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
-  }, []);
+  }, [contasPagar]);
 
   const baseFiltrado = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return CONTAS_PAGAR.filter((item) => {
+    return contasPagar.filter((item) => {
       const matchesSearch =
         !term ||
         item.descricao.toLowerCase().includes(term) ||
@@ -123,7 +97,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({ onFormatCurren
       const matchesCategory = selectedCategory === 'Todas as categorias' || item.categoria === selectedCategory;
       return matchesSearch && isAfterStart && isBeforeEnd && matchesCategory;
     });
-  }, [search, startDate, endDate, onFormatDate, selectedCategory]);
+  }, [contasPagar, search, startDate, endDate, onFormatDate, selectedCategory]);
 
   const filtered = useMemo(() => {
     const current = new Date();
@@ -140,7 +114,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({ onFormatCurren
       if (activeSubTab === 'atrasado') return isOverdue;
       return true;
     });
-  }, [baseFiltrado, activeSubTab, hoje]);
+  }, [baseFiltrado, activeSubTab, hojeDate]);
 
   const getMonthName = (value: string) => {
     const parts = value.split('-');

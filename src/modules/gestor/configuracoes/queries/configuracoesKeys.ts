@@ -5,4 +5,8 @@ export const configuracoesKeys = {
   perfisAcesso: () => [...configuracoesKeys.all, 'perfis-acesso'] as const,
   usuarios: () => [...configuracoesKeys.all, 'usuarios'] as const,
   xmlModelos: () => [...configuracoesKeys.all, 'xml-modelos'] as const,
+  contasBancarias: () => [...configuracoesKeys.all, 'contas-bancarias'] as const,
+  contasBancariasResumo: () => [...configuracoesKeys.contasBancarias(), 'resumo'] as const,
+  contadores: () => [...configuracoesKeys.all, 'contadores'] as const,
+  logsEventos: () => [...configuracoesKeys.all, 'logs-eventos'] as const,
 };

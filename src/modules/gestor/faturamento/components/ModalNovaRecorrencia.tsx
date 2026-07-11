@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { X, Check } from 'lucide-react';
+import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { useSaveContratoFinanceiroMutation } from '../../financeiro/queries/useFinanceiroQueries';
 
 interface ModalNovaRecorrenciaProps {
   isOpen: boolean;
@@ -8,10 +11,47 @@ interface ModalNovaRecorrenciaProps {
 }
 
 export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOpen, onClose }) => {
+  const clientesQuery = useQuery({
+    queryKey: ['gestao-empresarial', 'companies'],
+    queryFn: gestaoEmpresarialService.getCompanies,
+    enabled: isOpen,
+  });
+  const saveContratoMutation = useSaveContratoFinanceiroMutation();
   const [emitNfse, setEmitNfse] = useState(true);
   const [emitCobranca, setEmitCobranca] = useState(true);
+  const [clienteEmpresaId, setClienteEmpresaId] = useState('');
+  const [valorMensal, setValorMensal] = useState('');
+  const [diaVencimento, setDiaVencimento] = useState(1);
+  const [descricaoServico, setDescricaoServico] = useState('Honorários contábeis');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const parseCurrency = (value: string) => Number(value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+
+  const handleSubmit = async () => {
+    const valor = parseCurrency(valorMensal);
+    if (!clienteEmpresaId || valor <= 0) {
+      setErrorMsg('Selecione o parceiro e informe um valor mensal válido.');
+      return;
+    }
+
+    setErrorMsg(null);
+    await saveContratoMutation.mutateAsync({
+      clienteEmpresaId,
+      descricaoServico,
+      valorMensal: valor,
+      diaVencimento,
+      emissaoAutomaticaNfse: emitNfse,
+      ativo: true,
+      gerarCobranca: emitCobranca,
+    });
+    setClienteEmpresaId('');
+    setValorMensal('');
+    setDiaVencimento(1);
+    setDescricaoServico('Honorários contábeis');
+    onClose();
+  };
 
   const modalContent = (
     <div style={{
@@ -36,20 +76,22 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
             <label>Parceiro / Cliente</label>
-            <select>
+            <select value={clienteEmpresaId} onChange={(event) => setClienteEmpresaId(event.target.value)}>
               <option value="">Selecione o parceiro...</option>
-              <option value="1">Tech Solutions SA</option>
+              {(clientesQuery.data || []).map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
+              ))}
             </select>
           </div>
           
           <div className="faturamento-form-group">
             <label>Valor Mensal (R$)</label>
-            <input type="text" placeholder="0,00" />
+            <input type="text" placeholder="0,00" value={valorMensal} onChange={(event) => setValorMensal(event.target.value)} />
           </div>
 
           <div className="faturamento-form-group">
             <label>Dia de Vencimento/Emissão</label>
-            <select>
+            <select value={diaVencimento} onChange={(event) => setDiaVencimento(Number(event.target.value))}>
               {[...Array(28)].map((_, i) => (
                 <option key={i+1} value={i+1}>Dia {i+1}</option>
               ))}
@@ -74,7 +116,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
                 </div>
                 <div className="faturamento-form-group">
                   <label>Anotações (Variáveis aceitas: [MES], [ANO])</label>
-                  <textarea rows={2} placeholder="Honorários referentes a [MES]/[ANO]..."></textarea>
+                  <textarea rows={2} placeholder="Honorários referentes a [MES]/[ANO]..." value={descricaoServico} onChange={(event) => setDescricaoServico(event.target.value)}></textarea>
                 </div>
               </div>
             )}
@@ -99,15 +141,15 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
           </div>
         </div>
 
+        {errorMsg && <div style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>{errorMsg}</div>}
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
           <button 
-            onClick={() => {
-              alert('Recorrência criada!');
-              onClose();
-            }}
+            onClick={() => void handleSubmit()}
+            disabled={saveContratoMutation.isPending}
             className="faturamento-btn-primary"
           >
-            <Check size={16} /> Salvar Recorrência
+            <Check size={16} /> {saveContratoMutation.isPending ? 'Salvando...' : 'Salvar Recorrência'}
           </button>
         </div>
       </div>

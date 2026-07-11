@@ -8,6 +8,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useFinanceiro } from './hooks/useFinanceiro';
+import { useFinanceiroRealtime } from './hooks/useFinanceiroRealtime';
 import { CaixaTab } from './components/CaixaTab';
 import { ContasAReceberTab } from './components/ContasAReceberTab';
 import { ContasAPagarTab } from './components/ContasAPagarTab';
@@ -34,7 +35,18 @@ const FINANCEIRO_TABS: { id: FinanceiroTab; label: string; icon: React.ReactNode
 ];
 
 export const FinanceiroPage: React.FC = () => {
-  const { filteredCobranças, stats, companyMap, isLoading } = useFinanceiro();
+  useFinanceiroRealtime();
+  const {
+    filteredCobranças,
+    stats,
+    companyMap,
+    isLoading,
+    contasPagar,
+    transferencias,
+    outrosCreditos,
+    outrosDebitos,
+    handleCreateLancamento,
+  } = useFinanceiro();
   const [activeTab, setActiveTab] = useState<FinanceiroTab>('caixa');
 
   const contasReceber = useMemo(() => filteredCobranças, [filteredCobranças]);
@@ -64,19 +76,19 @@ export const FinanceiroPage: React.FC = () => {
     }
 
     if (activeTab === 'pagar') {
-      return <ContasAPagarTab onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return <ContasAPagarTab dados={contasPagar} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
     }
 
     if (activeTab === 'transferencia') {
-      return <TransferenciaEntreContasTab onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return <TransferenciaEntreContasTab dados={transferencias} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
     }
 
     if (activeTab === 'outros-creditos') {
-      return <OutrosCreditosTab onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return <OutrosCreditosTab dados={outrosCreditos} onCreateLancamento={handleCreateLancamento} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
     }
 
     if (activeTab === 'outros-debitos') {
-      return <OutrosDebitosTab onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return <OutrosDebitosTab dados={outrosDebitos} onCreateLancamento={handleCreateLancamento} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
     }
 
     return <CaixaTab stats={stats} onFormatCurrency={formatCurrency} />;

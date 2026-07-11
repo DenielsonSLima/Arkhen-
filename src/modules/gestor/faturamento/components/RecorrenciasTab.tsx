@@ -1,21 +1,17 @@
 import { useState } from 'react';
 import { Plus, Pause, Calendar, FileText, Activity } from 'lucide-react';
+import { useFaturamentoRecorrenciasQuery } from '../queries/useFaturamentoQueries';
 import { ModalNovaRecorrencia } from './ModalNovaRecorrencia';
 import { RecorrenciaDetailView } from './RecorrenciaDetailView';
 
 export const RecorrenciasTab = () => {
+  const recorrenciasQuery = useFaturamentoRecorrenciasQuery();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecorrencia, setSelectedRecorrencia] = useState<any | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'ativos' | 'inativos'>('ativos');
 
-  const recorrencias = [
-    { id: 1, cliente: 'Tech Solutions LTDA', servico: 'Assessoria Contábil', valor: 'R$ 1.500,00', dia: '5', status: 'Ativo', emissaoNfse: true, cobranca: true, situacao: 'em_dia' },
-    { id: 2, cliente: 'Comercial Silva', servico: 'BPO Financeiro', valor: 'R$ 2.800,00', dia: '10', status: 'Ativo', emissaoNfse: true, cobranca: true, situacao: 'inadimplente', diasAtraso: 12 },
-    { id: 3, cliente: 'Consultoria XYZ', servico: 'Assessoria Contábil', valor: 'R$ 1.200,00', dia: '15', status: 'Pausado', emissaoNfse: false, cobranca: false, situacao: 'em_dia' },
-    { id: 4, cliente: 'Inovação Tech', servico: 'Assessoria Contábil', valor: 'R$ 3.500,00', dia: '20', status: 'Ativo', emissaoNfse: true, cobranca: true, situacao: 'em_dia' },
-    { id: 5, cliente: 'Marketing Digital S.A.', servico: 'BPO Financeiro', valor: 'R$ 4.200,00', dia: '5', status: 'Ativo', emissaoNfse: true, cobranca: true, situacao: 'inadimplente', diasAtraso: 45 },
-    { id: 6, cliente: 'Ex-Cliente Alpha', servico: 'Assessoria Contábil', valor: 'R$ 1.000,00', dia: '10', status: 'Inativo', emissaoNfse: false, cobranca: false, situacao: 'em_dia' },
-  ];
+  const recorrencias = recorrenciasQuery.data || [];
+  const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   if (selectedRecorrencia) {
     return <RecorrenciaDetailView recorrencia={selectedRecorrencia} onBack={() => setSelectedRecorrencia(null)} />;
@@ -64,6 +60,9 @@ export const RecorrenciasTab = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '20px' }}>
+        {recorrenciasQuery.isLoading && (
+          <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>Carregando recorrências...</div>
+        )}
         {filteredRecorrencias.map((item) => (
           <div 
             key={item.id} 
@@ -122,7 +121,7 @@ export const RecorrenciasTab = () => {
               <p style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FileText size={14} color="#94a3b8" /> {item.servico}
               </p>
-              <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>{item.valor}</h4>
+              <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(item.valor)}</h4>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '16px', borderTop: '1px solid #f1f5f9', marginTop: 'auto' }}>
@@ -136,6 +135,11 @@ export const RecorrenciasTab = () => {
             </div>
           </div>
         ))}
+        {!recorrenciasQuery.isLoading && filteredRecorrencias.length === 0 && (
+          <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>
+            Nenhuma recorrência encontrada.
+          </div>
+        )}
       </div>
 
       <ModalNovaRecorrencia isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />

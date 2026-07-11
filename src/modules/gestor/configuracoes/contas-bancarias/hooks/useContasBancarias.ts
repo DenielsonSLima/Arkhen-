@@ -1,67 +1,56 @@
-import { useEffect, useState } from 'react';
-import { contasBancariasService } from '../services/contasBancariasService';
+import { useState } from 'react';
 import type { ContaBancaria } from '../services/contasBancariasService';
+import {
+  useContasBancariasQuery,
+  useContasBancariasResumoQuery,
+  useDeleteContaBancariaMutation,
+  useSaveContaBancariaMutation,
+} from '../queries/useContasBancariasQueries';
 
 export const useContasBancarias = () => {
-  const [contas, setContas] = useState<ContaBancaria[]>([]);
-  const [isLoadingContas, setIsLoadingContas] = useState(true);
-  const [isSavingConta, setIsSavingConta] = useState(false);
+  const contasQuery = useContasBancariasQuery();
+  const resumoQuery = useContasBancariasResumoQuery();
+  const saveContaMutation = useSaveContaBancariaMutation();
+  const deleteContaMutation = useDeleteContaBancariaMutation();
+
   const [successMsgConta, setSuccessMsgConta] = useState<string | null>(null);
   const [errorMsgConta, setErrorMsgConta] = useState<string | null>(null);
   const [showModalConta, setShowModalConta] = useState(false);
   const [editingConta, setEditingConta] = useState<ContaBancaria | null>(null);
 
-  const fetchContas = async () => {
-    setIsLoadingContas(true);
-    try {
-      const res = await contasBancariasService.getContas();
-      setContas(res);
-    } catch (err) {
-      console.error('Erro ao carregar contas bancárias:', err);
-    } finally {
-      setIsLoadingContas(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchContas();
-  }, []);
-
   const handleContaSave = async (dadosConta: Omit<ContaBancaria, 'saldoAtual'>) => {
-    setIsSavingConta(true);
     setSuccessMsgConta(null);
     setErrorMsgConta(null);
 
     try {
-      await contasBancariasService.saveConta(dadosConta);
+      await saveContaMutation.mutateAsync(dadosConta);
       setSuccessMsgConta(dadosConta.id ? 'Conta bancária atualizada com sucesso!' : 'Conta bancária adicionada com sucesso!');
       setShowModalConta(false);
       setEditingConta(null);
-      await fetchContas();
       setTimeout(() => setSuccessMsgConta(null), 3000);
     } catch (err) {
-      console.error(err);
       setErrorMsgConta(err instanceof Error ? err.message : 'Ocorreu um erro ao salvar a conta.');
-    } finally {
-      setIsSavingConta(false);
     }
   };
 
   const handleContaDelete = async (id: string) => {
+    setSuccessMsgConta(null);
+    setErrorMsgConta(null);
+
     try {
-      await contasBancariasService.deleteConta(id);
+      await deleteContaMutation.mutateAsync(id);
       setSuccessMsgConta('Conta bancária removida com sucesso!');
-      await fetchContas();
       setTimeout(() => setSuccessMsgConta(null), 3000);
     } catch (err) {
-      console.error('Erro ao deletar conta:', err);
+      setErrorMsgConta(err instanceof Error ? err.message : 'Ocorreu um erro ao remover a conta.');
     }
   };
 
   return {
-    contas,
-    isLoadingContas,
-    isSavingConta,
+    contas: contasQuery.data || [],
+    resumoContas: resumoQuery.data || { saldoInicial: 0, saldoAtual: 0, totalContas: 0 },
+    isLoadingContas: contasQuery.isLoading || resumoQuery.isLoading,
+    isSavingConta: saveContaMutation.isPending || deleteContaMutation.isPending,
     successMsgConta,
     errorMsgConta,
     editingConta,
