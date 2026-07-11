@@ -577,6 +577,7 @@ export const CompartilhamentoConfig: React.FC = () => {
                   <th style={{ width: '160px' }}>Data Geração</th>
                   <th style={{ width: '160px' }}>Expiração</th>
                   <th>Chave de Acesso</th>
+                  <th>Link</th>
                   <th style={{ width: '120px', textAlign: 'right' }}>Ações</th>
                 </tr>
               </thead>
@@ -658,6 +659,51 @@ export const CompartilhamentoConfig: React.FC = () => {
                             </span>
                           )}
                         </td>
+                        <td>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'minmax(0, 1fr) auto',
+                              alignItems: 'center',
+                              gap: '6px',
+                              color: '#334155',
+                              fontSize: '0.72rem',
+                            }}
+                            title={link.link}
+                          >
+                            <span
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: '#475569',
+                              }}
+                            >
+                              {link.link}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyLink(link.id, link.link)}
+                              style={{
+                                border: '1px solid #cbd5e1',
+                                background: '#ffffff',
+                                color: copiedId === link.id ? '#166534' : '#475569',
+                                borderRadius: '4px',
+                                padding: '5px 6px',
+                                fontSize: '0.68rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title="Copiar URL"
+                            >
+                              {copiedId === link.id ? <Check size={12} /> : <Clipboard size={12} />}
+                              Copiar
+                            </button>
+                          </div>
+                        </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button
@@ -709,7 +755,7 @@ export const CompartilhamentoConfig: React.FC = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '0.85rem' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '0.85rem' }}>
                       Nenhum link de compartilhamento encontrado para os critérios informados.
                     </td>
                   </tr>
