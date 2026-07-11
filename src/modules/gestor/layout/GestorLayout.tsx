@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Building2,
@@ -57,6 +58,8 @@ import { TAB_INFOS } from './gestorTabMetadata';
 import { GuiaAjudaPage } from '../guia-ajuda/GuiaAjudaPage';
 import { ModuleRenderErrorBoundary } from '../components/ModuleRenderErrorBoundary';
 import { sidebarPreferencesService } from './services/sidebarPreferencesService';
+import { documentosService } from '../documentos/services/documentosService';
+import type { Company, CompanyDocument } from '../gestao-empresarial/services/gestaoEmpresarialService';
 
 import systemLogoImg from '../../../assets/camada-o.png';
 import './GestorLayout.css';
@@ -80,6 +83,16 @@ const DEFAULT_MENU_ORDER = [
 ];
 const ALL_MENU_IDS = [...DEFAULT_MENU_ORDER];
 
+type GlobalSearchResult = {
+  id: string;
+  label: string;
+  description: string;
+  type: 'Módulo' | 'Cliente' | 'Documento' | 'Configuração';
+  moduleId: string;
+  context?: InternalTabContext;
+  configSubTab?: string;
+};
+
 interface GestorLayoutProps {
   onLogout: () => void;
 }
@@ -90,6 +103,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const [isAtividadesExpanded, setIsAtividadesExpanded] = useState(false);
   const [moduleContexts, setModuleContexts] = useState<Record<string, InternalTabContext>>({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+  const [isGlobalSearchFocused, setIsGlobalSearchFocused] = useState(false);
   const [draggedSidebarIndex, setDraggedSidebarIndex] = useState<number | null>(null);
   const [isReadyToDragSidebar, setIsReadyToDragSidebar] = useState(false);
   const [userProfile, setUserProfile] = useState(() => {
@@ -173,12 +188,98 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   );
   const openSolicitacoesCount = 0;
   const openInternalChatsCount = 0;
+  const normalizedGlobalSearch = globalSearchTerm.trim().toLowerCase();
+
+  const globalSearchQuery = useQuery({
+    queryKey: ['gestor-global-search-index'],
+    queryFn: async () => {
+      const [companies, personalDocs, companyDocs] = await Promise.all([
+        documentosService.listCompanies(),
+        documentosService.listPersonalDocumentos(),
+        documentosService.listCompanyDocumentos(),
+      ]);
+      return { companies, personalDocs, companyDocs };
+    },
+    staleTime: 2 * 60 * 1000,
+    enabled: normalizedGlobalSearch.length >= 2,
+  });
 
   const activeOpenedTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTabId),
     [activeTabId, tabs],
   );
   const activeModuleId = activeOpenedTab?.moduleId || activeTabId;
+
+  const globalSearchResults = useMemo<GlobalSearchResult[]>(() => {
+    if (normalizedGlobalSearch.length < 2) return [];
+    const source = globalSearchQuery.data;
+    const includes = (value?: string | null) => (
+      String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(
+        normalizedGlobalSearch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+      )
+    );
+    const documentResult = (doc: CompanyDocument, description: string): GlobalSearchResult => ({
+      id: `doc-${doc.id}`,
+      label: doc.nome,
+      description,
+      type: 'Documento',
+      moduleId: 'documentos',
+      context: {
+        titleSuffix: 'Todos os Documentos',
+        data: { activeTab: 'todos' },
+      },
+    });
+    const moduleResults: GlobalSearchResult[] = Object.values(TAB_INFOS)
+      .filter((item) => includes(item.title))
+      .slice(0, 4)
+      .map((item) => ({
+        id: `module-${item.title}`,
+        label: item.title,
+        description: 'Abrir módulo do sistema',
+        type: 'Módulo',
+        moduleId: Object.entries(TAB_INFOS).find(([, info]) => info.title === item.title)?.[0] || 'inicio',
+      }));
+    const configResults: GlobalSearchResult[] = [
+      ['integracao-bancaria', 'Integrações Bancárias', 'Asaas, Pix, boleto, checkout e webhooks'],
+      ['contas-bancarias', 'Contas Bancárias', 'Bancos, agências, contas e saldos'],
+      ['empresa', 'Dados da Empresa', 'CNPJ, endereço, logo e contato'],
+      ['usuarios', 'Gestão de Usuários', 'Usuários, convites e perfis'],
+      ['compartilhamento', 'Compartilhamento de Docs', 'Links, senhas e expiração'],
+    ]
+      .filter(([, label, description]) => includes(label) || includes(description))
+      .map(([subTab, label, description]) => ({
+        id: `config-${subTab}`,
+        label,
+        description,
+        type: 'Configuração',
+        moduleId: 'configuracoes',
+        configSubTab: subTab,
+      }));
+    const companyResults = (source?.companies || [])
+      .filter((company: Company) => includes(company.nome) || includes(company.razaoSocial) || includes(company.cnpj))
+      .slice(0, 5)
+      .map((company: Company) => ({
+        id: `company-${company.id}`,
+        label: company.nome,
+        description: `${company.cnpj} • ${company.status}`,
+        type: 'Cliente' as const,
+        moduleId: 'clientes',
+        context: {
+          titleSuffix: company.nome,
+          data: { selectedCompanyId: company.id },
+        },
+      }));
+    const personalDocs = (source?.personalDocs || [])
+      .filter((doc: CompanyDocument) => includes(doc.nome) || includes(doc.tipo) || includes(doc.pasta))
+      .slice(0, 4)
+      .map((doc: CompanyDocument) => documentResult(doc, `${doc.tipo || 'Documento'} • Biblioteca`));
+    const companyDocs = (source?.companyDocs || [])
+      .filter((doc: CompanyDocument) => includes(doc.nome) || includes(doc.tipo) || includes(doc.pasta))
+      .slice(0, 4)
+      .map((doc: CompanyDocument) => documentResult(doc, `${doc.tipo || 'Documento'} • Empresa`));
+
+    return [...moduleResults, ...configResults, ...companyResults, ...personalDocs, ...companyDocs].slice(0, 10);
+  }, [globalSearchQuery.data, normalizedGlobalSearch]);
 
   useEffect(() => {
     const baseTitle = 'Arkhen Gestão Contábil';
@@ -355,6 +456,32 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     sessionStorage.setItem('contabil_config_initial_subtab', 'meu-perfil');
     window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: 'meu-perfil' } }));
     activateModule('configuracoes');
+  };
+
+  const handleGlobalSearchSelect = (result: GlobalSearchResult) => {
+    if (result.configSubTab) {
+      sessionStorage.setItem('contabil_config_initial_subtab', result.configSubTab);
+      window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: result.configSubTab } }));
+    }
+
+    if (result.context) {
+      handleModuleContextChange(result.moduleId, result.context);
+    }
+
+    activateModule(result.moduleId);
+    setGlobalSearchTerm('');
+    setIsGlobalSearchFocused(false);
+  };
+
+  const handleGlobalSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && globalSearchResults[0]) {
+      event.preventDefault();
+      handleGlobalSearchSelect(globalSearchResults[0]);
+    }
+
+    if (event.key === 'Escape') {
+      setIsGlobalSearchFocused(false);
+    }
   };
 
   const handleOpenModuleTab = (event: React.MouseEvent | React.KeyboardEvent, id: string) => {
@@ -816,7 +943,38 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         <header className="gestor-header">
           <div className="header-search">
             <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Buscar clientes, empresas, documentos..." />
+            <input
+              type="text"
+              placeholder="Buscar clientes, empresas, documentos..."
+              value={globalSearchTerm}
+              onChange={(event) => setGlobalSearchTerm(event.target.value)}
+              onFocus={() => setIsGlobalSearchFocused(true)}
+              onBlur={() => window.setTimeout(() => setIsGlobalSearchFocused(false), 120)}
+              onKeyDown={handleGlobalSearchKeyDown}
+            />
+            {isGlobalSearchFocused && globalSearchTerm.trim().length >= 2 && (
+              <div className="global-search-results">
+                {globalSearchQuery.isLoading ? (
+                  <div className="global-search-empty">Buscando...</div>
+                ) : globalSearchResults.length > 0 ? (
+                  globalSearchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      type="button"
+                      className="global-search-result"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleGlobalSearchSelect(result)}
+                    >
+                      <span className="global-search-result-type">{result.type}</span>
+                      <strong>{result.label}</strong>
+                      <small>{result.description}</small>
+                    </button>
+                  ))
+                ) : (
+                  <div className="global-search-empty">Nenhum resultado encontrado.</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="header-actions">

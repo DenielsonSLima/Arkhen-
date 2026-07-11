@@ -521,11 +521,11 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
               style={{ padding: '6px 8px', fontSize: '0.78rem', border: '1px solid #e2e8f0', borderRadius: '6px', outline: 'none', backgroundColor: '#ffffff', minWidth: '120px', flexShrink: 0, cursor: 'pointer', color: '#475569' }}
               title="Agrupar documentos"
             >
-              <option value="none">Sem grupos</option>
-              <option value="type">Agrupar: tipo</option>
-              <option value="category">Agrupar: categoria</option>
-              <option value="folder">Agrupar: pasta</option>
-              <option value="company">Agrupar: empresa</option>
+              <option value="none">Sem Grupos</option>
+              <option value="type">Agrupar: Tipo</option>
+              <option value="category">Agrupar: Categoria</option>
+              <option value="folder">Agrupar: Pasta</option>
+              <option value="company">Agrupar: Empresa</option>
             </select>
 
             <select
