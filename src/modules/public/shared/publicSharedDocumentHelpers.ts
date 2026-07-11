@@ -36,9 +36,21 @@ const parseLegacyDateTime = (value: string) => {
   return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
 };
 
+const uniqueShareRows = (rows: PublicShareRow[]) => {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
+};
+
 const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPayload | null => {
   if (!rows.length) return null;
-  const first = rows[0];
+  const uniqueRows = uniqueShareRows(rows);
+  if (!uniqueRows.length) return null;
+
+  const first = uniqueRows[0];
   const created = parseDate(first.data_geracao);
   const expires = parseDate(first.data_expiracao);
 
@@ -53,7 +65,7 @@ const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPaylo
     dataExpiracao: formatShareDateTime(expires || new Date(), 'America/Sao_Paulo'),
     dataExpiracaoIso: first.data_expiracao,
     senhaObrigatoria: first.senha_obrigatoria,
-    documents: rows.map((row) => ({
+    documents: uniqueRows.map((row) => ({
       id: row.id,
       documento: row.documento,
       storage_bucket: row.storage_bucket,
@@ -136,9 +148,9 @@ export const checkPassword = async (
 };
 
 export const getDocumentMode = (filename: string) => {
-  const extension = filename.split('.').pop()?.toLowerCase() || '';
+  const extension = filename.split('.').pop()?.toLowerCase().trim() || '';
   if (extension === 'pdf') return 'pdf';
-  if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) return 'image';
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff'].includes(extension)) return 'image';
   return 'generic';
 };
 

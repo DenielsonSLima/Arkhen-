@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Download, FileText, KeyRound, Lock, Loader2, ShieldCheck, Timer, UserRound } from 'lucide-react';
+import { Building2, CheckCircle2, Download, FileText, KeyRound, Lock, Loader2, ShieldCheck, Timer, UserRound } from 'lucide-react';
 import sharedBackground from '../../../assets/office-scene-meeting.png';
 import systemLogoImg from '../../../assets/camada-o.png';
 import { PublicSharedDocumentCard } from './PublicSharedDocumentCard';
@@ -48,6 +48,16 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const [documentPdfPreviews, setDocumentPdfPreviews] = useState<Record<string, string | null>>({});
   const [documentPdfPreviewStatus, setDocumentPdfPreviewStatus] = useState<Record<string, 'loading' | 'ready' | 'error'>>({});
 
+  const documents = useMemo(() => {
+    const normalized = shareData?.documents || [];
+    const seen = new Set<string>();
+    return normalized.filter((doc) => {
+      if (seen.has(doc.id)) return false;
+      seen.add(doc.id);
+      return true;
+    });
+  }, [shareData?.documents]);
+
   useEffect(() => {
     let mounted = true;
     setIsLoading(true);
@@ -58,9 +68,10 @@ export const PublicSharedDocumentPage: React.FC = () => {
         setDocumentPdfPreviews({});
         setDocumentPdfPreviewStatus({});
         setIsUnlocked(Boolean(share && !share.senhaObrigatoria));
-        if (share?.documents[0]) {
-          setSelectedIds([share.documents[0].id]);
-          setActiveId(share.documents[0].id);
+        const firstDocument = share?.documents?.[0];
+        if (firstDocument) {
+          setSelectedIds([firstDocument.id]);
+          setActiveId(firstDocument.id);
         } else {
           setSelectedIds([]);
           setActiveId(null);
@@ -99,7 +110,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
     const durationSeconds = Math.max(Math.floor(parseShareDurationMs(shareData.tempoLimite) / 1000), 60);
     const load = async () => {
       const entries = await Promise.all(
-        shareData.documents.map(async (doc) => [doc.id, await createDocumentAccessUrl(doc, durationSeconds)] as const),
+        documents.map(async (doc) => [doc.id, await createDocumentAccessUrl(doc, durationSeconds)] as const),
       );
       if (mounted) setDocumentUrls(Object.fromEntries(entries));
     };
@@ -108,12 +119,12 @@ export const PublicSharedDocumentPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [shareData, isUnlocked]);
+  }, [shareData, isUnlocked, documents]);
 
   useEffect(() => {
     if (!shareData || !isUnlocked) return;
     let mounted = true;
-    const pdfDocuments = shareData.documents.filter((doc) => getDocumentMode(doc.documento) === 'pdf');
+    const pdfDocuments = documents.filter((doc) => getDocumentMode(doc.documento) === 'pdf');
     if (pdfDocuments.length === 0) return;
 
     void (async () => {
@@ -146,25 +157,25 @@ export const PublicSharedDocumentPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [documentUrls, isUnlocked, shareData, documentPdfPreviews, documentPdfPreviewStatus]);
+  }, [documentUrls, isUnlocked, shareData, documents, documentPdfPreviews, documentPdfPreviewStatus]);
 
   const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
   const isExpired = remaining !== null && remaining <= 0;
-  const activeDocument = shareData?.documents.find((doc) => doc.id === activeId) || shareData?.documents[0] || null;
+  const activeDocument = documents.find((doc) => doc.id === activeId) || documents[0] || null;
   const activePreviewUrl = shareData?.isLegacy ? shareData.legacyUrl : (activeDocument ? documentUrls[activeDocument.id] : null);
   const activeMode = getDocumentMode(activeDocument?.documento || '');
   const activePdfPreviewUrl = activeDocument ? documentPdfPreviews[activeDocument.id] : null;
   const activePdfPreviewStatus = activeDocument ? documentPdfPreviewStatus[activeDocument.id] : undefined;
-  const hasMultipleDocuments = Boolean(shareData && shareData.documents.length > 1);
+  const hasMultipleDocuments = Boolean(shareData && documents.length > 1);
   const canDownloadDocument = (documentId: string) => (
     !isExpired && (shareData?.isLegacy ? Boolean(shareData?.legacyUrl) : Boolean(documentUrls[documentId]))
   );
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const allSelected = shareData ? selectedIds.length === shareData.documents.length : false;
+  const allSelected = shareData ? selectedIds.length === documents.length : false;
   const hasSelected = selectedIds.length > 0;
   const canDownloadSelection = hasSelected && selectedIds.every(canDownloadDocument);
-  const canDownloadAll = shareData ? shareData.documents.every((doc) => canDownloadDocument(doc.id)) : false;
-  const fileGridColumns = shareData ? Math.min(Math.max(shareData.documents.length, 1), 4) : 1;
+  const canDownloadAll = shareData ? documents.every((doc) => canDownloadDocument(doc.id)) : false;
+  const fileGridColumns = shareData ? Math.min(Math.max(documents.length, 1), 4) : 1;
   const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
   const activePreviewUnavailable =
     activePreviewError ||
@@ -195,7 +206,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
       setSelectedIds([]);
       return;
     }
-    setSelectedIds(shareData.documents.map((doc) => doc.id));
+    setSelectedIds(documents.map((doc) => doc.id));
   };
 
   const downloadByUrl = async (item: SharedDocumentForPublicView, url: string | null | undefined) => {
@@ -234,7 +245,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
     setIsBatchDownloading(true);
     try {
       for (const id of documentIds) {
-        const item = shareData.documents.find((document) => document.id === id);
+        const item = documents.find((document) => document.id === id);
         if (!item) continue;
         const url = shareData.isLegacy ? shareData.legacyUrl : documentUrls[item.id];
         // eslint-disable-next-line no-await-in-loop
@@ -255,7 +266,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   const handleDownloadAll = async () => {
     if (!shareData) return;
-    await handleDownloadDocumentIds(shareData.documents.map((doc) => doc.id));
+    await handleDownloadDocumentIds(documents.map((doc) => doc.id));
   };
 
   const handleUnlock = async (event: React.FormEvent) => {
@@ -275,8 +286,11 @@ export const PublicSharedDocumentPage: React.FC = () => {
     setDocumentPdfPreviewStatus({});
     setShareData(result.share);
     setIsUnlocked(true);
-    setSelectedIds([result.share.documents[0].id]);
-    setActiveId(result.share.documents[0].id);
+    const firstDocument = result.share.documents?.[0];
+    if (firstDocument) {
+      setSelectedIds([firstDocument.id]);
+      setActiveId(firstDocument.id);
+    }
     setPassword('');
   };
 
@@ -356,14 +370,14 @@ export const PublicSharedDocumentPage: React.FC = () => {
           style={{
             maxWidth: '1320px',
             margin: '0 auto',
-            background: '#fff',
+            background: 'linear-gradient(165deg, rgba(15, 23, 42, 0.86), rgba(2, 6, 23, 0.95))',
             borderRadius: '14px',
             overflow: 'hidden',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 24px 68px rgba(15, 23, 42, 0.38)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 30px 74px rgba(2, 6, 23, 0.58)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: '#0f172a', color: '#fff', borderBottom: '1px solid rgba(148,163,184,0.24)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: 'rgba(15, 23, 42, 0.75)', color: '#fff', borderBottom: '1px solid rgba(148,163,184,0.24)' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(197, 146, 53, 0.2)', border: '1px solid rgba(197, 146, 53, 0.45)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               <ShieldCheck size={20} color="#dfb35e" />
             </div>
@@ -389,7 +403,14 @@ export const PublicSharedDocumentPage: React.FC = () => {
           </div>
 
           <div style={{ padding: '18px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: '14px' }}>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#0f172a', minHeight: '450px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '12px',
+              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.6), rgba(2, 6, 23, 0.9))',
+              minHeight: hasMultipleDocuments ? '470px' : '420px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
               {activeMode === 'pdf' && activePdfPreviewUrl && !activePreviewError ? (
                 <img
                   src={activePdfPreviewUrl}
@@ -413,7 +434,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 />
               ) : null}
               {activePdfFailedToPreview || activePreviewUnavailable ? (
-                <div style={{ height: '100%', minHeight: '450px', padding: '24px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', textAlign: 'center', color: '#64748b' }}>
+                <div style={{ height: '100%', minHeight: '470px', padding: '24px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', textAlign: 'center', color: '#64748b' }}>
                   <FileText size={38} />
                   <strong style={{ color: '#0f172a' }}>{getLoadingMessage(activeMode, activePdfPreviewStatus)}</strong>
                   <p style={{ margin: 0, fontSize: '0.78rem' }}>
@@ -426,31 +447,35 @@ export const PublicSharedDocumentPage: React.FC = () => {
             </div>
 
             <aside style={{ display: 'grid', gap: '10px' }}>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Arquivo principal</p>
-                <strong style={{ marginTop: '4px', color: '#0f172a', fontSize: '0.96rem', display: 'block', lineHeight: 1.3 }}>
+              <div style={{ border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', padding: '14px', background: 'linear-gradient(155deg, rgba(30, 41, 59, 0.84), rgba(15, 23, 42, 0.94))' }}>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Arquivo principal</p>
+                <strong style={{ marginTop: '4px', color: '#f8fafc', fontSize: '0.96rem', display: 'block', lineHeight: 1.3 }}>
                   {activeDocument?.documento || 'Arquivo compartilhado'}
                 </strong>
-                <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '0.76rem', lineHeight: 1.3 }}>
-                  {companyLine}
-                </p>
-                <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <UserRound size={13} /> Compartilhado por <strong style={{ color: '#0f172a' }}>{shareData.geradoPor}</strong>
+                <div style={{ marginTop: '8px', display: 'grid', gap: '8px', color: '#cbd5e1', fontSize: '0.74rem' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <Building2 size={13} /> <span>{companyLine}</span>
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <UserRound size={13} />
+                    <span>Compartilhado por <strong style={{ color: '#f8fafc' }}>{shareData.geradoPor}</strong></span>
+                  </span>
+                  <span>Referência: <strong style={{ color: '#f8fafc' }}>{shareData.shareGroupId}</strong></span>
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', padding: '12px', background: 'linear-gradient(155deg, rgba(30, 41, 59, 0.84), rgba(15, 23, 42, 0.94))' }}>
+                <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Disponível por: <strong style={{ color: '#f8fafc' }}>{shareData.tempoLimite}</strong></span>
+                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#94a3b8' }}>Expira em: <strong style={{ color: '#f8fafc' }}>{shareData.dataExpiracao}</strong></p>
+                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: remainingLabel === 'Expirado' ? '#fecaca' : '#93c5fd' }}>
+                  Restante: <strong style={{ color: isExpired ? '#f87171' : '#f8fafc' }}>{remainingLabel || '...'}</strong>
                 </p>
               </div>
 
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
-                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Disponível por: <strong>{shareData.tempoLimite}</strong></span>
-                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#64748b' }}>Expira em: <strong style={{ color: '#0f172a' }}>{shareData.dataExpiracao}</strong></p>
-                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: remainingLabel === 'Expirado' ? '#b91c1c' : '#1d4ed8' }}>
-                  Restante: <strong style={{ color: isExpired ? '#b91c1c' : '#0f172a' }}>{remainingLabel || '...'}</strong>
-                </p>
-              </div>
-
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
-                <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', fontWeight: 800 }}>Gerado em</p>
-                <strong style={{ color: '#0f172a' }}>{shareData.dataGeracao}</strong>
-                <p style={{ margin: '8px 0 0', fontSize: '0.74rem', color: '#64748b' }}>Gerado para visualização segura em fuso de Brasília.</p>
+              <div style={{ border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', padding: '12px', background: 'linear-gradient(155deg, rgba(30, 41, 59, 0.84), rgba(15, 23, 42, 0.94))' }}>
+                <p style={{ margin: 0, fontSize: '0.74rem', color: '#94a3b8', fontWeight: 800 }}>Gerado em</p>
+                <strong style={{ color: '#f8fafc' }}>{shareData.dataGeracao}</strong>
+                <p style={{ margin: '8px 0 0', fontSize: '0.74rem', color: '#94a3b8' }}>Expiração exibida em fuso de Maceió (America/Maceio).</p>
               </div>
             </aside>
           </div>
@@ -489,23 +514,26 @@ export const PublicSharedDocumentPage: React.FC = () => {
           <div style={{ padding: '0 18px 18px', display: 'grid', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: 850 }}>Arquivos do compartilhamento</h2>
-                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.76rem' }}>
-                  {shareData.documents.length} documento(s) · {hasSelected ? `${selectedIds.length} selecionado(s)` : 'nenhum selecionado'}
+                <h2 style={{ margin: 0, fontSize: '0.98rem', color: '#f8fafc', fontWeight: 850 }}>Arquivos do compartilhamento</h2>
+                <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '0.76rem' }}>
+                  {documents.length} documento(s) · {hasSelected ? `${selectedIds.length} selecionado(s)` : 'nenhum selecionado'}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={selectAll}
+                  disabled={!hasMultipleDocuments}
                   style={{
-                    border: '1px solid #d8e0ea',
-                    background: '#ffffff',
-                    color: '#475569',
+                    border: '1px solid rgba(148,163,184,0.35)',
+                    background: hasMultipleDocuments ? '#0f172a' : '#1f2937',
+                    color: hasMultipleDocuments ? '#f8fafc' : '#94a3b8',
                     borderRadius: '8px',
                     padding: '7px 10px',
                     fontSize: '0.73rem',
                     fontWeight: 850,
+                    cursor: hasMultipleDocuments ? 'pointer' : 'not-allowed',
+                    opacity: hasMultipleDocuments ? 1 : 0.7,
                   }}
                 >
                   {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
@@ -533,30 +561,36 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${fileGridColumns}, minmax(220px, 1fr))`,
-              gap: '10px',
-            }}>
-              {shareData.documents.map((doc) => (
-                <PublicSharedDocumentCard
-                  key={doc.id}
-                  document={doc}
-                  isSelected={doc.id === activeDocument?.id}
-                  isChecked={selectedSet.has(doc.id)}
-                  previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
-                  previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
-                  previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
-                  canDownload={canDownloadDocument(doc.id)}
-                  onSelect={toggleSelection}
-                  onPreview={openPreview}
-                  onDownload={handleDownloadOne}
-                />
-              ))}
-            </div>
+            {hasMultipleDocuments ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${fileGridColumns}, minmax(220px, 1fr))`,
+                gap: '10px',
+              }}>
+                {documents.map((doc) => (
+                  <PublicSharedDocumentCard
+                    key={doc.id}
+                    document={doc}
+                    isSelected={doc.id === activeDocument?.id}
+                    isChecked={selectedSet.has(doc.id)}
+                    previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
+                    previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
+                    previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
+                    canDownload={canDownloadDocument(doc.id)}
+                    onSelect={toggleSelection}
+                    onPreview={openPreview}
+                    onDownload={handleDownloadOne}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: '2px 0 0', color: '#94a3b8', fontSize: '0.74rem' }}>
+                Visualização do único arquivo disponível no painel principal.
+              </p>
+            )}
 
             <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ fontSize: '0.73rem', color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: '0.73rem', color: '#cbd5e1', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <Timer size={14} />
                 {isExpired ? 'Tempo encerrado. Gere novo compartilhamento.' : `Tempo restante: ${remainingLabel || '---'}`}
               </div>
@@ -576,7 +610,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
           <CheckCircle2 size={13} color="#22c55e" />
           {isExpired ? 'Compartilhamento vencido' : 'Para segurança, arquivos são liberados somente para o grupo e janela de tempo corretos.'}
           {!isExpired ? <Lock size={13} color="#f59e0b" /> : null}
-          {!isExpired ? <span style={{ color: '#f59e0b' }}>Expiração baseada no fuso de São Paulo.</span> : null}
+          {!isExpired ? <span style={{ color: '#f59e0b' }}>Expiração baseada no fuso de Maceió.</span> : null}
         </div>
       </div>
     </main>
