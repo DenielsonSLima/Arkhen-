@@ -280,15 +280,15 @@ export const PublicSharedDocumentPage: React.FC = () => {
           src={systemLogoImg}
           alt="Logo Arkhen"
           style={{
-            width: '34px',
-            height: '34px',
+            width: '58px',
+            height: '58px',
             objectFit: 'contain',
-            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.45))',
+            filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.45))',
           }}
         />
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{ letterSpacing: '1px', fontSize: '0.72rem', color: '#f1f5f9', textTransform: 'uppercase' }}>Arkhen</span>
-          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>Gestão Contábil</span>
+          <span style={{ letterSpacing: '1.2px', fontSize: '1.24rem', color: '#f8fafc', textTransform: 'uppercase', fontWeight: 700 }}>Arkhen</span>
+          <span style={{ fontSize: '1.7rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.05 }}>Gestão Contábil</span>
         </div>
       </div>
       <div
@@ -307,7 +307,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(140deg, rgba(2, 6, 23, 0.58) 0%, rgba(2, 6, 23, 0.88) 48%, rgba(2, 6, 23, 0.72) 100%)',
+          background: 'linear-gradient(140deg, rgba(7, 8, 10, 0.68) 0%, rgba(17, 20, 24, 0.9) 48%, rgba(13, 15, 18, 0.76) 100%)',
         }}
       />
       <section style={{ width: '100%', maxWidth: '920px', position: 'relative', zIndex: 1, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.36)', overflow: 'hidden' }}>
