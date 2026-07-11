@@ -50,8 +50,12 @@ export const useUsuarios = () => {
   const usuarios = useMemo(() => usuariosQuery.data || [], [usuariosQuery.data]);
 
   const openCreate = () => {
+    const defaultPerfil = perfis.find((perfil) => perfil.nome.toLowerCase().includes('assistente'))?.nome
+      || perfis.find((perfil) => perfil.nome.toLowerCase().includes('operacional'))?.nome
+      || perfis[0]?.nome
+      || 'Assistente';
     setSelectedUsuario(null);
-    setFormValue(defaultForm(perfis[0]?.nome || 'Assistente'));
+    setFormValue(defaultForm(defaultPerfil));
     setErrorMsg(null);
     setShowForm(true);
   };

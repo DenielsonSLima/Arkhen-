@@ -76,10 +76,20 @@ const normalizeBase64ForDecode = (value: string) => value
   .replace(/_/g, '/')
   .replace(/\s+/g, '');
 
+const decodeBase64Payload = (value: string) => {
+  const binary = atob(normalizeBase64ForDecode(value));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  try {
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return binary;
+  }
+};
+
 export const parseLegacySharedPayload = (encoded: string): LegacySharedPayload | null => {
   const normalized = `${encoded}${'='.repeat((4 - (encoded.length % 4)) % 4)}`;
   try {
-    const decoded = atob(normalizeBase64ForDecode(normalized));
+    const decoded = decodeBase64Payload(normalized);
     const parsed = JSON.parse(decoded) as Partial<LegacySharedPayload>;
     if (!parsed?.id || !parsed?.arquivoUrl) return null;
     return {

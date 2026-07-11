@@ -34,6 +34,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
   onViewContextChange,
 }) => {
   const [clienteToDelete, setClienteToDelete] = useState<Company | null>(null);
+  const [clienteWithDocs, setClienteWithDocs] = useState<{ company: Company; count: number } | null>(null);
   const {
     filteredCompanies,
     searchQuery,
@@ -55,6 +56,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     inativarCompany,
     reativarCompany,
     deleteCompany,
+    getCompanyDocumentCount,
     searchCNPJ,
     activeDetailTab,
     isLoading,
@@ -98,6 +100,21 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     if (!clienteToDelete) return;
     await deleteCompany(clienteToDelete.id);
     setClienteToDelete(null);
+  };
+
+  const requestDeleteCompany = async (company: Company) => {
+    const count = await getCompanyDocumentCount(company.id);
+    if (count > 0) {
+      setClienteWithDocs({ company, count });
+      return;
+    }
+    setClienteToDelete(company);
+  };
+
+  const inactivateCompanyWithDocs = async () => {
+    if (!clienteWithDocs) return;
+    await inativarCompany(clienteWithDocs.company.id);
+    setClienteWithDocs(null);
   };
 
   const hasNoResults = filteredCompanies.length === 0;
@@ -202,7 +219,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
                       onSelect={setSelectedCompanyId}
                       onEdit={openEdit}
                       onToggleStatus={(c) => c.status === 'Inativa' ? reativarCompany(c.id) : inativarCompany(c.id)}
-                      onDelete={() => setClienteToDelete(company)}
+                      onDelete={() => requestDeleteCompany(company)}
                     />
                   ))}
                 </div>
@@ -246,12 +263,23 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
       <SystemQuickModal
         isOpen={!!clienteToDelete}
         title="Excluir Cliente"
-        message={`Tem certeza de que deseja excluir o cliente "${clienteToDelete?.nome || ''}"?`}
+        message={`Tem certeza de que deseja excluir o cliente "${clienteToDelete?.nome || ''}"? Como não há arquivos vinculados em Documentos, as pastas e subpastas vazias dessa empresa também serão removidas.`}
         confirmLabel="Excluir"
         cancelLabel="Cancelar"
         danger
         onConfirm={confirmDeleteCompany}
         onClose={() => setClienteToDelete(null)}
+      />
+
+      <SystemQuickModal
+        isOpen={!!clienteWithDocs}
+        title="Cliente com arquivos"
+        message={`O cliente "${clienteWithDocs?.company.nome || ''}" possui ${clienteWithDocs?.count || 0} arquivo(s) na aba Documentos. Para excluir definitivamente, primeiro apague os arquivos da pasta da empresa em Documentos. Como alternativa, você pode apenas inativar a empresa.`}
+        confirmLabel="Inativar empresa"
+        cancelLabel="Manter ativa"
+        danger
+        onConfirm={inactivateCompanyWithDocs}
+        onClose={() => setClienteWithDocs(null)}
       />
     </div>
   );

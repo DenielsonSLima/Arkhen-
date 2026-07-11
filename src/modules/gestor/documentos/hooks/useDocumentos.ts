@@ -5,7 +5,7 @@ import type { Company, CompanyDocument } from '../../gestao-empresarial/services
 import { useDocumentosRealtime } from './useDocumentosRealtime';
 import { useDocumentosBaseQueries, useDocumentosMutations } from '../queries/useDocumentosQueries';
 
-export type DocumentosTab = 'meus' | 'empresas' | 'todos' | 'compartilhados';
+export type DocumentosTab = 'meus' | 'empresas' | 'inativas' | 'todos' | 'compartilhados';
 
 interface UseDocumentosOptions {
   initialActiveTab?: DocumentosTab;
@@ -147,7 +147,7 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
     isRealtimeConnected: documentosRealtime.isConnected,
     isLoading: settingsQuery.isLoading
       || (activeTab === 'meus' && personalDocsQuery.isLoading)
-      || (activeTab === 'empresas' && (companiesQuery.isLoading || companyDocsQuery.isLoading))
+      || ((activeTab === 'empresas' || activeTab === 'inativas') && (companiesQuery.isLoading || companyDocsQuery.isLoading))
       || (activeTab === 'todos' && (personalDocsQuery.isLoading || companiesQuery.isLoading || companyDocsQuery.isLoading)),
   };
 };

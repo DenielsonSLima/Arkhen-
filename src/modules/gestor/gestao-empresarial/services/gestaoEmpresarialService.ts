@@ -305,7 +305,36 @@ export const gestaoEmpresarialService = {
     return mapRowToCompany(data as ClienteRow);
   },
 
+  async getCompanyDocumentCount(id: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('documentos')
+      .select('id', { count: 'exact', head: true })
+      .eq('scope', 'empresa')
+      .eq('cliente_id', id);
+
+    if (error) throw new Error(`Erro ao verificar documentos do cliente: ${error.message}`);
+
+    const { data: company, error: companyError } = await supabase
+      .from('clientes')
+      .select('documentos')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (companyError) throw new Error(`Erro ao verificar documentos do cliente: ${companyError.message}`);
+
+    const legacyDocuments = Array.isArray((company as Pick<ClienteRow, 'documentos'> | null)?.documentos)
+      ? ((company as Pick<ClienteRow, 'documentos'>).documentos?.length || 0)
+      : 0;
+
+    return (count || 0) + legacyDocuments;
+  },
+
   async deleteCompany(id: string): Promise<void> {
+    const documentCount = await this.getCompanyDocumentCount(id);
+    if (documentCount > 0) {
+      throw new Error('Este cliente possui arquivos em Documentos. Apague os arquivos da empresa antes de excluir o cadastro ou inative a empresa.');
+    }
+
     const { error } = await supabase.from('clientes').delete().eq('id', id);
     if (error) throw new Error(`Erro ao excluir cliente: ${error.message}`);
   },

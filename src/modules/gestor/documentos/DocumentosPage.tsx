@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { Archive, Building, CheckCircle2, Download, Files, FolderPlus, Grid, List, MoreHorizontal, Plus, Search, Share2, Trash2, Upload, AlignJustify, Link2 } from 'lucide-react';
+import { Archive, Building, CheckCircle2, Download, Files, FolderPlus, Grid, List, MoreHorizontal, Plus, Search, Share2, Trash2, Upload, AlignJustify, Link2, ArchiveX } from 'lucide-react';
 import { useDocumentos } from './hooks/useDocumentos';
 import type { DocumentosTab } from './hooks/useDocumentos';
 import { SystemQuickModal } from '../components/SystemQuickModal';
@@ -29,6 +29,7 @@ interface DocumentosPageProps {
 const tabLabels: Record<DocumentosTab, string> = {
   meus: 'Biblioteca',
   empresas: 'Por Empresa',
+  inativas: 'Inativas',
   todos: 'Todos os Documentos',
   compartilhados: 'Compartilhados',
 };
@@ -114,6 +115,12 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   const personalCategoriesList = useMemo(() => (
     (meusDocs.categorias || []).filter((item) => item.ativo).map((item) => item.nome)
   ), [meusDocs.categorias]);
+  const activeCompanies = useMemo(() => (
+    companies.filter((company) => company.status !== 'Inativa')
+  ), [companies]);
+  const inactiveCompanies = useMemo(() => (
+    companies.filter((company) => company.status === 'Inativa')
+  ), [companies]);
   const handleCompanyChange = useCallback((id: string | null, name?: string) => {
     setSelectedCompanyContext((current) => (
       current.id === id && current.name === name ? current : { id, name }
@@ -133,6 +140,8 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   const titleSuffix = useMemo(() => {
     if (activeTab === 'meus') return getFolderLabel(personalFolder) || tabLabels.meus;
     if (activeTab === 'empresas') return selectedCompanyContext.name || tabLabels.empresas;
+    if (activeTab === 'inativas') return selectedCompanyContext.name || tabLabels.inativas;
+    if (activeTab === 'compartilhados') return tabLabels.compartilhados;
     return tabLabels.todos;
   }, [activeTab, personalFolder, selectedCompanyContext.name]);
 
@@ -146,6 +155,11 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       },
     });
   }, [activeTab, onViewContextChange, personalFolder, selectedCompanyContext.id, titleSuffix]);
+
+  useEffect(() => {
+    setCompanyFolder(null);
+    setSelectedCompanyContext({ id: null });
+  }, [activeTab]);
 
   useEffect(() => {
     // Carregar ultimo acesso
@@ -347,7 +361,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
 
   const showActions = useMemo(() => {
     if (activeTab === 'meus') return true;
-    if (activeTab === 'empresas' && selectedCompanyContext.id !== null) return true;
+    if ((activeTab === 'empresas' || activeTab === 'inativas') && selectedCompanyContext.id !== null) return true;
     return false;
   }, [activeTab, selectedCompanyContext.id]);
 
@@ -573,6 +587,14 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
           Por Empresa
         </button>
         <button
+          className={`detail-tab-btn ${activeTab === 'inativas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('inativas')}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+        >
+          <ArchiveX size={14} />
+          Inativas
+        </button>
+        <button
           className={`detail-tab-btn ${activeTab === 'todos' ? 'active' : ''}`}
           onClick={() => setActiveTab('todos')}
           style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
@@ -614,9 +636,10 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 onDownload={handleDownloadDocument}
                 onNotify={showSuccessToast}
               />
-            ) : activeTab === 'empresas' ? (
+            ) : activeTab === 'empresas' || activeTab === 'inativas' ? (
               <DocumentosEmpresasTab
-                companies={companies}
+                key={activeTab}
+                companies={activeTab === 'inativas' ? inactiveCompanies : activeCompanies}
                 selectedDocIds={selectedDocIds}
                 toggleSelectDoc={toggleSelectDoc}
                 searchTerm={searchTerm}

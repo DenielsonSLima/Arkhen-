@@ -135,10 +135,9 @@ export const ParametrosCalculoPage: React.FC = () => {
             </button>
           </div>
           <div className="table-responsive">
-            <table className="config-table">
+            <table className="config-table parametros-rescisao-table">
               <thead>
                 <tr>
-                  <th>Identificador</th>
                   <th>Nome exibido</th>
                   <th>Descrição</th>
                   <th>Aviso</th>
@@ -149,9 +148,8 @@ export const ParametrosCalculoPage: React.FC = () => {
               <tbody>
                 {parametros.tiposRescisao.map((tipo, index) => (
                   <tr key={tipo.id}>
-                    <td><code className="ip-code">{tipo.id}</code></td>
-                    <td><input value={tipo.label} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} /></td>
-                    <td><input value={tipo.descricao} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, descricao: e.target.value } : item))} /></td>
+                    <td><input aria-label={`Nome exibido de ${tipo.id}`} value={tipo.label} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} /></td>
+                    <td><input aria-label={`Descrição de ${tipo.id}`} value={tipo.descricao} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, descricao: e.target.value } : item))} /></td>
                     <td><input type="checkbox" checked={tipo.geraAvisoPrevio} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, geraAvisoPrevio: e.target.checked } : item))} /></td>
                     <td><input type="checkbox" checked={tipo.geraMultaFgts} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, geraMultaFgts: e.target.checked } : item))} /></td>
                     <td><input type="checkbox" checked={tipo.ativo} onChange={(e) => updateTipos((list) => list.map((item, i) => i === index ? { ...item, ativo: e.target.checked } : item))} /></td>
@@ -205,15 +203,14 @@ export const ParametrosCalculoPage: React.FC = () => {
             </button>
           </div>
           <div className="table-responsive">
-            <table className="config-table">
+            <table className="config-table parametros-pis-table">
               <thead>
-                <tr><th>Identificador</th><th>Nome exibido</th><th>PIS (%)</th><th>COFINS (%)</th><th>Credita entradas</th><th>Ativo</th></tr>
+                <tr><th>Nome exibido</th><th>PIS (%)</th><th>COFINS (%)</th><th>Credita entradas</th><th>Ativo</th></tr>
               </thead>
               <tbody>
                 {parametros.regimesPisCofins.map((regime, index) => (
                   <tr key={regime.id}>
-                    <td><code className="ip-code">{regime.id}</code></td>
-                    <td><input value={regime.label} onChange={(e) => updateRegimes((list) => list.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} /></td>
+                    <td><input aria-label={`Nome exibido de ${regime.id}`} value={regime.label} onChange={(e) => updateRegimes((list) => list.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} /></td>
                     <td><input type="number" step="0.01" value={regime.aliquotaPis} onChange={(e) => updateRegimes((list) => list.map((item, i) => i === index ? { ...item, aliquotaPis: Number(e.target.value) } : item))} /></td>
                     <td><input type="number" step="0.01" value={regime.aliquotaCofins} onChange={(e) => updateRegimes((list) => list.map((item, i) => i === index ? { ...item, aliquotaCofins: Number(e.target.value) } : item))} /></td>
                     <td><input type="checkbox" checked={regime.permiteCreditoEntrada} onChange={(e) => updateRegimes((list) => list.map((item, i) => i === index ? { ...item, permiteCreditoEntrada: e.target.checked } : item))} /></td>

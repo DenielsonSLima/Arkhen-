@@ -47,6 +47,11 @@ export interface FolhaParamsCalculo {
   adicionalPericulosidade: number;
   adicionalNoturnoPercentual: number;
   insalubridadePercentual: number;
+  adicionalTempoServicoAtivo: boolean;
+  adicionalTempoServicoTipo: string;
+  adicionalTempoServicoAnos: number;
+  adicionalTempoServicoPercentual: number;
+  adicionalTempoServicoValor: number;
   horasExtras: HoraExtraFolha[];
   valeTransporteAtivo: boolean;
   valorValeTransporte: number;
@@ -105,6 +110,7 @@ export interface ResultadoFolha {
   horasExtrasTotal: number;
   adicionalNoturno: number;
   insalubridade: number;
+  adicionalTempoServico: number;
   salarioFamilia: number;
   salarioLiquido: number;
   custoEmpregador: number;
@@ -177,12 +183,21 @@ function calcularFolhaInterna(params: FolhaParamsCalculo): ResultadoFolha {
   }, 0);
   const adicionalNoturno = params.salarioBruto * (Math.max(0, params.adicionalNoturnoPercentual) / 100);
   const insalubridade = params.salarioBruto * (Math.max(0, params.insalubridadePercentual) / 100);
+  const adicionalTempoServico = calcularAdicionalTempoServico(
+    params.salarioBruto,
+    params.adicionalTempoServicoAnos,
+    params.adicionalTempoServicoAtivo,
+    params.adicionalTempoServicoTipo,
+    params.adicionalTempoServicoPercentual,
+    params.adicionalTempoServicoValor,
+  );
   const faltas = Math.max(0, params.faltasDias) * (params.salarioBruto / 30);
   const salarioFamilia = tipo.salarioFamilia && params.salarioBruto <= 1819.26
     ? params.dependentes * 65
     : 0;
   const baseRemuneracao = Math.max(0, params.salarioBruto + params.adicionalPericulosidade
-    + adicionalNoturno + insalubridade + horasExtrasTotal + params.adicionalManualValor - faltas);
+    + adicionalNoturno + insalubridade + adicionalTempoServico + horasExtrasTotal
+    + params.adicionalManualValor - faltas);
   const totalVencimentos = baseRemuneracao + salarioFamilia;
   const inss = tipo.inss === 'progressivo'
     ? calcularInssProgressivo(baseRemuneracao)
@@ -229,6 +244,7 @@ function calcularFolhaInterna(params: FolhaParamsCalculo): ResultadoFolha {
     horasExtrasTotal: round2(horasExtrasTotal),
     adicionalNoturno: round2(adicionalNoturno),
     insalubridade: round2(insalubridade),
+    adicionalTempoServico: round2(adicionalTempoServico),
     salarioFamilia: round2(salarioFamilia),
     salarioLiquido: round2(totalVencimentos - descontosFuncionario),
     custoEmpregador: round2(baseRemuneracao + encargosEmpresa),
@@ -256,6 +272,22 @@ function calcularInssProgressivo(totalBruto: number): number {
     limiteAnterior = faixa.limite;
   }
   return Math.min(inss, TETO_INSS);
+}
+
+function calcularAdicionalTempoServico(
+  salario: number,
+  anosCompletos: number,
+  ativo: boolean,
+  tipo: string,
+  percentual: number,
+  valorManual: number,
+): number {
+  if (!ativo) return 0;
+  if (tipo === 'manual') return Math.max(0, valorManual || 0);
+
+  const anosPorPeriodo = tipo === 'quinquenio' ? 5 : 3;
+  const periodos = Math.max(0, Math.floor((anosCompletos || 0) / anosPorPeriodo));
+  return salario * (Math.max(0, percentual || 0) / 100) * periodos;
 }
 
 function calcularIrrf(baseIRRF: number): number {
@@ -319,10 +351,14 @@ function buildObservacoes(resultado: ResultadoFolha, params: FolhaParamsCalculo)
 
 export interface ResultadoRescisao {
   tipo: string;
+  salarioBaseCalculo: number;
+  adicionalTempoServico: number;
   saldoSalario: number;
   decimoTerceiroProporcional: number;
   feriasProporcionais: number;
   adicionalFerias: number;
+  feriasVencidas: number;
+  adicionalFeriasVencidas: number;
   avisoPrevio: number;
   avisoPrevioDesconto: number;
   multaFGTS: number;
@@ -330,6 +366,13 @@ export interface ResultadoRescisao {
   inssRescisao: number;
   irrfRescisao: number;
   totalLiquido: number;
+}
+
+export interface AdicionalTempoServicoRescisao {
+  ativo: boolean;
+  tipo: string;
+  percentual: number;
+  valorManual: number;
 }
 
 /**
@@ -343,18 +386,35 @@ export function rpc_calcularRescisao(
   saldoFGTS: number = 0,
   tipoParametro?: TipoRescisaoParametro,
   avisoPrevioModo: 'cumprido' | 'descontado' | 'indenizado' = 'indenizado',
+  feriasVencidasPeriodos: number = 0,
+  feriasVencidasEmDobro: boolean = false,
+  adicionalTempoServicoParams?: AdicionalTempoServicoRescisao,
 ): ResultadoRescisao {
   const admissao = new Date(dataAdmissao);
   const demissao = new Date(dataDemissao);
   const diasTrabalhados = demissao.getDate();
-  const mesesTrabalhados = (demissao.getFullYear() - admissao.getFullYear()) * 12
-    + (demissao.getMonth() - admissao.getMonth());
+  const mesesTrabalhados = Math.max(
+    0,
+    (demissao.getFullYear() - admissao.getFullYear()) * 12
+      + (demissao.getMonth() - admissao.getMonth()),
+  );
   const anosTrabalhados = mesesTrabalhados / 12;
+  const anosCompletos = Math.floor(anosTrabalhados);
+  const adicionalTempoServico = calcularAdicionalTempoServicoRescisao(
+    salario,
+    anosCompletos,
+    adicionalTempoServicoParams,
+  );
+  const salarioBaseCalculo = salario + adicionalTempoServico;
+  const periodosVencidos = Math.max(0, Math.floor(feriasVencidasPeriodos || 0));
+  const multiplicadorFeriasVencidas = feriasVencidasEmDobro ? 2 : 1;
 
-  const saldoSalario = (salario / 30) * diasTrabalhados;
-  const decimoTerceiroProp = (salario / 12) * (demissao.getMonth() + 1);
-  const feriasProp = (salario / 12) * Math.min(mesesTrabalhados % 12, 11);
+  const saldoSalario = (salarioBaseCalculo / 30) * diasTrabalhados;
+  const decimoTerceiroProp = (salarioBaseCalculo / 12) * (demissao.getMonth() + 1);
+  const feriasProp = (salarioBaseCalculo / 12) * Math.min(mesesTrabalhados % 12, 11);
   const adicionalFerias = feriasProp / 3;
+  const feriasVencidas = salarioBaseCalculo * periodosVencidos * multiplicadorFeriasVencidas;
+  const adicionalFeriasVencidas = feriasVencidas / 3;
 
   let avisoPrevio = 0;
   let avisoPrevioDesconto = 0;
@@ -365,20 +425,22 @@ export function rpc_calcularRescisao(
 
   if (geraAvisoPrevio && avisoPrevioModo === 'indenizado') {
     const diasAviso = Math.min(30 + (Math.floor(anosTrabalhados) * 3), 90);
-    avisoPrevio = (salario / 30) * diasAviso;
+    avisoPrevio = (salarioBaseCalculo / 30) * diasAviso;
   }
 
   if (avisoPrevioModo === 'descontado') {
-    avisoPrevioDesconto = salario;
+    avisoPrevioDesconto = salarioBaseCalculo;
   }
 
   if (geraMultaFgts) {
     multaFGTS = saldoFGTS * 0.40;
   }
 
-  const totalBruto = saldoSalario + decimoTerceiroProp + feriasProp + adicionalFerias + avisoPrevio;
-  const inssRescisao = Math.min(totalBruto * 0.14, TETO_INSS);
-  const baseIRRF = Math.max(0, totalBruto - inssRescisao);
+  const totalBruto = saldoSalario + decimoTerceiroProp + feriasProp + adicionalFerias
+    + feriasVencidas + adicionalFeriasVencidas + avisoPrevio;
+  const baseDescontosRescisao = Math.max(0, saldoSalario + decimoTerceiroProp + avisoPrevio);
+  const inssRescisao = Math.min(baseDescontosRescisao * 0.14, TETO_INSS);
+  const baseIRRF = Math.max(0, baseDescontosRescisao - inssRescisao);
   let irrfRescisao = 0;
   for (const faixa of TABELA_IRRF_2024) {
     if (baseIRRF <= faixa.limite) {
@@ -389,10 +451,14 @@ export function rpc_calcularRescisao(
 
   return {
     tipo,
+    salarioBaseCalculo: round2(salarioBaseCalculo),
+    adicionalTempoServico: round2(adicionalTempoServico),
     saldoSalario: round2(saldoSalario),
     decimoTerceiroProporcional: round2(decimoTerceiroProp),
     feriasProporcionais: round2(feriasProp),
     adicionalFerias: round2(adicionalFerias),
+    feriasVencidas: round2(feriasVencidas),
+    adicionalFeriasVencidas: round2(adicionalFeriasVencidas),
     avisoPrevio: round2(avisoPrevio),
     avisoPrevioDesconto: round2(avisoPrevioDesconto),
     multaFGTS: round2(multaFGTS),
@@ -401,6 +467,20 @@ export function rpc_calcularRescisao(
     irrfRescisao: round2(irrfRescisao),
     totalLiquido: round2(totalBruto + multaFGTS - avisoPrevioDesconto - inssRescisao - irrfRescisao),
   };
+}
+
+function calcularAdicionalTempoServicoRescisao(
+  salario: number,
+  anosCompletos: number,
+  params?: AdicionalTempoServicoRescisao,
+): number {
+  if (!params?.ativo) return 0;
+  if (params.tipo === 'manual') return Math.max(0, params.valorManual || 0);
+
+  const anosPorPeriodo = params.tipo === 'quinquenio' ? 5 : 3;
+  const periodos = Math.max(0, Math.floor(anosCompletos / anosPorPeriodo));
+  const percentual = Math.max(0, params.percentual || 0) / 100;
+  return salario * percentual * periodos;
 }
 
 export interface ResultadoProLabore {

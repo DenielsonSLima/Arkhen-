@@ -136,6 +136,8 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     setSelectedCompanyId(null);
   };
 
+  const getCompanyDocumentCount = (id: string) => gestaoEmpresarialService.getCompanyDocumentCount(id);
+
   const handleSearchCNPJ = (cnpj: string) => cnpjLookupService.lookup(cnpj);
 
   return {
@@ -162,6 +164,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     inativarCompany: handleInativarCompany,
     reativarCompany: handleReativarCompany,
     deleteCompany: handleDeleteCompany,
+    getCompanyDocumentCount,
     searchCNPJ: handleSearchCNPJ,
     activeDetailTab,
     setActiveDetailTab,

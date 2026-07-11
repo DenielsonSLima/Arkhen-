@@ -1,12 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import { FileX2, Calculator } from 'lucide-react';
 import { type ResultadoRescisao, formatCurrency } from '../services/calculos.service';
 import { CurrencyInput } from '../../shared/CurrencyInput';
-import { formatCurrencyInputValue } from '../../shared/currencyInputUtils';
-import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import type { Company, Employee } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type { TipoRescisaoParametro } from '../../parametrizacao/parametros-calculo/services/parametrosCalculoService';
-import type { AvisoPrevioModo } from '../hooks/useSimulacoesCalculos';
+import type { AdicionalTempoServicoTipo, AvisoPrevioModo } from '../hooks/useSimulacoesCalculos';
 
 interface Params {
   tipo: string;
@@ -15,6 +12,12 @@ interface Params {
   dataAdmissao: string;
   dataDemissao: string;
   saldoFGTS: string;
+  feriasVencidasPeriodos: string;
+  feriasVencidasEmDobro: boolean;
+  adicionalTempoServicoAtivo: boolean;
+  adicionalTempoServicoTipo: AdicionalTempoServicoTipo;
+  adicionalTempoServicoPercentual: string;
+  adicionalTempoServicoValor: string;
 }
 
 interface Props {
@@ -30,99 +33,20 @@ const AVISO_PREVIO_OPCOES: { id: AvisoPrevioModo; label: string; desc: string }[
   { id: 'indenizado', label: 'Indenizado', desc: 'Soma aviso prévio indenizado nas verbas.' },
 ];
 
+const ADICIONAL_TEMPO_SERVICO_OPCOES: { id: AdicionalTempoServicoTipo; label: string }[] = [
+  { id: 'trienio', label: 'Triênio' },
+  { id: 'quinquenio', label: 'Quinquênio' },
+  { id: 'manual', label: 'Valor manual' },
+];
+
 export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultado, tiposRescisao }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-
-  useEffect(() => {
-    let active = true;
-
-    gestaoEmpresarialService.getCompanies().then((data) => {
-      if (active) setCompanies(data);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const selectedCompany = useMemo(() => {
-    return companies.find((company) => company.id === selectedCompanyId) || null;
-  }, [companies, selectedCompanyId]);
-
-  const selectedEmployee = useMemo(() => {
-    return selectedCompany?.funcionarios.find((employee) => employee.id === selectedEmployeeId) || null;
-  }, [selectedCompany, selectedEmployeeId]);
-
   const set = (key: keyof Params) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setParams({ ...params, [key]: e.target.value });
-
-  const handleSelectCompany = (companyId: string) => {
-    setSelectedCompanyId(companyId);
-    setSelectedEmployeeId('');
-  };
-
-  const handleSelectEmployee = (employeeId: string) => {
-    setSelectedEmployeeId(employeeId);
-    const employee = selectedCompany?.funcionarios.find((item) => item.id === employeeId);
-    if (!employee) return;
-
-    setParams({
-      ...params,
-      salario: formatCurrencyInputValue(employee.salario),
-      dataAdmissao: employee.dataAdmissao,
-    });
-  };
-
-  const employeeLabel = (employee: Employee) => {
-    return `${employee.nome} - ${employee.cargo}`;
-  };
 
   return (
     <div className="calc-layout">
       <div className="calc-form-card">
         <h3><FileX2 size={18} color="#c59235" />Dados da Rescisão</h3>
-        <div className="rescisao-select-grid">
-          <div className="calc-field">
-            <label>Empresa</label>
-            <select
-              value={selectedCompanyId}
-              onChange={(event) => handleSelectCompany(event.target.value)}
-            >
-              <option value="">Preenchimento manual</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="calc-field">
-            <label>Funcionário</label>
-            <select
-              value={selectedEmployeeId}
-              onChange={(event) => handleSelectEmployee(event.target.value)}
-              disabled={!selectedCompany}
-            >
-              <option value="">
-                {selectedCompany ? 'Selecionar funcionário' : 'Selecione uma empresa'}
-              </option>
-              {selectedCompany?.funcionarios.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employeeLabel(employee)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {selectedEmployee && (
-          <div className="rescisao-employee-summary">
-            <strong>{selectedEmployee.nome}</strong>
-            <span>{selectedCompany?.nome}</span>
-            <span>{selectedEmployee.status}</span>
-          </div>
-        )}
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>
             Tipo de Rescisão
@@ -181,6 +105,85 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
             onValueChange={(value) => setParams({ ...params, saldoFGTS: value })}
           />
         </div>
+
+        <div className="rescisao-extra-section">
+          <div className="rescisao-section-title">Férias vencidas</div>
+          <div className="rescisao-select-grid">
+            <div className="calc-field">
+              <label>Períodos vencidos</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={params.feriasVencidasPeriodos}
+                onChange={set('feriasVencidasPeriodos')}
+              />
+            </div>
+            <label className="calc-check-row rescisao-check-row">
+              <input
+                type="checkbox"
+                checked={params.feriasVencidasEmDobro}
+                onChange={(event) => setParams({ ...params, feriasVencidasEmDobro: event.target.checked })}
+              />
+              <span>Pagar vencidas em dobro</span>
+            </label>
+          </div>
+          <small className="rescisao-help-text">
+            Use o dobro quando o período concessivo já tiver sido ultrapassado.
+          </small>
+        </div>
+
+        <div className="rescisao-extra-section">
+          <label className="calc-check-row">
+            <input
+              type="checkbox"
+              checked={params.adicionalTempoServicoAtivo}
+              onChange={(event) => setParams({ ...params, adicionalTempoServicoAtivo: event.target.checked })}
+            />
+            <span>Possui adicional por tempo de serviço</span>
+          </label>
+          {params.adicionalTempoServicoAtivo && (
+            <div className="rescisao-adicional-grid">
+              <div className="calc-field">
+                <label>Tipo</label>
+                <select
+                  value={params.adicionalTempoServicoTipo}
+                  onChange={(event) => setParams({
+                    ...params,
+                    adicionalTempoServicoTipo: event.target.value as AdicionalTempoServicoTipo,
+                  })}
+                >
+                  {ADICIONAL_TEMPO_SERVICO_OPCOES.map((opcao) => (
+                    <option key={opcao.id} value={opcao.id}>{opcao.label}</option>
+                  ))}
+                </select>
+              </div>
+              {params.adicionalTempoServicoTipo === 'manual' ? (
+                <div className="calc-field">
+                  <label>Valor mensal (R$)</label>
+                  <CurrencyInput
+                    value={params.adicionalTempoServicoValor}
+                    onValueChange={(value) => setParams({ ...params, adicionalTempoServicoValor: value })}
+                  />
+                </div>
+              ) : (
+                <div className="calc-field">
+                  <label>Percentual por período (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={params.adicionalTempoServicoPercentual}
+                    onChange={set('adicionalTempoServicoPercentual')}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <small className="rescisao-help-text">
+            Triênio/quinquênio depende de CCT, ACT, estatuto ou política interna; por isso fica opcional.
+          </small>
+        </div>
       </div>
 
       <div className="resultado-card">
@@ -201,6 +204,24 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
           <span className="r-label">Adicional de 1/3 de Férias</span>
           <span className="r-valor">{formatCurrency(resultado.adicionalFerias)}</span>
         </div>
+        {resultado.feriasVencidas > 0 && (
+          <div className="resultado-row">
+            <span className="r-label">Férias Vencidas</span>
+            <span className="r-valor">{formatCurrency(resultado.feriasVencidas)}</span>
+          </div>
+        )}
+        {resultado.adicionalFeriasVencidas > 0 && (
+          <div className="resultado-row">
+            <span className="r-label">1/3 sobre Férias Vencidas</span>
+            <span className="r-valor">{formatCurrency(resultado.adicionalFeriasVencidas)}</span>
+          </div>
+        )}
+        {resultado.adicionalTempoServico > 0 && (
+          <div className="resultado-row azul">
+            <span className="r-label">Adicional Tempo Serviço</span>
+            <span className="r-valor">{formatCurrency(resultado.adicionalTempoServico)}</span>
+          </div>
+        )}
         {resultado.avisoPrevio > 0 && (
           <div className="resultado-row">
             <span className="r-label">Aviso Prévio Indenizado</span>

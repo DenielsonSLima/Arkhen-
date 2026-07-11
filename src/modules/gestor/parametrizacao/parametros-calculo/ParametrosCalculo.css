@@ -29,3 +29,25 @@
   height: 18px;
   accent-color: #c59235;
 }
+
+.parametros-calculo-page .parametros-rescisao-table th:nth-child(1),
+.parametros-calculo-page .parametros-rescisao-table td:nth-child(1) {
+  width: 28%;
+}
+
+.parametros-calculo-page .parametros-rescisao-table th:nth-child(2),
+.parametros-calculo-page .parametros-rescisao-table td:nth-child(2) {
+  width: 42%;
+}
+
+.parametros-calculo-page .parametros-pis-table th:nth-child(1),
+.parametros-calculo-page .parametros-pis-table td:nth-child(1) {
+  width: 28%;
+}
+
+.parametros-calculo-page .parametros-pis-table th:nth-child(2),
+.parametros-calculo-page .parametros-pis-table td:nth-child(2),
+.parametros-calculo-page .parametros-pis-table th:nth-child(3),
+.parametros-calculo-page .parametros-pis-table td:nth-child(3) {
+  width: 20%;
+}

@@ -9,6 +9,7 @@ export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   'parametrizacao-cnae': { title: 'CNAE', iconName: 'Database' },
   'parametrizacao-regras': { title: 'Impostos', iconName: 'Database' },
   'parametrizacao-documentos': { title: 'Tipos de Documentos', iconName: 'Database' },
+  'parametrizacao-pastas-padrao': { title: 'Pastas Padrão', iconName: 'FolderTree' },
   'parametrizacao-parametros-calculo': { title: 'Parâmetros de Cálculo', iconName: 'Database' },
   'parametrizacao-prazos-entrega': { title: 'Obrigações', iconName: 'Database' },
   'parametrizacao-protocolos': { title: 'Catálogo de Obrigações', iconName: 'Database' },

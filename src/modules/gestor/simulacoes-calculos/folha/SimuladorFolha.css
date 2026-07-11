@@ -90,6 +90,22 @@
   overflow: hidden;
 }
 
+.folha-adicional-tempo {
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 14px 0;
+  background: #fcfcfd;
+}
+
+.folha-adicional-tempo .folha-check {
+  margin-bottom: 0;
+}
+
+.folha-adicional-tempo .folha-grid {
+  margin-top: 12px;
+}
+
 .folha-hour-row {
   display: grid;
   grid-template-columns: 1.1fr 0.6fr 1fr;

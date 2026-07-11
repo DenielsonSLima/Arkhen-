@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { 
-  FolderOpen, AlertCircle, ArrowLeft, Trash2, ChevronRight, Download 
+  FolderOpen, AlertCircle, ArrowLeft, Trash2, ChevronRight, Download, FolderInput 
 } from 'lucide-react';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentQuickPreview } from '../../gestao-empresarial/components/DocumentQuickPreview';
@@ -99,6 +99,17 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     () => getDirectChildren(foldersList, selectedFolder),
     [foldersList, selectedFolder]
   );
+  const parentFolder = useMemo(() => {
+    if (!selectedFolder) return null;
+    const parts = selectedFolder.split('/');
+    parts.pop();
+    return parts.length > 0 ? parts.join('/') : null;
+  }, [selectedFolder]);
+  const siblingFolders = useMemo(() => {
+    if (!selectedFolder) return [];
+    const currentName = selectedFolder.split('/').at(-1);
+    return getDirectChildren(foldersList, parentFolder).filter((folder) => folder !== currentName);
+  }, [foldersList, parentFolder, selectedFolder]);
 
   // Custom company breadcrumbs
   const breadcrumbs = useMemo(() => {
@@ -252,6 +263,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
 
   const handleDropItem = (event: React.DragEvent, targetFolder: string | null) => {
     event.preventDefault();
+    setDropTargetFolder(null);
     if (!selectedCompany) return;
     const payload = event.dataTransfer.getData('application/x-documentos-item');
     if (!payload) return;
@@ -267,6 +279,42 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     } catch {
       // Invalid drag payloads are ignored.
     }
+  };
+
+  const canDropOnFolder = (event: React.DragEvent, targetFolder: string | null) => {
+    if (!Array.from(event.dataTransfer.types).includes('application/x-documentos-item')) return false;
+    if (!draggedFolder) return true;
+    return draggedFolder !== targetFolder && !(targetFolder || '').startsWith(draggedFolder + '/');
+  };
+
+  const renderDropTargetCard = (label: string, targetFolder: string | null, description: string) => {
+    const targetKey = targetFolder ?? '__root__';
+    const isActive = dropTargetFolder === targetKey;
+
+    return (
+      <div
+        key={targetKey}
+        className={`doc-folder-card doc-folder-card--drop-target ${isActive ? 'is-drop-target' : ''}`}
+        onDragOver={(event) => {
+          if (!canDropOnFolder(event, targetFolder)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setDropTargetFolder(targetKey);
+        }}
+        onDragLeave={() => setDropTargetFolder((current) => current === targetKey ? null : current)}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          handleDropItem(event, targetFolder);
+        }}
+      >
+        <FolderInput className="doc-folder-icon" size={22} />
+        <div className="doc-folder-info" style={{ flexGrow: 1 }}>
+          <h4>{label}</h4>
+          <span>{description}</span>
+        </div>
+      </div>
+    );
   };
 
   const handleRenameFileSubmit = async (newName: string) => {
@@ -466,14 +514,23 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
         <div>
           
           {/* Company subfolders rendering */}
-          {!searchTerm.trim() && currentSubFolders.length > 0 && selectedCompanyId !== null && (
+          {!searchTerm.trim() && selectedCompanyId !== null && (selectedFolder || currentSubFolders.length > 0) && (
             <div style={{ marginBottom: '24px' }}>
               {selectedFolder && (
                 <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-                  Subpastas
+                  Mover para fora ou subpastas
                 </div>
               )}
               <div className="docs-folders-grid">
+                {selectedFolder && renderDropTargetCard(
+                  parentFolder ? `Voltar para ${parentFolder.split('/').at(-1)}` : 'Mover para a raiz',
+                  parentFolder,
+                  parentFolder ? 'Soltar na pasta acima' : 'Soltar fora das pastas'
+                )}
+                {selectedFolder && siblingFolders.map((shortName) => {
+                  const fullPath = parentFolder ? `${parentFolder}/${shortName}` : shortName;
+                  return renderDropTargetCard(shortName, fullPath, 'Outra pasta no mesmo nível');
+                })}
                 {currentSubFolders.map((shortName, index) => {
                   const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
                   const filesInFolder = documents.filter(d => {
@@ -497,11 +554,10 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
                         setDropTargetFolder(null);
                       }}
                       onDragOver={(event) => {
-                        if (draggedFolder && draggedFolder !== fullPath && !fullPath.startsWith(draggedFolder + '/')) {
-                          event.preventDefault();
-                          event.dataTransfer.dropEffect = 'move';
-                          setDropTargetFolder(fullPath);
-                        }
+                        if (!canDropOnFolder(event, fullPath)) return;
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'move';
+                        setDropTargetFolder(fullPath);
                       }}
                       onDragLeave={() => setDropTargetFolder((current) => current === fullPath ? null : current)}
                       onDrop={(event) => {
@@ -509,11 +565,8 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
                         event.stopPropagation();
                         handleDropItem(event, fullPath);
                       }}
-                      style={{
-                        outline: dropTargetFolder === fullPath ? '2px solid var(--color-gold-primary)' : undefined,
-                        opacity: draggedFolder === fullPath ? 0.55 : 1,
-                        cursor: 'grab',
-                      }}
+                      style={{ opacity: draggedFolder === fullPath ? 0.55 : 1, cursor: 'grab' }}
+                      data-drop-active={dropTargetFolder === fullPath ? 'true' : undefined}
                       title="Arraste para mover esta pasta para dentro de outra"
                     >
                       <FolderOpen className="doc-folder-icon" size={24} />

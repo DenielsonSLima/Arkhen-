@@ -40,6 +40,7 @@ export type AbaCalculo =
   | 'simulacao-custos';
 
 export type AvisoPrevioModo = 'cumprido' | 'descontado' | 'indenizado';
+export type AdicionalTempoServicoTipo = 'trienio' | 'quinquenio' | 'manual';
 
 export function useSimulacoesCalculos() {
   const status = 'Em desenvolvimento';
@@ -115,6 +116,11 @@ export function useSimulacoesCalculos() {
     adicionalPericulosidade: formatCurrencyInputValue(0),
     adicionalNoturnoPercentual: '0',
     insalubridadePercentual: '0',
+    adicionalTempoServicoAtivo: false,
+    adicionalTempoServicoTipo: 'trienio' as AdicionalTempoServicoTipo,
+    adicionalTempoServicoAnos: '0',
+    adicionalTempoServicoPercentual: '3',
+    adicionalTempoServicoValor: formatCurrencyInputValue(0),
     horasExtras50: '0',
     valorHora50: formatCurrencyInputValue(0),
     horasExtras100: '0',
@@ -152,6 +158,11 @@ export function useSimulacoesCalculos() {
     adicionalPericulosidade: parseCurrencyInputValue(folhaParams.adicionalPericulosidade),
     adicionalNoturnoPercentual: parseNumberInput(folhaParams.adicionalNoturnoPercentual),
     insalubridadePercentual: parseNumberInput(folhaParams.insalubridadePercentual),
+    adicionalTempoServicoAtivo: folhaParams.adicionalTempoServicoAtivo,
+    adicionalTempoServicoTipo: folhaParams.adicionalTempoServicoTipo,
+    adicionalTempoServicoAnos: parseNumberInput(folhaParams.adicionalTempoServicoAnos),
+    adicionalTempoServicoPercentual: parseNumberInput(folhaParams.adicionalTempoServicoPercentual),
+    adicionalTempoServicoValor: parseCurrencyInputValue(folhaParams.adicionalTempoServicoValor),
     horasExtras: [
       { quantidade: parseNumberInput(folhaParams.horasExtras50), valorHora: parseCurrencyInputValue(folhaParams.valorHora50), multiplicador: 1.5 },
       { quantidade: parseNumberInput(folhaParams.horasExtras100), valorHora: parseCurrencyInputValue(folhaParams.valorHora100), multiplicador: 2 },
@@ -184,6 +195,12 @@ export function useSimulacoesCalculos() {
     dataAdmissao: '2022-01-01',
     dataDemissao: new Date().toISOString().split('T')[0],
     saldoFGTS: formatCurrencyInputValue(8500),
+    feriasVencidasPeriodos: '0',
+    feriasVencidasEmDobro: false,
+    adicionalTempoServicoAtivo: false,
+    adicionalTempoServicoTipo: 'trienio' as AdicionalTempoServicoTipo,
+    adicionalTempoServicoPercentual: '3',
+    adicionalTempoServicoValor: formatCurrencyInputValue(0),
   });
   const tipoRescisaoSelecionado = useMemo(() => {
     return parametrosCalculo.tiposRescisao.find((tipo) => tipo.id === rescisaoParams.tipo);
@@ -196,6 +213,14 @@ export function useSimulacoesCalculos() {
     parseCurrencyInputValue(rescisaoParams.saldoFGTS),
     tipoRescisaoSelecionado,
     rescisaoParams.avisoPrevioModo,
+    parseNumberInput(rescisaoParams.feriasVencidasPeriodos),
+    rescisaoParams.feriasVencidasEmDobro,
+    {
+      ativo: rescisaoParams.adicionalTempoServicoAtivo,
+      tipo: rescisaoParams.adicionalTempoServicoTipo,
+      percentual: parseNumberInput(rescisaoParams.adicionalTempoServicoPercentual),
+      valorManual: parseCurrencyInputValue(rescisaoParams.adicionalTempoServicoValor),
+    },
   ), [rescisaoParams, tipoRescisaoSelecionado]);
 
   // ── Pró-Labore ────────────────────────────────────────

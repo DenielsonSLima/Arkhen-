@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { type ResultadoFolha, formatCurrency, formatPercent } from '../services/calculos.service';
 import { CurrencyInput } from '../../shared/CurrencyInput';
+import type { AdicionalTempoServicoTipo } from '../hooks/useSimulacoesCalculos';
 import './SimuladorFolha.css';
 
 interface Params {
@@ -23,6 +24,11 @@ interface Params {
   adicionalPericulosidade: string;
   adicionalNoturnoPercentual: string;
   insalubridadePercentual: string;
+  adicionalTempoServicoAtivo: boolean;
+  adicionalTempoServicoTipo: AdicionalTempoServicoTipo;
+  adicionalTempoServicoAnos: string;
+  adicionalTempoServicoPercentual: string;
+  adicionalTempoServicoValor: string;
   horasExtras50: string;
   valorHora50: string;
   horasExtras100: string;
@@ -74,6 +80,12 @@ const REGIOES = [
   { id: 'centro_oeste', label: 'Centro-Oeste' },
   { id: 'sudeste', label: 'Sudeste' },
   { id: 'sul', label: 'Sul' },
+];
+
+const ADICIONAL_TEMPO_SERVICO_OPCOES: { id: AdicionalTempoServicoTipo; label: string }[] = [
+  { id: 'trienio', label: 'Triênio' },
+  { id: 'quinquenio', label: 'Quinquênio' },
+  { id: 'manual', label: 'Valor manual' },
 ];
 
 export const SimuladorFolha: React.FC<Props> = ({ params, setParams, resultado }) => {
@@ -196,6 +208,41 @@ export const SimuladorFolha: React.FC<Props> = ({ params, setParams, resultado }
             </div>
           </div>
 
+          <div className="folha-adicional-tempo">
+            <label className="folha-check">
+              <input
+                type="checkbox"
+                checked={params.adicionalTempoServicoAtivo}
+                onChange={(event) => updateParam('adicionalTempoServicoAtivo', event.target.checked)}
+              />
+              Adicional por tempo de serviço
+            </label>
+            {params.adicionalTempoServicoAtivo && (
+              <div className="folha-grid three">
+                <div className="calc-field">
+                  <InfoLabel label="Tipo do adicional" items={['Use triênio quando a CCT/ACT prever adicional a cada 3 anos.', 'Use manual para informar um valor mensal fechado.']} />
+                  <select
+                    value={params.adicionalTempoServicoTipo}
+                    onChange={(event) => updateParam('adicionalTempoServicoTipo', event.target.value as AdicionalTempoServicoTipo)}
+                  >
+                    {ADICIONAL_TEMPO_SERVICO_OPCOES.map((opcao) => (
+                      <option key={opcao.id} value={opcao.id}>{opcao.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {params.adicionalTempoServicoTipo !== 'manual' && (
+                  <>
+                    <NumberField label="Anos completos" value={params.adicionalTempoServicoAnos} onChange={setText('adicionalTempoServicoAnos')} />
+                    <PercentField label="% por período" value={params.adicionalTempoServicoPercentual} onChange={setText('adicionalTempoServicoPercentual')} />
+                  </>
+                )}
+                {params.adicionalTempoServicoTipo === 'manual' && (
+                  <MoneyField label="Valor mensal" value={params.adicionalTempoServicoValor} onChange={(value) => updateParam('adicionalTempoServicoValor', value)} />
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="folha-hours-table">
             <HourRow label="Hora extra 50%" qtd={params.horasExtras50} valor={params.valorHora50} onQtd={setText('horasExtras50')} onValor={(value) => updateParam('valorHora50', value)} />
             <HourRow label="Hora extra 100%" qtd={params.horasExtras100} valor={params.valorHora100} onQtd={setText('horasExtras100')} onValor={(value) => updateParam('valorHora100', value)} />
@@ -246,6 +293,9 @@ export const SimuladorFolha: React.FC<Props> = ({ params, setParams, resultado }
         <section className="resultado-card folha-result-card">
           <h3><Calculator size={18} color="#c59235" />Resumo</h3>
           <SummaryRow label="Salário Bruto" value={resultado.salarioBruto} />
+          {resultado.adicionalTempoServico > 0 && (
+            <SummaryRow label="Adic. tempo serviço" value={resultado.adicionalTempoServico} tone="blue" />
+          )}
           <SummaryRow label="Descontos Funcionário" value={resultado.descontosFuncionario} tone="danger" />
           <SummaryRow label="Encargos Empresa" value={resultado.encargosEmpresa} tone="blue" />
           <SummaryRow label="Custo Total" value={resultado.custoEmpregador} tone="strong" />

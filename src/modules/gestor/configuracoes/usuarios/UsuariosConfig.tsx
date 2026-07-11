@@ -2,6 +2,22 @@ import React from 'react';
 import { Edit2, Trash2, UserPlus, UserX } from 'lucide-react';
 import { useUsuarios } from './hooks/useUsuarios';
 import { UsuarioForm } from './forms/UsuarioForm';
+import type { Usuario } from './services/usuariosService';
+
+const weekdays = [1, 2, 3, 4, 5];
+
+const getAccessSummary = (user: Usuario) => {
+  if (!user.accessConfig.enabled) return 'Livre';
+  const isWeekdays = user.accessConfig.days.length === weekdays.length
+    && weekdays.every((day) => user.accessConfig.days.includes(day));
+  const isCommercialHours = user.accessConfig.intervals.length === 1
+    && user.accessConfig.intervals[0]?.start === '08:00'
+    && user.accessConfig.intervals[0]?.end === '18:00';
+  if (isWeekdays && isCommercialHours) return 'Horário comercial';
+  const days = user.accessConfig.days.length === 7 ? 'Todos os dias' : `${user.accessConfig.days.length} dia(s)`;
+  const intervals = `${user.accessConfig.intervals.length} intervalo(s)`;
+  return `${days} / ${intervals}`;
+};
 
 export const UsuariosConfig: React.FC = () => {
   const {
@@ -10,7 +26,6 @@ export const UsuariosConfig: React.FC = () => {
     isLoading,
     isSaving,
     showForm,
-    selectedUsuario,
     formValue,
     setFormValue,
     successMsg,
@@ -44,11 +59,7 @@ export const UsuariosConfig: React.FC = () => {
 
       {showForm && (
         <div className="modal-backdrop">
-          <div className="modal-container" style={{ maxWidth: '760px' }}>
-            <h3>{selectedUsuario ? 'Editar Usuário' : 'Cadastrar Usuário'}</h3>
-            <p style={{ margin: '4px 0 16px', color: '#64748b', fontSize: '0.86rem' }}>
-              {selectedUsuario ? 'Clique em salvar para aplicar os dados e regras de acesso.' : 'O usuário ficará pendente até confirmar o acesso no Supabase Auth.'}
-            </p>
+          <div className="modal-container usuario-modal-container">
             <UsuarioForm
               value={formValue}
               perfis={perfis}
@@ -88,7 +99,7 @@ export const UsuariosConfig: React.FC = () => {
                     {user.status}
                   </span>
                 </td>
-                <td>{user.accessConfig.enabled ? 'Dias/horários personalizados' : 'Livre'}</td>
+                <td>{getAccessSummary(user)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                     <button

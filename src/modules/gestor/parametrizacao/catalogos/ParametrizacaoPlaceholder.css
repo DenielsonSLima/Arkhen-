@@ -158,6 +158,20 @@
   justify-content: flex-end;
 }
 
+.parametrizacao-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.parametrizacao-header-actions .btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .parametrizacao-empty-row {
   padding: 32px;
   color: #64748b;
@@ -236,5 +250,10 @@
 @media (max-width: 900px) {
   .parametrizacao-docs-summary {
     grid-template-columns: 1fr;
+  }
+
+  .parametrizacao-header-actions {
+    justify-content: flex-start;
+    width: 100%;
   }
 }

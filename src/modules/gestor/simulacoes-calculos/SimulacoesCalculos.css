@@ -131,6 +131,58 @@
   border-left: 1px solid rgba(100,116,139,0.22);
 }
 
+.rescisao-extra-section {
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 14px;
+  background: #fcfcfd;
+}
+
+.rescisao-section-title {
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.calc-check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calc-check-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #c59235;
+  flex: 0 0 auto;
+}
+
+.rescisao-check-row {
+  align-self: end;
+  min-height: 39px;
+  margin-bottom: 14px;
+}
+
+.rescisao-help-text {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.rescisao-adicional-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 /* ── Resultado do cálculo ──────────────────────────────── */
 .resultado-card {
   background: #ffffff;
@@ -307,6 +359,16 @@
   .aviso-previo-grid {
     grid-template-columns: 1fr;
   }
+
+  .rescisao-select-grid,
+  .rescisao-adicional-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rescisao-check-row {
+    align-self: start;
+    margin-bottom: 4px;
+  }
 }
 
 @keyframes scaleIn {
@@ -376,15 +438,26 @@
 
 .simulation-export-preview {
   flex: 1;
-  background: #ffffff;
+  background: #e5e7eb;
   padding: 24px;
-  overflow-y: auto;
-  position: relative;
+  overflow: auto;
   display: flex;
-  flex-direction: column;
-  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
   min-width: 0;
   min-height: 0;
+}
+
+.simulation-pdf-page {
+  width: min(760px, 100%);
+  min-height: 1040px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.24);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
 }
 
 .simulation-export-actions {
@@ -412,6 +485,12 @@
   .simulation-export-preview {
     padding: 18px;
     max-height: 65vh;
+    justify-content: flex-start;
+  }
+
+  .simulation-pdf-page {
+    min-height: 900px;
+    padding: 18px;
   }
 
   .simulation-export-actions {

@@ -33,6 +33,7 @@ import { ProtocolosTiposPage } from '../parametrizacao/protocolos/ProtocolosTipo
 import { ParametrizacaoPlaceholderPage } from '../parametrizacao/catalogos/ParametrizacaoPlaceholderPage';
 import { CategoriaClientePage } from '../parametrizacao/catalogos/CategoriaClientePage';
 import { TiposDocumentosPage } from '../parametrizacao/catalogos/tipos-documentos/TiposDocumentosPage';
+import { PastasPadraoPage } from '../parametrizacao/pastas-padrao/PastasPadraoPage';
 import { GestaoEmpresarialPage } from '../gestao-empresarial/GestaoEmpresarialPage';
 import type { EmpresaDetailTab } from '../gestao-empresarial/hooks/useGestaoEmpresarial';
 import { AtividadesPage } from '../atividades/AtividadesPage';
@@ -55,6 +56,7 @@ import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tab
 import { TAB_INFOS } from './gestorTabMetadata';
 import { GuiaAjudaPage } from '../guia-ajuda/GuiaAjudaPage';
 import { ModuleRenderErrorBoundary } from '../components/ModuleRenderErrorBoundary';
+import { sidebarPreferencesService } from './services/sidebarPreferencesService';
 
 import systemLogoImg from '../../../assets/camada-o.png';
 import './GestorLayout.css';
@@ -62,6 +64,21 @@ import './GestorLayoutFixes.css';
 import './GestorModuleTabs.css';
 
 const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage').then((module) => ({ default: module.DocumentosPage })));
+const DEFAULT_MENU_ORDER = [
+  'inicio',
+  'clientes',
+  'atividades',
+  'conformidade',
+  'protocolos',
+  'simulacoes-calculos',
+  'faturamento',
+  'financeiro',
+  'documentos',
+  'agenda',
+  'parametrizacao',
+  'configuracoes',
+];
+const ALL_MENU_IDS = [...DEFAULT_MENU_ORDER];
 
 interface GestorLayoutProps {
   onLogout: () => void;
@@ -199,40 +216,38 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     setShowLogoutConfirm(true);
   };
 
-  const defaultOrder = [
-    'inicio',
-    'clientes',
-    'atividades',
-    'conformidade',
-    'protocolos',
-    'simulacoes-calculos',
-    'faturamento',
-    'financeiro',
-    'documentos',
-    'agenda',
-    'parametrizacao',
-    'configuracoes'
-  ];
-
   const [menuOrder, setMenuOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('arkhen_sidebar_menu_order');
-        if (saved) {
+    if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const allItems = ['inicio', 'clientes', 'parametrizacao', 'atividades', 'conformidade', 'simulacoes-calculos', 'documentos', 'protocolos', 'faturamento', 'financeiro', 'agenda', 'configuracoes'];
-          const filtered = parsed.filter(id => allItems.includes(id));
-          const missing = allItems.filter(id => !filtered.includes(id));
-          return [...filtered, ...missing];
-        }
+        return sidebarPreferencesService.normalizeMenuOrder(parsed, ALL_MENU_IDS, DEFAULT_MENU_ORDER);
       } catch (e) {
         console.error(e);
       }
     }
-    return defaultOrder;
+    return DEFAULT_MENU_ORDER;
   });
 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    sidebarPreferencesService.getMenuOrder(ALL_MENU_IDS, DEFAULT_MENU_ORDER)
+      .then((remoteOrder) => {
+        if (!mounted || !remoteOrder) return;
+        setMenuOrder(remoteOrder);
+        localStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(remoteOrder));
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar ordem da sidebar:', error);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSidebarDragStart = (e: React.DragEvent, index: number) => {
     if (!isReadyToDragSidebar) {
@@ -260,9 +275,13 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       const newOrder = [...menuOrder];
       const [draggedItem] = newOrder.splice(draggedSidebarIndex, 1);
       newOrder.splice(index, 0, draggedItem);
+      const normalizedOrder = sidebarPreferencesService.normalizeMenuOrder(newOrder, ALL_MENU_IDS, DEFAULT_MENU_ORDER);
 
-      setMenuOrder(newOrder);
-      localStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(newOrder));
+      setMenuOrder(normalizedOrder);
+      localStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(normalizedOrder));
+      void sidebarPreferencesService.saveMenuOrder(normalizedOrder, ALL_MENU_IDS, DEFAULT_MENU_ORDER).catch((error) => {
+        console.error('Erro ao salvar ordem da sidebar:', error);
+      });
     }
     setDraggedSidebarIndex(null);
     setDragOverIndex(null);
@@ -308,9 +327,12 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
     { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
     { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },
+    { id: 'parametrizacao-cnae', label: 'CNAE' },
     { id: 'parametrizacao-regras', label: 'Impostos' },
+    { id: 'parametrizacao-parametros-calculo', label: 'Parâmetros de Cálculo' },
     { id: 'parametrizacao-prazos-entrega', label: 'Obrigações' },
     { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },
+    { id: 'parametrizacao-pastas-padrao', label: 'Pastas Padrão' },
     { id: 'parametrizacao-checklists', label: 'Modelos de Checklists' },
   ];
   const atividadesItems = [
@@ -407,6 +429,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         return <RegrasApuracaoPage />;
       case 'parametrizacao-documentos':
         return <TiposDocumentosPage />;
+      case 'parametrizacao-pastas-padrao':
+        return <PastasPadraoPage />;
       case 'parametrizacao-parametros-calculo':
         return <ParametrosCalculoPage />;
       case 'parametrizacao-prazos-entrega':

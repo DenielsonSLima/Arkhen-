@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { AlertCircle, Check, Loader2, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ArrowLeft, Check, FolderTree, Loader2, Search } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
+import {
+  DEFAULT_PASTAS_DOCUMENTOS,
+  expandFolderPaths,
+} from '../../parametrizacao/pastas-padrao/services/pastasPadraoService';
+import { useActivePastasPadraoQuery } from '../../parametrizacao/pastas-padrao/services/usePastasPadraoQueries';
 import { ClienteLogoUpload } from './components/ClienteLogoUpload';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
@@ -18,8 +23,16 @@ interface ClienteAddFormProps {
 type DocumentType = 'CPF' | 'CNPJ';
 type RegimeCliente = Company['tipo'];
 type CategoriaCliente = string;
+type FormStep = 'identificacao' | 'contato' | 'endereco' | 'pastas';
 
 const regimes: RegimeCliente[] = ['PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+const fallbackPastas = expandFolderPaths(DEFAULT_PASTAS_DOCUMENTOS.map((item) => item.caminho));
+const formSteps: Array<{ id: FormStep; label: string; description: string }> = [
+  { id: 'identificacao', label: '1. Identificação', description: 'Informe documento, regime, razão social e classificação do cliente.' },
+  { id: 'contato', label: '2. Contatos', description: 'Cadastre o responsável, telefone e e-mail principal.' },
+  { id: 'endereco', label: '3. Endereço fiscal', description: 'Preencha a localização fiscal da empresa ou pessoa física.' },
+  { id: 'pastas', label: '4. Pastas padrão', description: 'Revise a estrutura de pastas que será criada em Documentos.' },
+];
 
 // Funções utilitárias de formatação
 const formatCPF = (val: string) => {
@@ -58,6 +71,7 @@ const formatCEP = (val: string) => {
 
 
 export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel, onSearchCNPJ, isSaving }) => {
+  const [step, setStep] = useState<FormStep>('identificacao');
   const [docType, setDocType] = useState<DocumentType>('CNPJ');
   const [cnpj, setCnpj] = useState('');
   const [cpf, setCpf] = useState('');
@@ -86,8 +100,23 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedPastas, setSelectedPastas] = useState<string[]>(fallbackPastas);
+  const [pastasTouched, setPastasTouched] = useState(false);
   
   const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const pastasPadraoQuery = useActivePastasPadraoQuery();
+
+  const availablePastas = useMemo(() => {
+    const paths = pastasPadraoQuery.data && pastasPadraoQuery.data.length > 0
+      ? pastasPadraoQuery.data
+      : fallbackPastas;
+    return Array.from(new Set(paths));
+  }, [pastasPadraoQuery.data]);
+
+  useEffect(() => {
+    if (pastasTouched || !availablePastas.length) return;
+    setSelectedPastas(availablePastas);
+  }, [availablePastas, pastasTouched]);
 
 
   const handleDocTypeChange = (type: DocumentType) => {
@@ -127,33 +156,10 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const buildCompanyDraft = (): Company => {
     const activeDoc = docType === 'CNPJ' ? cnpj : cpf;
-    const cleanDoc = activeDoc.replace(/\D/g, '');
 
-    if (!cleanDoc) {
-      setErrorMsg(`Por favor, informe o ${docType}.`);
-      return;
-    }
-    if (docType === 'CNPJ' && cleanDoc.length !== 14) {
-      setErrorMsg('CNPJ incompleto.');
-      return;
-    }
-    if (docType === 'CPF' && cleanDoc.length !== 11) {
-      setErrorMsg('CPF incompleto.');
-      return;
-    }
-    if (!razaoSocial.trim()) {
-      setErrorMsg(docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.');
-      return;
-    }
-    if (!nomeFantasia.trim()) {
-      setErrorMsg(docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.');
-      return;
-    }
-
-    onSave({
+    return {
       id: '',
       nome: nomeFantasia,
       razaoSocial,
@@ -176,8 +182,71 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       funcionarios: [],
       ferias: [],
       documentos: [],
+      pastasDocumentos: expandFolderPaths(selectedPastas),
       polos: [],
-    });
+    };
+  };
+
+  const validateIdentificacao = () => {
+    const activeDoc = docType === 'CNPJ' ? cnpj : cpf;
+    const cleanDoc = activeDoc.replace(/\D/g, '');
+
+    if (!cleanDoc) return `Por favor, informe o ${docType}.`;
+    if (docType === 'CNPJ' && cleanDoc.length !== 14) return 'CNPJ incompleto.';
+    if (docType === 'CPF' && cleanDoc.length !== 11) return 'CPF incompleto.';
+    if (!razaoSocial.trim()) return docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.';
+    if (!nomeFantasia.trim()) return docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.';
+
+    return null;
+  };
+
+  const currentStepIndex = formSteps.findIndex((item) => item.id === step);
+  const currentStepInfo = formSteps[currentStepIndex] || formSteps[0];
+  const isLastStep = step === 'pastas';
+
+  const goToPreviousStep = () => {
+    if (currentStepIndex <= 0) {
+      onCancel();
+      return;
+    }
+    setStep(formSteps[currentStepIndex - 1].id);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step === 'identificacao') {
+      const validationError = validateIdentificacao();
+      if (validationError) {
+        setErrorMsg(validationError);
+        return;
+      }
+    }
+
+    setErrorMsg(null);
+
+    if (!isLastStep) {
+      setStep(formSteps[currentStepIndex + 1].id);
+      return;
+    }
+
+    onSave(buildCompanyDraft());
+  };
+
+  const togglePasta = (path: string) => {
+    setPastasTouched(true);
+    setSelectedPastas((current) => (
+      current.includes(path) ? current.filter((item) => item !== path) : [...current, path]
+    ));
+  };
+
+  const selectAllPastas = () => {
+    setPastasTouched(true);
+    setSelectedPastas(availablePastas);
+  };
+
+  const clearPastas = () => {
+    setPastasTouched(true);
+    setSelectedPastas([]);
   };
 
   const closeCategoryModal = () => {
@@ -207,7 +276,18 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     <div className="cliente-form-container">
       <div className="cliente-form-header">
         <h2>Cadastrar Cliente</h2>
-        <p>Preencha os dados do cliente principal para habilitar relatórios e filiais.</p>
+        <p>{currentStepInfo.description}</p>
+      </div>
+
+      <div className="cliente-form-steps" aria-label="Etapas do cadastro">
+        {formSteps.map((item, index) => (
+          <span
+            key={item.id}
+            className={step === item.id ? 'active' : index < currentStepIndex ? 'done' : ''}
+          >
+            {item.label}
+          </span>
+        ))}
       </div>
 
       {errorMsg && (
@@ -224,13 +304,16 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="cliente-form-columns">
-        <div className="cliente-form-sidebar">
-          <ClienteLogoUpload logo={logo} onLogoChange={setLogo} />
-          <DocumentoTipoSelector value={docType} onChange={handleDocTypeChange} />
-        </div>
+      <form onSubmit={handleSubmit} className={`cliente-form-columns ${step === 'identificacao' ? '' : 'single-column'}`}>
+        {step === 'identificacao' && (
+          <div className="cliente-form-sidebar">
+            <ClienteLogoUpload logo={logo} onLogoChange={setLogo} />
+            <DocumentoTipoSelector value={docType} onChange={handleDocTypeChange} />
+          </div>
+        )}
 
         <div className="cliente-form-main-fields">
+          {step === 'identificacao' && (
           <div className="form-fields-section">
             <h4 className="form-fields-section-title">Identificação Básica</h4>
             <div className="fields-grid">
@@ -354,8 +437,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               </div>
             </div>
           </div>
+          )}
 
-          {/* Seção 2: Contatos */}
+          {step === 'contato' && (
           <div className="form-fields-section">
             <h4 className="form-fields-section-title">Contatos Principais</h4>
             <div className="fields-grid">
@@ -393,8 +477,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               </div>
             </div>
           </div>
+          )}
 
-          {/* Seção 3: Endereço */}
+          {step === 'endereco' && (
           <div className="form-fields-section">
             <h4 className="form-fields-section-title">Localização / Endereço Fiscal</h4>
             <div className="fields-grid">
@@ -455,15 +540,60 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               </div>
             </div>
           </div>
+          )}
+
+          {step === 'pastas' && (
+            <div className="form-fields-section cliente-folder-step">
+              <div className="cliente-folder-step-header">
+                <div>
+                  <h4 className="form-fields-section-title">Pastas da Empresa</h4>
+                  <p>Essas pastas ficarão disponíveis na aba Documentos logo após salvar o cliente.</p>
+                </div>
+                <div className="cliente-folder-step-actions">
+                  <button type="button" onClick={selectAllPastas}>Selecionar todas</button>
+                  <button type="button" onClick={clearPastas}>Limpar</button>
+                </div>
+              </div>
+
+              {pastasPadraoQuery.isLoading && (
+                <div className="form-alert-banner">
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Carregando pastas padrão...</span>
+                </div>
+              )}
+
+              <div className="cliente-folder-grid">
+                {availablePastas.map((path) => {
+                  const checked = selectedPastas.includes(path);
+                  return (
+                    <label key={path} className={`cliente-folder-option ${checked ? 'selected' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => togglePasta(path)}
+                      />
+                      <FolderTree size={16} />
+                      <span>{path}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Ações do Formulário */}
           <div className="form-footer-actions">
-            <button type="button" className="btn-cancel" onClick={onCancel} disabled={isSaving}>
-              Cancelar
+            <button
+              type="button"
+              className="btn-cancel"
+              onClick={goToPreviousStep}
+              disabled={isSaving}
+            >
+              {currentStepIndex > 0 ? <><ArrowLeft size={14} /> Voltar</> : 'Cancelar'}
             </button>
             <button type="submit" className="btn-submit" disabled={isSaving}>
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-              Salvar Cliente
+              {isLastStep ? 'Salvar Cliente' : 'Avançar'}
             </button>
           </div>
         </div>

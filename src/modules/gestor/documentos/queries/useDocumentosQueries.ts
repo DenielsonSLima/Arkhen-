@@ -21,7 +21,7 @@ interface DocumentosInvalidationTarget {
   includeSettings?: boolean;
 }
 
-type DocumentosQueryTab = 'meus' | 'empresas' | 'todos' | 'compartilhados';
+type DocumentosQueryTab = 'meus' | 'empresas' | 'inativas' | 'todos' | 'compartilhados';
 
 const reconcileDocumentChanges = async (previous: CompanyDocument[], next: CompanyDocument[]) => {
   const nextById = new Map(next.map((doc) => [doc.id, doc]));
@@ -79,7 +79,7 @@ export const invalidateDocumentosQueries = (
 
 export const useDocumentosBaseQueries = (activeTab: DocumentosQueryTab) => {
   const shouldLoadPersonalDocs = activeTab === 'meus' || activeTab === 'todos';
-  const shouldLoadCompanyDocs = activeTab === 'empresas' || activeTab === 'todos';
+  const shouldLoadCompanyDocs = activeTab === 'empresas' || activeTab === 'inativas' || activeTab === 'todos';
 
   const settingsQuery = useQuery({
     queryKey: documentosKeys.settings(),
