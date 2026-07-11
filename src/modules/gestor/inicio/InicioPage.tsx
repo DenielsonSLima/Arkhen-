@@ -10,6 +10,7 @@ import {
   ListChecks,
   ShieldAlert,
   Users,
+  Settings,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
@@ -25,9 +26,7 @@ import {
 import { useInicio } from './hooks/useInicio';
 import type { VencimentoAlerta } from './services/inicioService';
 import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
-import './styles/InicioBase.css';
-import './styles/InicioDashboard.css';
-import './styles/InicioTeam.css';
+import './InicioPage.css';
 
 const alertasPadrao: VencimentoAlerta[] = [];
 
@@ -220,6 +219,7 @@ export const InicioPage: React.FC = () => {
               }, 100);
             }}
           >
+            <Settings size={14} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
             Completar Cadastro
           </button>
         </div>
