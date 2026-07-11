@@ -283,10 +283,16 @@ export const documentShareService = {
     return nextLinks;
   },
 
-  async revoke(id: string) {
-    const { error } = await supabase.from(SHARE_TABLE).update({ status: 'Expirado' }).eq('id', id);
+  async revoke(targetId: string) {
+    const { error } = await supabase
+      .from(SHARE_TABLE)
+      .update({ status: 'Expirado' })
+      .or(`id.eq.${targetId},share_group_id.eq.${targetId}`);
+
     const links = this.listLocal().map((link) => (
-      link.id === id ? { ...link, status: 'Expirado' as const } : link
+      (link.id === targetId || (link.shareGroupId && link.shareGroupId === targetId))
+        ? { ...link, status: 'Expirado' as const }
+        : link
     ));
     this.save(links);
     if (error) return;
