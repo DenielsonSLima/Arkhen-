@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clipboard, Key, Share2, Timer, X } from 'lucide-react';
-import { documentShareService, generateSharePassword, SHARE_EXPIRATION_OPTIONS, type ShareableDocument, type SharedDocumentLink } from '../services/documentShareService';
+import { DEFAULT_SHARE_PASSWORD, documentShareService, formatShareDateTime, generateSharePassword, parseShareDurationMs, SHARE_EXPIRATION_OPTIONS, type ShareableDocument, type SharedDocumentLink } from '../services/documentShareService';
 
 interface ShareDocumentModalProps {
   isOpen: boolean;
@@ -17,41 +17,56 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 }) => {
   const [tempoLimite, setTempoLimite] = useState(() => localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
   const [exigirSenha, setExigirSenha] = useState(() => localStorage.getItem('cfg_share_exigir_senha_padrao') === 'true');
-  const [senha, setSenha] = useState(() => generateSharePassword());
+  const [senha, setSenha] = useState(() => DEFAULT_SHARE_PASSWORD);
   const [createdLinks, setCreatedLinks] = useState<SharedDocumentLink[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const canCreate = documents.length > 0;
   const title = useMemo(() => (
     documents.length === 1 ? 'Compartilhar arquivo' : `Compartilhar ${documents.length} arquivos`
   ), [documents.length]);
+  const expirationPreview = useMemo(() => (
+    formatShareDateTime(new Date(Date.now() + parseShareDurationMs(tempoLimite)))
+  ), [tempoLimite]);
 
   useEffect(() => {
     if (!isOpen) return;
     setTempoLimite(localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
     setExigirSenha(localStorage.getItem('cfg_share_exigir_senha_padrao') === 'true');
-    setSenha(generateSharePassword());
+    setSenha(DEFAULT_SHARE_PASSWORD);
     setCreatedLinks([]);
     setCopied(false);
+    setIsCreating(false);
+    setErrorMessage('');
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!canCreate) return;
-    const links = documentShareService.createLinks({
-      documents,
-      tempoLimite,
-      exigirSenha,
-      senha,
-    });
-    setCreatedLinks(links);
-    onCreated(links);
+    setIsCreating(true);
+    setErrorMessage('');
+    try {
+      const links = await documentShareService.createLinks({
+        documents,
+        tempoLimite,
+        exigirSenha,
+        senha,
+      });
+      setCreatedLinks(links);
+      onCreated(links);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Erro ao gerar link temporário.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleCopy = async () => {
     const payload = createdLinks.map((link) => (
-      `${link.documento}\n${link.link}${link.senha ? `\nSenha: ${link.senha}` : ''}`
+      `${link.documento}\n${link.link}${link.senha ? `\nSenha: ${link.senha}` : ''}\nDisponível por: ${link.tempoLimite}\nExpira em: ${link.dataExpiracao}`
     )).join('\n\n');
     await navigator.clipboard.writeText(payload);
     setCopied(true);
@@ -143,14 +158,20 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
             <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc', color: '#64748b', fontSize: '0.76rem', lineHeight: 1.35 }}>
               <Timer size={15} style={{ color: '#b45309', verticalAlign: 'middle', marginRight: '6px' }} />
-              Os links ficam ativos pelo prazo escolhido e podem ser revogados depois em Compartilhados.
+              Os links ficam ativos por {tempoLimite}, até {expirationPreview}, e podem ser revogados depois em Compartilhados.
             </div>
           </div>
         </div>
 
+        {errorMessage && (
+          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.76rem', fontWeight: 750 }}>
+            {errorMessage}
+          </div>
+        )}
+
         {createdLinks.length > 0 && (
           <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
-            {createdLinks.length} link(s) gerado(s). {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
+            {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
           </div>
         )}
 
@@ -161,9 +182,9 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
               {copied ? 'Copiado' : 'Copiar links'}
             </button>
           )}
-          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate ? 'pointer' : 'not-allowed', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate || isCreating} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate && !isCreating ? 'pointer' : 'not-allowed', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isCreating ? 0.72 : 1 }}>
             <Share2 size={15} />
-            {createdLinks.length > 0 ? 'Concluir' : 'Gerar compartilhamento'}
+            {createdLinks.length > 0 ? 'Concluir' : isCreating ? 'Gerando...' : 'Gerar compartilhamento'}
           </button>
         </div>
       </div>

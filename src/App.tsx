@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode, type ErrorInfo, Component } from 'react';
 import { LoginPage } from './modules/public/login/LoginPage';
+import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
 import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/useConfiguracoesRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
@@ -87,6 +88,8 @@ class GestorErrorBoundary extends Component<GestorErrorBoundaryProps, GestorErro
 }
 
 function App() {
+  const isSharedDocumentRoute = window.location.pathname.startsWith('/shared/d/');
+
   const getInitialView = () => {
     try {
       return localStorage.getItem('contabil_auth') === 'gestor' ? 'gestor' : 'login';
@@ -189,6 +192,14 @@ function App() {
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
     };
   }, [view]);
+
+  if (isSharedDocumentRoute) {
+    return (
+      <div className="animate-page-fade">
+        <PublicSharedDocumentPage />
+      </div>
+    );
+  }
 
   if (view === 'gestor') {
     return (
