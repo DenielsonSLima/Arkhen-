@@ -7,3 +7,20 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+.public-shared-page-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.04);
+  filter: blur(2.2px) grayscale(0.95) brightness(0.24) contrast(1.15) saturate(0.1);
+  z-index: 0;
+}
+
+.public-shared-page-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 15% 10%, rgba(9, 11, 15, 0.45), rgba(18, 18, 18, 0.8) 50%, rgba(9, 11, 15, 0.98) 100%);
+  z-index: 1;
+}
