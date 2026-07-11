@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import officeBackground from '../../../assets/shared-shared-background.png';
+import officeBackground from '../../../assets/login-bg.jpg';
+import systemLogoImg from '../../../assets/camada-o.png';
 import {
   formatShareDateTime,
   hashSharePassword,
@@ -266,6 +267,33 @@ export const PublicSharedDocumentPage: React.FC = () => {
       <div
         style={{
           position: 'absolute',
+          top: '18px',
+          left: '22px',
+          zIndex: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: '#f8fafc',
+        }}
+      >
+        <img
+          src={systemLogoImg}
+          alt="Logo Arkhen"
+          style={{
+            width: '34px',
+            height: '34px',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.45))',
+          }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+          <span style={{ letterSpacing: '1px', fontSize: '0.72rem', color: '#f1f5f9', textTransform: 'uppercase' }}>Arkhen</span>
+          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>Gestão Contábil</span>
+        </div>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
           inset: 0,
           backgroundImage: `url(${officeBackground})`,
           backgroundSize: 'cover',
@@ -279,7 +307,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(rgba(2, 6, 23, 0.64), rgba(2, 6, 23, 0.84))',
+          background: 'linear-gradient(140deg, rgba(2, 6, 23, 0.58) 0%, rgba(2, 6, 23, 0.88) 48%, rgba(2, 6, 23, 0.72) 100%)',
         }}
       />
       <section style={{ width: '100%', maxWidth: '920px', position: 'relative', zIndex: 1, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.36)', overflow: 'hidden' }}>
