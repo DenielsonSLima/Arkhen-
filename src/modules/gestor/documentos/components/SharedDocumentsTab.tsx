@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clipboard, FileText, Key, Link2, Search, ShieldX, Trash2, ExternalLink } from 'lucide-react';
 import { documentShareService, type SharedDocumentLink } from '../services/documentShareService';
+import { SystemQuickModal } from '../../components/SystemQuickModal';
 
 interface SharedDocumentsTabProps {
   refreshKey: number;
@@ -54,6 +55,15 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   const [isLoading, setIsLoading] = useState(true);
   const [revokingGroupIds, setRevokingGroupIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean;
+    groupId: string;
+    action: 'revoke' | 'delete';
+  }>({
+    isOpen: false,
+    groupId: '',
+    action: 'revoke',
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -186,6 +196,50 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
       next.delete(groupId);
       return next;
     });
+  };
+
+  const handleDelete = async (groupId: string) => {
+    setRevokingGroupIds((current) => {
+      const next = new Set(current);
+      next.add(groupId);
+      return next;
+    });
+
+    setLinks((current) => current.filter((link) => (
+      link.id !== groupId && link.shareGroupId !== groupId
+    )));
+
+    const deleted = await documentShareService.delete(groupId);
+    const latest = await documentShareService.list();
+    setLinks(latest);
+
+    if (!deleted) {
+      onNotify?.('Não foi possível excluir agora no servidor. Alteração salva localmente.');
+    } else {
+      onNotify?.('Link de compartilhamento excluído definitivamente.');
+    }
+
+    setRevokingGroupIds((current) => {
+      const next = new Set(current);
+      next.delete(groupId);
+      return next;
+    });
+  };
+
+  const handleActionClick = (groupId: string, status: 'Ativo' | 'Expirado') => {
+    setConfirmModalState({
+      isOpen: true,
+      groupId,
+      action: status === 'Ativo' ? 'revoke' : 'delete',
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmModalState.action === 'revoke') {
+      handleRevoke(confirmModalState.groupId);
+    } else {
+      handleDelete(confirmModalState.groupId);
+    }
   };
 
   const handleTogglePassword = (groupId: string) => {
@@ -333,9 +387,9 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleRevoke(batch.groupId)}
+                      onClick={() => handleActionClick(batch.groupId, batch.status)}
                         disabled={revokingGroupIds.has(batch.groupId)}
-                        title={revokingGroupIds.has(batch.groupId) ? 'Revogando...' : 'Revogar'}
+                        title={revokingGroupIds.has(batch.groupId) ? 'Processando...' : batch.status === 'Ativo' ? 'Revogar' : 'Excluir'}
                         style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', borderRadius: '7px', width: '32px', height: '32px', cursor: revokingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         {revokingGroupIds.has(batch.groupId) ? <span style={{ fontSize: '0.58rem' }}>...</span> : batch.status === 'Ativo' ? <ShieldX size={14} /> : <Trash2 size={14} />}
@@ -380,6 +434,21 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
           </button>
         </div>
       </div>
+
+      <SystemQuickModal
+        isOpen={confirmModalState.isOpen}
+        title={confirmModalState.action === 'revoke' ? 'Revogar Compartilhamento' : 'Excluir Compartilhamento'}
+        message={
+          confirmModalState.action === 'revoke'
+            ? 'Tem certeza de que deseja revogar este link de compartilhamento? O acesso público aos arquivos correspondentes será bloqueado imediatamente.'
+            : 'Tem certeza de que deseja excluir definitivamente este link de compartilhamento? Esta ação removerá o registro do histórico do servidor.'
+        }
+        confirmLabel={confirmModalState.action === 'revoke' ? 'Revogar' : 'Excluir'}
+        cancelLabel="Cancelar"
+        onConfirm={handleConfirmAction}
+        onClose={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
+        danger={true}
+      />
     </div>
   );
 };

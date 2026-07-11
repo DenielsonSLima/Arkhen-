@@ -219,7 +219,10 @@ export const documentShareService = {
       ({ data, error } = await this.listRaw(false));
     }
 
-    if (error) return this.listLocal();
+    if (error) {
+      console.error('[documentShareService.list] Erro ao listar compartilhamentos do Supabase, retornando cache local:', error);
+      return this.listLocal();
+    }
 
     return ((data || []) as SharedDocumentRow[]).map(mapRowToLink).map((link) => ({
       ...link,
@@ -254,6 +257,14 @@ export const documentShareService = {
     const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : undefined;
     const shareGroupId = makeId();
+
+    let empresaId: string | undefined;
+    try {
+      const { data } = await supabase.rpc('current_empresa_id');
+      if (data) empresaId = String(data);
+    } catch (err) {
+      console.error('[documentShareService.createLinks] Falha ao obter current_empresa_id via RPC:', err);
+    }
 
     const nextLinks = input.documents.map((doc) => {
       const id = makeId();
@@ -293,6 +304,10 @@ export const documentShareService = {
         status: link.status,
       };
 
+      if (empresaId) {
+        row.empresa_id = empresaId;
+      }
+
       if (includeShareGroup) {
         row.share_group_id = shareGroupId;
       }
@@ -326,11 +341,14 @@ export const documentShareService = {
         return next;
       }
 
+      console.warn(`[documentShareService.createLinks] Tentativa de inserção falhou (includeShareGroup=${attempt.includeShareGroup}):`, error);
+
       if (!isMissingColumnError(error)) {
         break;
       }
     }
 
+    console.error('[documentShareService.createLinks] Todas as tentativas de inserção no Supabase falharam. Usando fallback local.');
     this.save([...nextLinks, ...existing]);
     return nextLinks;
   },
@@ -349,10 +367,41 @@ export const documentShareService = {
       error = fallback.error;
     }
 
+    if (error) {
+      console.error('[documentShareService.revoke] Erro ao revogar no Supabase:', error);
+    }
+
     const links = this.listLocal().map((link) => (
       (link.id === targetId || (link.shareGroupId && link.shareGroupId === targetId))
         ? { ...link, status: 'Expirado' as const }
         : link
+    ));
+    this.save(links);
+
+    if (error) return false;
+    return true;
+  },
+
+  async delete(targetId: string) {
+    let { error } = await supabase
+      .from(SHARE_TABLE)
+      .delete()
+      .or(`id.eq.${targetId},share_group_id.eq.${targetId}`);
+
+    if (isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from(SHARE_TABLE)
+        .delete()
+        .eq('id', targetId);
+      error = fallback.error;
+    }
+
+    if (error) {
+      console.error('[documentShareService.delete] Erro ao deletar no Supabase:', error);
+    }
+
+    const links = this.listLocal().filter((link) => (
+      link.id !== targetId && link.shareGroupId !== targetId
     ));
     this.save(links);
 
