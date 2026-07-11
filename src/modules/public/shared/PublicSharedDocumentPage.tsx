@@ -1,115 +1,52 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
-import officeBackground from '../../../assets/login-bg.jpg';
+import { CheckCircle2, Download, FileText, KeyRound, Lock, Loader2, ShieldCheck, Timer, UserRound } from 'lucide-react';
+import sharedBackground from '../../../assets/office-scene-meeting.png';
 import systemLogoImg from '../../../assets/camada-o.png';
+import { PublicSharedDocumentCard } from './PublicSharedDocumentCard';
 import {
-  formatShareDateTime,
-  hashSharePassword,
-  parseLegacySharedPayload,
-  type SharedDocumentLink,
-} from '../../gestor/documentos/services/documentShareService';
+  fetchPublicShare,
+  checkPassword,
+  createDocumentAccessUrl,
+  formatCountdownLabel,
+  getDocumentMode,
+  loadPdfFirstPagePreview,
+} from './publicSharedDocumentHelpers';
+import type { PublicSharedDocumentPayload, SharedDocumentForPublicView } from './types';
 import { parseShareDurationMs } from '../../gestor/documentos/services/documentShareService';
 
-type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao'> & {
-  senhaObrigatoria: boolean;
-  dataGeracaoIso: string;
-  dataExpiracaoIso: string;
-  storageBucket?: string;
-  storagePath?: string;
-  legacyUrl?: string;
+const buildPageTitle = (shareData: PublicSharedDocumentPayload | null) => (
+  shareData ? `${shareData.documents[0]?.documento ?? 'Arquivo'} | Arquivo compartilhado` : 'Link indisponível | Arkhen'
+);
+
+const formatCompanyCnpj = (cnpj: string | null) => {
+  if (!cnpj) return '';
+  const digits = cnpj.replace(/\D/g, '');
+  if (digits.length !== 14) return cnpj;
+
+  return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
 };
 
-interface PublicShareRow {
-  id: string;
-  documento: string;
-  empresa: string;
-  tempo_limite: string;
-  data_geracao: string;
-  data_expiracao: string;
-  senha_obrigatoria: boolean;
-  storage_bucket: string | null;
-  storage_path: string | null;
-}
-
-const getShareIdFromPath = () => window.location.pathname.split('/').filter(Boolean).pop();
-
-const mapPublicShareRow = (row: PublicShareRow): PublicLinkPayload => ({
-  id: row.id,
-  documento: row.documento,
-  empresa: row.empresa,
-  tempoLimite: row.tempo_limite,
-  dataGeracao: formatShareDateTime(new Date(row.data_geracao)),
-  dataGeracaoIso: row.data_geracao,
-  dataExpiracao: formatShareDateTime(new Date(row.data_expiracao)),
-  dataExpiracaoIso: row.data_expiracao,
-  senhaObrigatoria: row.senha_obrigatoria,
-  storageBucket: row.storage_bucket || undefined,
-  storagePath: row.storage_path || undefined,
-});
-
-const parseLegacyDateTime = (value: string) => {
-  if (!value) return null;
-  const cleaned = value.replace(',', '').trim();
-  const [datePart, timePart = '00:00'] = cleaned.split(' ');
-  const [day, month, year] = datePart.split('/');
-  if (!day || !month || !year) return null;
-  return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
-};
-
-const mapLegacyPayload = (payload: ReturnType<typeof parseLegacySharedPayload>) => {
-  if (!payload) return null;
-
-  const created = parseLegacyDateTime(payload.dataGeracao);
-  const expires = parseLegacyDateTime(payload.dataExpiracao);
-
-  return {
-    id: payload.id,
-    documento: payload.documento,
-    empresa: payload.empresa || 'Biblioteca pessoal',
-    tempoLimite: payload.tempoLimite || '1 hora',
-    dataGeracao: formatShareDateTime(created || new Date()),
-    dataGeracaoIso: created ? created.toISOString() : '',
-    dataExpiracao: formatShareDateTime(expires || new Date()),
-    dataExpiracaoIso: expires ? expires.toISOString() : '',
-    senhaObrigatoria: false,
-    storageBucket: undefined,
-    storagePath: undefined,
-    legacyUrl: payload.arquivoUrl,
-  };
-};
-
-const fetchPublicShare = async (passwordHash?: string) => {
-  const shareId = getShareIdFromPath();
-  if (!shareId) return null;
-
-  const { data, error } = await supabase.rpc('get_public_document_share', {
-    p_share_id: shareId,
-    p_password_hash: passwordHash || null,
-  });
-  if (!error && data?.[0]) return mapPublicShareRow(data[0] as PublicShareRow);
-
-  const legacyPayload = parseLegacySharedPayload(window.location.hash.replace(/^#/, ''));
-  return mapLegacyPayload(legacyPayload);
-};
-
-const createDownloadUrl = async (share: PublicLinkPayload) => {
-  if (share.legacyUrl) return share.legacyUrl;
-  if (!share.storageBucket || !share.storagePath) return null;
-  const duration = Math.max(parseShareDurationMs(share.tempoLimite), 60) / 1000;
-  const { data, error } = await supabase.storage.from(share.storageBucket).createSignedUrl(share.storagePath, duration);
-  if (error) return null;
-  return data?.signedUrl || null;
+const getLoadingMessage = (mode: ReturnType<typeof getDocumentMode>, status?: 'loading' | 'ready' | 'error') => {
+  if (mode === 'pdf' && status === 'loading') {
+    return 'Gerando prévia da primeira página...';
+  }
+  return 'Prévia indisponível';
 };
 
 export const PublicSharedDocumentPage: React.FC = () => {
-  const [linkData, setLinkData] = useState<PublicLinkPayload | null>(null);
+  const [shareData, setShareData] = useState<PublicSharedDocumentPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [remainingMilliseconds, setRemainingMilliseconds] = useState<number | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [documentUrls, setDocumentUrls] = useState<Record<string, string | null>>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [activePreviewError, setActivePreviewError] = useState(false);
+  const [documentPdfPreviews, setDocumentPdfPreviews] = useState<Record<string, string | null>>({});
+  const [documentPdfPreviewStatus, setDocumentPdfPreviewStatus] = useState<Record<string, 'loading' | 'ready' | 'error'>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -117,347 +54,531 @@ export const PublicSharedDocumentPage: React.FC = () => {
     fetchPublicShare()
       .then((share) => {
         if (!mounted) return;
-        setLinkData(share);
+        setShareData(share);
+        setDocumentPdfPreviews({});
+        setDocumentPdfPreviewStatus({});
         setIsUnlocked(Boolean(share && !share.senhaObrigatoria));
-        if (share && !share.senhaObrigatoria) {
-          createDownloadUrl(share).then((url) => {
-            if (mounted) setDownloadUrl(url);
-          });
+        if (share?.documents[0]) {
+          setSelectedIds([share.documents[0].id]);
+          setActiveId(share.documents[0].id);
+        } else {
+          setSelectedIds([]);
+          setActiveId(null);
         }
       })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-
+      .finally(() => mounted && setIsLoading(false));
     return () => {
       mounted = false;
     };
   }, []);
 
   useEffect(() => {
-    document.title = linkData ? `${linkData.documento} | Arquivo compartilhado` : 'Link indisponível | Arkhen';
-  }, [linkData]);
+    if (!shareData) return;
+    document.title = buildPageTitle(shareData);
+  }, [shareData]);
 
   useEffect(() => {
-    if (!linkData?.dataExpiracaoIso) {
-      setRemainingMilliseconds(null);
+    if (!shareData?.dataExpiracaoIso) {
+      setRemaining(null);
       return;
     }
-
-    const expiry = new Date(linkData.dataExpiracaoIso).getTime();
+    const expiry = new Date(shareData.dataExpiracaoIso).getTime();
     if (Number.isNaN(expiry)) {
-      setRemainingMilliseconds(0);
+      setRemaining(0);
       return;
     }
+    const tick = () => setRemaining(Math.max(0, expiry - Date.now()));
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [shareData?.dataExpiracaoIso]);
 
-    const updateCounter = () => {
-      const remaining = Math.max(0, expiry - Date.now());
-      setRemainingMilliseconds(remaining);
+  useEffect(() => {
+    if (!shareData || !isUnlocked || shareData.isLegacy) return;
+    let mounted = true;
+    const durationSeconds = Math.max(Math.floor(parseShareDurationMs(shareData.tempoLimite) / 1000), 60);
+    const load = async () => {
+      const entries = await Promise.all(
+        shareData.documents.map(async (doc) => [doc.id, await createDocumentAccessUrl(doc, durationSeconds)] as const),
+      );
+      if (mounted) setDocumentUrls(Object.fromEntries(entries));
     };
+    setDocumentUrls({});
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [shareData, isUnlocked]);
 
-    updateCounter();
-    const interval = window.setInterval(updateCounter, 1000);
+  useEffect(() => {
+    if (!shareData || !isUnlocked) return;
+    let mounted = true;
+    const pdfDocuments = shareData.documents.filter((doc) => getDocumentMode(doc.documento) === 'pdf');
+    if (pdfDocuments.length === 0) return;
+
+    void (async () => {
+      await Promise.all(pdfDocuments.map(async (doc) => {
+        if (documentPdfPreviews[doc.id] !== undefined) return;
+        if (documentPdfPreviewStatus[doc.id] === 'loading' || documentPdfPreviewStatus[doc.id] === 'ready' || documentPdfPreviewStatus[doc.id] === 'error') return;
+
+        const previewSource = shareData.isLegacy ? shareData.legacyUrl : documentUrls[doc.id];
+        if (!previewSource) return;
+
+        setDocumentPdfPreviewStatus((current) => ({
+          ...current,
+          [doc.id]: 'loading',
+        }));
+
+        const generated = await loadPdfFirstPagePreview(previewSource);
+        if (!mounted) return;
+
+        setDocumentPdfPreviews((current) => ({
+          ...current,
+          [doc.id]: generated,
+        }));
+        setDocumentPdfPreviewStatus((current) => ({
+          ...current,
+          [doc.id]: generated ? 'ready' : 'error',
+        }));
+      }));
+    })();
 
     return () => {
-      window.clearInterval(interval);
+      mounted = false;
     };
-  }, [linkData?.dataExpiracaoIso]);
+  }, [documentUrls, isUnlocked, shareData, documentPdfPreviews, documentPdfPreviewStatus]);
 
-  const isExpired = useMemo(() => (
-    remainingMilliseconds !== null && remainingMilliseconds <= 0
-  ), [remainingMilliseconds]);
+  const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
+  const isExpired = remaining !== null && remaining <= 0;
+  const activeDocument = shareData?.documents.find((doc) => doc.id === activeId) || shareData?.documents[0] || null;
+  const activePreviewUrl = shareData?.isLegacy ? shareData.legacyUrl : (activeDocument ? documentUrls[activeDocument.id] : null);
+  const activeMode = getDocumentMode(activeDocument?.documento || '');
+  const activePdfPreviewUrl = activeDocument ? documentPdfPreviews[activeDocument.id] : null;
+  const activePdfPreviewStatus = activeDocument ? documentPdfPreviewStatus[activeDocument.id] : undefined;
+  const hasMultipleDocuments = Boolean(shareData && shareData.documents.length > 1);
+  const canDownloadDocument = (documentId: string) => (
+    !isExpired && (shareData?.isLegacy ? Boolean(shareData?.legacyUrl) : Boolean(documentUrls[documentId]))
+  );
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allSelected = shareData ? selectedIds.length === shareData.documents.length : false;
+  const hasSelected = selectedIds.length > 0;
+  const canDownloadSelection = hasSelected && selectedIds.every(canDownloadDocument);
+  const canDownloadAll = shareData ? shareData.documents.every((doc) => canDownloadDocument(doc.id)) : false;
+  const fileGridColumns = shareData ? Math.min(Math.max(shareData.documents.length, 1), 4) : 1;
+  const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
+  const activePreviewUnavailable =
+    activePreviewError ||
+    activeMode === 'generic' ||
+    (activeMode === 'image' && !activePreviewUrl) ||
+    (activeMode === 'pdf' && !activePdfPreviewUrl && activePdfPreviewStatus !== 'loading' && activePdfPreviewStatus !== 'ready');
+  const activeLoadingPreview = activeMode === 'pdf'
+    && ((activePdfPreviewStatus === 'loading') || (Boolean(activePreviewUrl) && activePdfPreviewStatus === undefined));
 
-  const remainingTimeLabel = useMemo(() => {
-    if (remainingMilliseconds === null) return null;
-    if (remainingMilliseconds <= 0) return 'Expirado';
+  useEffect(() => {
+    setActivePreviewError(false);
+  }, [activeId, activePreviewUrl]);
 
-    const totalSeconds = Math.floor(remainingMilliseconds / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const hh = String(hours).padStart(2, '0');
-    const mm = String(minutes).padStart(2, '0');
-    const ss = String(seconds).padStart(2, '0');
-
-    return `${hh}:${mm}:${ss}`;
-  }, [remainingMilliseconds]);
-
-  const fileExt = useMemo(() => {
-    if (!linkData?.documento) return '';
-    return linkData.documento.split('.').pop()?.toLowerCase() || '';
-  }, [linkData?.documento]);
-
-  const previewMode = useMemo(() => {
-    if (fileExt === 'pdf') return 'pdf';
-    if (['png', 'jpg', 'jpeg', 'webp'].includes(fileExt)) return 'image';
-    return 'generic';
-  }, [fileExt]);
-
-  const previewSource = useMemo(() => {
-    if (!downloadUrl) return '';
-    return downloadUrl.split('#')[0];
-  }, [downloadUrl]);
-
-  const previewImage = useMemo(() => (previewMode === 'pdf' && previewSource ? `${previewSource}#page=1&view=FitH&toolbar=0&navpanes=0` : ''), [previewMode, previewSource]);
-
-  const handleUnlock = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!linkData?.senhaObrigatoria) return;
-    const passwordHash = await hashSharePassword(password);
-    const share = await fetchPublicShare(passwordHash);
-    if (!share || (!share.storagePath && !share.legacyUrl)) {
-      setPasswordError('Senha incorreta. Confira o código recebido e tente novamente.');
-      return;
-    }
-    const url = await createDownloadUrl(share);
-    if (!url) {
-      setPasswordError('Não foi possível preparar o download. Solicite um novo link.');
-      return;
-    }
-    setPasswordError('');
-    setLinkData(share);
-    setDownloadUrl(url);
-    setIsUnlocked(true);
+  const openPreview = (documentId: string) => {
+    setActiveId(documentId);
+    setSelectedIds((current) => (current.includes(documentId) ? current : [...current, documentId]));
   };
 
-  const canDownload = Boolean(downloadUrl && isUnlocked && !isExpired);
+  const toggleSelection = (documentId: string) => {
+    setSelectedIds((current) => (
+      current.includes(documentId) ? current.filter((id) => id !== documentId) : [...current, documentId]
+    ));
+  };
 
-  const handleDownload = async () => {
-    if (!downloadUrl || !linkData || isExpired || !isUnlocked) return;
+  const selectAll = () => {
+    if (!shareData) return;
+    if (allSelected) {
+      setSelectedIds([]);
+      return;
+    }
+    setSelectedIds(shareData.documents.map((doc) => doc.id));
+  };
 
+  const downloadByUrl = async (item: SharedDocumentForPublicView, url: string | null | undefined) => {
+    if (!url) return;
     try {
-      const response = await fetch(downloadUrl, { method: 'GET', mode: 'cors' });
-      if (!response.ok) throw new Error('Resposta inválida ao preparar o download.');
-
+      const response = await fetch(url, { method: 'GET', mode: 'cors' });
+      if (!response.ok) throw new Error('Falha no fetch');
       const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-
+      const urlSafe = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = objectUrl;
-      anchor.download = linkData.documento;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(objectUrl);
-    } catch {
-      const anchor = document.createElement('a');
-      anchor.href = downloadUrl;
-      anchor.download = linkData.documento;
+      anchor.href = urlSafe;
+      anchor.download = item.documento;
       anchor.rel = 'noopener noreferrer';
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
+      window.URL.revokeObjectURL(urlSafe);
+      return;
+    } catch {
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = item.documento;
+      anchor.rel = 'noopener noreferrer';
+      anchor.target = '_self';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
     }
   };
 
-  return (
-    <main
-      style={{
-        minHeight: '100vh',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '24px',
-        color: '#0f172a',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: '18px',
-          left: '22px',
-          zIndex: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: '#f8fafc',
-        }}
-      >
-        <img
-          src={systemLogoImg}
-          alt="Logo Arkhen"
-          style={{
-            width: '58px',
-            height: '58px',
-            objectFit: 'contain',
-            filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.45))',
-          }}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-          <span style={{ letterSpacing: '1.2px', fontSize: '1.24rem', color: '#f8fafc', textTransform: 'uppercase', fontWeight: 700 }}>Arkhen</span>
-          <span style={{ fontSize: '1.7rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.05 }}>Gestão Contábil</span>
+  const handleDownloadDocumentIds = async (documentIds: string[]) => {
+    if (!shareData || isBatchDownloading) return;
+    const enabled = documentIds.every(canDownloadDocument);
+    if (!enabled || isExpired) return;
+
+    setIsBatchDownloading(true);
+    try {
+      for (const id of documentIds) {
+        const item = shareData.documents.find((document) => document.id === id);
+        if (!item) continue;
+        const url = shareData.isLegacy ? shareData.legacyUrl : documentUrls[item.id];
+        // eslint-disable-next-line no-await-in-loop
+        await downloadByUrl(item, url);
+      }
+    } finally {
+      setIsBatchDownloading(false);
+    }
+  };
+
+  const handleDownloadOne = async (documentId: string) => {
+    await handleDownloadDocumentIds([documentId]);
+  };
+
+  const handleDownloadSelected = async () => {
+    await handleDownloadDocumentIds(selectedIds);
+  };
+
+  const handleDownloadAll = async () => {
+    if (!shareData) return;
+    await handleDownloadDocumentIds(shareData.documents.map((doc) => doc.id));
+  };
+
+  const handleUnlock = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!shareData) return;
+    const result = await checkPassword(password, shareData);
+    if (!result.ok || !result.share) {
+      setPasswordError('Senha inválida ou compartilhamento indisponível.');
+      return;
+    }
+    if (!result.share.documents.some((doc) => doc.storage_bucket && doc.storage_path)) {
+      setPasswordError('Senha correta, mas não foi possível localizar os arquivos para download.');
+      return;
+    }
+    setPasswordError('');
+    setDocumentPdfPreviews({});
+    setDocumentPdfPreviewStatus({});
+    setShareData(result.share);
+    setIsUnlocked(true);
+    setSelectedIds([result.share.documents[0].id]);
+    setActiveId(result.share.documents[0].id);
+    setPassword('');
+  };
+
+  if (isLoading) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090b0f', color: '#94a3b8' }}>
+        <div style={{ padding: '18px 20px', border: '1px solid #1e293b', borderRadius: '12px', background: '#0f172a', color: '#e2e8f0' }}>
+          Carregando compartilhamento...
         </div>
-      </div>
+      </main>
+    );
+  }
+
+  if (!shareData) {
+    return (
+      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#090b0f', color: '#fda4af', padding: '20px' }}>
+        <div style={{ maxWidth: '600px', background: '#7f1d1d', color: '#fff', borderRadius: '12px', border: '1px solid #fecdd3', padding: '20px' }}>
+          Link não encontrado. Solicite um novo compartilhamento ao responsável.
+        </div>
+      </main>
+    );
+  }
+
+  const formattedCnpj = formatCompanyCnpj(shareData.empresaCnpj);
+  const companyLine = `${shareData.empresa}${formattedCnpj ? ` · CNPJ ${formattedCnpj}` : ''}`;
+
+  return (
+    <main style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `url(${officeBackground})`,
+          backgroundImage: `url(${sharedBackground})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'blur(1.5px)',
-          transform: 'scale(1.03)',
-          opacity: 0.44,
+          transform: 'scale(1.06)',
+          filter: 'blur(1.9px) grayscale(0.95) brightness(0.30) contrast(1.2) saturate(0.15)',
         }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(140deg, rgba(7, 8, 10, 0.68) 0%, rgba(17, 20, 24, 0.9) 48%, rgba(13, 15, 18, 0.76) 100%)',
-        }}
-      />
-      <section style={{ width: '100%', maxWidth: '920px', position: 'relative', zIndex: 1, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.36)', overflow: 'hidden' }}>
-        <div style={{ background: '#0f172a', color: '#ffffff', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(197, 146, 53, 0.16)', border: '1px solid rgba(197, 146, 53, 0.45)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <ShieldCheck size={23} color="#dfb35e" />
-          </div>
-          <div>
-            <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.76rem', fontWeight: 750 }}>Arkhen Gestão Contábil</p>
-            <h1 style={{ margin: '3px 0 0', color: '#ffffff', fontSize: '1.18rem', lineHeight: 1.25 }}>Arquivo compartilhado com acesso temporário</h1>
-          </div>
-        </div>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 10%, rgba(15, 23, 42, 0.28), rgba(2, 6, 23, 0.65) 46%, rgba(2, 6, 23, 0.9) 100%)' }} />
 
-        <div style={{ padding: '24px' }}>
-          {isLoading ? (
-            <div style={{ padding: '22px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 750 }}>
-              Carregando arquivo compartilhado...
+      <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', padding: '16px' }}>
+        <header
+          style={{
+            maxWidth: '1320px',
+            margin: '0 auto 12px',
+            color: '#e2e8f0',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src={systemLogoImg}
+              alt="Arkhen"
+              style={{
+                width: 'clamp(120px, 16vw, 220px)',
+                height: 'clamp(120px, 16vw, 220px)',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 6px 18px rgba(0,0,0,0.5))',
+              }}
+            />
+            <div>
+              <p style={{ margin: 0, fontSize: '0.9rem', letterSpacing: '0.85px', textTransform: 'uppercase', color: '#cbd5e1' }}>Arkhen</p>
+              <p style={{ margin: '2px 0 0', fontSize: 'clamp(2rem, 4.7vw, 3.3rem)', fontWeight: 900, color: '#fff', lineHeight: 1 }}>Gestão Contábil</p>
             </div>
-          ) : !linkData ? (
-            <div style={{ padding: '22px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' }}>
-              Link não encontrado. Solicite um novo compartilhamento para acessar este arquivo.
+          </div>
+          <div style={{ fontSize: '0.76rem', color: '#cbd5e1', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', padding: '7px 10px', borderRadius: '999px' }}>
+            Módulo de compartilhamento
+          </div>
+        </header>
+
+        <section
+          style={{
+            maxWidth: '1320px',
+            margin: '0 auto',
+            background: '#fff',
+            borderRadius: '14px',
+            overflow: 'hidden',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 24px 68px rgba(15, 23, 42, 0.38)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', background: '#0f172a', color: '#fff', borderBottom: '1px solid rgba(148,163,184,0.24)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(197, 146, 53, 0.2)', border: '1px solid rgba(197, 146, 53, 0.45)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={20} color="#dfb35e" />
             </div>
-          ) : (
-            <>
-              <section style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: '14px' }}>
-                <div
+            <div>
+              <p style={{ margin: 0, fontSize: '0.76rem', color: '#cbd5e1' }}>Acesso temporário seguro</p>
+              <h1 style={{ margin: '3px 0 0', fontSize: '1.06rem', color: '#fff', fontWeight: 850 }}>
+                Arquivo compartilhado com acesso temporário
+              </h1>
+            </div>
+            {isExpired && (
+              <span style={{
+                marginLeft: 'auto',
+                background: '#7f1d1d',
+                color: '#fff',
+                borderRadius: '999px',
+                padding: '5px 10px',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+              }}>
+                Expirado
+              </span>
+            )}
+          </div>
+
+          <div style={{ padding: '18px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: '14px' }}>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: '#0f172a', minHeight: '450px', position: 'relative', overflow: 'hidden' }}>
+              {activeMode === 'pdf' && activePdfPreviewUrl && !activePreviewError ? (
+                <img
+                  src={activePdfPreviewUrl}
+                  alt={activeDocument?.documento || 'Prévia'}
+                  onError={() => setActivePreviewError(true)}
+                  style={{ width: '100%', height: '100%', minHeight: '450px', objectFit: 'contain', background: '#ffffff' }}
+                />
+              ) : null}
+              {activeLoadingPreview ? (
+                <div style={{ height: '100%', minHeight: '450px', background: '#0f172a', color: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexDirection: 'column' }}>
+                  <Loader2 size={26} />
+                  <span style={{ fontSize: '0.78rem' }}>Gerando prévia da primeira página...</span>
+                </div>
+              ) : null}
+              {activeMode === 'image' && activePreviewUrl ? (
+                <img
+                  src={activePreviewUrl}
+                  alt={activeDocument?.documento || 'Prévia'}
+                  onError={() => setActivePreviewError(true)}
+                  style={{ width: '100%', height: '100%', minHeight: '450px', objectFit: 'contain', background: '#0f172a' }}
+                />
+              ) : null}
+              {activePdfFailedToPreview || activePreviewUnavailable ? (
+                <div style={{ height: '100%', minHeight: '450px', padding: '24px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', textAlign: 'center', color: '#64748b' }}>
+                  <FileText size={38} />
+                  <strong style={{ color: '#0f172a' }}>{getLoadingMessage(activeMode, activePdfPreviewStatus)}</strong>
+                  <p style={{ margin: 0, fontSize: '0.78rem' }}>
+                    {activePdfFailedToPreview
+                      ? 'Arquivo protegido por senha? Baixe direto para abrir.'
+                      : 'Use a opção de download para abrir o arquivo.'}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <aside style={{ display: 'grid', gap: '10px' }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Arquivo principal</p>
+                <strong style={{ marginTop: '4px', color: '#0f172a', fontSize: '0.96rem', display: 'block', lineHeight: 1.3 }}>
+                  {activeDocument?.documento || 'Arquivo compartilhado'}
+                </strong>
+                <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: '0.76rem', lineHeight: 1.3 }}>
+                  {companyLine}
+                </p>
+                <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '0.74rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <UserRound size={13} /> Compartilhado por <strong style={{ color: '#0f172a' }}>{shareData.geradoPor}</strong>
+                </p>
+              </div>
+
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Disponível por: <strong>{shareData.tempoLimite}</strong></span>
+                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#64748b' }}>Expira em: <strong style={{ color: '#0f172a' }}>{shareData.dataExpiracao}</strong></p>
+                <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: remainingLabel === 'Expirado' ? '#b91c1c' : '#1d4ed8' }}>
+                  Restante: <strong style={{ color: isExpired ? '#b91c1c' : '#0f172a' }}>{remainingLabel || '...'}</strong>
+                </p>
+              </div>
+
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', background: '#f8fafc' }}>
+                <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', fontWeight: 800 }}>Gerado em</p>
+                <strong style={{ color: '#0f172a' }}>{shareData.dataGeracao}</strong>
+                <p style={{ margin: '8px 0 0', fontSize: '0.74rem', color: '#64748b' }}>Gerado para visualização segura em fuso de Brasília.</p>
+              </div>
+            </aside>
+          </div>
+
+          {!isExpired && shareData.senhaObrigatoria && !isUnlocked ? (
+            <form onSubmit={handleUnlock} style={{ padding: '0 18px 16px', display: 'grid', gap: '8px' }}>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: '#92400e', fontWeight: 800 }}>Digite a senha para desbloquear os arquivos.</p>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                <input
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Senha de acesso"
+                  style={{ flex: 1, border: '1px solid #f59e0b', borderRadius: '8px', padding: '10px', color: '#0f172a', outline: 'none' }}
+                />
+                <button
+                  type="submit"
                   style={{
-                    position: 'relative',
-                    minHeight: '360px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    backgroundImage: `linear-gradient(140deg, rgba(15, 23, 42, 0.04), rgba(255, 255, 255, 0.9))`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    background: 'var(--color-gold-gradient)',
+                    color: '#fff',
+                    fontWeight: 850,
+                    display: 'inline-flex',
+                    gap: '7px',
+                    alignItems: 'center',
                   }}
                 >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      backgroundColor: 'rgba(15, 23, 42, 0.02)',
-                    }}
-                  />
-                  <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-                    {previewMode === 'pdf' && previewImage ? (
-                      <iframe
-                        src={previewImage}
-                        title={linkData.documento}
-                        loading="lazy"
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                      />
-                    ) : null}
-                    {previewMode === 'image' && previewSource ? (
-                      <img
-                        src={previewSource}
-                        alt={linkData.documento}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a', display: 'block' }}
-                      />
-                    ) : null}
-                    {previewMode === 'generic' ? (
-                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column', gap: '8px', textAlign: 'center', padding: '16px', background: 'linear-gradient(180deg, rgba(255,255,255,0.85), #ffffff)' }}>
-                        <FileText size={34} />
-                        <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700 }}>Prévia indisponível</p>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#ffffff' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
-                    <FileText size={26} color="#c59235" />
-                    <div style={{ minWidth: 0 }}>
-                      <h2 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', overflowWrap: 'anywhere' }}>{linkData.documento}</h2>
-                      <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.75rem' }}>{linkData.empresa}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>Formato</span>
-                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: '#0f172a' }}>{fileExt ? fileExt.toUpperCase() : 'N/A'}</p>
-                    </div>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#64748b', fontSize: '0.72rem', fontWeight: 800 }}>
-                        <Timer size={14} /> Tempo restante
-                      </span>
-                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: isExpired ? '#b91c1c' : '#0f172a', fontWeight: 700 }}>
-                        {remainingTimeLabel || 'calculando...'}
-                      </p>
-                    </div>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>Expira em</span>
-                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: isExpired ? '#b91c1c' : '#0f172a' }}>{linkData.dataExpiracao}</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px' }}>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '9px', padding: '12px', background: '#ffffff' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}>Disponível por</span>
-                  <strong style={{ display: 'block', marginTop: '5px', fontSize: '0.92rem', color: '#0f172a' }}>{linkData.tempoLimite}</strong>
-                </div>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '9px', padding: '12px', background: '#ffffff' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}>Gerado em</span>
-                  <strong style={{ display: 'block', marginTop: '5px', fontSize: '0.92rem', color: '#0f172a' }}>{linkData.dataGeracao}</strong>
-                </div>
-              </div>
-
-              {isExpired && (
-                <div style={{ marginTop: '16px', padding: '12px', borderRadius: '9px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontWeight: 750, fontSize: '0.82rem' }}>
-                  Este link temporário expirou. Peça um novo compartilhamento ao responsável.
-                </div>
-              )}
-
-              {!isExpired && linkData.senhaObrigatoria && !isUnlocked && (
-                <form onSubmit={handleUnlock} style={{ marginTop: '16px', padding: '16px', borderRadius: '10px', border: '1px solid #fde68a', background: '#fffbeb' }}>
-                  <label style={{ display: 'block', color: '#92400e', fontSize: '0.78rem', fontWeight: 850, marginBottom: '8px' }}>
-                    Senha de acesso
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <input
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="Ex.: ARKH-1876-SEC"
-                      style={{ flex: '1 1 220px', border: '1px solid #f59e0b', borderRadius: '8px', padding: '10px 12px', color: '#0f172a', outline: 'none' }}
-                    />
-                    <button type="submit" style={{ border: 'none', borderRadius: '8px', padding: '10px 14px', background: 'var(--color-gold-gradient)', color: '#ffffff', fontWeight: 850, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
-                      <KeyRound size={16} /> Acessar
-                    </button>
-                  </div>
-                  {passwordError && <p style={{ margin: '8px 0 0', color: '#b91c1c', fontSize: '0.78rem', fontWeight: 750 }}>{passwordError}</p>}
-                </form>
-              )}
-
-              <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={handleDownload}
-                  type="button"
-                  disabled={!canDownload}
-                  style={{ pointerEvents: canDownload ? 'auto' : 'none', opacity: canDownload ? 1 : 0.5, borderRadius: '8px', padding: '10px 14px', background: canDownload ? '#0f172a' : '#94a3b8', color: '#ffffff', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                >
-                  {isUnlocked ? <Download size={16} /> : <Lock size={16} />}
-                  {isUnlocked ? 'Baixar arquivo' : 'Aguardando senha'}
+                  <KeyRound size={15} /> Desbloquear
                 </button>
               </div>
-            </>
-          )}
+              {passwordError ? <span style={{ color: '#b91c1c', fontSize: '0.76rem', fontWeight: 750 }}>{passwordError}</span> : null}
+            </form>
+          ) : null}
+
+          <div style={{ padding: '0 18px 18px', display: 'grid', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: 850 }}>Arquivos do compartilhamento</h2>
+                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.76rem' }}>
+                  {shareData.documents.length} documento(s) · {hasSelected ? `${selectedIds.length} selecionado(s)` : 'nenhum selecionado'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  style={{
+                    border: '1px solid #d8e0ea',
+                    background: '#ffffff',
+                    color: '#475569',
+                    borderRadius: '8px',
+                    padding: '7px 10px',
+                    fontSize: '0.73rem',
+                    fontWeight: 850,
+                  }}
+                >
+                  {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadSelected}
+                  disabled={isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading}
+                  style={{ border: 'none', borderRadius: '8px', padding: '7px 12px', background: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? '#94a3b8' : '#0f172a', color: '#fff', fontWeight: 850, cursor: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '7px', alignItems: 'center' }}
+                >
+                  <Download size={15} />
+                  {isBatchDownloading ? 'Baixando...' : `Baixar ${selectedIds.length > 1 ? 'selecionados' : 'selecionado'}`}
+                </button>
+                {hasMultipleDocuments ? (
+                  <button
+                    type="button"
+                    onClick={handleDownloadAll}
+                    disabled={isExpired || !canDownloadAll || isBatchDownloading}
+                    style={{ border: '1px solid #0f172a', borderRadius: '8px', padding: '7px 12px', background: isExpired || !canDownloadAll || isBatchDownloading ? '#e2e8f0' : '#ffffff', color: isExpired || !canDownloadAll || isBatchDownloading ? '#64748b' : '#0f172a', cursor: (isExpired || !canDownloadAll || isBatchDownloading) ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '7px', alignItems: 'center', fontSize: '0.74rem', fontWeight: 850 }}
+                  >
+                  <Download size={15} />
+                  {isBatchDownloading ? 'Baixando...' : 'Baixar todos'}
+                </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${fileGridColumns}, minmax(220px, 1fr))`,
+              gap: '10px',
+            }}>
+              {shareData.documents.map((doc) => (
+                <PublicSharedDocumentCard
+                  key={doc.id}
+                  document={doc}
+                  isSelected={doc.id === activeDocument?.id}
+                  isChecked={selectedSet.has(doc.id)}
+                  previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
+                  previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
+                  previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
+                  canDownload={canDownloadDocument(doc.id)}
+                  onSelect={toggleSelection}
+                  onPreview={openPreview}
+                  onDownload={handleDownloadOne}
+                />
+              ))}
+            </div>
+
+            <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '0.73rem', color: '#0f172a', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Timer size={14} />
+                {isExpired ? 'Tempo encerrado. Gere novo compartilhamento.' : `Tempo restante: ${remainingLabel || '---'}`}
+              </div>
+              <button
+                type="button"
+                onClick={() => activeDocument && handleDownloadOne(activeDocument.id)}
+                disabled={!activeDocument || !canDownloadDocument(activeDocument.id) || isExpired}
+                style={{ border: '1px solid #0f172a', borderRadius: '8px', padding: '7px 11px', background: isExpired ? '#94a3b8' : '#0f172a', color: '#fff', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '0.74rem', fontWeight: 850 }}
+              >
+                <Download size={15} /> Baixar arquivo selecionado
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div style={{ maxWidth: '1320px', margin: '10px auto 0', color: '#e2e8f0', fontSize: '0.73rem', display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+          <CheckCircle2 size={13} color="#22c55e" />
+          {isExpired ? 'Compartilhamento vencido' : 'Para segurança, arquivos são liberados somente para o grupo e janela de tempo corretos.'}
+          {!isExpired ? <Lock size={13} color="#f59e0b" /> : null}
+          {!isExpired ? <span style={{ color: '#f59e0b' }}>Expiração baseada no fuso de São Paulo.</span> : null}
         </div>
-      </section>
+      </div>
     </main>
   );
 };

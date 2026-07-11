@@ -6,6 +6,7 @@ export interface SharedDocumentLink {
   documento: string;
   empresa: string;
   geradoPor: string;
+  shareGroupId?: string;
   dataGeracao: string;
   dataGeracaoIso?: string;
   tempoLimite: string;
@@ -44,6 +45,7 @@ interface SharedDocumentRow {
   documento_nome: string;
   empresa_nome: string;
   gerado_por: string;
+  share_group_id: string | null;
   tempo_limite: string;
   expires_at: string;
   senha_hash: string | null;
@@ -144,7 +146,7 @@ export const hashSharePassword = async (password: string) => {
   return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const buildPublicLink = (link: Pick<SharedDocumentLink, 'id'>) => `${window.location.origin}/s/${link.id}`;
+const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/s/${shareGroupId}`;
 
 const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
   const linkData: Omit<SharedDocumentLink, 'link'> = {
@@ -153,6 +155,7 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
     documento: row.documento_nome,
     empresa: row.empresa_nome,
     geradoPor: row.gerado_por,
+    shareGroupId: row.share_group_id || row.id,
     dataGeracao: formatShareDateTime(new Date(row.created_at)),
     dataGeracaoIso: row.created_at,
     tempoLimite: row.tempo_limite,
@@ -163,7 +166,7 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
 
   return {
     ...linkData,
-    link: buildPublicLink(linkData),
+    link: buildPublicLink(linkData.shareGroupId || linkData.id),
   };
 };
 
@@ -192,7 +195,7 @@ export const documentShareService = {
   async list(): Promise<SharedDocumentLink[]> {
     const { data, error } = await supabase
       .from(SHARE_TABLE)
-      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,senha_hash,status,created_at')
+      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,senha_hash,status,created_at')
       .order('created_at', { ascending: false });
 
     if (error) return this.listLocal();
@@ -229,12 +232,14 @@ export const documentShareService = {
     const existing = this.listLocal();
     const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : undefined;
+    const shareGroupId = makeId();
 
     const nextLinks = input.documents.map((doc) => {
       const id = makeId();
 
       const linkData: Omit<SharedDocumentLink, 'link'> = {
         id,
+        shareGroupId,
         documentId: doc.id,
         documento: doc.nome,
         empresa: doc.empresaNome || (doc.scope === 'empresa' ? 'Empresa vinculada' : 'Biblioteca pessoal'),
@@ -251,7 +256,7 @@ export const documentShareService = {
 
       return {
         ...linkData,
-        link: buildPublicLink(linkData),
+        link: buildPublicLink(shareGroupId),
       };
     });
 
@@ -261,6 +266,7 @@ export const documentShareService = {
       documento_nome: link.documento,
       empresa_nome: link.empresa,
       gerado_por: link.geradoPor,
+      share_group_id: shareGroupId,
       tempo_limite: link.tempoLimite,
       expires_at: expiresAt.toISOString(),
       senha_hash: link.senhaHash || null,
