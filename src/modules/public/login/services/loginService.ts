@@ -21,6 +21,11 @@ export interface SignupPayload {
   cnpj: string;
   email: string;
   senha: string;
+  logoUrl?: string;
+  watermarkPaisagemUrl?: string;
+  watermarkRetratoUrl?: string;
+  cpf?: string;
+  telefone?: string;
 }
 
 export interface LoginResponse {
@@ -71,6 +76,11 @@ const completeOnboarding = async (payload?: Partial<SignupPayload>) => {
       empresa_nome: payload?.empresaNome || DEMO_AUTH.empresaNome,
       cnpj: payload?.cnpj || DEMO_AUTH.cnpj,
       email: payload?.email || DEMO_AUTH.email,
+      logo_url: payload?.logoUrl || '',
+      file_url_paisagem: payload?.watermarkPaisagemUrl || '',
+      file_url_retrato: payload?.watermarkRetratoUrl || '',
+      cpf: payload?.cpf || '',
+      telefone: payload?.telefone || '',
     },
   });
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { DEMO_AUTH, loginService, type LoginResponse } from '../services/loginService';
+import { cnpjLookupService } from '../../../gestor/gestao-empresarial/services/cnpjLookupService';
 
 export type LoginMode = 'login' | 'signup' | 'recovery';
 
@@ -12,6 +13,12 @@ export const useLogin = () => {
   const [signupCnpj, setSignupCnpj] = useState(DEMO_AUTH.cnpj);
   const [signupEmail, setSignupEmail] = useState(DEMO_AUTH.email);
   const [signupSenha, setSignupSenha] = useState(DEMO_AUTH.senha);
+  const [signupLogoUrl, setSignupLogoUrl] = useState('');
+  const [signupWatermarkPaisagemUrl, setSignupWatermarkPaisagemUrl] = useState('');
+  const [signupWatermarkRetratoUrl, setSignupWatermarkRetratoUrl] = useState('');
+  const [signupCpf, setSignupCpf] = useState('');
+  const [signupTelefone, setSignupTelefone] = useState('');
+  const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +73,11 @@ export const useLogin = () => {
         cnpj: signupCnpj,
         email: signupEmail,
         senha: signupSenha,
+        logoUrl: signupLogoUrl,
+        watermarkPaisagemUrl: signupWatermarkPaisagemUrl,
+        watermarkRetratoUrl: signupWatermarkRetratoUrl,
+        cpf: signupCpf,
+        telefone: signupTelefone,
       });
 
       if (!response.success) {
@@ -134,6 +146,28 @@ export const useLogin = () => {
     setMode(nextMode);
   };
 
+  const handleLookupCnpj = async () => {
+    const cleanCnpj = signupCnpj.replace(/\D/g, '');
+    if (!cleanCnpj || cleanCnpj.length !== 14) {
+      setError('Informe um CNPJ válido com 14 dígitos para busca.');
+      return;
+    }
+    setError(null);
+    setIsSearchingCnpj(true);
+    try {
+      const data = await cnpjLookupService.lookup(cleanCnpj);
+      setSignupEmpresa(data.razaoSocial || data.nome || '');
+      if (data.email) setSignupEmail(data.email);
+      if (data.telefone) setSignupTelefone(data.telefone);
+      setSuccessMessage('Dados da empresa carregados com sucesso!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar CNPJ.');
+    } finally {
+      setIsSearchingCnpj(false);
+    }
+  };
+
   return {
     mode,
     switchMode,
@@ -151,10 +185,23 @@ export const useLogin = () => {
     setSignupEmail,
     signupSenha,
     setSignupSenha,
+    signupLogoUrl,
+    setSignupLogoUrl,
+    signupWatermarkPaisagemUrl,
+    setSignupWatermarkPaisagemUrl,
+    signupWatermarkRetratoUrl,
+    setSignupWatermarkRetratoUrl,
+    signupCpf,
+    setSignupCpf,
+    signupTelefone,
+    setSignupTelefone,
+    isSearchingCnpj,
+    handleLookupCnpj,
     showPassword,
     togglePasswordVisibility,
     isLoading,
     error,
+    setError,
     accessBlockMessage,
     setAccessBlockMessage,
     successMessage,
