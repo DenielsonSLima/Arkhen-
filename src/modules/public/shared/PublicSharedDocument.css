@@ -2,86 +2,147 @@
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: var(--color-bg-dark);
+  background-color: #090b0f;
   overflow: hidden;
   position: relative;
-}
-
-/* Lado esquerdo: Visualizador de Documentos */
-.public-shared-viewer-pane {
-  position: relative;
-  flex: 0 0 65%;
-  display: flex;
-  flex-direction: column;
-  padding: 80px 40px 40px 40px; /* Margem superior para deixar espaço para a logo Arkhen */
-  overflow: hidden;
-  height: 100%;
   box-sizing: border-box;
 }
 
-.public-shared-viewer-overlay {
+.public-shared-page-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(18, 18, 18, 0.95) 0%, rgba(18, 18, 18, 0.8) 100%);
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.04);
+  filter: blur(8px) grayscale(0.85) brightness(0.22) contrast(1.1);
+  z-index: 0;
+}
+
+.public-shared-page-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(9, 11, 15, 0.4) 0%, rgba(9, 11, 15, 0.95) 100%);
   z-index: 1;
 }
 
-.public-shared-viewer-content {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Lado direito: Informações */
-.public-shared-info-pane {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 30px;
-  background: radial-gradient(circle at 80% 20%, rgba(197, 146, 53, 0.04) 0%, transparent 60%),
-              linear-gradient(135deg, #f8f9fa 0%, #eef1f5 100%);
-  position: relative;
+/* Modal Centralizado Glassmorphism */
+.public-shared-glass-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  width: calc(100% - 48px);
+  max-width: 1200px;
+  height: calc(100% - 140px);
+  max-height: 760px;
+  background: rgba(18, 18, 22, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(197, 146, 53, 0.28);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
   overflow: hidden;
-  height: 100%;
   box-sizing: border-box;
 }
 
-.public-shared-info-pane::before {
-  content: '';
-  position: absolute;
-  bottom: -10%;
-  right: -5%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(197, 146, 53, 0.04) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
+/* Estilos de layout interno do modal para múltiplos arquivos */
+.public-shared-modal-split {
+  display: flex;
+  width: 100%;
+  height: 100%;
 }
 
+.public-shared-split-left {
+  flex: 0 0 65%;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-shared-split-right {
+  flex: 1;
+  height: 100%;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: rgba(9, 11, 15, 0.35);
+}
+
+/* Estilos de layout interno do modal para arquivo único */
+.public-shared-modal-single {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.public-shared-single-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(9, 11, 15, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.public-shared-single-body {
+  flex: 1;
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar para elementos internos */
+.scrollbar-premium::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb {
+  background: rgba(197, 146, 53, 0.25);
+  border-radius: 3px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 146, 53, 0.5);
+}
+
+/* Responsividade do Modal */
 @media (max-width: 992px) {
-  .public-shared-container {
+  .public-shared-glass-modal {
+    height: calc(100% - 100px);
+    max-height: none;
+    overflow-y: auto;
+  }
+
+  .public-shared-modal-split {
     flex-direction: column;
     overflow-y: auto;
   }
-  
-  .public-shared-viewer-pane {
+
+  .public-shared-split-left {
     flex: 0 0 auto;
     height: 480px;
-    padding: 70px 20px 20px 20px;
+    padding: 12px;
   }
-  
-  .public-shared-info-pane {
+
+  .public-shared-split-right {
+    flex: 0 0 auto;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 20px;
-    height: auto;
-    min-height: calc(100vh - 480px);
+    background: transparent;
   }
 }
