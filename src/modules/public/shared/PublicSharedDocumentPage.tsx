@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, Timer, Calendar, Building2 } from 'lucide-react';
+import { Download, Loader2, Timer, Calendar, Building2, FileText, X, Shield } from 'lucide-react';
 import sharedBackground from '../../../assets/office-scene-meeting.png';
 import signatureLogoImg from '../../../assets/chatgpt-login.png';
 import loginLogoImg from '../../../assets/camada-o.png';
@@ -183,15 +183,10 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const activeMode = getDocumentMode(activeDocument?.documento || '');
   const activePdfPreviewUrl = activeDocument ? documentPdfPreviews[activeDocument.id] : null;
   const activePdfPreviewStatus = activeDocument ? documentPdfPreviewStatus[activeDocument.id] : undefined;
-  const isSingleFile = documents.length === 1;
   const activeHasPdfSource = activeMode === 'pdf' && Boolean(activePreviewUrl);
   
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const allSelected = shareData ? selectedIds.length === documents.length : false;
-  const hasSelected = selectedIds.length > 0;
-  const canDownloadSelection = hasSelected && selectedIds.every(canDownloadDocument);
   const canDownloadAll = shareData ? documents.every((doc) => canDownloadDocument(doc.id)) : false;
-
   const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
   const activeLoadingPdfPreview = activeMode === 'pdf' && (activePdfPreviewStatus === 'loading' || (activeHasPdfSource && activePdfPreviewStatus === undefined));
   
@@ -217,14 +212,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
     ));
   };
 
-  const selectAll = () => {
-    if (!shareData) return;
-    if (allSelected) {
-      setSelectedIds([]);
-      return;
-    }
-    setSelectedIds(documents.map((doc) => doc.id));
-  };
 
   const handleUnlock = async (password: string) => {
     if (!shareData) return;
@@ -290,76 +277,66 @@ export const PublicSharedDocumentPage: React.FC = () => {
       <div className="public-shared-page-bg" style={{ backgroundImage: `url(${sharedBackground})` }} />
       <div className="public-shared-page-overlay" />
 
-      {/* Marca Arkhen no canto esquerdo superior da tela */}
-      <div className="brand-header animate-fade-in" style={{ position: 'absolute', top: '24px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-        <div className="brand-title-group" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span className="brand-name" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', letterSpacing: '1px' }}>Arkhen</span>
-          <span className="brand-subtitle" style={{ fontSize: '0.76rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
-        </div>
-      </div>
-
-      {/* Modal Centralizado Glassmorphism */}
+      {/* Modal Centralizado Glassmorphism conforme Imagem 2 */}
       <div className="public-shared-glass-modal animate-slide-up">
-        {isSingleFile ? (
-          /* ================= LAYOUT DE ARQUIVO ÚNICO ================= */
-          <div className="public-shared-modal-single">
-            {/* Cabeçalho Horizontal Completo */}
-            <div className="public-shared-single-header">
-              {/* Informações da Empresa Emitente */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {shareData.empresaLogo ? (
-                  <img
-                    src={shareData.empresaLogo}
-                    alt={shareData.empresa}
-                    style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '6px', background: '#ffffff', padding: '1px' }}
-                  />
-                ) : (
-                  <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dfb35e' }}>
-                    <Building2 size={18} />
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, textAlign: 'left' }}>
-                  <strong style={{ color: '#ffffff', fontSize: '0.88rem', fontWeight: 800 }}>{shareData.empresa}</strong>
-                  {shareData.empresaCnpj && <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>CNPJ: {shareData.empresaCnpj}</span>}
-                </div>
-              </div>
+        {/* Header Superior do Modal (Área Preta) */}
+        <div className="public-shared-modal-header">
+          {/* Lado Esquerdo: Logo Arkhen */}
+          <div className="public-shared-header-left">
+            <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.5px' }}>Arkhen</span>
+              <span style={{ fontSize: '0.6rem', color: 'var(--color-gold-primary)', fontWeight: 600 }}>Gestão Contábil</span>
+            </div>
+          </div>
 
-              {/* Nome do Arquivo Ativo */}
-              <div style={{ flex: 1, maxWidth: '300px', display: 'flex', flexDirection: 'column', paddingLeft: '8px' }}>
-                <span style={{ fontSize: '0.6rem', color: 'var(--color-gold-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Documento</span>
-                <strong style={{ color: '#ffffff', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument?.documento}>
-                  {activeDocument?.documento}
-                </strong>
-              </div>
+          {/* Centro: Nome do Arquivo e tipo */}
+          <div className="public-shared-header-center">
+            <FileText size={16} style={{ color: 'var(--color-gold-primary)', minWidth: '16px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, textAlign: 'left', overflow: 'hidden' }}>
+              <span style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '340px' }} title={activeDocument?.documento}>
+                {activeDocument?.documento || 'Documento'}
+              </span>
+              <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>
+                {activeMode.toUpperCase()} • {documents.length > 1 ? `${documents.length} páginas/arquivos` : '1 arquivo'}
+              </span>
+            </div>
+          </div>
 
-              {/* Informações de Expiração / Tempo */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.74rem', color: '#cbd5e1' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
-                  <Calendar size={13} /> Expira em: <strong style={{ color: '#ef4444', fontWeight: 700 }}>{shareData.dataExpiracao}</strong>
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ color: '#94a3b8' }}><Timer size={13} /> Restante:</span>
-                  <strong style={{ color: isExpired ? '#ef4444' : 'var(--color-gold-primary)', fontFamily: 'monospace', fontSize: '0.82rem', background: 'rgba(197, 146, 53, 0.08)', border: '1px solid rgba(197, 146, 53, 0.25)', padding: '2px 8px', borderRadius: '4px' }}>
-                    {remainingLabel || '...'}
-                  </strong>
-                </div>
-              </div>
+          {/* Lado Direito: Botão Fechar */}
+          <div className="public-shared-header-right">
+            <button 
+              type="button" 
+              className="public-shared-close-btn" 
+              onClick={() => { window.location.href = '/login'; }}
+              title="Voltar ao login"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
 
-              {/* Botão de Download */}
-              <button
-                type="button"
-                style={{ border: 'none', borderRadius: '8px', padding: '8px 14px', background: isExpired ? '#1e293b' : 'var(--color-gold-gradient)', color: '#ffffff', fontWeight: 700, fontSize: '0.74rem', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '6px', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}
-                onClick={handleDownloadSelected}
-                disabled={isExpired || isBatchDownloading}
-              >
-                {isBatchDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-                Baixar Arquivo
-              </button>
+        {/* Corpo do Modal (Visualizador + Sidebar de Info) */}
+        <div className="public-shared-modal-body">
+          {/* Lado Esquerdo: PDF */}
+          <div className="public-shared-body-left">
+            {/* Barra de Ferramentas de PDF */}
+            <div className="pdf-tools-bar">
+              <div className="pdf-tools-group">
+                <span style={{ fontWeight: 600 }}>1 / 1</span>
+              </div>
+              <div className="pdf-tools-group">
+                <button type="button" className="pdf-tool-btn" style={{ fontSize: '1rem', padding: '0 8px' }}>—</button>
+                <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', color: '#ffffff' }}>100%</span>
+                <button type="button" className="pdf-tool-btn" style={{ fontSize: '1rem', padding: '0 8px' }}>+</button>
+              </div>
+              <div className="pdf-tools-group">
+                <button type="button" className="pdf-tool-btn" onClick={handleDownloadSelected} title="Baixar arquivo"><Download size={15} /></button>
+              </div>
             </div>
 
-            {/* Visualizador de PDF Completo */}
-            <div className="public-shared-single-body">
+            {/* Visualizador do PDF */}
+            <div className="pdf-viewer-content">
               <SharedDocumentViewer
                 activeDocument={activeDocument}
                 activePreviewUrl={activePreviewUrl || null}
@@ -374,145 +351,141 @@ export const PublicSharedDocumentPage: React.FC = () => {
               />
             </div>
           </div>
-        ) : (
-          /* ================= LAYOUT MULTI-ARQUIVOS (SPLIT) ================= */
-          <div className="public-shared-modal-split">
-            {/* Lado Esquerdo: Visualizador de Documento */}
-            <div className="public-shared-split-left">
-              <SharedDocumentViewer
-                activeDocument={activeDocument}
-                activePreviewUrl={activePreviewUrl || null}
-                activeMode={activeMode}
-                activePdfPreviewUrl={activePdfPreviewUrl}
-                activePdfPreviewStatus={activePdfPreviewStatus}
-                activeLoadingPreview={activeLoadingPreview}
-                activePdfFailedToPreview={activePdfFailedToPreview}
-                activePreviewUnavailable={activePreviewUnavailable}
-                activePreviewError={activePreviewError}
-                onPreviewError={() => setActivePreviewError(true)}
-              />
-            </div>
 
-            {/* Lado Direito: Informações e Listagem de Cards */}
-            <div className="public-shared-split-right">
-              {/* Identificação do Emitente */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                {shareData.empresaLogo ? (
-                  <img
-                    src={shareData.empresaLogo}
-                    alt={shareData.empresa}
-                    style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '6px', background: '#ffffff', padding: '1px' }}
-                  />
-                ) : (
-                  <div style={{ width: '42px', height: '42px', borderRadius: '6px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dfb35e' }}>
-                    <Building2 size={20} />
+          {/* Lado Direito: Card Branco de Informações */}
+          <div className="public-shared-body-right">
+            <div className="sidebar-info-card">
+              <div className="sidebar-scroll-content">
+                {/* 1. Dados da Empresa */}
+                <div className="info-row">
+                  <div className="info-icon-wrapper">
+                    {shareData.empresaLogo ? (
+                      <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+                    ) : (
+                      <Building2 size={20} />
+                    )}
                   </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, textAlign: 'left' }}>
-                  <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Emitente</span>
-                  <strong style={{ color: '#ffffff', fontSize: '0.94rem', fontWeight: 800 }}>{shareData.empresa}</strong>
-                  {shareData.empresaCnpj && <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontFamily: 'monospace' }}>CNPJ: {shareData.empresaCnpj}</span>}
-                </div>
-              </div>
-
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }} className="scrollbar-premium">
-                {/* Nome do Arquivo Ativo */}
-                <div>
-                  <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Arquivo Selecionado</span>
-                  <strong style={{ color: '#ffffff', fontSize: '0.84rem', display: 'block', marginTop: '3px', lineHeight: 1.3 }}>
-                    {activeDocument?.documento || 'Documento'}
-                  </strong>
+                  <div className="info-text-group">
+                    <span className="info-title">Empresa Emissora</span>
+                    <strong className="info-value">{shareData.empresa}</strong>
+                    {shareData.empresaCnpj && <span style={{ fontSize: '0.7rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
+                  </div>
                 </div>
 
-                {/* Bloco de Metadados */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Gerado em:</span>
-                    <strong style={{ color: '#ffffff' }}>{shareData.dataGeracao}</strong>
+                {/* 2. Compartilhado em */}
+                <div className="info-row">
+                  <div className="info-icon-wrapper">
+                    <Calendar size={18} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Disponível por:</span>
-                    <strong style={{ color: '#ffffff' }}>{shareData.tempoLimite}</strong>
+                  <div className="info-text-group">
+                    <span className="info-title">Compartilhado em</span>
+                    <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Expira em:</span>
-                    <strong style={{ color: '#ef4444', fontWeight: 700 }}>{shareData.dataExpiracao}</strong>
+                </div>
+
+                {/* 3. Prazo de acesso */}
+                <div className="info-row">
+                  <div className="info-icon-wrapper">
+                    <Timer size={18} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px', marginTop: '2px', fontSize: '0.74rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Tempo Restante:</span>
-                    <strong style={{ color: isExpired ? '#ef4444' : 'var(--color-gold-primary)', fontFamily: 'monospace', fontSize: '0.82rem', background: 'rgba(197, 146, 53, 0.08)', border: '1px solid rgba(197, 146, 53, 0.25)', padding: '2px 8px', borderRadius: '4px' }}>
+                  <div className="info-text-group">
+                    <span className="info-title">Prazo de acesso</span>
+                    <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
+                  </div>
+                </div>
+
+                {/* 4. Tempo restante */}
+                <div className="info-row">
+                  <div className="info-icon-wrapper">
+                    <Timer size={18} />
+                  </div>
+                  <div className="info-text-group">
+                    <span className="info-title">Tempo restante</span>
+                    <strong className="info-value" style={{ color: isExpired ? '#ef4444' : '#c59235', background: '#fef8ec', border: '1px solid rgba(197, 146, 53, 0.2)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontFamily: 'monospace', width: 'fit-content', marginTop: '2px' }}>
                       {remainingLabel || '...'}
                     </strong>
                   </div>
                 </div>
 
-                {/* Listagem de Cards de Arquivos */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.62rem', color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Arquivos no Lote</span>
-                    <span style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>{selectedIds.length} / {documents.length}</span>
+                {/* 5. Expira em (Vermelho) */}
+                <div className="info-row">
+                  <div className="info-icon-wrapper danger">
+                    <Calendar size={18} />
                   </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '170px', overflowY: 'auto', paddingRight: '4px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '6px', background: 'rgba(9, 11, 15, 0.2)' }} className="scrollbar-premium">
-                    {documents.map((doc) => (
-                      <PublicSharedDocumentCard
-                        key={doc.id}
-                        document={doc}
-                        isSelected={doc.id === activeDocument?.id}
-                        isChecked={selectedSet.has(doc.id)}
-                        previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
-                        previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
-                        previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
-                        canDownload={canDownloadDocument(doc.id)}
-                        onSelect={toggleSelection}
-                        onPreview={openPreview}
-                        onDownload={handleDownloadOne}
-                      />
-                    ))}
+                  <div className="info-text-group">
+                    <span className="info-title">Expira em</span>
+                    <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
                   </div>
                 </div>
+
+                {/* Listagem de outros arquivos no lote (se aplicável) */}
+                {documents.length > 1 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                    <span className="info-title" style={{ fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Outros Arquivos</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '110px', overflowY: 'auto' }} className="scrollbar-premium">
+                      {documents.map((doc) => (
+                        <PublicSharedDocumentCard
+                          key={doc.id}
+                          document={doc}
+                          isSelected={doc.id === activeDocument?.id}
+                          isChecked={selectedSet.has(doc.id)}
+                          previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
+                          previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
+                          previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
+                          canDownload={canDownloadDocument(doc.id)}
+                          onSelect={toggleSelection}
+                          onPreview={openPreview}
+                          onDownload={handleDownloadOne}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Botões de Ações na base da coluna */}
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    style={{ flex: 1, border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '9px', background: 'rgba(255,255,255,0.05)', color: '#ffffff', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
-                    onClick={selectAll}
-                  >
-                    {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
-                  </button>
-                  <button
-                    type="button"
-                    style={{ flex: 2, border: 'none', borderRadius: '8px', padding: '9px 12px', background: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? '#1e293b' : 'var(--color-gold-gradient)', color: '#ffffff', fontWeight: 700, fontSize: '0.74rem', cursor: (isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading) ? 'not-allowed' : 'pointer', display: 'inline-flex', gap: '6px', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={handleDownloadSelected}
-                    disabled={isExpired || !hasSelected || !canDownloadSelection || isBatchDownloading}
-                  >
-                    {isBatchDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-                    Baixar Seleção (ZIP)
-                  </button>
-                </div>
+              {/* Botões e Aviso no Rodapé do Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
                 <button
                   type="button"
-                  style={{ width: '100%', border: '1px solid rgba(197, 146, 53, 0.4)', borderRadius: '8px', padding: '9px', background: 'rgba(197, 146, 53, 0.08)', color: '#dfb35e', fontSize: '0.74rem', fontWeight: 700, cursor: (isExpired || !canDownloadAll || isBatchDownloading) ? 'not-allowed' : 'pointer' }}
-                  onClick={handleDownloadAll}
-                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
+                  style={{ width: '100%', border: 'none', borderRadius: '8px', padding: '12px', background: isExpired ? '#e2e8f0' : 'var(--color-gold-gradient)', color: isExpired ? '#94a3b8' : '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={handleDownloadSelected}
+                  disabled={isExpired || isBatchDownloading}
                 >
-                  Baixar Todos (ZIP)
+                  {isBatchDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  Baixar arquivo
                 </button>
+
+                {documents.length > 1 && (
+                  <button
+                    type="button"
+                    style={{ width: '100%', border: '1px solid rgba(197, 146, 53, 0.5)', borderRadius: '8px', padding: '11px', background: '#ffffff', color: '#c59235', fontWeight: 700, fontSize: '0.8rem', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}
+                    onClick={handleDownloadAll}
+                    disabled={isExpired || !canDownloadAll || isBatchDownloading}
+                  >
+                    {isBatchDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                    Baixar todos como ZIP
+                  </button>
+                )}
+
+                {/* Caixa de aviso de segurança no rodapé do card */}
+                <div className="sidebar-warning-box">
+                  <Shield size={16} style={{ color: '#c59235', minWidth: '16px', marginTop: '2px' }} />
+                  <span className="sidebar-warning-text">
+                    O link e os arquivos estarão disponíveis até a <strong style={{ color: '#c59235' }}>data de expiração</strong>.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Assinatura Dailabs no canto inferior direito da tela (cor clara sobre fundo escuro) */}
-      <div className="developer-signature" style={{ color: '#ffffff', opacity: 0.8, right: '30px', bottom: '24px' }}>
+      {/* Assinatura Dailabs no canto inferior direito da tela (cor branca/clara legível) */}
+      <div className="developer-signature" style={{ color: '#ffffff', opacity: 0.75, right: '30px', bottom: '24px' }}>
         <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
         <div className="developer-signature-copy">
           <span className="developer-signature-brand">DAILABS</span>
-          <span className="developer-signature-subtitle" style={{ fontSize: '0.62rem', letterSpacing: '0.8px' }}>CREATIVE AI & SOFTWARES</span>
+          <span className="developer-signature-subtitle" style={{ fontSize: '0.6rem', letterSpacing: '0.8px' }}>CREATIVE AI & SOFTWARES</span>
         </div>
       </div>
     </main>

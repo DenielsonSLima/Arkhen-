@@ -1,11 +1,15 @@
+/* Container Geral Centralizado */
 .public-shared-container {
   display: flex;
+  align-items: center;
+  justify-content: center;
   height: 100vh;
   width: 100vw;
-  background-color: #090b0f;
+  background-color: #050608;
   overflow: hidden;
   position: relative;
   box-sizing: border-box;
+  padding: 20px;
 }
 
 .public-shared-page-bg {
@@ -13,136 +17,302 @@
   inset: 0;
   background-size: cover;
   background-position: center;
-  transform: scale(1.04);
-  filter: blur(8px) grayscale(0.85) brightness(0.22) contrast(1.1);
+  transform: scale(1.02);
+  filter: blur(10px) grayscale(0.8) brightness(0.18) contrast(1.1);
   z-index: 0;
 }
 
 .public-shared-page-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(9, 11, 15, 0.4) 0%, rgba(9, 11, 15, 0.95) 100%);
+  background: radial-gradient(circle at 50% 50%, rgba(5, 6, 8, 0.3) 0%, rgba(5, 6, 8, 0.96) 100%);
   z-index: 1;
 }
 
 /* Modal Centralizado Glassmorphism */
 .public-shared-glass-modal {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   z-index: 5;
-  width: calc(100% - 48px);
-  max-width: 1200px;
-  height: calc(100% - 140px);
-  max-height: 760px;
-  background: rgba(18, 18, 22, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(197, 146, 53, 0.28);
+  width: 100%;
+  max-width: 1240px;
+  height: 100%;
+  max-height: 780px;
+  background: rgba(14, 16, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   box-sizing: border-box;
-}
-
-/* Estilos de layout interno do modal para múltiplos arquivos */
-.public-shared-modal-split {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
-
-.public-shared-split-left {
-  flex: 0 0 65%;
-  height: 100%;
-  padding: 16px;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 
-.public-shared-split-right {
-  flex: 1;
-  height: 100%;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 24px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  background: rgba(9, 11, 15, 0.35);
-}
-
-/* Estilos de layout interno do modal para arquivo único */
-.public-shared-modal-single {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-
-.public-shared-single-header {
+/* Header Superior do Modal (Área Preta) */
+.public-shared-modal-header {
+  height: 64px;
+  min-height: 64px;
+  background: #090b0e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  background: rgba(9, 11, 15, 0.6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
-.public-shared-single-body {
+.public-shared-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.public-shared-header-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6px 16px;
+  max-width: 480px;
+}
+
+.public-shared-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.public-shared-close-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.public-shared-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Corpo Principal (Dividido) */
+.public-shared-modal-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  height: calc(100% - 64px);
+  box-sizing: border-box;
+}
+
+/* Coluna Esquerda: Visualizador do PDF */
+.public-shared-body-left {
+  flex: 0 0 65%;
+  height: 100%;
+  background: #14171d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Barra de Ferramentas do PDF */
+.pdf-tools-bar {
+  height: 48px;
+  background: #191c23;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.pdf-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pdf-tool-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.pdf-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.pdf-viewer-content {
   flex: 1;
   width: 100%;
+  height: calc(100% - 48px);
+  overflow: hidden;
   padding: 16px;
   box-sizing: border-box;
 }
 
-/* Custom Scrollbar para elementos internos */
-.scrollbar-premium::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Coluna Direita: Informações no Card Branco */
+.public-shared-body-right {
+  flex: 1;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  background: #090b0e;
+  overflow-y: auto;
 }
 
-.scrollbar-premium::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 3px;
+.sidebar-info-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.scrollbar-premium::-webkit-scrollbar-thumb {
-  background: rgba(197, 146, 53, 0.25);
-  border-radius: 3px;
+.sidebar-scroll-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
-.scrollbar-premium::-webkit-scrollbar-thumb:hover {
-  background: rgba(197, 146, 53, 0.5);
+/* Linhas com ícones circulares */
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
 }
 
-/* Responsividade do Modal */
+.info-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: #fef8ec; /* Bege claro padrão */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c59235; /* Dourado */
+}
+
+.info-icon-wrapper.danger {
+  background: #fef2f2; /* Vermelhinho claro */
+  color: #ef4444; /* Vermelho */
+}
+
+.info-text-group {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.info-title {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 0.88rem;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* Card de Aviso no rodapé da barra lateral */
+.sidebar-warning-box {
+  background: #fefcf6;
+  border: 1px solid #fef08a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+}
+
+.sidebar-warning-text {
+  font-size: 0.74rem;
+  color: #713f12;
+  line-height: 1.4;
+}
+
+/* Custom Scrollbar */
+.sidebar-scroll-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Responsividade */
 @media (max-width: 992px) {
+  .public-shared-container {
+    padding: 10px;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
   .public-shared-glass-modal {
-    height: calc(100% - 100px);
+    height: auto;
     max-height: none;
-    overflow-y: auto;
-  }
-
-  .public-shared-modal-split {
+    display: flex;
     flex-direction: column;
-    overflow-y: auto;
   }
 
-  .public-shared-split-left {
+  .public-shared-modal-body {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .public-shared-body-left {
     flex: 0 0 auto;
     height: 480px;
-    padding: 12px;
   }
 
-  .public-shared-split-right {
+  .public-shared-body-right {
     flex: 0 0 auto;
-    border-left: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 20px;
-    background: transparent;
+    height: auto;
+    padding: 16px;
+  }
+
+  .sidebar-info-card {
+    height: auto;
+    gap: 20px;
   }
 }
