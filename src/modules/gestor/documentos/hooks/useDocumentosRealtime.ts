@@ -1,23 +1,73 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { invalidateDocumentosQueries } from '../queries/useDocumentosQueries';
+import type { DocumentScope } from '../services/documentosService';
+
+type RealtimeStatus = 'idle' | 'subscribing' | 'subscribed' | 'error' | 'closed';
+type DocumentosRealtimeRow = {
+  scope?: DocumentScope | null;
+  cliente_id?: string | null;
+};
+
+const getDocumentosRealtimeRow = (payload: { new?: unknown; old?: unknown }): DocumentosRealtimeRow => {
+  const row = (payload.new || payload.old || {}) as DocumentosRealtimeRow;
+  return row;
+};
 
 export const useDocumentosRealtime = (enabled = true) => {
   const queryClient = useQueryClient();
+  const [status, setStatus] = useState<RealtimeStatus>(enabled ? 'subscribing' : 'idle');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!enabled) {
+      setStatus('idle');
+      setError(null);
+      return undefined;
+    }
+
+    setStatus('subscribing');
+    setError(null);
 
     const channel = supabase
       .channel('documentos-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, () => {
-        invalidateDocumentosQueries(queryClient);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, (payload) => {
+        const row = getDocumentosRealtimeRow(payload);
+        invalidateDocumentosQueries(queryClient, {
+          scope: row.scope || undefined,
+          companyId: row.cliente_id || undefined,
+        });
       })
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
+        invalidateDocumentosQueries(queryClient, { includeCompanies: true });
+      })
+      .subscribe((nextStatus, nextError) => {
+        if (nextStatus === 'SUBSCRIBED') {
+          setStatus('subscribed');
+          setError(null);
+          return;
+        }
+
+        if (nextStatus === 'CHANNEL_ERROR' || nextStatus === 'TIMED_OUT') {
+          setStatus('error');
+          setError(nextError?.message || 'Falha ao assinar atualizações em tempo real de documentos.');
+          return;
+        }
+
+        if (nextStatus === 'CLOSED') {
+          setStatus('closed');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
+
+  return {
+    status,
+    error,
+    isConnected: status === 'subscribed',
+  };
 };

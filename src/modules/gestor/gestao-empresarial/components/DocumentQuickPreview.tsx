@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Download, ExternalLink, FileText, Image as ImageIcon, Presentation, Sheet, X } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 import { isXmlDocument, XmlFiscalViewer } from '../../documentos/xml/XmlFiscalViewer';
+import { documentosService } from '../../documentos/services/documentosService';
 
 interface DocumentQuickPreviewProps {
   document: CompanyDocument;
@@ -10,6 +11,9 @@ interface DocumentQuickPreviewProps {
 }
 
 export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ document: doc, onClose }) => {
+  const [accessUrl, setAccessUrl] = React.useState(doc.url || '');
+  const [urlStatus, setUrlStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>(doc.url ? 'ready' : 'idle');
+  const [urlError, setUrlError] = React.useState('');
   const extension = doc.nome.split('.').pop()?.toLowerCase() || '';
   const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
   const isPdf = extension === 'pdf';
@@ -33,15 +37,58 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
     };
   }, [onClose]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAccessUrl = async () => {
+      if (doc.url) {
+        setAccessUrl(doc.url);
+        setUrlStatus('ready');
+        setUrlError('');
+        return;
+      }
+
+      if (!doc.storagePath) {
+        setAccessUrl('');
+        setUrlStatus('error');
+        setUrlError('Este arquivo não possui caminho de armazenamento.');
+        return;
+      }
+
+      try {
+        setUrlStatus('loading');
+        setUrlError('');
+        const url = await documentosService.getDocumentAccessUrl(doc);
+        if (!cancelled) {
+          setAccessUrl(url || '');
+          setUrlStatus(url ? 'ready' : 'error');
+          if (!url) setUrlError('Não foi possível gerar uma URL assinada para este arquivo.');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAccessUrl('');
+          setUrlStatus('error');
+          setUrlError(error instanceof Error ? error.message : 'Não foi possível gerar uma URL assinada.');
+        }
+      }
+    };
+
+    loadAccessUrl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [doc]);
+
   const handleOpen = () => {
-    if (!doc.url) return;
-    window.open(doc.url, '_blank', 'noopener,noreferrer');
+    if (!accessUrl) return;
+    window.open(accessUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDownload = () => {
-    if (!doc.url) return;
+    if (!accessUrl) return;
     const anchor = document.createElement('a');
-    anchor.href = doc.url;
+    anchor.href = accessUrl;
     anchor.download = doc.nome;
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
@@ -74,13 +121,25 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
   };
 
   const renderContent = () => {
-    if (!doc.url) {
+    if (urlStatus === 'loading' || urlStatus === 'idle') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100%', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', padding: '40px', textAlign: 'center' }}>
+          <div className="loading-spinner" style={{ marginBottom: '16px' }} />
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.98rem', color: '#1e293b' }}>Preparando pré-visualização</h4>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
+            Gerando acesso seguro ao arquivo.
+          </p>
+        </div>
+      );
+    }
+
+    if (!accessUrl) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100%', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', padding: '40px', textAlign: 'center' }}>
           <FileText size={48} style={{ color: '#94a3b8', marginBottom: '16px' }} />
           <h4 style={{ margin: '0 0 8px 0', fontSize: '0.98rem', color: '#1e293b' }}>Link indisponível</h4>
           <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
-            Não foi possível gerar uma URL assinada para este arquivo.
+            {urlError || 'Não foi possível gerar uma URL assinada para este arquivo.'}
           </p>
         </div>
       );
@@ -91,7 +150,7 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
         <div style={{ width: '100%', height: '100%', overflow: 'auto', background: '#2b313b', padding: '26px', boxSizing: 'border-box' }}>
           <div style={{ width: 'min(100%, 980px)', height: '100%', minHeight: '640px', margin: '0 auto', background: '#ffffff', boxShadow: '0 22px 52px rgba(0,0,0,0.34)' }}>
             <iframe
-              src={`${doc.url}#view=FitH`}
+              src={`${accessUrl}#view=FitH`}
               title={doc.nome}
               style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }}
             />
@@ -103,13 +162,13 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
     if (isImage) {
       return (
         <div style={{ height: '100%', background: '#171c25', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'auto', padding: '26px', boxSizing: 'border-box' }}>
-          <img src={doc.url} alt={doc.nome} style={{ maxWidth: 'min(100%, 1100px)', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', boxShadow: '0 22px 52px rgba(0,0,0,0.34)' }} />
+          <img src={accessUrl} alt={doc.nome} style={{ maxWidth: 'min(100%, 1100px)', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', boxShadow: '0 22px 52px rgba(0,0,0,0.34)' }} />
         </div>
       );
     }
 
     if (isXml) {
-      return <XmlFiscalViewer document={doc} />;
+      return <XmlFiscalViewer document={{ ...doc, url: accessUrl }} />;
     }
 
     return renderUnavailableContent();
@@ -156,17 +215,17 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
               onClick={handleOpen}
-              disabled={!doc.url}
+              disabled={!accessUrl}
               title="Abrir em nova aba"
-              style={{ border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.08)', cursor: doc.url ? 'pointer' : 'not-allowed', color: '#e2e8f0', width: '34px', height: '34px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.08)', cursor: accessUrl ? 'pointer' : 'not-allowed', color: '#e2e8f0', width: '34px', height: '34px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ExternalLink size={16} />
             </button>
             <button
               onClick={handleDownload}
-              disabled={!doc.url}
+              disabled={!accessUrl}
               title="Baixar arquivo"
-              style={{ border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.08)', cursor: doc.url ? 'pointer' : 'not-allowed', color: '#e2e8f0', width: '34px', height: '34px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.08)', cursor: accessUrl ? 'pointer' : 'not-allowed', color: '#e2e8f0', width: '34px', height: '34px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <Download size={16} />
             </button>

@@ -12,7 +12,6 @@ export interface SharedDocumentLink {
   senha?: string;
   senhaHash?: string;
   link: string;
-  arquivoUrl?: string;
   status: 'Ativo' | 'Expirado';
   documentId?: string;
 }
@@ -34,7 +33,6 @@ export const SHARE_EXPIRATION_OPTIONS = [
 
 const LINKS_STORAGE_KEY = 'cfg_share_links_gerados';
 const DEMO_LINK_IDS = ['l1', 'l2', 'l3', 'l4'];
-const STORAGE_BUCKET = 'documentos';
 const SHARE_TABLE = 'documentos_compartilhamentos';
 export const DEFAULT_SHARE_PASSWORD = 'ARKH-1876-SEC';
 
@@ -47,8 +45,6 @@ interface SharedDocumentRow {
   tempo_limite: string;
   expires_at: string;
   senha_hash: string | null;
-  senha_visualizacao: string | null;
-  arquivo_url: string | null;
   status: 'Ativo' | 'Expirado';
   created_at: string;
 }
@@ -74,42 +70,13 @@ export const formatShareDateTime = (date: Date) => (
 
 const makeId = () => crypto.randomUUID();
 
-const toBase64Url = (value: string) => {
-  const bytes = new TextEncoder().encode(value);
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-export const fromBase64Url = (value: string) => {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
-  const binary = window.atob(padded);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-};
-
 export const hashSharePassword = async (password: string) => {
   const data = new TextEncoder().encode(password.trim());
   const hash = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const buildPublicLink = (link: Omit<SharedDocumentLink, 'link'>) => {
-  const payload = toBase64Url(JSON.stringify({
-    id: link.id,
-    documento: link.documento,
-    empresa: link.empresa,
-    tempoLimite: link.tempoLimite,
-    dataGeracao: link.dataGeracao,
-    dataExpiracao: link.dataExpiracao,
-    senhaHash: link.senhaHash,
-    arquivoUrl: link.arquivoUrl,
-  }));
-
-  return `${window.location.origin}/shared/d/${link.id}#${payload}`;
-};
+const buildPublicLink = (link: Pick<SharedDocumentLink, 'id'>) => `${window.location.origin}/s/${link.id}`;
 
 const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
   const linkData: Omit<SharedDocumentLink, 'link'> = {
@@ -121,9 +88,6 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
     dataGeracao: formatShareDateTime(new Date(row.created_at)),
     tempoLimite: row.tempo_limite,
     dataExpiracao: formatShareDateTime(new Date(row.expires_at)),
-    senha: row.senha_visualizacao || undefined,
-    senhaHash: row.senha_hash || undefined,
-    arquivoUrl: row.arquivo_url || undefined,
     status: row.status,
   };
 
@@ -157,7 +121,7 @@ export const documentShareService = {
   async list(): Promise<SharedDocumentLink[]> {
     const { data, error } = await supabase
       .from(SHARE_TABLE)
-      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,senha_hash,senha_visualizacao,arquivo_url,status,created_at')
+      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,senha_hash,status,created_at')
       .order('created_at', { ascending: false });
 
     if (error) return this.listLocal();
@@ -190,20 +154,12 @@ export const documentShareService = {
     const now = new Date();
     const durationMs = parseShareDurationMs(input.tempoLimite);
     const expiresAt = new Date(now.getTime() + durationMs);
-    const expiresIn = Math.max(60, Math.floor(durationMs / 1000));
     const existing = this.listLocal();
     const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : undefined;
 
-    const nextLinks = await Promise.all(input.documents.map(async (doc) => {
+    const nextLinks = input.documents.map((doc) => {
       const id = makeId();
-      let arquivoUrl = doc.url;
-
-      if (doc.storagePath) {
-        const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(doc.storagePath, expiresIn);
-        if (error) throw new Error(`Falha ao gerar link temporário de ${doc.nome}: ${error.message}`);
-        arquivoUrl = data?.signedUrl || arquivoUrl;
-      }
 
       const linkData: Omit<SharedDocumentLink, 'link'> = {
         id,
@@ -216,7 +172,6 @@ export const documentShareService = {
         dataExpiracao: formatShareDateTime(expiresAt),
         senha,
         senhaHash,
-        arquivoUrl,
         status: 'Ativo' as const,
       };
 
@@ -224,7 +179,7 @@ export const documentShareService = {
         ...linkData,
         link: buildPublicLink(linkData),
       };
-    }));
+    });
 
     const rows = nextLinks.map((link) => ({
       id: link.id,
@@ -235,8 +190,6 @@ export const documentShareService = {
       tempo_limite: link.tempoLimite,
       expires_at: expiresAt.toISOString(),
       senha_hash: link.senhaHash || null,
-      senha_visualizacao: link.senha || null,
-      arquivo_url: link.arquivoUrl || null,
       status: link.status,
     }));
 

@@ -10,6 +10,15 @@ interface SharedDocumentsTabProps {
 const PAGE_SIZE = 8;
 const STATUS_TABS: Array<'Ativo' | 'Expirado' | 'Todos'> = ['Ativo', 'Expirado', 'Todos'];
 
+const formatDisplayLink = (link: string) => {
+  try {
+    const parsed = new URL(link);
+    return `${parsed.host}${parsed.pathname}`;
+  } catch {
+    return link.replace(/^https?:\/\//, '');
+  }
+};
+
 export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshKey, onNotify }) => {
   const [links, setLinks] = useState<SharedDocumentLink[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,6 +72,12 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   const handleCopy = async (link: SharedDocumentLink) => {
     await navigator.clipboard.writeText(`${link.link}${link.senha ? `\nSenha: ${link.senha}` : ''}`);
     setCopiedId(link.id);
+    window.setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const handleCopyLinkOnly = async (link: SharedDocumentLink) => {
+    await navigator.clipboard.writeText(link.link);
+    setCopiedId(`link:${link.id}`);
     window.setTimeout(() => setCopiedId(null), 1800);
   };
 
@@ -132,6 +147,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             <tr>
               <th>Status</th>
               <th>Arquivo</th>
+              <th>Link</th>
               <th>Expiração</th>
               <th>Senha</th>
               <th style={{ textAlign: 'right' }}>Ações</th>
@@ -140,6 +156,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
           <tbody>
             {paginatedLinks.map((link) => {
               const isCopied = copiedId === link.id;
+              const isLinkCopied = copiedId === `link:${link.id}`;
               const isPasswordVisible = visiblePasswordId === link.id;
               return (
                 <tr key={link.id}>
@@ -156,6 +173,20 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                       </strong>
                       <span style={{ color: '#64748b', fontSize: '0.72rem' }}>{link.empresa} · Gerado em {link.dataGeracao}</span>
                     </div>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLinkOnly(link)}
+                      disabled={link.status === 'Expirado'}
+                      style={{ maxWidth: '240px', border: '1px solid #d8e0ea', background: isLinkCopied ? '#f0fdf4' : '#ffffff', color: isLinkCopied ? '#166534' : '#475569', opacity: link.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: link.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.72rem' }}
+                      title={link.link}
+                    >
+                      {isLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {isLinkCopied ? 'Link copiado' : formatDisplayLink(link.link)}
+                      </span>
+                    </button>
                   </td>
                   <td style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>{link.dataExpiracao}</td>
                   <td>
@@ -184,7 +215,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             })}
             {paginatedLinks.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '22px', color: '#64748b', fontWeight: 750 }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '22px', color: '#64748b', fontWeight: 750 }}>
                   Nenhum compartilhamento encontrado nesta aba.
                 </td>
               </tr>

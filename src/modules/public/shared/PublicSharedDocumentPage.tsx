@@ -1,8 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
-import { fromBase64Url, hashSharePassword, type SharedDocumentLink } from '../../gestor/documentos/services/documentShareService';
+import { supabase } from '../../../lib/supabase';
+import { formatShareDateTime, hashSharePassword, type SharedDocumentLink } from '../../gestor/documentos/services/documentShareService';
 
-type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao' | 'senhaHash' | 'arquivoUrl'>;
+type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao'> & {
+  senhaObrigatoria: boolean;
+  storageBucket?: string;
+  storagePath?: string;
+};
 
 const parseExpiration = (value: string) => {
   const [datePart, timePart = '00:00'] = value.split(' ');
@@ -10,22 +15,81 @@ const parseExpiration = (value: string) => {
   return new Date(`${year}-${month}-${day}T${timePart}:00`);
 };
 
-const getPayloadFromUrl = (): PublicLinkPayload | null => {
-  const hashValue = window.location.hash.replace(/^#/, '');
-  if (!hashValue) return null;
+interface PublicShareRow {
+  id: string;
+  documento: string;
+  empresa: string;
+  tempo_limite: string;
+  data_geracao: string;
+  data_expiracao: string;
+  senha_obrigatoria: boolean;
+  storage_bucket: string | null;
+  storage_path: string | null;
+}
 
-  try {
-    return JSON.parse(fromBase64Url(hashValue)) as PublicLinkPayload;
-  } catch {
-    return null;
-  }
+const getShareIdFromPath = () => window.location.pathname.split('/').filter(Boolean).pop();
+
+const mapPublicShareRow = (row: PublicShareRow): PublicLinkPayload => ({
+  id: row.id,
+  documento: row.documento,
+  empresa: row.empresa,
+  tempoLimite: row.tempo_limite,
+  dataGeracao: formatShareDateTime(new Date(row.data_geracao)),
+  dataExpiracao: formatShareDateTime(new Date(row.data_expiracao)),
+  senhaObrigatoria: row.senha_obrigatoria,
+  storageBucket: row.storage_bucket || undefined,
+  storagePath: row.storage_path || undefined,
+});
+
+const fetchPublicShare = async (passwordHash?: string) => {
+  const shareId = getShareIdFromPath();
+  if (!shareId) return null;
+
+  const { data, error } = await supabase.rpc('get_public_document_share', {
+    p_share_id: shareId,
+    p_password_hash: passwordHash || null,
+  });
+  if (error || !data?.[0]) return null;
+  return mapPublicShareRow(data[0] as PublicShareRow);
+};
+
+const createDownloadUrl = async (share: PublicLinkPayload) => {
+  if (!share.storageBucket || !share.storagePath) return null;
+  const { data, error } = await supabase.storage.from(share.storageBucket).createSignedUrl(share.storagePath, 60);
+  if (error) return null;
+  return data?.signedUrl || null;
 };
 
 export const PublicSharedDocumentPage: React.FC = () => {
-  const [linkData] = useState<PublicLinkPayload | null>(() => getPayloadFromUrl());
+  const [linkData, setLinkData] = useState<PublicLinkPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [isUnlocked, setIsUnlocked] = useState(() => !linkData?.senhaHash);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+    fetchPublicShare()
+      .then((share) => {
+        if (!mounted) return;
+        setLinkData(share);
+        setIsUnlocked(Boolean(share && !share.senhaObrigatoria));
+        if (share && !share.senhaObrigatoria) {
+          createDownloadUrl(share).then((url) => {
+            if (mounted) setDownloadUrl(url);
+          });
+        }
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     document.title = linkData ? `${linkData.documento} | Arquivo compartilhado` : 'Link indisponível | Arkhen';
@@ -39,17 +103,25 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   const handleUnlock = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!linkData?.senhaHash) return;
+    if (!linkData?.senhaObrigatoria) return;
     const passwordHash = await hashSharePassword(password);
-    if (passwordHash !== linkData.senhaHash) {
+    const share = await fetchPublicShare(passwordHash);
+    if (!share?.storagePath) {
       setPasswordError('Senha incorreta. Confira o código recebido e tente novamente.');
       return;
     }
+    const url = await createDownloadUrl(share);
+    if (!url) {
+      setPasswordError('Não foi possível preparar o download. Solicite um novo link.');
+      return;
+    }
     setPasswordError('');
+    setLinkData(share);
+    setDownloadUrl(url);
     setIsUnlocked(true);
   };
 
-  const canDownload = Boolean(linkData?.arquivoUrl && isUnlocked && !isExpired);
+  const canDownload = Boolean(downloadUrl && isUnlocked && !isExpired);
 
   return (
     <main style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -65,7 +137,11 @@ export const PublicSharedDocumentPage: React.FC = () => {
         </div>
 
         <div style={{ padding: '24px' }}>
-          {!linkData ? (
+          {isLoading ? (
+            <div style={{ padding: '22px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', fontWeight: 750 }}>
+              Carregando arquivo compartilhado...
+            </div>
+          ) : !linkData ? (
             <div style={{ padding: '22px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' }}>
               Link não encontrado. Solicite um novo compartilhamento para acessar este arquivo.
             </div>
@@ -100,7 +176,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 </div>
               )}
 
-              {!isExpired && linkData.senhaHash && !isUnlocked && (
+              {!isExpired && linkData.senhaObrigatoria && !isUnlocked && (
                 <form onSubmit={handleUnlock} style={{ marginTop: '16px', padding: '16px', borderRadius: '10px', border: '1px solid #fde68a', background: '#fffbeb' }}>
                   <label style={{ display: 'block', color: '#92400e', fontSize: '0.78rem', fontWeight: 850, marginBottom: '8px' }}>
                     Senha de acesso
@@ -122,7 +198,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
               <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
                 <a
-                  href={canDownload ? linkData.arquivoUrl : undefined}
+                  href={canDownload ? downloadUrl || undefined : undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   download={linkData.documento}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { documentosService, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
 import type { DocumentCategory, MeusDocumentosData } from '../services/documentosService';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
@@ -11,6 +11,10 @@ interface UseDocumentosOptions {
   initialActiveTab?: DocumentosTab;
 }
 
+const EMPTY_DOCUMENTOS: CompanyDocument[] = [];
+const EMPTY_COMPANIES: Company[] = [];
+const EMPTY_SETTINGS: MeusDocumentosData = { pastas: [], categorias: [], documentos: [] };
+
 export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   const [activeTab, setActiveTab] = useState<DocumentosTab>(() => options.initialActiveTab || 'meus');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
@@ -18,12 +22,13 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('Todos');
   const [fileTypeFilter, setFileTypeFilter] = useState('Todos');
 
-  useDocumentosRealtime();
-  const { settingsQuery, companiesQuery, personalDocsQuery, companyDocsQuery } = useDocumentosBaseQueries();
+  const documentosRealtime = useDocumentosRealtime();
+  const { settingsQuery, companiesQuery, personalDocsQuery, companyDocsQuery } = useDocumentosBaseQueries(activeTab);
 
-  const settings = settingsQuery.data || { pastas: [], categorias: [], documentos: [] };
-  const personalDocs = personalDocsQuery.data || [];
-  const companyDocs = companyDocsQuery.data || [];
+  const settings = settingsQuery.data ?? EMPTY_SETTINGS;
+  const personalDocs = personalDocsQuery.data ?? EMPTY_DOCUMENTOS;
+  const companyDocs = companyDocsQuery.data ?? EMPTY_DOCUMENTOS;
+  const companyRows = companiesQuery.data ?? EMPTY_COMPANIES;
 
   const meusDocs = useMemo<MeusDocumentosData>(() => {
     const docFolders = personalDocs.map((doc) => doc.pasta).filter(Boolean) as string[];
@@ -35,8 +40,19 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   }, [settings, personalDocs]);
 
   const companies = useMemo<Company[]>(() => {
-    return (companiesQuery.data || []).map((company) => {
-      const documentos = companyDocs.filter((doc) => doc.companyId === company.id);
+    const docsByCompanyId = new Map<string, CompanyDocument[]>();
+    companyDocs.forEach((doc) => {
+      if (!doc.companyId) return;
+      const docs = docsByCompanyId.get(doc.companyId);
+      if (docs) {
+        docs.push(doc);
+      } else {
+        docsByCompanyId.set(doc.companyId, [doc]);
+      }
+    });
+
+    return companyRows.map((company) => {
+      const documentos = docsByCompanyId.get(company.id) || EMPTY_DOCUMENTOS;
       const docFolders = documentos.map((doc) => doc.pasta).filter(Boolean) as string[];
       return {
         ...company,
@@ -44,7 +60,7 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
         pastasDocumentos: Array.from(new Set([...(company.pastasDocumentos || []), ...docFolders])),
       };
     });
-  }, [companiesQuery.data, companyDocs]);
+  }, [companyRows, companyDocs]);
 
   const {
     uploadPersonalMutation,
@@ -54,45 +70,45 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
     saveCompanyMutation,
   } = useDocumentosMutations(meusDocs, companies);
 
-  const handleSaveMeusDocs = async (updatedData: MeusDocumentosData) => {
+  const handleSaveMeusDocs = useCallback(async (updatedData: MeusDocumentosData) => {
     await saveSettingsMutation.mutateAsync(updatedData);
-  };
+  }, [saveSettingsMutation]);
 
-  const handleSaveCategories = async (categories: DocumentCategory[]) => {
+  const handleSaveCategories = useCallback(async (categories: DocumentCategory[]) => {
     await saveCategoriesMutation.mutateAsync(categories);
-  };
+  }, [saveCategoriesMutation]);
 
-  const handleSaveCompanyDocs = async (updatedCompany: Company) => {
+  const handleSaveCompanyDocs = useCallback(async (updatedCompany: Company) => {
     await saveCompanyMutation.mutateAsync(updatedCompany);
-  };
+  }, [saveCompanyMutation]);
 
-  const uploadPersonalDocument = async (input: UploadDocumentInput) => {
+  const uploadPersonalDocument = useCallback(async (input: UploadDocumentInput) => {
     return uploadPersonalMutation.mutateAsync(input);
-  };
+  }, [uploadPersonalMutation]);
 
-  const uploadCompanyDocument = async (input: UploadCompanyDocumentInput) => {
+  const uploadCompanyDocument = useCallback(async (input: UploadCompanyDocumentInput) => {
     return uploadCompanyMutation.mutateAsync(input);
-  };
+  }, [uploadCompanyMutation]);
 
-  const toggleSelectDoc = (docId: string) => {
+  const toggleSelectDoc = useCallback((docId: string) => {
     setSelectedDocIds((prev) => (
       prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]
     ));
-  };
+  }, []);
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelectedDocIds([]);
-  };
+  }, []);
 
-  const selectAllDocs = (docIds: string[]) => {
+  const selectAllDocs = useCallback((docIds: string[]) => {
     setSelectedDocIds(docIds);
-  };
+  }, []);
 
-  const handleBulkDownload = async (documents: CompanyDocument[]) => {
+  const handleBulkDownload = useCallback(async (documents: CompanyDocument[]) => {
     if (documents.length === 0) return;
     await Promise.all(documents.map((doc) => documentosService.downloadDocument(doc)));
     setSelectedDocIds([]);
-  };
+  }, []);
 
   const categoriesList = useMemo(() => {
     const personal = (meusDocs.categorias || []).filter((item) => item.ativo).map((item) => item.nome);
@@ -126,6 +142,12 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
     fileTypeFilter,
     setFileTypeFilter,
     categoriesList,
-    isLoading: settingsQuery.isLoading || companiesQuery.isLoading || personalDocsQuery.isLoading || companyDocsQuery.isLoading,
+    realtimeStatus: documentosRealtime.status,
+    realtimeError: documentosRealtime.error,
+    isRealtimeConnected: documentosRealtime.isConnected,
+    isLoading: settingsQuery.isLoading
+      || (activeTab === 'meus' && personalDocsQuery.isLoading)
+      || (activeTab === 'empresas' && (companiesQuery.isLoading || companyDocsQuery.isLoading))
+      || (activeTab === 'todos' && (personalDocsQuery.isLoading || companiesQuery.isLoading || companyDocsQuery.isLoading)),
   };
 };

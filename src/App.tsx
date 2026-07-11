@@ -88,7 +88,7 @@ class GestorErrorBoundary extends Component<GestorErrorBoundaryProps, GestorErro
 }
 
 function App() {
-  const isSharedDocumentRoute = window.location.pathname.startsWith('/shared/d/');
+  const isSharedDocumentRoute = window.location.pathname.startsWith('/shared/d/') || window.location.pathname.startsWith('/s/');
 
   const getInitialView = () => {
     try {

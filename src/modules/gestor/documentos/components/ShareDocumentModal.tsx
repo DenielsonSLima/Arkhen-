@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Clipboard, Key, Share2, Timer, X } from 'lucide-react';
+import { Check, Clipboard, Key, Link2, Share2, Timer, X } from 'lucide-react';
 import { DEFAULT_SHARE_PASSWORD, documentShareService, formatShareDateTime, generateSharePassword, parseShareDurationMs, SHARE_EXPIRATION_OPTIONS, type ShareableDocument, type SharedDocumentLink } from '../services/documentShareService';
 
 interface ShareDocumentModalProps {
@@ -20,6 +20,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
   const [senha, setSenha] = useState(() => DEFAULT_SHARE_PASSWORD);
   const [createdLinks, setCreatedLinks] = useState<SharedDocumentLink[]>([]);
   const [copied, setCopied] = useState(false);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -38,6 +39,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
     setSenha(DEFAULT_SHARE_PASSWORD);
     setCreatedLinks([]);
     setCopied(false);
+    setCopiedLinkId(null);
     setIsCreating(false);
     setErrorMessage('');
   }, [isOpen]);
@@ -71,6 +73,21 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
     await navigator.clipboard.writeText(payload);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  };
+
+  const handleCopyOnlyLink = async (link: SharedDocumentLink) => {
+    await navigator.clipboard.writeText(link.link);
+    setCopiedLinkId(link.id);
+    window.setTimeout(() => setCopiedLinkId(null), 1800);
+  };
+
+  const formatDisplayLink = (link: string) => {
+    try {
+      const parsed = new URL(link);
+      return `${parsed.host}${parsed.pathname}`;
+    } catch {
+      return link.replace(/^https?:\/\//, '');
+    }
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -170,8 +187,30 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
         )}
 
         {createdLinks.length > 0 && (
-          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
-            {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
+          <div style={{ margin: '0 18px 16px', display: 'grid', gap: '8px' }}>
+            <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
+              {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
+            </div>
+            <div style={{ border: '1px solid #d8e0ea', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
+              {createdLinks.map((link, index) => {
+                const isCopied = copiedLinkId === link.id;
+                return (
+                  <div key={link.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', alignItems: 'center', padding: '9px 10px', borderTop: index === 0 ? 'none' : '1px solid #edf2f7' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.documento}</strong>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569', fontSize: '0.72rem', maxWidth: '100%' }}>
+                        <Link2 size={13} color="var(--color-gold-primary)" />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatDisplayLink(link.link)}</span>
+                      </span>
+                    </div>
+                    <button type="button" onClick={() => handleCopyOnlyLink(link)} style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', borderRadius: '7px', padding: '7px 10px', cursor: 'pointer', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem' }}>
+                      {isCopied ? <Check size={14} /> : <Clipboard size={14} />}
+                      {isCopied ? 'Copiado' : 'Copiar link'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

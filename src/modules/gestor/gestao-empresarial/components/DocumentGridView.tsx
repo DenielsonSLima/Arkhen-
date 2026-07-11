@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Edit2, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface DocumentGridViewProps {
   documents: CompanyDocument[];
@@ -32,94 +28,6 @@ const PdfStaticCover: React.FC = () => (
   </div>
 );
 
-const PdfFirstPageThumbnail: React.FC<{ url?: string; fileName: string }> = ({ url, fileName }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [rendered, setRendered] = useState(false);
-
-  useEffect(() => {
-    if (!url) {
-      setFailed(true);
-      return undefined;
-    }
-
-    let cancelled = false;
-    let loadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
-    let renderTask: pdfjsLib.RenderTask | null = null;
-
-    const renderFirstPage = async () => {
-      try {
-        setFailed(false);
-        setRendered(false);
-        loadingTask = pdfjsLib.getDocument({ url });
-        const pdf = await loadingTask.promise;
-        if (cancelled) {
-          await pdf.destroy();
-          return;
-        }
-
-        const page = await pdf.getPage(1);
-        if (cancelled) {
-          await pdf.destroy();
-          return;
-        }
-
-        const canvas = canvasRef.current;
-        const context = canvas?.getContext('2d');
-        if (!canvas || !context) {
-          await pdf.destroy();
-          return;
-        }
-
-        const baseViewport = page.getViewport({ scale: 1 });
-        const scale = 260 / baseViewport.width;
-        const viewport = page.getViewport({ scale });
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        renderTask = page.render({ canvas, canvasContext: context, viewport });
-        await renderTask.promise;
-        await pdf.destroy();
-        if (!cancelled) setRendered(true);
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    };
-
-    renderFirstPage();
-
-    return () => {
-      cancelled = true;
-      renderTask?.cancel();
-      loadingTask?.destroy();
-    };
-  }, [url]);
-
-  if (failed) return <PdfStaticCover />;
-
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#f8fafc', overflow: 'hidden', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-      {!rendered && <PdfStaticCover />}
-      <canvas
-        ref={canvasRef}
-        aria-label={`Prévia da primeira página de ${fileName}`}
-        style={{
-          width: '100%',
-          height: 'auto',
-          minHeight: '100%',
-          objectFit: 'cover',
-          display: rendered ? 'block' : 'none',
-          pointerEvents: 'none',
-        }}
-      />
-      {rendered && (
-        <span style={{ position: 'absolute', top: '7px', right: '7px', borderRadius: '5px', background: 'rgba(220, 38, 38, 0.94)', color: '#ffffff', padding: '2px 5px', fontSize: '0.58rem', fontWeight: 850 }}>
-          PDF
-        </span>
-      )}
-    </div>
-  );
-};
-
 export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
   documents,
   onPreview,
@@ -130,6 +38,8 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
   onToggleSelect,
   showCheckboxes = false,
 }) => {
+  const selectedDocIdSet = useMemo(() => new Set(selectedDocIds), [selectedDocIds]);
+
   const getFileMeta = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || '';
     if (ext === 'pdf') return { label: 'PDF', icon: FileText, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
@@ -161,7 +71,7 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
     }
 
     if (isPdf) {
-      return <PdfFirstPageThumbnail url={doc.url} fileName={doc.nome} />;
+      return <PdfStaticCover />;
     }
 
     return (
@@ -223,7 +133,7 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
               <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 10 }}>
                 <input
                   type="checkbox"
-                  checked={selectedDocIds.includes(doc.id)}
+                  checked={selectedDocIdSet.has(doc.id)}
                   onChange={() => onToggleSelect?.(doc.id)}
                   onDoubleClick={(event) => event.stopPropagation()}
                   style={{ cursor: 'pointer', width: '15px', height: '15px' }}

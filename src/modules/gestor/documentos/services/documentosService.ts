@@ -10,7 +10,7 @@ export interface DocumentCategory {
 }
 
 type StoredDocumentCategory = DocumentCategory | string;
-type DocumentScope = 'pessoal' | 'empresa';
+export type DocumentScope = 'pessoal' | 'empresa';
 
 export interface MeusDocumentosData {
   pastas: string[];
@@ -62,6 +62,12 @@ interface EmpresaRow {
   uf: string | null;
   pastas_documentos: string[] | null;
   categorias_documentos: string[] | null;
+}
+
+interface DocumentMetadataUpdate {
+  id: string;
+  nome?: string;
+  pasta?: string | null;
 }
 
 const STORAGE_BUCKET = 'documentos';
@@ -134,35 +140,14 @@ const normalizeFolder = (folder?: string) => (
     : ''
 );
 
-const mapRow = async (row: DocumentRow): Promise<CompanyDocument> => {
-  if (row.storage_bucket === SAMPLE_XML_BUCKET) {
-    return {
-      id: row.id,
-      nome: row.nome,
-      tipo: row.tipo,
-      dataUpload: (row.data_upload || row.created_at || '').slice(0, 10),
-      tamanho: formatBytes(row.tamanho_bytes),
-      url: row.storage_path,
-      pasta: row.pasta || undefined,
-      descricao: row.descricao || undefined,
-      dataValidade: row.data_validade || undefined,
-      storagePath: row.storage_path,
-      mimeType: row.mime_type || undefined,
-      tamanhoBytes: row.tamanho_bytes ?? undefined,
-      scope: row.scope,
-      companyId: row.cliente_id || undefined,
-    };
-  }
-
-  const { data } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(row.storage_path, 60 * 60);
-
+const mapRow = (row: DocumentRow): CompanyDocument => {
   return {
     id: row.id,
     nome: row.nome,
     tipo: row.tipo,
     dataUpload: (row.data_upload || row.created_at || '').slice(0, 10),
     tamanho: formatBytes(row.tamanho_bytes),
-    url: data?.signedUrl,
+    url: row.storage_bucket === SAMPLE_XML_BUCKET ? row.storage_path : undefined,
     pasta: row.pasta || undefined,
     descricao: row.descricao || undefined,
     dataValidade: row.data_validade || undefined,
@@ -174,7 +159,7 @@ const mapRow = async (row: DocumentRow): Promise<CompanyDocument> => {
   };
 };
 
-const mapRows = async (rows: DocumentRow[]) => Promise.all(rows.map(mapRow));
+const mapRows = (rows: DocumentRow[]) => rows.map(mapRow);
 
 const mapEmpresaRow = (row: EmpresaRow): Company => ({
   id: row.id,
@@ -344,34 +329,57 @@ export const documentosService = {
     return uploadAndCreateRecord('empresa', input, input.companyId);
   },
 
+  async updateDocumentMetadata(documentId: string, changes: Omit<DocumentMetadataUpdate, 'id'>): Promise<void> {
+    const payload: Partial<Pick<DocumentRow, 'nome' | 'pasta'>> = {};
+    if (changes.nome !== undefined) payload.nome = changes.nome.trim();
+    if (changes.pasta !== undefined) payload.pasta = normalizeFolder(changes.pasta || '') || null;
+
+    if (Object.keys(payload).length === 0) return;
+
+    const { error } = await supabase.from(DOCUMENT_TABLE).update(payload).eq('id', documentId);
+    if (error) throw new Error(`Erro ao atualizar documento: ${error.message}`);
+  },
+
+  async updateDocumentsMetadata(updates: DocumentMetadataUpdate[]): Promise<void> {
+    await Promise.all(updates.map(({ id, ...changes }) => this.updateDocumentMetadata(id, changes)));
+  },
+
   async renameDocument(documentId: string, newName: string): Promise<void> {
-    const { error } = await supabase.from(DOCUMENT_TABLE).update({ nome: newName.trim() }).eq('id', documentId);
-    if (error) throw new Error(`Erro ao renomear documento: ${error.message}`);
+    await this.updateDocumentMetadata(documentId, { nome: newName });
   },
 
   async moveDocument(documentId: string, targetFolder: string): Promise<void> {
-    const { error } = await supabase.from(DOCUMENT_TABLE).update({ pasta: normalizeFolder(targetFolder) || null }).eq('id', documentId);
-    if (error) throw new Error(`Erro ao mover documento: ${error.message}`);
+    await this.updateDocumentMetadata(documentId, { pasta: targetFolder });
   },
 
   async deleteDocument(documentId: string): Promise<void> {
-    const { data, error } = await supabase.from(DOCUMENT_TABLE).select('storage_bucket, storage_path').eq('id', documentId).maybeSingle();
+    await this.deleteDocuments([documentId]);
+  },
+
+  async deleteDocuments(documentIds: string[]): Promise<void> {
+    if (documentIds.length === 0) return;
+
+    const { data, error } = await supabase
+      .from(DOCUMENT_TABLE)
+      .select('storage_bucket, storage_path')
+      .in('id', documentIds);
     if (error) throw new Error(`Erro ao localizar documento: ${error.message}`);
 
-    const { error: deleteError } = await supabase.from(DOCUMENT_TABLE).delete().eq('id', documentId);
-    if (deleteError) throw new Error(`Erro ao excluir documento: ${deleteError.message}`);
+    const storagePaths = ((data || []) as { storage_bucket?: string; storage_path?: string }[])
+      .filter((item) => item.storage_bucket === STORAGE_BUCKET && item.storage_path)
+      .map((item) => item.storage_path as string);
 
-    const storageData = data as { storage_bucket?: string; storage_path?: string } | null;
-    const storagePath = storageData?.storage_path;
-    if (storagePath && storageData?.storage_bucket === STORAGE_BUCKET) {
-      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
+      if (storageError) throw new Error(`Erro ao remover arquivo do storage: ${storageError.message}`);
     }
+
+    const { error: deleteError } = await supabase.from(DOCUMENT_TABLE).delete().in('id', documentIds);
+    if (deleteError) throw new Error(`Erro ao excluir documento: ${deleteError.message}`);
   },
 
   async downloadDocument(doc: CompanyDocument): Promise<void> {
-    const url = doc.url || (doc.storagePath
-      ? (await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(doc.storagePath, 60 * 60)).data?.signedUrl
-      : null);
+    const url = await this.getDocumentAccessUrl(doc);
 
     if (!url) throw new Error('Não foi possível gerar o link de download deste arquivo.');
 
@@ -383,5 +391,14 @@ export const documentosService = {
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
+  },
+
+  async getDocumentAccessUrl(doc: Pick<CompanyDocument, 'url' | 'storagePath'>): Promise<string | null> {
+    if (doc.url) return doc.url;
+    if (!doc.storagePath) return null;
+
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrl(doc.storagePath, 60 * 60);
+    if (error) throw new Error(`Não foi possível gerar a URL assinada: ${error.message}`);
+    return data?.signedUrl || null;
   },
 };

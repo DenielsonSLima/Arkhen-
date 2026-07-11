@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Edit2, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 
@@ -26,6 +26,7 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
   variant = 'default',
 }) => {
   const isCompact = variant === 'compact';
+  const selectedDocIdSet = useMemo(() => new Set(selectedDocIds), [selectedDocIds]);
   const getFileIcon = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
     switch (ext) {
@@ -115,7 +116,7 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
                 <td style={{ width: '40px', verticalAlign: 'middle', padding: isCompact ? '6px 16px' : undefined }}>
                   <input
                     type="checkbox"
-                    checked={selectedDocIds.includes(doc.id)}
+                    checked={selectedDocIdSet.has(doc.id)}
                     onChange={() => onToggleSelect?.(doc.id)}
                     onDoubleClick={(event) => event.stopPropagation()}
                     style={{ cursor: 'pointer', width: '15px', height: '15px' }}

@@ -39,7 +39,6 @@ import { AtividadesPage } from '../atividades/AtividadesPage';
 import { ConfigFluxosPage } from '../atividades/config/ConfigFluxosPage';
 import { PlanejamentoTributarioPage } from '../planejamento-tributario/PlanejamentoTributarioPage';
 import { SimulacoesCalculosPage } from '../simulacoes-calculos/SimulacoesCalculosPage';
-import { DocumentosPage } from '../documentos/DocumentosPage';
 import type { DocumentosTab } from '../documentos/hooks/useDocumentos';
 import { ConformidadePage } from '../conformidade/ConformidadePage';
 import { ProtocolosPage } from '../protocolos/ProtocolosPage';
@@ -60,6 +59,8 @@ import systemLogoImg from '../../../assets/camada-o.png';
 import './GestorLayout.css';
 import './GestorLayoutFixes.css';
 import './GestorModuleTabs.css';
+
+const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage').then((module) => ({ default: module.DocumentosPage })));
 
 interface GestorLayoutProps {
   onLogout: () => void;
@@ -518,12 +519,20 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         );
       case 'documentos':
         return (
-          <DocumentosPage
-            initialActiveTab={initialContext?.data?.activeTab as DocumentosTab | undefined}
-            initialPersonalFolder={initialContext?.data?.personalFolder as string | null | undefined}
-            initialCompanyId={initialContext?.data?.selectedCompanyId as string | null | undefined}
-            onViewContextChange={onContextChange}
-          />
+          <React.Suspense
+            fallback={(
+              <div className="submodule-content-card" style={{ textAlign: 'center', color: '#64748b' }}>
+                Carregando documentos...
+              </div>
+            )}
+          >
+            <DocumentosPage
+              initialActiveTab={initialContext?.data?.activeTab as DocumentosTab | undefined}
+              initialPersonalFolder={initialContext?.data?.personalFolder as string | null | undefined}
+              initialCompanyId={initialContext?.data?.selectedCompanyId as string | null | undefined}
+              onViewContextChange={onContextChange}
+            />
+          </React.Suspense>
         );
       case 'faturamento':
         return (

@@ -1,21 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, Building, CheckCircle2, Download, Files, FolderPlus, Grid, List, MoreHorizontal, Plus, Search, Share2, Trash2, Upload, AlignJustify, Link2 } from 'lucide-react';
 import { useDocumentos } from './hooks/useDocumentos';
 import type { DocumentosTab } from './hooks/useDocumentos';
-import { MeusDocumentosTab } from './components/MeusDocumentosTab';
-import { DocumentosEmpresasTab } from './components/DocumentosEmpresasTab';
-import { TodosDocumentosTab } from './components/TodosDocumentosTab';
-import { DocumentCategoriesModal } from './components/DocumentCategoriesModal';
-import { CreateFolderModal } from './components/CreateFolderModal';
-import { ShareDocumentModal } from './components/ShareDocumentModal';
-import { SharedDocumentsTab } from './components/SharedDocumentsTab';
-import { DocumentUploadModal } from '../gestao-empresarial/components/DocumentUploadModal';
 import { SystemQuickModal } from '../components/SystemQuickModal';
 import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import type { Company, CompanyDocument } from '../gestao-empresarial/services/gestaoEmpresarialService';
 import type { DocumentCategory } from './services/documentosService';
 import type { ShareableDocument } from './services/documentShareService';
 import type { DocumentGroupBy, DocumentSortBy } from './utils/documentOrganization';
+
+const MeusDocumentosTab = React.lazy(() => import('./components/MeusDocumentosTab').then((module) => ({ default: module.MeusDocumentosTab })));
+const DocumentosEmpresasTab = React.lazy(() => import('./components/DocumentosEmpresasTab').then((module) => ({ default: module.DocumentosEmpresasTab })));
+const TodosDocumentosTab = React.lazy(() => import('./components/TodosDocumentosTab').then((module) => ({ default: module.TodosDocumentosTab })));
+const SharedDocumentsTab = React.lazy(() => import('./components/SharedDocumentsTab').then((module) => ({ default: module.SharedDocumentsTab })));
+const DocumentCategoriesModal = React.lazy(() => import('./components/DocumentCategoriesModal').then((module) => ({ default: module.DocumentCategoriesModal })));
+const CreateFolderModal = React.lazy(() => import('./components/CreateFolderModal').then((module) => ({ default: module.CreateFolderModal })));
+const ShareDocumentModal = React.lazy(() => import('./components/ShareDocumentModal').then((module) => ({ default: module.ShareDocumentModal })));
+const DocumentUploadModal = React.lazy(() => import('../gestao-empresarial/components/DocumentUploadModal').then((module) => ({ default: module.DocumentUploadModal })));
 
 interface DocumentosPageProps {
   initialActiveTab?: DocumentosTab;
@@ -46,6 +47,13 @@ const getFolderDocuments = (documents: CompanyDocument[], folderPath: string | n
     return docFolder === folderPath || docFolder.startsWith(prefix);
   });
 };
+
+const DocumentosLoadingState = () => (
+  <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+    <div className="loading-spinner" style={{ margin: '0 auto 12px auto' }}></div>
+    <p style={{ fontSize: '0.85rem' }}>Carregando documentos...</p>
+  </div>
+);
 
 export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   initialActiveTab,
@@ -572,103 +580,114 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       {/* Tab contents */}
       <div className="detail-tab-content">
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-            <div className="loading-spinner" style={{ margin: '0 auto 12px auto' }}></div>
-            <p style={{ fontSize: '0.85rem' }}>Carregando documentos...</p>
-          </div>
-        ) : activeTab === 'meus' ? (
-          <MeusDocumentosTab 
-            meusDocs={meusDocs} 
-            onSaveMeusDocs={saveMeusDocs}
-            selectedDocIds={selectedDocIds}
-            toggleSelectDoc={toggleSelectDoc}
-            searchTerm={searchTerm}
-            selectedCategoryFilter={selectedCategoryFilter}
-            fileTypeFilter={fileTypeFilter}
-            initialSelectedFolder={initialPersonalFolder}
-            onFolderChange={setPersonalFolder}
-            viewMode={viewMode}
-            groupBy={groupBy}
-            sortBy={sortBy}
-            onDownloadFolder={(folderPath) => handleDownloadFolderZip('meus', folderPath)}
-            onNotify={showSuccessToast}
-          />
-        ) : activeTab === 'empresas' ? (
-          <DocumentosEmpresasTab 
-            companies={companies}
-            selectedDocIds={selectedDocIds}
-            toggleSelectDoc={toggleSelectDoc}
-            searchTerm={searchTerm}
-            selectedCategoryFilter={selectedCategoryFilter}
-            fileTypeFilter={fileTypeFilter}
-            initialSelectedCompanyId={initialCompanyId}
-            onCompanyChange={handleCompanyChange}
-            viewMode={viewMode}
-            onSaveCompanyDocs={saveCompanyDocs}
-            selectedFolder={companyFolder}
-            onFolderChange={setCompanyFolder}
-            groupBy={groupBy}
-            sortBy={sortBy}
-            onDownloadFolder={(folderPath) => handleDownloadFolderZip('empresas', folderPath)}
-            onNotify={showSuccessToast}
-          />
-        ) : activeTab === 'todos' ? (
-          <TodosDocumentosTab
-            meusDocs={meusDocs}
-            companies={companies}
-            selectedDocIds={selectedDocIds}
-            toggleSelectDoc={toggleSelectDoc}
-            selectAllDocs={selectAllDocs}
-            onBulkDownload={handleBulkDownload}
-            searchTerm={searchTerm}
-            selectedCategoryFilter={selectedCategoryFilter}
-            fileTypeFilter={fileTypeFilter}
-            viewMode={viewMode}
-            groupBy={groupBy}
-            sortBy={sortBy}
-          />
+          <DocumentosLoadingState />
         ) : (
-          <SharedDocumentsTab
-            refreshKey={shareRefreshKey}
-            onNotify={showSuccessToast}
-          />
+          <Suspense fallback={<DocumentosLoadingState />}>
+            {activeTab === 'meus' ? (
+              <MeusDocumentosTab
+                meusDocs={meusDocs}
+                onSaveMeusDocs={saveMeusDocs}
+                selectedDocIds={selectedDocIds}
+                toggleSelectDoc={toggleSelectDoc}
+                searchTerm={searchTerm}
+                selectedCategoryFilter={selectedCategoryFilter}
+                fileTypeFilter={fileTypeFilter}
+                initialSelectedFolder={initialPersonalFolder}
+                onFolderChange={setPersonalFolder}
+                viewMode={viewMode}
+                groupBy={groupBy}
+                sortBy={sortBy}
+                onDownloadFolder={(folderPath) => handleDownloadFolderZip('meus', folderPath)}
+                onNotify={showSuccessToast}
+              />
+            ) : activeTab === 'empresas' ? (
+              <DocumentosEmpresasTab
+                companies={companies}
+                selectedDocIds={selectedDocIds}
+                toggleSelectDoc={toggleSelectDoc}
+                searchTerm={searchTerm}
+                selectedCategoryFilter={selectedCategoryFilter}
+                fileTypeFilter={fileTypeFilter}
+                initialSelectedCompanyId={initialCompanyId}
+                onCompanyChange={handleCompanyChange}
+                viewMode={viewMode}
+                onSaveCompanyDocs={saveCompanyDocs}
+                selectedFolder={companyFolder}
+                onFolderChange={setCompanyFolder}
+                groupBy={groupBy}
+                sortBy={sortBy}
+                onDownloadFolder={(folderPath) => handleDownloadFolderZip('empresas', folderPath)}
+                onNotify={showSuccessToast}
+              />
+            ) : activeTab === 'todos' ? (
+              <TodosDocumentosTab
+                meusDocs={meusDocs}
+                companies={companies}
+                selectedDocIds={selectedDocIds}
+                toggleSelectDoc={toggleSelectDoc}
+                selectAllDocs={selectAllDocs}
+                onBulkDownload={handleBulkDownload}
+                searchTerm={searchTerm}
+                selectedCategoryFilter={selectedCategoryFilter}
+                fileTypeFilter={fileTypeFilter}
+                viewMode={viewMode}
+                groupBy={groupBy}
+                sortBy={sortBy}
+              />
+            ) : (
+              <SharedDocumentsTab
+                refreshKey={shareRefreshKey}
+                onNotify={showSuccessToast}
+              />
+            )}
+          </Suspense>
         )}
       </div>
 
-      <DocumentCategoriesModal
-        isOpen={showCategoriesModal}
-        categories={meusDocs.categorias}
-        onClose={() => setShowCategoriesModal(false)}
-        onSave={saveCategories}
-      />
+      <Suspense fallback={null}>
+        {showCategoriesModal && (
+          <DocumentCategoriesModal
+            isOpen={showCategoriesModal}
+            categories={meusDocs.categorias}
+            onClose={() => setShowCategoriesModal(false)}
+            onSave={saveCategories}
+          />
+        )}
 
-      <CreateFolderModal
-        isOpen={showCreateFolderModal}
-        onClose={() => setShowCreateFolderModal(false)}
-        onSubmit={activeTab === 'meus' ? handleCreatePersonalFolder : handleCreateCompanyFolder}
-        parentFolderName={activeTab === 'meus' ? (personalFolder ? getFolderLabel(personalFolder) : null) : (companyFolder ? companyFolder.split('/').at(-1) || null : null)}
-      />
+        {showCreateFolderModal && (
+          <CreateFolderModal
+            isOpen={showCreateFolderModal}
+            onClose={() => setShowCreateFolderModal(false)}
+            onSubmit={activeTab === 'meus' ? handleCreatePersonalFolder : handleCreateCompanyFolder}
+            parentFolderName={activeTab === 'meus' ? (personalFolder ? getFolderLabel(personalFolder) : null) : (companyFolder ? companyFolder.split('/').at(-1) || null : null)}
+          />
+        )}
 
-      <DocumentUploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        categories={activeTab === 'meus' ? personalCategoriesList : companyCategoriesList}
-        currentFolder={activeTab === 'meus' ? personalFolder : companyFolder}
-        onCreateCategory={handleCreateUploadCategory}
-        onUpload={activeTab === 'meus' ? handleUploadPersonalFile : handleUploadCompanyFile}
-      />
+        {showUploadModal && (
+          <DocumentUploadModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            categories={activeTab === 'meus' ? personalCategoriesList : companyCategoriesList}
+            currentFolder={activeTab === 'meus' ? personalFolder : companyFolder}
+            onCreateCategory={handleCreateUploadCategory}
+            onUpload={activeTab === 'meus' ? handleUploadPersonalFile : handleUploadCompanyFile}
+          />
+        )}
 
-      <ShareDocumentModal
-        isOpen={showShareModal}
-        documents={selectedShareDocuments}
-        onClose={() => setShowShareModal(false)}
-        onCreated={(links) => {
-          setShareRefreshKey((current) => current + 1);
-          setActiveTab('compartilhados');
-          clearSelection();
-          showSuccessToast(`${links.length} link(s) de compartilhamento gerado(s).`);
-        }}
-      />
+        {showShareModal && (
+          <ShareDocumentModal
+            isOpen={showShareModal}
+            documents={selectedShareDocuments}
+            onClose={() => setShowShareModal(false)}
+            onCreated={(links) => {
+              setShareRefreshKey((current) => current + 1);
+              setActiveTab('compartilhados');
+              clearSelection();
+              showSuccessToast(`${links.length} link(s) de compartilhamento gerado(s).`);
+            }}
+          />
+        )}
+      </Suspense>
 
       {successToast && (
         <div
