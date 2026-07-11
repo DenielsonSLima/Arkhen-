@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
-import logoImage from '../../../assets/camada-o.png';
-import officeBackground from '../../../assets/office-scene-meeting.png';
+import officeBackground from '../../../assets/shared-shared-background.png';
 import {
   formatShareDateTime,
   hashSharePassword,
@@ -283,48 +282,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
           background: 'linear-gradient(rgba(2, 6, 23, 0.64), rgba(2, 6, 23, 0.84))',
         }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          left: '6%',
-          bottom: '6%',
-          width: 100,
-          height: 72,
-          border: '1px solid rgba(251, 191, 36, 0.45)',
-          borderRadius: '0 0 20px 20px',
-          background: 'rgba(15, 23, 42, 0.35)',
-          boxShadow: 'inset 0 0 0 1px rgba(251, 191, 36, 0.2)',
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: '9px',
-            left: '12px',
-            width: '64px',
-            height: '44px',
-            backgroundImage: `url(${logoImage})`,
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
-            opacity: 0.82,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '14px',
-            right: '-14px',
-            width: '32px',
-            height: '24px',
-            borderRadius: '0 12px 12px 0',
-            border: '2px solid rgba(251, 191, 36, 0.75)',
-            borderLeft: 'none',
-          }}
-        />
-      </div>
       <section style={{ width: '100%', maxWidth: '920px', position: 'relative', zIndex: 1, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.36)', overflow: 'hidden' }}>
         <div style={{ background: '#0f172a', color: '#ffffff', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(197, 146, 53, 0.16)', border: '1px solid rgba(197, 146, 53, 0.45)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
