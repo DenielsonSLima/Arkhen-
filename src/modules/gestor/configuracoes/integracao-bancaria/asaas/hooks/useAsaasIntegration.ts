@@ -26,11 +26,12 @@ export const useAsaasIntegration = () => {
   const activeConfig = config?.environments[activeEnvironment] || null;
 
   const updateConfig = (updater: (current: AsaasIntegrationConfig) => AsaasIntegrationConfig) => {
-    const current = config;
-    if (!current) return;
-    queryClient.setQueryData(
+    queryClient.setQueryData<AsaasIntegrationConfig | null>(
       configuracoesKeys.asaas(),
-      updater(current),
+      (current) => {
+        const baseConfig = current || config;
+        return baseConfig ? updater(baseConfig) : baseConfig;
+      },
     );
   };
 
@@ -43,13 +44,20 @@ export const useAsaasIntegration = () => {
     field: keyof AsaasEnvironmentConfig,
     value: string | boolean | number,
   ) => {
+    updateEnvironmentConfigPatch(environment, { [field]: value });
+  };
+
+  const updateEnvironmentConfigPatch = (
+    environment: BankEnvironment,
+    changes: Partial<AsaasEnvironmentConfig>,
+  ) => {
     updateConfig((current) => ({
       ...current,
       environments: {
         ...current.environments,
         [environment]: {
           ...current.environments[environment],
-          [field]: value,
+          ...changes,
         },
       },
     }));
@@ -71,6 +79,7 @@ export const useAsaasIntegration = () => {
     saveError: saveMutation.error,
     setActiveEnvironment,
     updateEnvironmentConfig,
+    updateEnvironmentConfigPatch,
     handleSave,
   };
 };

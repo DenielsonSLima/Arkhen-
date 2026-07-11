@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, CircleDollarSign, QrCode, ReceiptText, Webhook, ShoppingCart } from 'lucide-react';
 import type { BankGatewayDefinition } from '../../gateway/bankGateway';
-import type { AsaasEnvironmentConfig } from '../services/asaasService';
+import { hasAsaasWebhookToken, type AsaasEnvironmentConfig } from '../services/asaasService';
 
 interface AsaasModulesPanelProps {
   gateway: BankGatewayDefinition;
@@ -22,7 +22,7 @@ export const AsaasModulesPanel: React.FC<AsaasModulesPanelProps> = ({ gateway, c
     checkout: config.checkoutAtivo,
     pix: config.aceitaPix,
     boleto: config.aceitaBoleto,
-    webhook: Boolean(config.webhookUrl && config.webhookToken),
+    webhook: Boolean(config.webhookUrl && hasAsaasWebhookToken(config)),
   };
 
   return (

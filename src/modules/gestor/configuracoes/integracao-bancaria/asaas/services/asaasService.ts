@@ -123,11 +123,11 @@ const toSecurePayload = (config: AsaasIntegrationConfig) => ({
 });
 
 export const hasAsaasApiKey = (config: AsaasEnvironmentConfig | null | undefined) => (
-  Boolean(config?.apiKey || config?.apiKeyConfigured)
+  Boolean(config && !config.clearApiKey && (config.apiKey || config.apiKeyConfigured))
 );
 
 export const hasAsaasWebhookToken = (config: AsaasEnvironmentConfig | null | undefined) => (
-  Boolean(config?.webhookToken || config?.webhookTokenConfigured)
+  Boolean(config && !config.clearWebhookToken && (config.webhookToken || config.webhookTokenConfigured))
 );
 
 export const asaasService = {

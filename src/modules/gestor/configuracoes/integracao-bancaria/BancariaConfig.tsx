@@ -229,11 +229,18 @@ export const BancariaConfig: React.FC = () => {
               ))}
             </div>
 
+            {asaas.saveError && (
+              <div style={{ border: '1px solid #fecaca', background: '#fff1f2', color: '#991b1b', borderRadius: '12px', padding: '13px 15px', fontSize: '0.84rem', fontWeight: 750, marginBottom: '18px' }}>
+                Não foi possível salvar a integração Asaas. Revise as credenciais e tente novamente.
+              </div>
+            )}
+
             <AsaasEnvironmentForm
               environment={asaas.activeEnvironment}
               config={activeAsaasConfig}
               isSaving={asaas.isSaving}
               onChange={(field, value) => asaas.updateEnvironmentConfig(asaas.activeEnvironment, field, value)}
+              onPatch={(changes) => asaas.updateEnvironmentConfigPatch(asaas.activeEnvironment, changes)}
             />
 
             <div className="form-divider-title">Módulos Internos do Asaas</div>
