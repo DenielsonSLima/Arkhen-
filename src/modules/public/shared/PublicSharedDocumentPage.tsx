@@ -247,251 +247,257 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   return (
     <main className="public-shared-container">
-      {/* 1. Topo Esquerdo: Logo Arkhen */}
-      <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
-          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '1px' }}>ARKHEN</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>GESTÃO CONTÁBIL</span>
+      {/* 1. Cabeçalho Superior Preto do Site (VAI DE PONTA A PONTA) */}
+      <div className="public-shared-site-header">
+        {/* Esquerda: Logo Arkhen */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '1px' }}>ARKHEN</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>GESTÃO CONTÁBIL</span>
+          </div>
+        </div>
+
+        {/* Direita: Compartilhamento Seguro */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontSize: '0.8rem', opacity: 0.9 }}>
+          <Shield size={16} style={{ color: '#22c55e' }} />
+          <span>Compartilhamento seguro</span>
         </div>
       </div>
 
-      {/* 2. Topo Direito: Compartilhamento Seguro */}
-      <div style={{ position: 'absolute', top: '38px', right: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontSize: '0.8rem', opacity: 0.9 }}>
-        <Shield size={16} style={{ color: '#22c55e' }} />
-        <span>Compartilhamento seguro</span>
-      </div>
+      {/* 2. Área de Conteúdo Central (onde o card branco flutua) */}
+      <div className="public-shared-content-area">
+        {/* Card Centralizado Branco */}
+        <div className="public-shared-glass-modal animate-slide-up">
+          {/* ================= COLUNA ESQUERDA ================= */}
+          <div className="public-shared-body-left">
+            {isSingleFile && activeDocument ? (
+              /* Layout Arquivo Único (Imagem 3) */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', justifyContent: 'center', height: '100%' }}>
+                {/* Ícone Gigante do Formato */}
+                <div style={{ width: '96px', height: '96px', borderRadius: '16px', background: getFileExtension(activeDocument.documento) === 'pdf' ? '#fef2f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)', color: getFileExtension(activeDocument.documento) === 'pdf' ? '#ef4444' : '#64748b', boxShadow: '0 8px 16px rgba(0,0,0,0.03)' }}>
+                  <FileText size={48} />
+                </div>
 
-      {/* 3. Card Centralizado Branco (Sem cabeçalho preto superior do modal) */}
-      <div className="public-shared-glass-modal animate-slide-up">
-        {/* ================= COLUNA ESQUERDA ================= */}
-        <div className="public-shared-body-left">
-          {isSingleFile && activeDocument ? (
-            /* Layout Arquivo Único (Imagem 3) */
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', justifyContent: 'center', height: '100%' }}>
-              {/* Ícone Gigante do Formato */}
-              <div style={{ width: '96px', height: '96px', borderRadius: '16px', background: getFileExtension(activeDocument.documento) === 'pdf' ? '#fef2f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)', color: getFileExtension(activeDocument.documento) === 'pdf' ? '#ef4444' : '#64748b', boxShadow: '0 8px 16px rgba(0,0,0,0.03)' }}>
-                <FileText size={48} />
+                {/* Nome do Arquivo */}
+                <h2 style={{ margin: '8px 0 2px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument.documento}>
+                  {activeDocument.documento}
+                </h2>
+                <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 600 }}>
+                  {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
+                </span>
+
+                {/* Botão de Download Direto (Sem Google Drive e sem divisor "ou") */}
+                <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                  <button
+                    type="button"
+                    className="btn-primary-blue"
+                    onClick={handleDownloadSelected}
+                    disabled={isExpired || isBatchDownloading}
+                  >
+                    {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    Baixar arquivo
+                  </button>
+                </div>
+
+                {/* Rodapé do arquivo único */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.8 }}>
+                  <Shield size={14} style={{ color: '#2563eb' }} />
+                  <span>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
+                </div>
               </div>
+            ) : (
+              /* Layout Lote de Múltiplos Arquivos (Imagem 2) */
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Ícone de Pasta Azul no topo */}
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 12px auto' }}>
+                  <FileText size={22} />
+                </div>
 
-              {/* Nome do Arquivo */}
-              <h2 style={{ margin: '8px 0 2px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument.documento}>
-                {activeDocument.documento}
-              </h2>
-              <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 600 }}>
-                {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
-              </span>
+                {/* Título de Arquivos Compartilhados */}
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Arquivos compartilhados</h2>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  Alguém compartilhou os seguintes arquivos com você.
+                </p>
 
-              {/* Botão de Download Direto (Sem Google Drive e sem divisor "ou") */}
-              <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                {/* Pílula de Detalhe de Tamanho */}
+                <div className="batch-size-pill">
+                  <span>{documents.length} arquivos</span>
+                  <span style={{ color: '#cbd5e1' }}>|</span>
+                  <span>{totalSizeFormatted}</span>
+                </div>
+
+                {/* Tabela de listagem dos arquivos com scroll */}
+                <div className="files-table-container scrollbar-premium">
+                  <table className="files-table">
+                    <thead>
+                      <tr>
+                        <th align="left">Nome do arquivo</th>
+                        <th align="right" style={{ paddingRight: '20px' }}>Tamanho</th>
+                        <th align="center"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.map((doc) => (
+                        <tr key={doc.id}>
+                          <td align="left">
+                            <div className="file-row-name-cell">
+                              {renderFileIcon(doc.documento)}
+                              <span 
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                  setActiveId(doc.id);
+                                  toggleSelection(doc.id);
+                                }}
+                                title="Visualizar este arquivo"
+                              >
+                                {doc.documento}
+                              </span>
+                            </div>
+                          </td>
+                          <td align="right" style={{ fontWeight: 600, paddingRight: '20px', color: '#64748b' }}>
+                            {formatBytes(doc.tamanho_bytes)}
+                          </td>
+                          <td align="center" style={{ width: '40px' }}>
+                            <button
+                              type="button"
+                              className="file-download-btn"
+                              onClick={() => handleDownloadOne(doc.id)}
+                              title="Baixar este arquivo"
+                              disabled={isExpired}
+                            >
+                              <Download size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Botão de download do zip */}
                 <button
                   type="button"
                   className="btn-primary-blue"
-                  onClick={handleDownloadSelected}
-                  disabled={isExpired || isBatchDownloading}
+                  onClick={handleDownloadAll}
+                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
                 >
                   {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                  Baixar arquivo
+                  Baixar todos os arquivos (.zip)
                 </button>
+                <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginTop: '6px' }}>
+                  Todos os arquivos serão baixados compactados em um único arquivo .zip
+                </span>
               </div>
-
-              {/* Rodapé do arquivo único */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.8 }}>
-                <Shield size={14} style={{ color: '#2563eb' }} />
-                <span>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
-              </div>
-            </div>
-          ) : (
-            /* Layout Lote de Múltiplos Arquivos (Imagem 2) */
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Ícone de Pasta Azul no topo */}
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 12px auto' }}>
-                <FileText size={22} />
-              </div>
-
-              {/* Título de Arquivos Compartilhados */}
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Arquivos compartilhados</h2>
-              <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                Alguém compartilhou os seguintes arquivos com você.
-              </p>
-
-              {/* Pílula de Detalhe de Tamanho */}
-              <div className="batch-size-pill">
-                <span>{documents.length} arquivos</span>
-                <span style={{ color: '#cbd5e1' }}>|</span>
-                <span>{totalSizeFormatted}</span>
-              </div>
-
-              {/* Tabela de listagem dos arquivos com scroll */}
-              <div className="files-table-container scrollbar-premium">
-                <table className="files-table">
-                  <thead>
-                    <tr>
-                      <th align="left">Nome do arquivo</th>
-                      <th align="right" style={{ paddingRight: '20px' }}>Tamanho</th>
-                      <th align="center"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.map((doc) => (
-                      <tr key={doc.id}>
-                        <td align="left">
-                          <div className="file-row-name-cell">
-                            {renderFileIcon(doc.documento)}
-                            <span 
-                              style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                setActiveId(doc.id);
-                                toggleSelection(doc.id);
-                              }}
-                              title="Visualizar este arquivo"
-                            >
-                              {doc.documento}
-                            </span>
-                          </div>
-                        </td>
-                        <td align="right" style={{ fontWeight: 600, paddingRight: '20px', color: '#64748b' }}>
-                          {formatBytes(doc.tamanho_bytes)}
-                        </td>
-                        <td align="center" style={{ width: '40px' }}>
-                          <button
-                            type="button"
-                            className="file-download-btn"
-                            onClick={() => handleDownloadOne(doc.id)}
-                            title="Baixar este arquivo"
-                            disabled={isExpired}
-                          >
-                            <Download size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Botão de download do zip */}
-              <button
-                type="button"
-                className="btn-primary-blue"
-                onClick={handleDownloadAll}
-                disabled={isExpired || !canDownloadAll || isBatchDownloading}
-              >
-                {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                Baixar todos os arquivos (.zip)
-              </button>
-              <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginTop: '6px' }}>
-                Todos os arquivos serão baixados compactados em um único arquivo .zip
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* ================= COLUNA DIREITA ================= */}
-        <div className="public-shared-body-right">
-          <div className="sidebar-scroll-content">
-            {/* 1. Empresa Emissora (Ícone Azul do Mockup, Logo Destacada) */}
-            <div className="info-row">
-              <div className="info-icon-wrapper" style={{ background: '#eff6ff', color: '#2563eb' }}>
-                {shareData.empresaLogo ? (
-                  <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                ) : (
-                  <Building2 size={20} />
-                )}
-              </div>
-              <div className="info-text-group">
-                <span className="info-title">Empresa Emissora</span>
-                <strong className="info-value" style={{ color: '#0f172a' }}>{shareData.empresa}</strong>
-                {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
-              </div>
-            </div>
-
-            {/* 2. Compartilhado em */}
-            <div className="info-row">
-              <div className="info-icon-wrapper">
-                <Calendar size={18} />
-              </div>
-              <div className="info-text-group">
-                <span className="info-title">Compartilhado em</span>
-                <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
-              </div>
-            </div>
-
-            {/* 3. Prazo de acesso */}
-            <div className="info-row">
-              <div className="info-icon-wrapper">
-                <Timer size={18} />
-              </div>
-              <div className="info-text-group">
-                <span className="info-title">Prazo de acesso</span>
-                <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
-              </div>
-            </div>
-
-            {/* 4. Tempo restante (Azul para único e Vermelho para lote, tamanho grande) */}
-            <div className="info-row">
-              <div className="info-icon-wrapper">
-                <Timer size={18} />
-              </div>
-              <div className="info-text-group">
-                <span className="info-title">Tempo restante</span>
-                <strong 
-                  className="info-value" 
-                  style={{ 
-                    color: isExpired ? '#ef4444' : (isSingleFile ? '#2563eb' : '#ef4444'), 
-                    fontSize: '1.25rem', 
-                    fontFamily: 'monospace', 
-                    fontWeight: 800, 
-                    marginTop: '2px' 
-                  }}
-                >
-                  {remainingLabel || '...'}
-                </strong>
-              </div>
-            </div>
-
-            {/* 5. Expira em (Vermelho) */}
-            <div className="info-row">
-              <div className="info-icon-wrapper danger">
-                <Calendar size={18} />
-              </div>
-              <div className="info-text-group">
-                <span className="info-title">Expira em</span>
-                <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Caixas de Aviso no Rodapé do Card da Direita */}
-          {isSingleFile ? (
-            <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-              <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-              <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
-              </span>
+          {/* ================= COLUNA DIREITA ================= */}
+          <div className="public-shared-body-right">
+            <div className="sidebar-scroll-content">
+              {/* 1. Empresa Emissora (Ícone Azul do Mockup) */}
+              <div className="info-row">
+                <div className="info-icon-wrapper" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                  {shareData.empresaLogo ? (
+                    <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+                  ) : (
+                    <Building2 size={20} />
+                  )}
+                </div>
+                <div className="info-text-group">
+                  <span className="info-title">Empresa Emissora</span>
+                  <strong className="info-value" style={{ color: '#0f172a' }}>{shareData.empresa}</strong>
+                  {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
+                </div>
+              </div>
+
+              {/* 2. Compartilhado em */}
+              <div className="info-row">
+                <div className="info-icon-wrapper">
+                  <Calendar size={18} />
+                </div>
+                <div className="info-text-group">
+                  <span className="info-title">Compartilhado em</span>
+                  <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
+                </div>
+              </div>
+
+              {/* 3. Prazo de acesso */}
+              <div className="info-row">
+                <div className="info-icon-wrapper">
+                  <Timer size={18} />
+                </div>
+                <div className="info-text-group">
+                  <span className="info-title">Prazo de acesso</span>
+                  <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
+                </div>
+              </div>
+
+              {/* 4. Tempo restante (Azul para único e Vermelho para lote, tamanho grande) */}
+              <div className="info-row">
+                <div className="info-icon-wrapper">
+                  <Timer size={18} />
+                </div>
+                <div className="info-text-group">
+                  <span className="info-title">Tempo restante</span>
+                  <strong 
+                    className="info-value" 
+                    style={{ 
+                      color: isExpired ? '#ef4444' : (isSingleFile ? '#2563eb' : '#ef4444'), 
+                      fontSize: '1.25rem', 
+                      fontFamily: 'monospace', 
+                      fontWeight: 800, 
+                      marginTop: '2px' 
+                    }}
+                  >
+                    {remainingLabel || '...'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* 5. Expira em (Vermelho) */}
+              <div className="info-row">
+                <div className="info-icon-wrapper danger">
+                  <Calendar size={18} />
+                </div>
+                <div className="info-text-group">
+                  <span className="info-title">Expira em</span>
+                  <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="sidebar-warning-box">
-              <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-              <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
-              </span>
-            </div>
-          )}
+
+            {/* Caixas de Aviso no Rodapé do Card da Direita */}
+            {isSingleFile ? (
+              <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+                <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                  Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
+                </span>
+              </div>
+            ) : (
+              <div className="sidebar-warning-box">
+                <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+                <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                  <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 4. Rodapé Centralizado com copyright */}
-      <div style={{ position: 'absolute', bottom: '24px', zIndex: 10, color: '#94a3b8', fontSize: '0.74rem', fontWeight: 600 }}>
+      {/* 3. Rodapé Centralizado com copyright */}
+      <div style={{ position: 'absolute', bottom: '24px', zIndex: 10, color: '#64748b', fontSize: '0.74rem', fontWeight: 600 }}>
         <span>© 2026 | Arkhen Gestão Contábil</span>
       </div>
 
-      {/* 5. Assinatura Dailabs no canto inferior direito da tela */}
-      <div className="developer-signature" style={{ color: '#ffffff', opacity: 0.75, right: '30px', bottom: '24px', position: 'absolute', zIndex: 10 }}>
+      {/* 4. Assinatura Dailabs no canto inferior direito da tela */}
+      <div className="developer-signature" style={{ color: '#0f172a', opacity: 0.8, right: '30px', bottom: '24px', position: 'absolute', zIndex: 10 }}>
         <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
         <div className="developer-signature-copy">
           <span className="developer-signature-brand">DAILABS</span>
-          <span className="developer-signature-subtitle" style={{ fontSize: '0.6rem', letterSpacing: '0.8px' }}>CREATIVE AI & SOFTWARES</span>
+          <span className="developer-signature-subtitle" style={{ fontSize: '0.6rem', letterSpacing: '0.8px', color: '#475569' }}>CREATIVE AI & SOFTWARES</span>
         </div>
       </div>
     </main>
