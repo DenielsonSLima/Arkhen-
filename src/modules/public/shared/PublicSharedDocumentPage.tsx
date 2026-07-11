@@ -108,8 +108,12 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   useEffect(() => {
     if (!shareData) return;
-    document.title = buildPageTitle(shareData);
-  }, [shareData]);
+    if (shareData.senhaObrigatoria && !isUnlocked) {
+      document.title = 'Arquivo Protegido | Arkhen';
+    } else {
+      document.title = buildPageTitle(shareData);
+    }
+  }, [shareData, isUnlocked]);
 
   // Resetar erro ao mudar de arquivo
   useEffect(() => {
