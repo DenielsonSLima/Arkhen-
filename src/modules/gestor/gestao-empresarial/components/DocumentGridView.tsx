@@ -256,6 +256,28 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
               >
                 {doc.nome}
               </h4>
+              <div
+                style={{
+                  marginTop: '5px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  maxWidth: '100%',
+                  padding: '2px 7px',
+                  borderRadius: '999px',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  color: 'var(--color-gold-dark)',
+                  fontSize: '0.64rem',
+                  fontWeight: 800,
+                  lineHeight: 1.25,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={`Categoria: ${doc.tipo || 'Sem categoria'}`}
+              >
+                {doc.tipo || 'Sem categoria'}
+              </div>
               {doc.descricao && (
                 <p 
                   style={{ 

@@ -127,6 +127,27 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
                   {getFileIcon(doc.nome)}
                   <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
                     <span style={{ fontWeight: 600, color: '#0f172a', fontSize: isCompact ? '0.8rem' : undefined }}>{doc.nome}</span>
+                    <span
+                      style={{
+                        marginTop: '2px',
+                        width: 'fit-content',
+                        maxWidth: '100%',
+                        padding: '2px 7px',
+                        borderRadius: '999px',
+                        background: '#fffbeb',
+                        border: '1px solid #fde68a',
+                        color: 'var(--color-gold-dark)',
+                        fontSize: isCompact ? '0.64rem' : '0.68rem',
+                        fontWeight: 800,
+                        lineHeight: 1.25,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={`Categoria: ${doc.tipo || 'Sem categoria'}`}
+                    >
+                      {doc.tipo || 'Sem categoria'}
+                    </span>
                     {doc.descricao && !isCompact && (
                       <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'normal', marginTop: '1px' }}>
                         {doc.descricao}
