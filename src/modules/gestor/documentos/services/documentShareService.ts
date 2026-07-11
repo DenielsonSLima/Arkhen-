@@ -157,7 +157,7 @@ export const hashSharePassword = async (password: string) => {
   return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/shared/d/${shareGroupId}`;
+const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/s/${shareGroupId}`;
 
 const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
   const linkData: Omit<SharedDocumentLink, 'link'> = {
