@@ -51,10 +51,11 @@ interface SharedDocumentRow {
   status: 'Ativo' | 'Expirado';
   created_at: string;
   senha_hash?: string | null;
+  senha_visualizacao?: string | null;
 }
 
-const LIST_COLUMNS_WITH_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,status,created_at,senha_hash';
-const LIST_COLUMNS_WITHOUT_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,status,created_at,senha_hash';
+const LIST_COLUMNS_WITH_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,status,created_at,senha_hash,senha_visualizacao';
+const LIST_COLUMNS_WITHOUT_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,status,created_at,senha_hash,senha_visualizacao';
 
 const isMissingColumnError = (error: { message?: string; code?: string } | null | undefined) => (
   !!error && (error.code === '42703' || (error.message || '').toLowerCase().includes('does not exist'))
@@ -175,6 +176,7 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
     dataExpiracaoIso: row.expires_at,
     status: row.status,
     senhaHash: row.senha_hash || undefined,
+    senha: row.senha_visualizacao || undefined,
   };
 
   return {
@@ -335,6 +337,10 @@ export const documentShareService = {
 
       if (includeSenhaHash && link.senhaHash) {
         row.senha_hash = link.senhaHash;
+      }
+
+      if (link.senha) {
+        row.senha_visualizacao = link.senha;
       }
 
       return row;
