@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Search, Upload } from 'lucide-react';
 import type { EmpresaDados } from '../services/empresaService';
 
@@ -6,7 +6,7 @@ interface EmpresaFormProps {
   dados: EmpresaDados;
   isSaving: boolean;
   isSearchingCnpj: boolean;
-  onInputChange: (field: keyof EmpresaDados, value: string | null) => void;
+  onInputChange: (field: keyof EmpresaDados, value: string | number | null) => void;
   onLookupCnpj: () => void;
   onLogoUpload: (file?: File) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -22,15 +22,56 @@ export const EmpresaForm: React.FC<EmpresaFormProps> = ({
   onSubmit,
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   return (
     <form onSubmit={onSubmit} className="config-form">
       
       {/* Brand Logo Uploader Section */}
-      <div className="logo-uploader-section">
-        <div className="logo-preview-container">
+      <div className="logo-uploader-section" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px' }}>
+        <div 
+          className="logo-preview-container"
+          style={{
+            position: 'relative',
+            width: '120px',
+            height: '120px',
+            borderRadius: '12px',
+            border: isDragging ? '2px dashed #c59235' : '1px solid #e2e8f0',
+            background: isDragging ? '#fffdf7' : '#fafbfc',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            transition: 'all 0.2s',
+            flexShrink: 0,
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              onLogoUpload(file);
+            }
+          }}
+        >
           {dados.logoUrl ? (
-            <img src={dados.logoUrl} alt="Logo da empresa" className="logo-preview-img" />
+            <img 
+              src={dados.logoUrl} 
+              alt="Logo da empresa" 
+              style={{ 
+                maxHeight: '100%', 
+                maxWidth: '100%', 
+                height: `${dados.logoTamanho ?? 80}px`,
+                width: 'auto', 
+                objectFit: 'contain',
+                transition: 'height 0.15s ease'
+              }} 
+            />
           ) : (
             <div className="logo-placeholder-text">Sem Logo</div>
           )}
@@ -54,9 +95,30 @@ export const EmpresaForm: React.FC<EmpresaFormProps> = ({
             }}
           />
         </div>
-        <div className="logo-uploader-info">
-          <h4>Logotipo da Empresa</h4>
-          <p>Selecione a identidade visual do seu escritório para relatórios e faturas.</p>
+        <div className="logo-uploader-info" style={{ flex: 1 }}>
+          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>Logotipo da Empresa</h4>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+            Arraste um arquivo de imagem aqui ou clique para selecionar.
+          </p>
+          
+          {dados.logoUrl && (
+            <div style={{ marginTop: '12px', maxWidth: '280px' }}>
+              <label style={{ fontWeight: 600, fontSize: '0.78rem', display: 'block', marginBottom: '6px', color: '#475569' }}>
+                Ajustar Altura do Logo ({dados.logoTamanho ?? 80}px)
+              </label>
+              <div className="opacity-slider-wrapper">
+                <input
+                  type="range"
+                  min="30"
+                  max="110"
+                  value={dados.logoTamanho ?? 80}
+                  onChange={(e) => onInputChange('logoTamanho', parseInt(e.target.value))}
+                  disabled={isSaving}
+                  className="opacity-slider"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

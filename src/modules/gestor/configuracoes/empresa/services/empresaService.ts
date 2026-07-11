@@ -13,6 +13,7 @@ export interface EmpresaDados {
   cidade: string;
   estado: string;
   logoUrl: string | null;
+  logoTamanho: number; // logo size in pixels
 }
 
 interface EmpresaRow {
@@ -28,6 +29,7 @@ interface EmpresaRow {
   cidade: string;
   estado: string;
   logo_url: string | null;
+  logo_tamanho: number;
 }
 
 const emptyEmpresaDados: EmpresaDados = {
@@ -43,6 +45,7 @@ const emptyEmpresaDados: EmpresaDados = {
   cidade: '',
   estado: '',
   logoUrl: null,
+  logoTamanho: 80,
 };
 
 const fromRow = (row: EmpresaRow | null): EmpresaDados => {
@@ -61,6 +64,7 @@ const fromRow = (row: EmpresaRow | null): EmpresaDados => {
     cidade: row.cidade,
     estado: row.estado,
     logoUrl: row.logo_url,
+    logoTamanho: row.logo_tamanho ?? 80,
   };
 };
 
@@ -77,13 +81,14 @@ const toPayload = (dados: EmpresaDados) => ({
   cidade: dados.cidade,
   estado: dados.estado,
   logo_url: dados.logoUrl,
+  logo_tamanho: dados.logoTamanho ?? 80,
 });
 
 export const empresaService = {
   async getDadosEmpresa(): Promise<EmpresaDados> {
     const { data, error } = await supabase
       .from('configuracoes_empresa')
-      .select('razao_social,nome_fantasia,cnpj,inscricao_estadual,email,telefone,cep,endereco,numero,cidade,estado,logo_url')
+      .select('razao_social,nome_fantasia,cnpj,inscricao_estadual,email,telefone,cep,endereco,numero,cidade,estado,logo_url,logo_tamanho')
       .maybeSingle<EmpresaRow>();
 
     if (error) throw error;

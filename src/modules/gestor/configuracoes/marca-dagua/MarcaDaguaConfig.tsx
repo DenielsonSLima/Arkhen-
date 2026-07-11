@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMarcaDagua } from './hooks/useMarcaDagua';
-import { UploadCloud, Settings } from 'lucide-react';
+import { UploadCloud, Settings, CheckCircle2 } from 'lucide-react';
 
 export const MarcaDaguaConfig: React.FC = () => {
   const {
@@ -170,7 +170,34 @@ export const MarcaDaguaConfig: React.FC = () => {
         <p>Defina um logotipo padrão a ser impresso ou anexado como fundo transparente de relatórios em PDF.</p>
       </div>
 
-      {successMsg && <div className="success-banner">{successMsg}</div>}
+      {successMsg && (
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 3000,
+            width: 'min(360px, calc(100vw - 32px))',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            background: '#0f172a',
+            border: '1px solid rgba(197, 146, 53, 0.5)',
+            color: '#ffffff',
+            boxShadow: '0 18px 46px rgba(15, 23, 42, 0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.82rem',
+            fontWeight: 750,
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <CheckCircle2 size={18} style={{ color: '#d9a441', flexShrink: 0 }} />
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{successMsg}</span>
+        </div>
+      )}
       {errorMsg && <div className="error-banner">{errorMsg}</div>}
 
       <form onSubmit={handleSave} className="config-form">

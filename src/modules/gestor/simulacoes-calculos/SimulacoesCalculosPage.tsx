@@ -1152,20 +1152,27 @@ export const SimulacoesCalculosPage: React.FC = () => {
                     paddingBottom: '16px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'stretch', gap: '18px', width: '100%' }}>
-                      <div style={{ width: '96px', minHeight: '80px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#fffaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px', flexShrink: 0 }}>
-                        {empresa?.logoUrl ? (
+                      {empresa?.logoUrl ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <img
                             src={empresa.logoUrl}
                             alt="Logo da Empresa"
-                            style={{ maxHeight: '66px', maxWidth: '76px', objectFit: 'contain', borderRadius: '6px' }}
+                            style={{
+                              height: `${empresa.logoTamanho ?? 80}px`,
+                              maxHeight: '110px',
+                              maxWidth: '180px',
+                              objectFit: 'contain',
+                            }}
                           />
-                        ) : (
+                        </div>
+                      ) : (
+                        <div style={{ width: '96px', minHeight: '80px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#fffaf0', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px', flexShrink: 0 }}>
                           <div style={{ fontSize: '0.72rem', fontWeight: 900, color: '#c59235', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', textAlign: 'center', lineHeight: 1.05 }}>
                             <Landmark size={26} />
                             <span>ARKHEN<br />CONTÁBIL</span>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>

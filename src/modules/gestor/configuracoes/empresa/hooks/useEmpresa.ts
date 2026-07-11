@@ -24,7 +24,7 @@ export const useEmpresa = () => {
     }
   }, [empresaQuery.error]);
 
-  const handleInputChange = (field: keyof EmpresaDados, value: string | null) => {
+  const handleInputChange = (field: keyof EmpresaDados, value: string | number | null) => {
     if (!dados) return;
     setDados({
       ...dados,
