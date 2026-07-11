@@ -7,11 +7,15 @@ export const MarcaDaguaConfig: React.FC = () => {
     config,
     isLoading,
     isSaving,
+    isUploadingLand,
+    isUploadingPort,
     successMsg,
     errorMsg,
     handleToggle,
     handlePosChange,
     handleOpacityChange,
+    handleUploadLandscape,
+    handleUploadPortrait,
     handleSave,
   } = useMarcaDagua();
 
@@ -45,13 +49,64 @@ export const MarcaDaguaConfig: React.FC = () => {
 
         {config.habilitado && (
           <div className="watermark-details-panel animate-fade-in">
-            {/* File uploader placeholder */}
-            <div className="form-item-group">
-              <label>Logotipo da Marca d'Água</label>
-              <div className="file-uploader-box">
-                <UploadCloud size={32} className="upload-icon" />
-                <span>Arraste seu arquivo de imagem (PNG ou JPG) aqui ou clique para selecionar</span>
-                <span className="file-helper">Recomendado: Imagem PNG com fundo transparente (Max 2MB)</span>
+            {/* Landscape and Portrait Watermark Uploaders */}
+            <div className="form-row-grid" style={{ marginBottom: '24px' }}>
+              <div className="form-item-group">
+                <label>Marca d'Água (Paisagem) - Relatórios Horizontais</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadLandscape(file);
+                  }}
+                  style={{ display: 'none' }}
+                  id="watermark-landscape-file"
+                  disabled={isSaving}
+                />
+                <label htmlFor="watermark-landscape-file" className="file-uploader-box" style={{ cursor: isSaving ? 'not-allowed' : 'pointer', minHeight: '130px' }}>
+                  {config.fileUrlPaisagem ? (
+                    <div className="watermark-preview-container" style={{ textAlign: 'center' }}>
+                      <img src={config.fileUrlPaisagem} alt="Marca d'Água Paisagem" style={{ maxHeight: '90px', objectFit: 'contain', margin: '0 auto 8px' }} />
+                      <span className="file-helper">Clique para alterar a imagem</span>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud size={28} className="upload-icon" />
+                      <span>{isUploadingLand ? 'Enviando...' : 'Clique para selecionar a imagem Paisagem'}</span>
+                      <span className="file-helper">PNG com fundo transparente</span>
+                    </>
+                  )}
+                </label>
+              </div>
+
+              <div className="form-item-group">
+                <label>Marca d'Água (Retrato) - Relatórios Verticais</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadPortrait(file);
+                  }}
+                  style={{ display: 'none' }}
+                  id="watermark-portrait-file"
+                  disabled={isSaving}
+                />
+                <label htmlFor="watermark-portrait-file" className="file-uploader-box" style={{ cursor: isSaving ? 'not-allowed' : 'pointer', minHeight: '130px' }}>
+                  {config.fileUrlRetrato ? (
+                    <div className="watermark-preview-container" style={{ textAlign: 'center' }}>
+                      <img src={config.fileUrlRetrato} alt="Marca d'Água Retrato" style={{ maxHeight: '90px', objectFit: 'contain', margin: '0 auto 8px' }} />
+                      <span className="file-helper">Clique para alterar a imagem</span>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud size={28} className="upload-icon" />
+                      <span>{isUploadingPort ? 'Enviando...' : 'Clique para selecionar a imagem Retrato'}</span>
+                      <span className="file-helper">PNG com fundo transparente</span>
+                    </>
+                  )}
+                </label>
               </div>
             </div>
 
