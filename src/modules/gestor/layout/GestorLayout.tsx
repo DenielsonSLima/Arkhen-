@@ -54,6 +54,7 @@ import { InternalTabBar } from '../../../components/tabs/InternalTabBar';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
 import { TAB_INFOS } from './gestorTabMetadata';
 import { GuiaDeAjuda } from './GuiaDeAjuda';
+import { ModuleRenderErrorBoundary } from '../components/ModuleRenderErrorBoundary';
 
 import systemLogoImg from '../../../assets/camada-o.png';
 import './GestorLayout.css';
@@ -64,49 +65,6 @@ const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage').t
 
 interface GestorLayoutProps {
   onLogout: () => void;
-}
-
-interface ModuleRenderErrorBoundaryState {
-  hasError: boolean;
-  message: string;
-}
-
-class ModuleRenderErrorBoundary extends React.Component<
-  { onReset: () => void; moduleName?: string; children: React.ReactNode },
-  ModuleRenderErrorBoundaryState
-> {
-  constructor(props: { onReset: () => void; moduleName?: string; children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, message: '' };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, message: error.message || 'Erro ao renderizar este módulo.' };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error(`Erro no módulo ${this.props.moduleName || 'desconhecido'}:`, error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="submodule-content-card" style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <h3 style={{ margin: '0 0 10px 0', color: '#0f172a' }}>Não foi possível abrir este módulo</h3>
-          <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: '0.9rem' }}>{this.state.message}</p>
-          <button
-            type="button"
-            onClick={this.props.onReset}
-            className="btn-save-settings"
-          >
-            Voltar para Início
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
 }
 
 export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {

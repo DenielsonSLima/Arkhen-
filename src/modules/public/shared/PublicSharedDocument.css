@@ -34,11 +34,11 @@
   position: relative;
   z-index: 5;
   width: 100%;
-  max-width: 1240px;
+  max-width: 980px;
   height: 100%;
-  max-height: 780px;
+  max-height: 610px;
   background: rgba(14, 16, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid #ffffff;
   border-radius: 16px;
   box-shadow: 0 35px 80px rgba(0, 0, 0, 0.9);
   overflow: hidden;

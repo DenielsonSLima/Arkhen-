@@ -277,18 +277,21 @@ export const PublicSharedDocumentPage: React.FC = () => {
       <div className="public-shared-page-bg" style={{ backgroundImage: `url(${sharedBackground})` }} />
       <div className="public-shared-page-overlay" />
 
+      {/* Marca Arkhen no canto esquerdo superior da tela de fundo */}
+      <div className="brand-header animate-fade-in" style={{ position: 'absolute', top: '24px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+        <div className="brand-title-group" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+          <span className="brand-name" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', letterSpacing: '1px' }}>Arkhen</span>
+          <span className="brand-subtitle" style={{ fontSize: '0.76rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
+        </div>
+      </div>
+
       {/* Modal Centralizado Glassmorphism conforme Imagem 2 */}
       <div className="public-shared-glass-modal animate-slide-up">
         {/* Header Superior do Modal (Área Preta) */}
         <div className="public-shared-modal-header">
-          {/* Lado Esquerdo: Logo Arkhen */}
-          <div className="public-shared-header-left">
-            <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.5px' }}>Arkhen</span>
-              <span style={{ fontSize: '0.6rem', color: 'var(--color-gold-primary)', fontWeight: 600 }}>Gestão Contábil</span>
-            </div>
-          </div>
+          {/* Lado Esquerdo: Espaçador para manter o centro alinhado */}
+          <div style={{ width: '120px' }} />
 
           {/* Centro: Nome do Arquivo e tipo */}
           <div className="public-shared-header-center">
@@ -357,18 +360,46 @@ export const PublicSharedDocumentPage: React.FC = () => {
             <div className="sidebar-info-card">
               <div className="sidebar-scroll-content">
                 {/* 1. Dados da Empresa */}
-                <div className="info-row">
-                  <div className="info-icon-wrapper">
-                    {shareData.empresaLogo ? (
-                      <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-                    ) : (
-                      <Building2 size={20} />
-                    )}
-                  </div>
-                  <div className="info-text-group">
+                <div className="info-row" style={{ gap: '14px', alignItems: 'center' }}>
+                  {shareData.empresaLogo ? (
+                    <img 
+                      src={shareData.empresaLogo} 
+                      alt={shareData.empresa} 
+                      style={{ 
+                        width: '56px', 
+                        height: '56px', 
+                        objectFit: 'contain', 
+                        borderRadius: '8px', 
+                        background: '#ffffff', 
+                        border: '1px solid #e2e8f0', 
+                        padding: '4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        minWidth: '56px'
+                      }} 
+                    />
+                  ) : (
+                    <div 
+                      style={{ 
+                        width: '56px', 
+                        height: '56px', 
+                        borderRadius: '8px', 
+                        background: '#fef8ec', 
+                        border: '1px solid rgba(197, 146, 53, 0.3)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        color: '#c59235',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        minWidth: '56px'
+                      }}
+                    >
+                      <Building2 size={28} />
+                    </div>
+                  )}
+                  <div className="info-text-group" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.25 }}>
                     <span className="info-title">Empresa Emissora</span>
-                    <strong className="info-value">{shareData.empresa}</strong>
-                    {shareData.empresaCnpj && <span style={{ fontSize: '0.7rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
+                    <strong className="info-value" style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>{shareData.empresa}</strong>
+                    {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 700 }}>CNPJ {shareData.empresaCnpj}</span>}
                   </div>
                 </div>
 
