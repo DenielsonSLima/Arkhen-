@@ -80,9 +80,11 @@ export const InicioPage: React.FC = () => {
 
         let addressIncomplete = true;
         if (companyData) {
+          const lowerEndereco = (companyData.endereco || '').toLowerCase();
           addressIncomplete = 
             !companyData.endereco || 
-            companyData.endereco.includes('Rua Fictícia') || 
+            lowerEndereco.includes('ficticia') || 
+            lowerEndereco.includes('fictícia') ||
             !companyData.cep || 
             companyData.cep === '49000-000';
         }
