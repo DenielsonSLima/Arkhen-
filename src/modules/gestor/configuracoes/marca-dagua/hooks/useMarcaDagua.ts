@@ -71,6 +71,11 @@ export const useMarcaDagua = () => {
     }
   };
 
+  const handleSizeChange = (val: number) => {
+    if (!config) return;
+    setConfig({ ...config, tamanho: val });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!config) return;
@@ -98,6 +103,7 @@ export const useMarcaDagua = () => {
     handleToggle,
     handlePosChange,
     handleOpacityChange,
+    handleSizeChange,
     handleUploadLandscape,
     handleUploadPortrait,
     handleSave,

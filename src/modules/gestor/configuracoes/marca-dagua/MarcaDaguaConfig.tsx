@@ -14,6 +14,7 @@ export const MarcaDaguaConfig: React.FC = () => {
     handleToggle,
     handlePosChange,
     handleOpacityChange,
+    handleSizeChange,
     handleUploadLandscape,
     handleUploadPortrait,
     handleSave,
@@ -28,6 +29,7 @@ export const MarcaDaguaConfig: React.FC = () => {
   const renderPreviewMockup = () => {
     const isLandscape = activeModeTab === 'landscape';
     const watermarkUrl = isLandscape ? config.fileUrlPaisagem : config.fileUrlRetrato;
+    const sizeVal = config.tamanho ?? 35;
     
     // Position style mapping
     let positionStyle: React.CSSProperties = {};
@@ -36,29 +38,29 @@ export const MarcaDaguaConfig: React.FC = () => {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        maxWidth: '55%',
-        maxHeight: '55%',
+        maxWidth: `${sizeVal}%`,
+        maxHeight: `${sizeVal}%`,
       };
     } else if (config.posicao === 'topo-esquerda') {
       positionStyle = {
         top: '12px',
         left: '12px',
-        maxWidth: '22%',
-        maxHeight: '22%',
+        maxWidth: `${sizeVal * 0.6}%`,
+        maxHeight: `${sizeVal * 0.6}%`,
       };
     } else if (config.posicao === 'topo-direita') {
       positionStyle = {
         top: '12px',
         right: '12px',
-        maxWidth: '22%',
-        maxHeight: '22%',
+        maxWidth: `${sizeVal * 0.6}%`,
+        maxHeight: `${sizeVal * 0.6}%`,
       };
     } else if (config.posicao === 'rodape-direita') {
       positionStyle = {
         bottom: '12px',
         right: '12px',
-        maxWidth: '22%',
-        maxHeight: '22%',
+        maxWidth: `${sizeVal * 0.6}%`,
+        maxHeight: `${sizeVal * 0.6}%`,
       };
     }
 
@@ -291,7 +293,8 @@ export const MarcaDaguaConfig: React.FC = () => {
                   </div>
                 )}
 
-                <div className="form-row-grid">
+                {/* 3-Column Settings Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <div className="form-item-group">
                     <label style={{ fontWeight: 600 }}>Posição da Marca</label>
                     <select
@@ -299,10 +302,10 @@ export const MarcaDaguaConfig: React.FC = () => {
                       onChange={(e) => handlePosChange(e.target.value as any)}
                       disabled={isSaving}
                     >
-                      <option value="centro">Centralizado (Fundo do Documento)</option>
-                      <option value="topo-esquerda">Cabeçalho - Superior Esquerdo</option>
-                      <option value="topo-direita">Cabeçalho - Superior Direito</option>
-                      <option value="rodape-direita">Rodapé - Inferior Direito</option>
+                      <option value="centro">Centralizado (Fundo)</option>
+                      <option value="topo-esquerda">Topo Esquerda</option>
+                      <option value="topo-direita">Topo Direita</option>
+                      <option value="rodape-direita">Rodapé Direita</option>
                     </select>
                   </div>
 
@@ -315,6 +318,21 @@ export const MarcaDaguaConfig: React.FC = () => {
                         max="100"
                         value={config.opacidade}
                         onChange={(e) => handleOpacityChange(parseInt(e.target.value))}
+                        disabled={isSaving}
+                        className="opacity-slider"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-item-group">
+                    <label style={{ fontWeight: 600 }}>Tamanho ({config.tamanho ?? 35}%)</label>
+                    <div className="opacity-slider-wrapper">
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        value={config.tamanho ?? 35}
+                        onChange={(e) => handleSizeChange(parseInt(e.target.value))}
                         disabled={isSaving}
                         className="opacity-slider"
                       />

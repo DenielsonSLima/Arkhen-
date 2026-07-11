@@ -1087,19 +1087,58 @@ export const SimulacoesCalculosPage: React.FC = () => {
               <div id="simulation-pdf-document" className="simulation-pdf-page">
                 
                 {/* Marca d'água Configurada */}
-                {marcaDagua?.fileUrl && (
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    pointerEvents: 'none',
-                    opacity: (marcaDagua.opacidade || 15) / 100,
-                    backgroundImage: `url(${marcaDagua.fileUrl})`,
-                    backgroundPosition: marcaDagua.posicao === 'center' ? 'center' : 'repeat',
-                    backgroundRepeat: marcaDagua.posicao === 'center' ? 'no-repeat' : 'repeat',
-                    backgroundSize: marcaDagua.posicao === 'center' ? '40%' : 'auto',
-                    zIndex: 0
-                  }} />
-                )}
+                {marcaDagua?.habilitado && (marcaDagua.fileUrlRetrato || marcaDagua.fileUrlPaisagem || marcaDagua.fileUrl) && (() => {
+                  const watermarkUrl = marcaDagua.fileUrlRetrato || marcaDagua.fileUrl || marcaDagua.fileUrlPaisagem;
+                  const sizeVal = marcaDagua.tamanho ?? 35;
+                  
+                  let positionStyle: React.CSSProperties = {};
+                  if (marcaDagua.posicao === 'centro' || !marcaDagua.posicao) {
+                    positionStyle = {
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      maxWidth: `${sizeVal}%`,
+                      maxHeight: `${sizeVal}%`,
+                    };
+                  } else if (marcaDagua.posicao === 'topo-esquerda') {
+                    positionStyle = {
+                      top: '24px',
+                      left: '24px',
+                      maxWidth: `${sizeVal * 0.6}%`,
+                      maxHeight: `${sizeVal * 0.6}%`,
+                    };
+                  } else if (marcaDagua.posicao === 'topo-direita') {
+                    positionStyle = {
+                      top: '24px',
+                      right: '24px',
+                      maxWidth: `${sizeVal * 0.6}%`,
+                      maxHeight: `${sizeVal * 0.6}%`,
+                    };
+                  } else if (marcaDagua.posicao === 'rodape-direita') {
+                    positionStyle = {
+                      bottom: '24px',
+                      right: '24px',
+                      maxWidth: `${sizeVal * 0.6}%`,
+                      maxHeight: `${sizeVal * 0.6}%`,
+                    };
+                  }
+
+                  return (
+                    <img 
+                      src={watermarkUrl!} 
+                      alt="Marca d'Água" 
+                      style={{
+                        position: 'absolute',
+                        opacity: (marcaDagua.opacidade ?? 15) / 100,
+                        pointerEvents: 'none',
+                        objectFit: 'contain',
+                        mixBlendMode: 'multiply',
+                        zIndex: 0,
+                        ...positionStyle
+                      }}
+                    />
+                  );
+                })()}
 
                 <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '100%' }}>
                   {/* Cabeçalho do PDF */}

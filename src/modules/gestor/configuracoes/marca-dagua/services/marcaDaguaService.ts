@@ -7,6 +7,7 @@ export interface MarcaDaguaDados {
   fileUrl: string | null;
   fileUrlPaisagem: string | null;
   fileUrlRetrato: string | null;
+  tamanho: number; // 10 to 100
 }
 
 interface MarcaDaguaRow {
@@ -16,6 +17,7 @@ interface MarcaDaguaRow {
   file_url: string | null;
   file_url_paisagem: string | null;
   file_url_retrato: string | null;
+  tamanho: number;
 }
 
 const emptyMarcaDagua: MarcaDaguaDados = {
@@ -25,6 +27,7 @@ const emptyMarcaDagua: MarcaDaguaDados = {
   fileUrl: null,
   fileUrlPaisagem: null,
   fileUrlRetrato: null,
+  tamanho: 35,
 };
 
 const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {
@@ -37,6 +40,7 @@ const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {
     fileUrl: row.file_url,
     fileUrlPaisagem: row.file_url_paisagem,
     fileUrlRetrato: row.file_url_retrato,
+    tamanho: row.tamanho ?? 35,
   };
 };
 
@@ -44,7 +48,7 @@ export const marcaDaguaService = {
   async getMarcaDaguaConfig(): Promise<MarcaDaguaDados> {
     const { data, error } = await supabase
       .from('configuracoes_marca_dagua')
-      .select('habilitado,posicao,opacidade,file_url,file_url_paisagem,file_url_retrato')
+      .select('habilitado,posicao,opacidade,file_url,file_url_paisagem,file_url_retrato,tamanho')
       .maybeSingle<MarcaDaguaRow>();
 
     if (error) throw error;
@@ -59,6 +63,7 @@ export const marcaDaguaService = {
         file_url: dados.fileUrl,
         file_url_paisagem: dados.fileUrlPaisagem,
         file_url_retrato: dados.fileUrlRetrato,
+        tamanho: dados.tamanho,
       },
     });
 

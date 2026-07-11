@@ -1,9 +1,10 @@
--- Migration: Add portrait and landscape watermark columns and update onboarding / upsert RPCs.
+-- Migration: Add portrait and landscape watermark columns, size column and update onboarding / upsert RPCs.
 
 -- 1. Add columns to configuracoes_marca_dagua
 ALTER TABLE public.configuracoes_marca_dagua
   ADD COLUMN IF NOT EXISTS file_url_paisagem text,
-  ADD COLUMN IF NOT EXISTS file_url_retrato text;
+  ADD COLUMN IF NOT EXISTS file_url_retrato text,
+  ADD COLUMN IF NOT EXISTS tamanho integer DEFAULT 35;
 
 -- 2. Update upsert_configuracoes_marca_dagua function
 CREATE OR REPLACE FUNCTION public.upsert_configuracoes_marca_dagua(p_payload jsonb)
@@ -21,7 +22,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.configuracoes_marca_dagua (
-    empresa_id, habilitado, posicao, opacidade, file_url, file_url_paisagem, file_url_retrato
+    empresa_id, habilitado, posicao, opacidade, file_url, file_url_paisagem, file_url_retrato, tamanho
   )
   VALUES (
     v_empresa_id,
@@ -30,7 +31,8 @@ BEGIN
     COALESCE((p_payload->>'opacidade')::integer, 15),
     NULLIF(p_payload->>'file_url', ''),
     NULLIF(p_payload->>'file_url_paisagem', ''),
-    NULLIF(p_payload->>'file_url_retrato', '')
+    NULLIF(p_payload->>'file_url_retrato', ''),
+    COALESCE((p_payload->>'tamanho')::integer, 35)
   )
   ON CONFLICT (empresa_id) DO UPDATE SET
     habilitado = EXCLUDED.habilitado,
@@ -39,6 +41,7 @@ BEGIN
     file_url = EXCLUDED.file_url,
     file_url_paisagem = EXCLUDED.file_url_paisagem,
     file_url_retrato = EXCLUDED.file_url_retrato,
+    tamanho = EXCLUDED.tamanho,
     updated_at = now()
   RETURNING * INTO v_row;
 
@@ -46,7 +49,7 @@ BEGIN
 END;
 $$;
 
--- 3. Update finalizar_cadastro_auth function to support saving logo and watermarks, as well as user cpf/phone and company address details
+-- 3. Update finalizar_cadastro_auth function to support saving logo and watermarks, as well as user cpf/phone, company address, and watermark size details
 CREATE OR REPLACE FUNCTION public.finalizar_cadastro_auth(p_payload jsonb DEFAULT '{}'::jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -140,7 +143,8 @@ BEGIN
       posicao,
       opacidade,
       file_url_paisagem,
-      file_url_retrato
+      file_url_retrato,
+      tamanho
     )
     VALUES (
       v_empresa_id,
@@ -148,7 +152,8 @@ BEGIN
       'centro',
       15,
       v_file_url_paisagem,
-      v_file_url_retrato
+      v_file_url_retrato,
+      35
     )
     ON CONFLICT (empresa_id) DO UPDATE SET
       file_url_paisagem = COALESCE(v_file_url_paisagem, configuracoes_marca_dagua.file_url_paisagem),
@@ -195,9 +200,9 @@ BEGIN
 
     IF v_file_url_paisagem IS NOT NULL OR v_file_url_retrato IS NOT NULL THEN
       INSERT INTO public.configuracoes_marca_dagua (
-        empresa_id, habilitado, posicao, opacidade, file_url_paisagem, file_url_retrato
+        empresa_id, habilitado, posicao, opacidade, file_url_paisagem, file_url_retrato, tamanho
       )
-      VALUES (v_empresa_id, true, 'centro', 15, v_file_url_paisagem, v_file_url_retrato)
+      VALUES (v_empresa_id, true, 'centro', 15, v_file_url_paisagem, v_file_url_retrato, 35)
       ON CONFLICT (empresa_id) DO UPDATE SET
         file_url_paisagem = COALESCE(EXCLUDED.file_url_paisagem, configuracoes_marca_dagua.file_url_paisagem),
         file_url_retrato = COALESCE(EXCLUDED.file_url_retrato, configuracoes_marca_dagua.file_url_retrato);
