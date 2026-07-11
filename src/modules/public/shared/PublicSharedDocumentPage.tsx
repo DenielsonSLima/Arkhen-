@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import logoImage from '../../../assets/camada-o.png';
+import officeBackground from '../../../assets/office-scene-meeting.png';
 import {
   formatShareDateTime,
   hashSharePassword,
@@ -108,6 +109,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const [passwordError, setPasswordError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [remainingMilliseconds, setRemainingMilliseconds] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -136,11 +138,50 @@ export const PublicSharedDocumentPage: React.FC = () => {
     document.title = linkData ? `${linkData.documento} | Arquivo compartilhado` : 'Link indisponível | Arkhen';
   }, [linkData]);
 
-  const isExpired = useMemo(() => {
-    if (!linkData?.dataExpiracaoIso) return true;
-    const parsed = new Date(linkData.dataExpiracaoIso);
-    return Number.isNaN(parsed.getTime()) || parsed.getTime() < Date.now();
-  }, [linkData]);
+  useEffect(() => {
+    if (!linkData?.dataExpiracaoIso) {
+      setRemainingMilliseconds(null);
+      return;
+    }
+
+    const expiry = new Date(linkData.dataExpiracaoIso).getTime();
+    if (Number.isNaN(expiry)) {
+      setRemainingMilliseconds(0);
+      return;
+    }
+
+    const updateCounter = () => {
+      const remaining = Math.max(0, expiry - Date.now());
+      setRemainingMilliseconds(remaining);
+    };
+
+    updateCounter();
+    const interval = window.setInterval(updateCounter, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [linkData?.dataExpiracaoIso]);
+
+  const isExpired = useMemo(() => (
+    remainingMilliseconds !== null && remainingMilliseconds <= 0
+  ), [remainingMilliseconds]);
+
+  const remainingTimeLabel = useMemo(() => {
+    if (remainingMilliseconds === null) return null;
+    if (remainingMilliseconds <= 0) return 'Expirado';
+
+    const totalSeconds = Math.floor(remainingMilliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+  }, [remainingMilliseconds]);
 
   const fileExt = useMemo(() => {
     if (!linkData?.documento) return '';
@@ -182,21 +223,109 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   const canDownload = Boolean(downloadUrl && isUnlocked && !isExpired);
 
+  const handleDownload = async () => {
+    if (!downloadUrl || !linkData || isExpired || !isUnlocked) return;
+
+    try {
+      const response = await fetch(downloadUrl, { method: 'GET', mode: 'cors' });
+      if (!response.ok) throw new Error('Resposta inválida ao preparar o download.');
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = linkData.documento;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = linkData.documento;
+      anchor.rel = 'noopener noreferrer';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  };
+
   return (
     <main
       style={{
         minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px',
         color: '#0f172a',
-        backgroundImage: `linear-gradient(rgba(10, 15, 35, 0.6), rgba(10, 15, 35, 0.72)), url(${logoImage})`,
-        backgroundRepeat: 'repeat',
-        backgroundSize: '260px 260px',
       }}
     >
-      <section style={{ width: '100%', maxWidth: '720px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.14)', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${officeBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(1.5px)',
+          transform: 'scale(1.03)',
+          opacity: 0.44,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(rgba(2, 6, 23, 0.64), rgba(2, 6, 23, 0.84))',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: '6%',
+          bottom: '6%',
+          width: 100,
+          height: 72,
+          border: '1px solid rgba(251, 191, 36, 0.45)',
+          borderRadius: '0 0 20px 20px',
+          background: 'rgba(15, 23, 42, 0.35)',
+          boxShadow: 'inset 0 0 0 1px rgba(251, 191, 36, 0.2)',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: '9px',
+            left: '12px',
+            width: '64px',
+            height: '44px',
+            backgroundImage: `url(${logoImage})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            opacity: 0.82,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: '14px',
+            right: '-14px',
+            width: '32px',
+            height: '24px',
+            borderRadius: '0 12px 12px 0',
+            border: '2px solid rgba(251, 191, 36, 0.75)',
+            borderLeft: 'none',
+          }}
+        />
+      </div>
+      <section style={{ width: '100%', maxWidth: '920px', position: 'relative', zIndex: 1, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', boxShadow: '0 24px 70px rgba(15, 23, 42, 0.36)', overflow: 'hidden' }}>
         <div style={{ background: '#0f172a', color: '#ffffff', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(197, 146, 53, 0.16)', border: '1px solid rgba(197, 146, 53, 0.45)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <ShieldCheck size={23} color="#dfb35e" />
@@ -218,23 +347,15 @@ export const PublicSharedDocumentPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc' }}>
-                <FileText size={28} color="#c59235" style={{ flexShrink: 0 }} />
-                <div style={{ minWidth: 0 }}>
-                  <h2 style={{ margin: 0, fontSize: '1rem', color: '#0f172a', overflowWrap: 'anywhere' }}>{linkData.documento}</h2>
-                  <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.82rem' }}>{linkData.empresa}</p>
-                </div>
-              </div>
-
-              <section style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(220px, 1fr)', gap: '14px' }}>
+              <section style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(260px, 1fr)', gap: '14px' }}>
                 <div
                   style={{
                     position: 'relative',
-                    minHeight: '280px',
+                    minHeight: '360px',
                     border: '1px solid #e2e8f0',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    backgroundImage: `linear-gradient(140deg, rgba(15, 23, 42, 0.04), rgba(255, 255, 255, 0.86))`,
+                    backgroundImage: `linear-gradient(140deg, rgba(15, 23, 42, 0.04), rgba(255, 255, 255, 0.9))`,
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
                   }}
@@ -242,54 +363,59 @@ export const PublicSharedDocumentPage: React.FC = () => {
                   <div
                     style={{
                       position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '150px',
-                      height: '150px',
-                      backgroundImage: `url(${logoImage})`,
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      opacity: 0.08,
-                      pointerEvents: 'none',
+                      inset: 0,
+                      backgroundColor: 'rgba(15, 23, 42, 0.02)',
                     }}
                   />
                   <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-                    {previewMode === 'pdf' && previewImage && (
+                    {previewMode === 'pdf' && previewImage ? (
                       <iframe
                         src={previewImage}
                         title={linkData.documento}
                         loading="lazy"
                         style={{ width: '100%', height: '100%', border: 'none' }}
                       />
-                    )}
-                    {previewMode === 'image' && previewSource && (
+                    ) : null}
+                    {previewMode === 'image' && previewSource ? (
                       <img
                         src={previewSource}
                         alt={linkData.documento}
                         style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0f172a', display: 'block' }}
                       />
-                    )}
-                    {previewMode === 'generic' && (
-                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column', gap: '8px', textAlign: 'center', padding: '16px' }}>
+                    ) : null}
+                    {previewMode === 'generic' ? (
+                      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexDirection: 'column', gap: '8px', textAlign: 'center', padding: '16px', background: 'linear-gradient(180deg, rgba(255,255,255,0.85), #ffffff)' }}>
                         <FileText size={34} />
                         <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700 }}>Prévia indisponível</p>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', background: '#ffffff' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.92rem', color: '#0f172a' }}>Prévia rápida</h3>
-                  <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: '0.82rem' }}>Baixe ou visualize pelo botão abaixo.</p>
-                  <div style={{ marginTop: '10px', display: 'grid', gap: '8px' }}>
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>Nome</span>
-                      <p style={{ margin: '6px 0 0', fontSize: '0.9rem', color: '#0f172a', wordBreak: 'break-word' }}>{linkData.documento}</p>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                    <FileText size={26} color="#c59235" />
+                    <div style={{ minWidth: 0 }}>
+                      <h2 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', overflowWrap: 'anywhere' }}>{linkData.documento}</h2>
+                      <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.75rem' }}>{linkData.empresa}</p>
                     </div>
+                  </div>
+                  <div style={{ display: 'grid', gap: '10px' }}>
                     <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
                       <span style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>Formato</span>
-                      <p style={{ margin: '6px 0 0', fontSize: '0.9rem', color: '#0f172a' }}>{fileExt ? fileExt.toUpperCase() : 'N/A'}</p>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: '#0f172a' }}>{fileExt ? fileExt.toUpperCase() : 'N/A'}</p>
+                    </div>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#64748b', fontSize: '0.72rem', fontWeight: 800 }}>
+                        <Timer size={14} /> Tempo restante
+                      </span>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: isExpired ? '#b91c1c' : '#0f172a', fontWeight: 700 }}>
+                        {remainingTimeLabel || 'calculando...'}
+                      </p>
+                    </div>
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', background: '#f8fafc' }}>
+                      <span style={{ color: '#64748b', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>Expira em</span>
+                      <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: isExpired ? '#b91c1c' : '#0f172a' }}>{linkData.dataExpiracao}</p>
                     </div>
                   </div>
                 </div>
@@ -297,12 +423,8 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
               <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px' }}>
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '9px', padding: '12px', background: '#ffffff' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}><Timer size={15} /> Disponível por</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}>Disponível por</span>
                   <strong style={{ display: 'block', marginTop: '5px', fontSize: '0.92rem', color: '#0f172a' }}>{linkData.tempoLimite}</strong>
-                </div>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '9px', padding: '12px', background: '#ffffff' }}>
-                  <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}>Expira em</span>
-                  <strong style={{ display: 'block', marginTop: '5px', fontSize: '0.92rem', color: isExpired ? '#b91c1c' : '#0f172a' }}>{linkData.dataExpiracao}</strong>
                 </div>
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '9px', padding: '12px', background: '#ffffff' }}>
                   <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 800 }}>Gerado em</span>
@@ -337,17 +459,15 @@ export const PublicSharedDocumentPage: React.FC = () => {
               )}
 
               <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-                <a
-                  href={canDownload ? downloadUrl || undefined : undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download={linkData.documento}
-                  aria-disabled={!canDownload}
+                <button
+                  onClick={handleDownload}
+                  type="button"
+                  disabled={!canDownload}
                   style={{ pointerEvents: canDownload ? 'auto' : 'none', opacity: canDownload ? 1 : 0.5, borderRadius: '8px', padding: '10px 14px', background: canDownload ? '#0f172a' : '#94a3b8', color: '#ffffff', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
                   {isUnlocked ? <Download size={16} /> : <Lock size={16} />}
                   {isUnlocked ? 'Baixar arquivo' : 'Aguardando senha'}
-                </a>
+                </button>
               </div>
             </>
           )}
