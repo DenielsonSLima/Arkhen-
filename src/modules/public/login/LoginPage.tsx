@@ -10,7 +10,7 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onBackToLanding }) => {
   React.useEffect(() => {
-    document.title = 'Entrar | ARKHEN Gestão Contábil';
+    document.title = 'Entrar | Arkhen Gestão Contábil';
   }, []);
 
   return (

@@ -11,9 +11,9 @@ export const LoginBanner: React.FC = () => {
       <div className="banner-content">
         {/* Brand Header */}
         <div className="brand-header animate-fade-in">
-          <img src={loginLogoImg} alt="Logo ARKHEN Gestão Contábil" className="brand-logo" />
+          <img src={loginLogoImg} alt="Logo Arkhen Gestão Contábil" className="brand-logo" />
           <div className="brand-title-group">
-            <span className="brand-name" style={{ fontSize: '1.8rem' }}>ARKHEN</span>
+            <span className="brand-name" style={{ fontSize: '1.8rem' }}>Arkhen</span>
             <span className="brand-subtitle">Gestão Contábil</span>
           </div>
         </div>

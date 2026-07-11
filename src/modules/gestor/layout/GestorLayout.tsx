@@ -221,7 +221,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const activeModuleId = activeOpenedTab?.moduleId || activeTabId;
 
   useEffect(() => {
-    const baseTitle = 'ARKHEN Gestão Contábil';
+    const baseTitle = 'Arkhen Gestão Contábil';
     if (activeOpenedTab) {
       document.title = `${activeOpenedTab.title} | ${baseTitle}`;
     } else {
@@ -550,7 +550,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         <div className="sidebar-brand">
           <img src={systemLogoImg} alt="Brand logo" className="sidebar-logo" />
           <div className="sidebar-brand-text">
-            <h3>ARKHEN</h3>
+            <h3>Arkhen</h3>
             <span>Gestão Contábil</span>
           </div>
         </div>
