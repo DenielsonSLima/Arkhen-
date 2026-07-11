@@ -7,15 +7,31 @@ interface SharedDocumentsTabProps {
   onNotify?: (message: string) => void;
 }
 
+const PAGE_SIZE = 8;
+const STATUS_TABS: Array<'Ativo' | 'Expirado' | 'Todos'> = ['Ativo', 'Expirado', 'Todos'];
+
 export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshKey, onNotify }) => {
   const [links, setLinks] = useState<SharedDocumentLink[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Expirado'>('Todos');
+  const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Expirado'>('Ativo');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    setLinks(documentShareService.list());
+    let mounted = true;
+    setIsLoading(true);
+    documentShareService.list()
+      .then((nextLinks) => {
+        if (mounted) setLinks(nextLinks);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [refreshKey]);
 
   const filteredLinks = useMemo(() => {
@@ -27,17 +43,42 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
     });
   }, [links, searchTerm, statusFilter]);
 
+  const statusCounts = useMemo(() => ({
+    Ativo: links.filter((link) => link.status === 'Ativo').length,
+    Expirado: links.filter((link) => link.status === 'Expirado').length,
+    Todos: links.length,
+  }), [links]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLinks.length / PAGE_SIZE));
+  const paginatedLinks = filteredLinks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
   const handleCopy = async (link: SharedDocumentLink) => {
     await navigator.clipboard.writeText(`${link.link}${link.senha ? `\nSenha: ${link.senha}` : ''}`);
     setCopiedId(link.id);
     window.setTimeout(() => setCopiedId(null), 1800);
   };
 
-  const handleRevoke = (id: string) => {
-    documentShareService.revoke(id);
-    setLinks(documentShareService.list());
+  const handleRevoke = async (id: string) => {
+    await documentShareService.revoke(id);
+    setLinks(await documentShareService.list());
     onNotify?.('Link de compartilhamento revogado.');
   };
+
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in" style={{ padding: '34px 20px', border: '1px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', textAlign: 'center', color: '#64748b', fontWeight: 750 }}>
+        Carregando arquivos compartilhados...
+      </div>
+    );
+  }
 
   if (links.length === 0) {
     return (
@@ -63,11 +104,26 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #d8e0ea', borderRadius: '8px', outline: 'none', color: '#0f172a', fontSize: '0.8rem', boxSizing: 'border-box' }}
           />
         </div>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'Todos' | 'Ativo' | 'Expirado')} style={{ padding: '8px 10px', border: '1px solid #d8e0ea', borderRadius: '8px', background: '#ffffff', color: '#475569', fontSize: '0.8rem' }}>
-          <option value="Todos">Todos os status</option>
-          <option value="Ativo">Ativos</option>
-          <option value="Expirado">Expirados</option>
-        </select>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+        {STATUS_TABS.map((tab) => {
+          const isActive = statusFilter === tab;
+          const label = tab === 'Ativo' ? 'Ativos' : tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setStatusFilter(tab)}
+              style={{ border: 'none', borderBottom: isActive ? '2px solid var(--color-gold-primary)' : '2px solid transparent', background: 'transparent', color: isActive ? '#b45309' : '#64748b', padding: '8px 10px', cursor: 'pointer', fontWeight: 850, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '7px' }}
+            >
+              {label}
+              <span style={{ minWidth: '22px', height: '20px', padding: '0 7px', borderRadius: '999px', background: isActive ? '#fffbeb' : '#f1f5f9', border: isActive ? '1px solid #fde68a' : '1px solid #e2e8f0', color: isActive ? '#b45309' : '#64748b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem' }}>
+                {statusCounts[tab]}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="table-responsive-wrapper">
@@ -82,7 +138,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             </tr>
           </thead>
           <tbody>
-            {filteredLinks.map((link) => {
+            {paginatedLinks.map((link) => {
               const isCopied = copiedId === link.id;
               const isPasswordVisible = visiblePasswordId === link.id;
               return (
@@ -126,8 +182,30 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                 </tr>
               );
             })}
+            {paginatedLinks.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '22px', color: '#64748b', fontWeight: 750 }}>
+                  Nenhum compartilhamento encontrado nesta aba.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+      </div>
+
+      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', color: '#64748b', fontSize: '0.76rem', fontWeight: 750 }}>
+        <span>
+          Mostrando {filteredLinks.length === 0 ? 0 : ((currentPage - 1) * PAGE_SIZE) + 1}-{Math.min(currentPage * PAGE_SIZE, filteredLinks.length)} de {filteredLinks.length}
+        </span>
+        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+          <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, fontWeight: 800 }}>
+            Anterior
+          </button>
+          <span>Página {currentPage} de {totalPages}</span>
+          <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages} style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, fontWeight: 800 }}>
+            Próxima
+          </button>
+        </div>
       </div>
     </div>
   );

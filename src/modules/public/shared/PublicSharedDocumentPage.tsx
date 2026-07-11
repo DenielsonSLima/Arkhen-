@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, KeyRound, Lock, ShieldCheck, Timer } from 'lucide-react';
-import { documentShareService, fromBase64Url, hashSharePassword, type SharedDocumentLink } from '../../gestor/documentos/services/documentShareService';
+import { fromBase64Url, hashSharePassword, type SharedDocumentLink } from '../../gestor/documentos/services/documentShareService';
 
 type PublicLinkPayload = Pick<SharedDocumentLink, 'id' | 'documento' | 'empresa' | 'tempoLimite' | 'dataGeracao' | 'dataExpiracao' | 'senhaHash' | 'arquivoUrl'>;
 
@@ -21,15 +21,8 @@ const getPayloadFromUrl = (): PublicLinkPayload | null => {
   }
 };
 
-const getFallbackLink = (): PublicLinkPayload | null => {
-  const id = window.location.pathname.split('/').filter(Boolean).pop();
-  if (!id) return null;
-  const link = documentShareService.list().find((item) => item.id === id);
-  return link || null;
-};
-
 export const PublicSharedDocumentPage: React.FC = () => {
-  const [linkData] = useState<PublicLinkPayload | null>(() => getPayloadFromUrl() || getFallbackLink());
+  const [linkData] = useState<PublicLinkPayload | null>(() => getPayloadFromUrl());
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(() => !linkData?.senhaHash);

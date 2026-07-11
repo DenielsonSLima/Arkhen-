@@ -35,7 +35,23 @@ export const SHARE_EXPIRATION_OPTIONS = [
 const LINKS_STORAGE_KEY = 'cfg_share_links_gerados';
 const DEMO_LINK_IDS = ['l1', 'l2', 'l3', 'l4'];
 const STORAGE_BUCKET = 'documentos';
+const SHARE_TABLE = 'documentos_compartilhamentos';
 export const DEFAULT_SHARE_PASSWORD = 'ARKH-1876-SEC';
+
+interface SharedDocumentRow {
+  id: string;
+  documento_id: string | null;
+  documento_nome: string;
+  empresa_nome: string;
+  gerado_por: string;
+  tempo_limite: string;
+  expires_at: string;
+  senha_hash: string | null;
+  senha_visualizacao: string | null;
+  arquivo_url: string | null;
+  status: 'Ativo' | 'Expirado';
+  created_at: string;
+}
 
 export const parseShareDurationMs = (duration: string) => {
   const [rawAmount, unit = ''] = duration.split(' ');
@@ -56,7 +72,7 @@ export const formatShareDateTime = (date: Date) => (
   })
 );
 
-const makeId = () => Math.random().toString(16).slice(2, 10);
+const makeId = () => crypto.randomUUID();
 
 const toBase64Url = (value: string) => {
   const bytes = new TextEncoder().encode(value);
@@ -95,12 +111,34 @@ const buildPublicLink = (link: Omit<SharedDocumentLink, 'link'>) => {
   return `${window.location.origin}/shared/d/${link.id}#${payload}`;
 };
 
+const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
+  const linkData: Omit<SharedDocumentLink, 'link'> = {
+    id: row.id,
+    documentId: row.documento_id || undefined,
+    documento: row.documento_nome,
+    empresa: row.empresa_nome,
+    geradoPor: row.gerado_por,
+    dataGeracao: formatShareDateTime(new Date(row.created_at)),
+    tempoLimite: row.tempo_limite,
+    dataExpiracao: formatShareDateTime(new Date(row.expires_at)),
+    senha: row.senha_visualizacao || undefined,
+    senhaHash: row.senha_hash || undefined,
+    arquivoUrl: row.arquivo_url || undefined,
+    status: row.status,
+  };
+
+  return {
+    ...linkData,
+    link: buildPublicLink(linkData),
+  };
+};
+
 export const generateSharePassword = () => (
   `ARKH-${Math.floor(1000 + Math.random() * 9000)}-SEC`
 );
 
 export const documentShareService = {
-  list(): SharedDocumentLink[] {
+  listLocal(): SharedDocumentLink[] {
     const data = localStorage.getItem(LINKS_STORAGE_KEY);
     if (!data) return [];
 
@@ -114,6 +152,20 @@ export const documentShareService = {
     } catch {
       return [];
     }
+  },
+
+  async list(): Promise<SharedDocumentLink[]> {
+    const { data, error } = await supabase
+      .from(SHARE_TABLE)
+      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,senha_hash,senha_visualizacao,arquivo_url,status,created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) return this.listLocal();
+
+    return ((data || []) as SharedDocumentRow[]).map(mapRowToLink).map((link) => ({
+      ...link,
+      status: this.resolveStatus(link),
+    }));
   },
 
   save(links: SharedDocumentLink[]) {
@@ -139,7 +191,7 @@ export const documentShareService = {
     const durationMs = parseShareDurationMs(input.tempoLimite);
     const expiresAt = new Date(now.getTime() + durationMs);
     const expiresIn = Math.max(60, Math.floor(durationMs / 1000));
-    const existing = this.list();
+    const existing = this.listLocal();
     const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : undefined;
 
@@ -174,14 +226,36 @@ export const documentShareService = {
       };
     }));
 
-    this.save([...nextLinks, ...existing]);
+    const rows = nextLinks.map((link) => ({
+      id: link.id,
+      documento_id: link.documentId || null,
+      documento_nome: link.documento,
+      empresa_nome: link.empresa,
+      gerado_por: link.geradoPor,
+      tempo_limite: link.tempoLimite,
+      expires_at: expiresAt.toISOString(),
+      senha_hash: link.senhaHash || null,
+      senha_visualizacao: link.senha || null,
+      arquivo_url: link.arquivoUrl || null,
+      status: link.status,
+    }));
+
+    const { error } = await supabase.from(SHARE_TABLE).insert(rows);
+    if (error) {
+      this.save([...nextLinks, ...existing]);
+    } else {
+      this.save(nextLinks);
+    }
+
     return nextLinks;
   },
 
-  revoke(id: string) {
-    const links = this.list().map((link) => (
+  async revoke(id: string) {
+    const { error } = await supabase.from(SHARE_TABLE).update({ status: 'Expirado' }).eq('id', id);
+    const links = this.listLocal().map((link) => (
       link.id === id ? { ...link, status: 'Expirado' as const } : link
     ));
     this.save(links);
+    if (error) return;
   },
 };
