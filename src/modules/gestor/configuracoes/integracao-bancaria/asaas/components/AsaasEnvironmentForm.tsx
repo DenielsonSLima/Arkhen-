@@ -39,10 +39,14 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
         type="password"
         value={config.apiKey}
         onChange={(event) => onChange('apiKey', event.target.value)}
-        placeholder={environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
+        placeholder={config.apiKeyConfigured ? 'Chave salva no Supabase Vault' : environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
         disabled={isSaving}
       />
-      <span className="input-helper-text">Token gerado no painel Asaas do ambiente selecionado.</span>
+      <span className="input-helper-text">
+        {config.apiKeyConfigured
+          ? 'A chave ja esta salva criptografada no Supabase Vault. Preencha apenas se quiser trocar.'
+          : 'Token gerado no painel Asaas do ambiente selecionado.'}
+      </span>
     </div>
 
     <div className="form-divider-title">Meios e Checkout</div>
@@ -97,10 +101,14 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
           type="password"
           value={config.webhookToken}
           onChange={(event) => onChange('webhookToken', event.target.value)}
-          placeholder="asaas-access-token"
+          placeholder={config.webhookTokenConfigured ? 'Token salvo no Supabase Vault' : 'asaas-access-token'}
           disabled={isSaving}
         />
-        <span className="input-helper-text">Valide o header asaas-access-token antes de processar eventos.</span>
+        <span className="input-helper-text">
+          {config.webhookTokenConfigured
+            ? 'Token salvo criptografado. Digite um novo valor somente para substituir.'
+            : 'Valide o header asaas-access-token antes de processar eventos.'}
+        </span>
       </div>
     </div>
 

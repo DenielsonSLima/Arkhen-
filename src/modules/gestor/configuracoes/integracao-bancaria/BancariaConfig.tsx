@@ -4,6 +4,7 @@ import { bankGateways, getBankGateway, type BankEnvironment, type BankGatewayId 
 import { useAsaasIntegration } from './asaas/hooks/useAsaasIntegration';
 import { AsaasEnvironmentForm } from './asaas/components/AsaasEnvironmentForm';
 import { AsaasModulesPanel } from './asaas/components/AsaasModulesPanel';
+import { hasAsaasApiKey, hasAsaasWebhookToken } from './asaas/services/asaasService';
 
 type BancariaTab = 'resumo' | 'bancos';
 
@@ -24,10 +25,10 @@ export const BancariaConfig: React.FC = () => {
     const activeEnvironment = asaas.config?.activeEnvironment || 'homologacao';
     const activeConfig = asaas.config?.environments[activeEnvironment] || null;
     const configuredEnvironments = asaas.config
-      ? Object.values(asaas.config.environments).filter((item) => item.apiKey).length
+      ? Object.values(asaas.config.environments).filter((item) => hasAsaasApiKey(item)).length
       : 0;
-    const hasApiKey = Boolean(activeConfig?.apiKey);
-    const hasWebhook = Boolean(activeConfig?.webhookUrl && activeConfig?.webhookToken);
+    const hasApiKey = hasAsaasApiKey(activeConfig);
+    const hasWebhook = Boolean(activeConfig?.webhookUrl && hasAsaasWebhookToken(activeConfig));
     const enabledModules = [
       activeConfig?.aceitaPix ? 'Pix' : null,
       activeConfig?.aceitaBoleto ? 'Boleto' : null,

@@ -1,9 +1,12 @@
+import { supabase, supabaseProjectUrl } from '../../../../../../lib/supabase';
 import { getAsaasBaseUrl, type BankEnvironment } from '../../gateway/bankGateway';
 
 export interface AsaasEnvironmentConfig {
   apiKey: string;
+  apiKeyConfigured: boolean;
   webhookUrl: string;
   webhookToken: string;
+  webhookTokenConfigured: boolean;
   emailNotificacao: boolean;
   aceitaBoleto: boolean;
   aceitaPix: boolean;
@@ -17,14 +20,21 @@ export interface AsaasIntegrationConfig {
   environments: Record<BankEnvironment, AsaasEnvironmentConfig>;
 }
 
-const LOCAL_STORAGE_ASAAS_KEY = 'contabil_config_asaas';
+const normalizeBankEnvironment = (environment: unknown): BankEnvironment => (
+  environment === 'producao' ? 'producao' : 'homologacao'
+);
+
+const getAsaasWebhookUrl = (environment: BankEnvironment) => {
+  const baseUrl = supabaseProjectUrl.replace(/\/$/, '');
+  return `${baseUrl}/functions/v1/asaas-webhook?ambiente=${environment}`;
+};
 
 const defaultEnvironmentConfig = (environment: BankEnvironment): AsaasEnvironmentConfig => ({
   apiKey: '',
-  webhookUrl: environment === 'producao'
-    ? 'https://api.contabil.com/webhooks/asaas'
-    : 'https://api.contabil.com/webhooks/asaas/sandbox',
+  apiKeyConfigured: false,
+  webhookUrl: getAsaasWebhookUrl(environment),
   webhookToken: '',
+  webhookTokenConfigured: false,
   emailNotificacao: true,
   aceitaBoleto: true,
   aceitaPix: true,
@@ -41,23 +51,6 @@ export const defaultAsaasIntegration: AsaasIntegrationConfig = {
   },
 };
 
-const readFromStorage = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (err) {
-    console.error('Erro ao ler config no localStorage:', err);
-    return null;
-  }
-};
-
-const writeToStorage = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (err) {
-    console.error('Erro ao salvar config no localStorage:', err);
-  }
-};
-
 const normalizeEnvironment = (
   rawValue: unknown,
   fallback: AsaasEnvironmentConfig,
@@ -66,40 +59,30 @@ const normalizeEnvironment = (
     ? rawValue as Partial<AsaasEnvironmentConfig>
     : {};
 
+  const webhookUrl = typeof candidate.webhookUrl === 'string' ? candidate.webhookUrl.trim() : '';
+  const legacyPlaceholderUrl = webhookUrl.includes('api.contabil.com/webhooks/asaas');
+
   return {
-    apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : fallback.apiKey,
-    webhookUrl: typeof candidate.webhookUrl === 'string' ? candidate.webhookUrl : fallback.webhookUrl,
-    webhookToken: typeof candidate.webhookToken === 'string' ? candidate.webhookToken : fallback.webhookToken,
+    apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : '',
+    apiKeyConfigured: Boolean(candidate.apiKeyConfigured || candidate.apiKey),
+    webhookUrl: webhookUrl && !legacyPlaceholderUrl ? webhookUrl : fallback.webhookUrl,
+    webhookToken: typeof candidate.webhookToken === 'string' ? candidate.webhookToken : '',
+    webhookTokenConfigured: Boolean(candidate.webhookTokenConfigured || candidate.webhookToken),
     emailNotificacao: typeof candidate.emailNotificacao === 'boolean' ? candidate.emailNotificacao : fallback.emailNotificacao,
     aceitaBoleto: typeof candidate.aceitaBoleto === 'boolean' ? candidate.aceitaBoleto : fallback.aceitaBoleto,
     aceitaPix: typeof candidate.aceitaPix === 'boolean' ? candidate.aceitaPix : fallback.aceitaPix,
     aceitaCartao: typeof candidate.aceitaCartao === 'boolean' ? candidate.aceitaCartao : fallback.aceitaCartao,
     checkoutAtivo: typeof candidate.checkoutAtivo === 'boolean' ? candidate.checkoutAtivo : fallback.checkoutAtivo,
     maxParcelas: Number.isInteger(candidate.maxParcelas) && Number(candidate.maxParcelas) > 0
-      ? Number(candidate.maxParcelas)
+      ? Math.min(Number(candidate.maxParcelas), 12)
       : fallback.maxParcelas,
   };
 };
 
 const normalizeAsaasConfig = (rawValue: unknown): AsaasIntegrationConfig => {
   if (!rawValue || typeof rawValue !== 'object') return defaultAsaasIntegration;
-  const candidate = rawValue as Partial<AsaasIntegrationConfig> & Partial<AsaasEnvironmentConfig> & { ambiente?: BankEnvironment };
-  const legacyEnvironment = candidate.ambiente === 'producao' || candidate.ambiente === 'homologacao'
-    ? candidate.ambiente
-    : null;
-  const activeEnvironment = candidate.activeEnvironment === 'producao' || candidate.activeEnvironment === 'homologacao'
-    ? candidate.activeEnvironment
-    : legacyEnvironment || defaultAsaasIntegration.activeEnvironment;
-
-  if (!candidate.environments && (candidate.apiKey || candidate.webhookUrl || candidate.webhookToken)) {
-    return {
-      activeEnvironment,
-      environments: {
-        producao: normalizeEnvironment(activeEnvironment === 'producao' ? candidate : null, defaultAsaasIntegration.environments.producao),
-        homologacao: normalizeEnvironment(activeEnvironment === 'homologacao' ? candidate : null, defaultAsaasIntegration.environments.homologacao),
-      },
-    };
-  }
+  const candidate = rawValue as Partial<AsaasIntegrationConfig>;
+  const activeEnvironment = normalizeBankEnvironment(candidate.activeEnvironment);
 
   return {
     activeEnvironment,
@@ -110,26 +93,44 @@ const normalizeAsaasConfig = (rawValue: unknown): AsaasIntegrationConfig => {
   };
 };
 
+const toSecurePayload = (config: AsaasIntegrationConfig) => ({
+  activeEnvironment: config.activeEnvironment,
+  environments: {
+    producao: config.environments.producao,
+    homologacao: config.environments.homologacao,
+  },
+});
+
+export const hasAsaasApiKey = (config: AsaasEnvironmentConfig | null | undefined) => (
+  Boolean(config?.apiKey || config?.apiKeyConfigured)
+);
+
+export const hasAsaasWebhookToken = (config: AsaasEnvironmentConfig | null | undefined) => (
+  Boolean(config?.webhookToken || config?.webhookTokenConfigured)
+);
+
 export const asaasService = {
   getBaseUrl(environment: BankEnvironment) {
     return getAsaasBaseUrl(environment);
   },
 
-  async getConfig(): Promise<AsaasIntegrationConfig> {
-    const data = readFromStorage(LOCAL_STORAGE_ASAAS_KEY);
-    if (!data) return defaultAsaasIntegration;
+  getWebhookUrl(environment: BankEnvironment) {
+    return getAsaasWebhookUrl(environment);
+  },
 
-    try {
-      return normalizeAsaasConfig(JSON.parse(data));
-    } catch {
-      return defaultAsaasIntegration;
-    }
+  async getConfig(): Promise<AsaasIntegrationConfig> {
+    const { data, error } = await supabase.rpc('listar_configuracao_asaas');
+    if (error) throw error;
+    return normalizeAsaasConfig(data);
   },
 
   async updateConfig(config: AsaasIntegrationConfig): Promise<AsaasIntegrationConfig> {
     const safeData = normalizeAsaasConfig(config);
-    writeToStorage(LOCAL_STORAGE_ASAAS_KEY, JSON.stringify(safeData));
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return safeData;
+    const { data, error } = await supabase.rpc('upsert_configuracao_asaas', {
+      p_payload: toSecurePayload(safeData),
+    });
+
+    if (error) throw error;
+    return normalizeAsaasConfig(data);
   },
 };

@@ -22,3 +22,5 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     detectSessionInUrl: true,
   },
 });
+
+export const supabaseProjectUrl = supabaseUrl;
