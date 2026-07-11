@@ -33,15 +33,6 @@ const getFileExtension = (filename: string) => {
   return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
 };
 
-// Componente inline do Logotipo do Google Drive em SVG
-const GoogleDriveLogo: React.FC = () => (
-  <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '6px' }}>
-    <path d="M6.6 74.3l14.4-25h47.2l-14.4 25H6.6z" fill="#0066DA"/>
-    <path d="M28.2 49.3L6.6 12.3l14.4-25 21.6 37.3-14.4 25z" fill="#00A859"/>
-    <path d="M51.6 24.3L30 12.3l14.4-25 42.9 37.7-14.4 25-22.9-25.7z" fill="#FFD000"/>
-  </svg>
-);
-
 export const PublicSharedDocumentPage: React.FC = () => {
   const [shareData, setShareData] = useState<PublicSharedDocumentPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,7 +145,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
   const activeDocument = documents.find((doc) => doc.id === activeId) || documents[0] || null;
-  const activePreviewUrl = shareData?.isLegacy ? shareData.legacyUrl : (activeDocument ? documentUrls[activeDocument.id] : null);
   const isSingleFile = documents.length === 1;
 
   const totalSizeFormatted = useMemo(() => {
@@ -194,7 +184,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   const renderFileIcon = (filename: string, size = 18) => {
     const ext = getFileExtension(filename);
-    let color = '#64748b'; // default gray
+    let color = '#64748b';
     let bg = '#f1f5f9';
 
     if (ext === 'pdf') {
@@ -272,12 +262,12 @@ export const PublicSharedDocumentPage: React.FC = () => {
         <span>Compartilhamento seguro</span>
       </div>
 
-      {/* 3. Card Centralizado Branco */}
+      {/* 3. Card Centralizado Branco (Sem cabeçalho preto superior do modal) */}
       <div className="public-shared-glass-modal animate-slide-up">
         {/* ================= COLUNA ESQUERDA ================= */}
         <div className="public-shared-body-left">
           {isSingleFile && activeDocument ? (
-            /* Layout Arquivo Único (Imagem 2) */
+            /* Layout Arquivo Único (Imagem 3) */
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', justifyContent: 'center', height: '100%' }}>
               {/* Ícone Gigante do Formato */}
               <div style={{ width: '96px', height: '96px', borderRadius: '16px', background: getFileExtension(activeDocument.documento) === 'pdf' ? '#fef2f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)', color: getFileExtension(activeDocument.documento) === 'pdf' ? '#ef4444' : '#64748b', boxShadow: '0 8px 16px rgba(0,0,0,0.03)' }}>
@@ -292,8 +282,8 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
               </span>
 
-              {/* Botões de Ação */}
-              <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
+              {/* Botão de Download Direto (Sem Google Drive e sem divisor "ou") */}
+              <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
                 <button
                   type="button"
                   className="btn-primary-blue"
@@ -303,36 +293,16 @@ export const PublicSharedDocumentPage: React.FC = () => {
                   {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                   Baixar arquivo
                 </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '4px 0' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>ou</span>
-                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                </div>
-
-                <button
-                  type="button"
-                  className="btn-secondary-outline"
-                  onClick={() => {
-                    if (activePreviewUrl) {
-                      window.open(activePreviewUrl, '_blank');
-                    }
-                  }}
-                  disabled={isExpired || !activePreviewUrl}
-                >
-                  <GoogleDriveLogo />
-                  Salvar no Google Drive
-                </button>
               </div>
 
               {/* Rodapé do arquivo único */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '16px', opacity: 0.8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.8 }}>
                 <Shield size={14} style={{ color: '#2563eb' }} />
                 <span>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
               </div>
             </div>
           ) : (
-            /* Layout Lote de Múltiplos Arquivos (Imagem 1) */
+            /* Layout Lote de Múltiplos Arquivos (Imagem 2) */
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               {/* Ícone de Pasta Azul no topo */}
               <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 12px auto' }}>
@@ -420,11 +390,11 @@ export const PublicSharedDocumentPage: React.FC = () => {
         {/* ================= COLUNA DIREITA ================= */}
         <div className="public-shared-body-right">
           <div className="sidebar-scroll-content">
-            {/* 1. Empresa Emissora */}
+            {/* 1. Empresa Emissora (Ícone Azul do Mockup, Logo Destacada) */}
             <div className="info-row">
               <div className="info-icon-wrapper" style={{ background: '#eff6ff', color: '#2563eb' }}>
                 {shareData.empresaLogo ? (
-                  <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+                  <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
                 ) : (
                   <Building2 size={20} />
                 )}
@@ -458,14 +428,23 @@ export const PublicSharedDocumentPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Tempo restante (Vermelho, grande) */}
+            {/* 4. Tempo restante (Azul para único e Vermelho para lote, tamanho grande) */}
             <div className="info-row">
               <div className="info-icon-wrapper">
                 <Timer size={18} />
               </div>
               <div className="info-text-group">
                 <span className="info-title">Tempo restante</span>
-                <strong className="info-value" style={{ color: '#ef4444', fontSize: '1.25rem', fontFamily: 'monospace', fontWeight: 800, marginTop: '2px' }}>
+                <strong 
+                  className="info-value" 
+                  style={{ 
+                    color: isExpired ? '#ef4444' : (isSingleFile ? '#2563eb' : '#ef4444'), 
+                    fontSize: '1.25rem', 
+                    fontFamily: 'monospace', 
+                    fontWeight: 800, 
+                    marginTop: '2px' 
+                  }}
+                >
                   {remainingLabel || '...'}
                 </strong>
               </div>
@@ -485,7 +464,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
           {/* Caixas de Aviso no Rodapé do Card da Direita */}
           {isSingleFile ? (
-            <div className="sidebar-warning-box info">
+            <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
               <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
               <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
                 Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
@@ -493,9 +472,9 @@ export const PublicSharedDocumentPage: React.FC = () => {
             </div>
           ) : (
             <div className="sidebar-warning-box">
-              <Shield size={18} style={{ color: '#15803d', minWidth: '18px', marginTop: '2px' }} />
-              <span className="sidebar-warning-text" style={{ color: '#14532d' }}>
-                <strong style={{ color: '#15803d' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
+              <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+              <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
               </span>
             </div>
           )}
