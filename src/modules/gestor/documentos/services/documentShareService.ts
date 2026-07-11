@@ -259,9 +259,20 @@ export const documentShareService = {
     const shareGroupId = makeId();
 
     let empresaId: string | undefined;
+    let empresaNomeReal = 'Empresa Fictícia Contábil';
     try {
       const { data } = await supabase.rpc('current_empresa_id');
-      if (data) empresaId = String(data);
+      if (data) {
+        empresaId = String(data);
+        const { data: configData } = await supabase
+          .from('configuracoes_empresa')
+          .select('nome_fantasia, razao_social')
+          .eq('empresa_id', empresaId)
+          .maybeSingle();
+        if (configData) {
+          empresaNomeReal = configData.nome_fantasia || configData.razao_social || empresaNomeReal;
+        }
+      }
     } catch (err) {
       console.error('[documentShareService.createLinks] Falha ao obter current_empresa_id via RPC:', err);
     }
@@ -274,7 +285,7 @@ export const documentShareService = {
         shareGroupId,
         documentId: doc.id,
         documento: doc.nome,
-        empresa: doc.empresaNome || (doc.scope === 'empresa' ? 'Empresa vinculada' : 'Biblioteca pessoal'),
+        empresa: doc.empresaNome || (doc.scope === 'empresa' ? 'Empresa vinculada' : empresaNomeReal),
         geradoPor: input.geradoPor || 'João Silva',
         dataGeracao: formatShareDateTime(now),
         dataGeracaoIso: now.toISOString(),

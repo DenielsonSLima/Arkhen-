@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, Loader2, ShieldCheck, Timer, Calendar, Clock } from 'lucide-react';
 import sharedBackground from '../../../assets/office-scene-meeting.png';
+import signatureLogoImg from '../../../assets/chatgpt-login.png';
 import { PublicSharedDocumentCard } from './PublicSharedDocumentCard';
 import './PublicSharedDocument.css';
 import {
@@ -68,15 +69,25 @@ export const PublicSharedDocumentPage: React.FC = () => {
     canDownloadDocument,
   });
 
+  const sanitizeShare = (share: PublicSharedDocumentPayload | null): PublicSharedDocumentPayload | null => {
+    if (!share) return null;
+    return {
+      ...share,
+      empresa: share.empresa === 'Biblioteca pessoal' ? 'Empresa Fictícia Contábil' : share.empresa,
+      empresaCnpj: share.empresa === 'Biblioteca pessoal' ? '12.345.678/0001-90' : share.empresaCnpj,
+    };
+  };
+
   useEffect(() => {
     let mounted = true;
     setIsLoading(true);
     fetchPublicShare()
       .then((share) => {
         if (!mounted) return;
-        setShareData(share);
-        setIsUnlocked(Boolean(share && !share.senhaObrigatoria));
-        const firstDocument = share?.documents?.[0];
+        const cleanShare = sanitizeShare(share);
+        setShareData(cleanShare);
+        setIsUnlocked(Boolean(cleanShare && !cleanShare.senhaObrigatoria));
+        const firstDocument = cleanShare?.documents?.[0];
         if (firstDocument) {
           setSelectedIds([firstDocument.id]);
           setActiveId(firstDocument.id);
@@ -227,12 +238,13 @@ export const PublicSharedDocumentPage: React.FC = () => {
       setPasswordError('Senha correta, mas não foi possível localizar os arquivos.');
       return;
     }
+    const cleanShare = sanitizeShare(result.share);
     setPasswordError('');
     setDocumentPdfPreviews({});
     setDocumentPdfPreviewStatus({});
-    setShareData(result.share);
+    setShareData(cleanShare);
     setIsUnlocked(true);
-    const firstDocument = result.share.documents?.[0];
+    const firstDocument = cleanShare?.documents?.[0];
     if (firstDocument) {
       setSelectedIds([firstDocument.id]);
       setActiveId(firstDocument.id);
@@ -508,7 +520,16 @@ export const PublicSharedDocumentPage: React.FC = () => {
             </>
           )}
         </section>
-      </div>
-    </main>
+
+          {/* Assinatura do desenvolvedor */}
+          <div className="developer-signature" style={{ color: '#cbd5e1', opacity: 0.55 }}>
+            <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
+            <div className="developer-signature-copy">
+              <span className="developer-signature-brand">DAILABS</span>
+              <span className="developer-signature-subtitle">CREATIVE AI & SOFTWARES</span>
+            </div>
+          </div>
+        </div>
+      </main>
   );
 };
