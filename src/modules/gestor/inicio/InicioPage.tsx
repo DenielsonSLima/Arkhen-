@@ -65,30 +65,58 @@ export const InicioPage: React.FC = () => {
   const [tarefasWorkspace, setTarefasWorkspace] = useState<TarefaGestor[]>([]);
   const [eventosAgenda, setEventosAgenda] = useState<Evento[]>([]);
   const [showConfigNotice, setShowConfigNotice] = useState(false);
+  const [noticeType, setNoticeType] = useState<'address' | 'watermark' | null>(null);
   const { openTab } = useInternalTabs();
 
   useEffect(() => {
     let active = true;
     const checkCompanyDetails = async () => {
       try {
-        const { data } = await supabase
+        // 1. Check company address completeness
+        const { data: companyData } = await supabase
           .from('configuracoes_empresa')
           .select('endereco, cep')
           .maybeSingle();
 
-        if (data && active) {
-          const isMissingDetails = 
-            !data.endereco || 
-            data.endereco.includes('Rua Fictícia') || 
-            !data.cep || 
-            data.cep === '49000-000';
-          
-          if (isMissingDetails) {
+        let addressIncomplete = true;
+        if (companyData) {
+          addressIncomplete = 
+            !companyData.endereco || 
+            companyData.endereco.includes('Rua Fictícia') || 
+            !companyData.cep || 
+            companyData.cep === '49000-000';
+        }
+
+        if (addressIncomplete) {
+          if (active) {
+            setNoticeType('address');
             setShowConfigNotice(true);
+          }
+          return;
+        }
+
+        // 2. Address is complete, now check watermarks
+        const { data: watermarkData } = await supabase
+          .from('configuracoes_marca_dagua')
+          .select('file_url_paisagem, file_url_retrato')
+          .maybeSingle();
+
+        let watermarksIncomplete = true;
+        if (watermarkData) {
+          watermarksIncomplete = !watermarkData.file_url_paisagem || !watermarkData.file_url_retrato;
+        }
+
+        if (active) {
+          if (watermarksIncomplete) {
+            setNoticeType('watermark');
+            setShowConfigNotice(true);
+          } else {
+            setShowConfigNotice(false);
+            setNoticeType(null);
           }
         }
       } catch (err) {
-        console.error('Erro ao verificar dados da empresa:', err);
+        console.error('Erro ao verificar dados da empresa e marca dágua:', err);
       }
     };
 
@@ -202,25 +230,32 @@ export const InicioPage: React.FC = () => {
 
   return (
     <div className="inicio-page">
-      {showConfigNotice && (
+      {showConfigNotice && noticeType && (
         <div className="company-config-warning-banner animate-fade-in">
           <div className="warning-banner-content">
             <AlertTriangle className="warning-icon" size={20} />
-            <span>
-              <strong>Cadastro da Empresa Incompleto:</strong> Os dados de endereço e contato de sua empresa ainda estão usando valores de demonstração ou incompletos. Complete o cadastro para que saiam corretos nos cabeçalhos de seus documentos.
-            </span>
+            {noticeType === 'address' ? (
+              <span>
+                <strong>Cadastro da Empresa Incompleto:</strong> Os dados de endereço e contato de sua empresa ainda estão usando valores de demonstração ou incompletos. Complete o cadastro para que saiam corretos nos cabeçalhos de seus documentos.
+              </span>
+            ) : (
+              <span>
+                <strong>Identidade Visual Incompleta:</strong> Você ainda não configurou as marcas d'água da sua empresa. Carregue as imagens de paisagem e retrato para personalizar os cabeçalhos de relatórios.
+              </span>
+            )}
           </div>
           <button 
             className="btn-complete-config"
             onClick={() => {
               openTab('configuracoes', 'Configurações', 'Settings');
+              const subTabTarget = noticeType === 'address' ? 'empresa' : 'marca-dagua';
               setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: 'empresa' } }));
+                window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: subTabTarget } }));
               }, 100);
             }}
           >
             <Settings size={14} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
-            Completar Cadastro
+            {noticeType === 'address' ? 'Completar Cadastro' : 'Configurar Marca d\'Água'}
           </button>
         </div>
       )}
