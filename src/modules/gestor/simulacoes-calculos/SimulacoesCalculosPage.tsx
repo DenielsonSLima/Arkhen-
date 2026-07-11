@@ -429,7 +429,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
       pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
       remainingHeight -= pageHeight;
 
-      while (remainingHeight > 0) {
+      while (remainingHeight > 8) {
         position -= pageHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
@@ -1142,7 +1142,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
                   );
                 })()}
 
-                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '100%' }}>
+                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '14px', minHeight: '100%' }}>
                   {/* Cabeçalho do PDF */}
                   <div style={{
                     display: 'flex',
