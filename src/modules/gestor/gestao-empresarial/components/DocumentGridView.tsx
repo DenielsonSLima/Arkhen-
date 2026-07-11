@@ -44,8 +44,10 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
   const selectedDocIdSet = useMemo(() => new Set(selectedDocIds), [selectedDocIds]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [pdfPreviewUrls, setPdfPreviewUrls] = useState<Record<string, string>>({});
+  const [pdfPreviewStatus, setPdfPreviewStatus] = useState<Record<string, 'loading' | 'ready' | 'error'>>({});
   const loadingPreviewIds = useRef(new Set<string>());
   const loadedPreviewIds = useRef(new Set<string>());
+  const loadingPdfPreviewIds = useRef(new Set<string>());
   const loadedPdfPreviewIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -58,8 +60,13 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
 
   const renderPdfFirstPage = async (url: string, docId: string) => {
     if (loadedPdfPreviewIds.current.has(docId)) return;
-    if (loadingPreviewIds.current.has(docId)) return;
-    loadingPreviewIds.current.add(docId);
+    if (loadingPdfPreviewIds.current.has(docId)) return;
+    if (pdfPreviewUrls[docId]) return;
+
+    loadingPdfPreviewIds.current.add(docId);
+    setPdfPreviewStatus((current) => (
+      current[docId] === 'ready' ? current : { ...current, [docId]: 'loading' }
+    ));
 
     try {
       const pdfjsLib = await import('pdfjs-dist');
@@ -81,6 +88,10 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
       const context = canvas.getContext('2d');
 
       if (!context) {
+        setPdfPreviewStatus((current) => ({
+          ...current,
+          [docId]: 'error',
+        }));
         return;
       }
 
@@ -100,11 +111,20 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
           [docId]: imageSrc,
         };
       });
+      setPdfPreviewStatus((current) => ({
+        ...current,
+        [docId]: 'ready',
+      }));
 
       page.cleanup();
       await pdf.destroy();
+    } catch {
+      setPdfPreviewStatus((current) => ({
+        ...current,
+        [docId]: 'error',
+      }));
     } finally {
-      loadingPreviewIds.current.delete(docId);
+      loadingPdfPreviewIds.current.delete(docId);
     }
   };
 
@@ -172,6 +192,27 @@ const renderThumbnail = (doc: CompanyDocument) => {
 
     const previewUrl = previewUrls[doc.id] || doc.url;
     const pdfPreviewUrl = pdfPreviewUrls[doc.id];
+    const pdfStatus = pdfPreviewStatus[doc.id];
+
+    const getPdfFallbackPreview = () => {
+      if (!previewUrl) return <PdfStaticCover />;
+
+      if (pdfStatus === 'loading' && !pdfPreviewUrl) {
+        return (
+          <div style={{ width: '100%', height: '100%', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '0.64rem', color: '#64748b', fontWeight: 700 }}>Carregando preview...</span>
+          </div>
+        );
+      }
+
+      return (
+        <iframe
+          src={`${previewUrl}#page=1&view=FitH`}
+          title={doc.nome}
+          style={{ width: '100%', height: '100%', border: 'none', pointerEvents: 'none' }}
+        />
+      );
+    };
 
     if (isImage && previewUrl) {
       return (
@@ -194,7 +235,7 @@ const renderThumbnail = (doc: CompanyDocument) => {
         );
       }
 
-      return <PdfStaticCover />;
+      return getPdfFallbackPreview();
     }
 
     return (
