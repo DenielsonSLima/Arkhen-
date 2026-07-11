@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { asaasService, type AsaasEnvironmentConfig } from '../services/asaasService';
 import type { BankEnvironment } from '../../gateway/bankGateway';
 
@@ -14,6 +14,21 @@ const environmentLabel: Record<BankEnvironment, string> = {
   producao: 'Produção',
   homologacao: 'Homologação',
 };
+
+const maskedSecret = '••••••••••••••••••••••••';
+
+const secureInputStyle = (configured: boolean): React.CSSProperties => configured
+  ? {
+    borderColor: '#86efac',
+    background: '#f0fdf4',
+    color: '#166534',
+    fontWeight: 800,
+  }
+  : {
+    borderColor: '#fecaca',
+    background: '#fff1f2',
+    color: '#991b1b',
+  };
 
 export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
   environment,
@@ -35,18 +50,31 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
 
     <div className="form-item-group">
       <label>Chave de API</label>
-      <input
-        type="password"
-        value={config.apiKey}
-        onChange={(event) => onChange('apiKey', event.target.value)}
-        placeholder={config.apiKeyConfigured ? 'Chave salva no Supabase Vault' : environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
-        disabled={isSaving}
-      />
+      <div style={{ position: 'relative', width: 'min(100%, 720px)' }}>
+        <input
+          type="password"
+          value={config.apiKey}
+          onChange={(event) => onChange('apiKey', event.target.value)}
+          placeholder={config.apiKeyConfigured ? maskedSecret : environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
+          disabled={isSaving}
+          style={{ ...secureInputStyle(Boolean(config.apiKeyConfigured || config.apiKey)), paddingRight: config.apiKeyConfigured ? '42px' : undefined }}
+        />
+        {config.apiKeyConfigured || config.apiKey ? (
+          <CheckCircle2 size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
+        ) : (
+          <AlertCircle size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#dc2626' }} />
+        )}
+      </div>
       <span className="input-helper-text">
-        {config.apiKeyConfigured
-          ? 'A chave ja esta salva criptografada no Supabase Vault. Preencha apenas se quiser trocar.'
-          : 'Token gerado no painel Asaas do ambiente selecionado.'}
+        {config.apiKeyConfigured || config.apiKey
+          ? 'Chave salva com segurança no Supabase Vault. Deixe em branco para manter a atual ou cole uma nova para substituir.'
+          : 'Obrigatorio: cole a chave do painel Asaas. Nao compartilhe esse token por print, chat ou e-mail.'}
       </span>
+    </div>
+
+    <div style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', borderRadius: '10px', padding: '12px 14px', fontSize: '0.82rem', lineHeight: 1.45, marginBottom: '18px' }}>
+      <strong style={{ display: 'block', marginBottom: '4px' }}>Atenção com credenciais</strong>
+      API Key e Token de Validação são segredos. Não envie em grupos, prints, e-mails ou atendimento. No sistema eles ficam mascarados e gravados criptografados no Supabase Vault.
     </div>
 
     <div className="form-divider-title">Meios e Checkout</div>
@@ -86,6 +114,28 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
     <div className="form-divider-title">Webhook</div>
     <div className="form-row-grid">
       <div className="form-item-group">
+        <label>Versão da API</label>
+        <select
+          value={config.apiVersion}
+          onChange={(event) => onChange('apiVersion', event.target.value)}
+          disabled={isSaving}
+        >
+          <option value="v3">v3</option>
+          <option value="v2">v2</option>
+        </select>
+      </div>
+      <div className="form-item-group">
+        <label>Tipo de envio</label>
+        <select
+          value={config.tipoEnvio}
+          onChange={(event) => onChange('tipoEnvio', event.target.value)}
+          disabled={isSaving}
+        >
+          <option value="sequencial">Sequencial</option>
+          <option value="nao_sequencial">Não sequencial</option>
+        </select>
+      </div>
+      <div className="form-item-group">
         <label>URL do Webhook</label>
         <input
           type="text"
@@ -99,20 +149,39 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
       </div>
       <div className="form-item-group">
         <label>Token de Validação</label>
-        <input
-          type="password"
-          value={config.webhookToken}
-          onChange={(event) => onChange('webhookToken', event.target.value)}
-          placeholder={config.webhookTokenConfigured ? 'Token salvo no Supabase Vault' : 'asaas-access-token'}
-          disabled={isSaving}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type="password"
+            value={config.webhookToken}
+            onChange={(event) => onChange('webhookToken', event.target.value)}
+            placeholder={config.webhookTokenConfigured ? maskedSecret : 'asaas-access-token'}
+            disabled={isSaving}
+            style={{ ...secureInputStyle(Boolean(config.webhookTokenConfigured || config.webhookToken)), paddingRight: config.webhookTokenConfigured ? '42px' : undefined }}
+          />
+          {config.webhookTokenConfigured || config.webhookToken ? (
+            <CheckCircle2 size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
+          ) : (
+            <AlertCircle size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#dc2626' }} />
+          )}
+        </div>
         <span className="input-helper-text">
           {config.webhookTokenConfigured
-            ? 'Token salvo criptografado. Digite um novo valor somente para substituir.'
+            ? 'Token salvo criptografado. Deixe em branco para manter o atual ou cole um novo para substituir.'
             : 'Valide o header asaas-access-token antes de processar eventos.'}
         </span>
       </div>
     </div>
+
+    <label className="checkbox-container">
+      <input
+        type="checkbox"
+        checked={config.filaSincronizacaoAtiva}
+        onChange={(event) => onChange('filaSincronizacaoAtiva', event.target.checked)}
+        disabled={isSaving}
+      />
+      <span className="checkbox-checkmark"></span>
+      Fila de sincronização ativada
+    </label>
 
     <label className="checkbox-container">
       <input

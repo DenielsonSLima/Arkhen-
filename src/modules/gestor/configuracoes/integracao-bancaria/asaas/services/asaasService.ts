@@ -4,9 +4,12 @@ import { getAsaasBaseUrl, type BankEnvironment } from '../../gateway/bankGateway
 export interface AsaasEnvironmentConfig {
   apiKey: string;
   apiKeyConfigured: boolean;
+  apiVersion: 'v3' | 'v2';
   webhookUrl: string;
   webhookToken: string;
   webhookTokenConfigured: boolean;
+  tipoEnvio: 'sequencial' | 'nao_sequencial';
+  filaSincronizacaoAtiva: boolean;
   emailNotificacao: boolean;
   aceitaBoleto: boolean;
   aceitaPix: boolean;
@@ -24,17 +27,20 @@ const normalizeBankEnvironment = (environment: unknown): BankEnvironment => (
   environment === 'producao' ? 'producao' : 'homologacao'
 );
 
-const getAsaasWebhookUrl = (environment: BankEnvironment) => {
+const getAsaasWebhookUrl = (_environment: BankEnvironment) => {
   const baseUrl = supabaseProjectUrl.replace(/\/$/, '');
-  return `${baseUrl}/functions/v1/asaas-webhook?ambiente=${environment}`;
+  return `${baseUrl}/functions/v1/asaas-webhook`;
 };
 
 const defaultEnvironmentConfig = (environment: BankEnvironment): AsaasEnvironmentConfig => ({
   apiKey: '',
   apiKeyConfigured: false,
+  apiVersion: 'v3',
   webhookUrl: getAsaasWebhookUrl(environment),
   webhookToken: '',
   webhookTokenConfigured: false,
+  tipoEnvio: 'sequencial',
+  filaSincronizacaoAtiva: false,
   emailNotificacao: true,
   aceitaBoleto: true,
   aceitaPix: true,
@@ -62,9 +68,12 @@ const normalizeEnvironment = (
   return {
     apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : '',
     apiKeyConfigured: Boolean(candidate.apiKeyConfigured || candidate.apiKey),
+    apiVersion: candidate.apiVersion === 'v2' ? 'v2' : 'v3',
     webhookUrl: fallback.webhookUrl,
     webhookToken: typeof candidate.webhookToken === 'string' ? candidate.webhookToken : '',
     webhookTokenConfigured: Boolean(candidate.webhookTokenConfigured || candidate.webhookToken),
+    tipoEnvio: candidate.tipoEnvio === 'nao_sequencial' ? 'nao_sequencial' : 'sequencial',
+    filaSincronizacaoAtiva: typeof candidate.filaSincronizacaoAtiva === 'boolean' ? candidate.filaSincronizacaoAtiva : fallback.filaSincronizacaoAtiva,
     emailNotificacao: typeof candidate.emailNotificacao === 'boolean' ? candidate.emailNotificacao : fallback.emailNotificacao,
     aceitaBoleto: typeof candidate.aceitaBoleto === 'boolean' ? candidate.aceitaBoleto : fallback.aceitaBoleto,
     aceitaPix: typeof candidate.aceitaPix === 'boolean' ? candidate.aceitaPix : fallback.aceitaPix,
@@ -90,17 +99,20 @@ const normalizeAsaasConfig = (rawValue: unknown): AsaasIntegrationConfig => {
   };
 };
 
+const sanitizeSecretInput = (value: string) => value.replace(/•/g, '').trim();
+
+const toEnvironmentPayload = (environment: BankEnvironment, config: AsaasEnvironmentConfig) => ({
+  ...config,
+  apiKey: sanitizeSecretInput(config.apiKey),
+  webhookToken: sanitizeSecretInput(config.webhookToken),
+  webhookUrl: getAsaasWebhookUrl(environment),
+});
+
 const toSecurePayload = (config: AsaasIntegrationConfig) => ({
   activeEnvironment: config.activeEnvironment,
   environments: {
-    producao: {
-      ...config.environments.producao,
-      webhookUrl: getAsaasWebhookUrl('producao'),
-    },
-    homologacao: {
-      ...config.environments.homologacao,
-      webhookUrl: getAsaasWebhookUrl('homologacao'),
-    },
+    producao: toEnvironmentPayload('producao', config.environments.producao),
+    homologacao: toEnvironmentPayload('homologacao', config.environments.homologacao),
   },
 });
 

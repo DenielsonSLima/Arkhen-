@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const ambiente = url.searchParams.get('ambiente') || url.searchParams.get('environment') || 'homologacao';
+  const ambiente = url.searchParams.get('ambiente') || url.searchParams.get('environment') || null;
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {

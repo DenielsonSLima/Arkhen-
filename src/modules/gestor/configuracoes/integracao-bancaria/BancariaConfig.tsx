@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle2, CreditCard, ExternalLink, Landmark, ShieldCheck, Webhook, Wifi, AlertTriangle, QrCode, ReceiptText, ShoppingCart } from 'lucide-react';
 import { bankGateways, getBankGateway, type BankEnvironment, type BankGatewayId } from './gateway/bankGateway';
 import { useAsaasIntegration } from './asaas/hooks/useAsaasIntegration';
@@ -16,9 +16,17 @@ const environmentLabel: Record<BankEnvironment, string> = {
 export const BancariaConfig: React.FC = () => {
   const [activeTab, setActiveTab] = useState<BancariaTab>('resumo');
   const [selectedGatewayId, setSelectedGatewayId] = useState<BankGatewayId | null>(null);
+  const [toastMessage, setToastMessage] = useState('');
   const gateway = selectedGatewayId ? getBankGateway(selectedGatewayId) : null;
   const asaas = useAsaasIntegration();
   const activeAsaasConfig = asaas.activeConfig;
+
+  useEffect(() => {
+    if (!asaas.isSaved) return;
+    setToastMessage('Integração Asaas atualizada com sucesso.');
+    const timer = window.setTimeout(() => setToastMessage(''), 3200);
+    return () => window.clearTimeout(timer);
+  }, [asaas.isSaved]);
 
   const renderSummary = () => {
     const activeGateway = getBankGateway('asaas');
@@ -161,6 +169,31 @@ export const BancariaConfig: React.FC = () => {
   if (gateway?.id === 'asaas') {
     return (
       <div className="submodule-content-card">
+        {toastMessage && (
+          <div style={{
+            position: 'fixed',
+            top: '24px',
+            right: '28px',
+            zIndex: 10000,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            minWidth: '320px',
+            maxWidth: '420px',
+            padding: '14px 16px',
+            borderRadius: '10px',
+            border: '1px solid #86efac',
+            background: '#f0fdf4',
+            color: '#166534',
+            boxShadow: '0 18px 45px rgba(15, 23, 42, 0.18)',
+            fontWeight: 850,
+            fontSize: '0.86rem',
+          }}>
+            <CheckCircle2 size={18} />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
         <button type="button" className="btn-back-to-grid" onClick={() => setSelectedGatewayId(null)} style={{ marginBottom: '16px' }}>
           <ArrowLeft size={16} /> Voltar para bancos
         </button>
@@ -182,13 +215,6 @@ export const BancariaConfig: React.FC = () => {
           <div className="sub-loading">Carregando integração Asaas...</div>
         ) : (
           <form onSubmit={asaas.handleSave} className="config-form">
-            {asaas.isSaved && (
-              <div className="success-banner">
-                <CheckCircle2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle', display: 'inline' }} />
-                Integração Asaas atualizada com sucesso.
-              </div>
-            )}
-
             <div className="tab-buttons-header" style={{ marginBottom: '18px' }}>
               {gateway.environments.map((environment) => (
                 <button
