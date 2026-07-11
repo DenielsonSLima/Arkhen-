@@ -48,10 +48,10 @@ export const SharedDocumentUnlockForm: React.FC<SharedDocumentUnlockFormProps> =
     >
       {/* 1. Canto Superior Esquerdo: Logo Arkhen */}
       <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
+        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '46px', height: '46px', objectFit: 'contain' }} />
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
-          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#090b0e', letterSpacing: '1px' }}>Arkhen</span>
-          <span style={{ fontSize: '0.7rem', color: '#c59235', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
+          <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#090b0e', letterSpacing: '1px' }}>Arkhen</span>
+          <span style={{ fontSize: '0.82rem', color: '#c59235', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
         </div>
       </div>
 
@@ -76,8 +76,8 @@ export const SharedDocumentUnlockForm: React.FC<SharedDocumentUnlockFormProps> =
               src={empresaLogo} 
               alt={empresaNome} 
               style={{ 
-                width: '80px', 
-                height: '80px', 
+                width: '96px', 
+                height: '96px', 
                 borderRadius: '50%', /* Circular exato */
                 objectFit: 'contain', 
                 background: '#ffffff', 
@@ -91,8 +91,8 @@ export const SharedDocumentUnlockForm: React.FC<SharedDocumentUnlockFormProps> =
           ) : (
             <div 
               style={{ 
-                width: '80px', 
-                height: '80px', 
+                width: '96px', 
+                height: '96px', 
                 borderRadius: '50%', /* Circular exato */
                 background: '#eff6ff', 
                 border: '1.5px solid #bfdbfe', 
@@ -104,7 +104,7 @@ export const SharedDocumentUnlockForm: React.FC<SharedDocumentUnlockFormProps> =
                 margin: '0 auto 16px auto'
               }}
             >
-              <Lock size={36} />
+              <Lock size={44} />
             </div>
           )}
           <h2 className="card-title" style={{ fontSize: '1.45rem', marginTop: '10px', color: '#0f172a', fontWeight: 800 }}>

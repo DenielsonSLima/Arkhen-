@@ -20,6 +20,7 @@ type SharedDocumentBatch = {
   dataGeracaoIso?: string;
   dataExpiracaoIso?: string;
   senha?: string;
+  senhaHash?: string;
   tempoLimite: string;
   documentos: SharedDocumentLink[];
 };
@@ -110,6 +111,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
         dataGeracaoIso: primary.dataGeracaoIso,
         dataExpiracaoIso: primary.dataExpiracaoIso,
         senha: primary.senha,
+        senhaHash: primary.senhaHash,
         tempoLimite: primary.tempoLimite,
         documentos: docs,
       };
@@ -362,6 +364,14 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                         <Key size={13} />
                         {isPasswordVisible ? batch.senha : '••••••••'}
                       </button>
+                    ) : batch.senhaHash ? (
+                      <span
+                        title="Link protegido por senha (gerado em outro dispositivo)"
+                        style={{ color: '#b45309', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}
+                      >
+                        <Key size={13} color="#b45309" />
+                        Protegido
+                      </span>
                     ) : (
                       <span style={{ color: '#94a3b8', fontSize: '0.72rem', fontStyle: 'italic' }}>Sem senha</span>
                     )}

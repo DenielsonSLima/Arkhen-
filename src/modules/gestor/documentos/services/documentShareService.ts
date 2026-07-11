@@ -50,10 +50,11 @@ interface SharedDocumentRow {
   expires_at: string;
   status: 'Ativo' | 'Expirado';
   created_at: string;
+  senha_hash?: string | null;
 }
 
-const LIST_COLUMNS_WITH_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,status,created_at';
-const LIST_COLUMNS_WITHOUT_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,status,created_at';
+const LIST_COLUMNS_WITH_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,status,created_at,senha_hash';
+const LIST_COLUMNS_WITHOUT_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,status,created_at,senha_hash';
 
 const isMissingColumnError = (error: { message?: string; code?: string } | null | undefined) => (
   !!error && (error.code === '42703' || (error.message || '').toLowerCase().includes('does not exist'))
@@ -173,6 +174,7 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
     dataExpiracao: formatShareDateTime(new Date(row.expires_at)),
     dataExpiracaoIso: row.expires_at,
     status: row.status,
+    senhaHash: row.senha_hash || undefined,
   };
 
   return {
@@ -224,11 +226,19 @@ export const documentShareService = {
       return this.listLocal();
     }
 
-    return ((data || []) as SharedDocumentRow[]).map(mapRowToLink).map((link) => ({
-      ...link,
-      link: sanitizeSharedLink(link.link),
-      status: this.resolveStatus(link),
-    }));
+    const localLinks = this.listLocal();
+    const localMap = new Map(localLinks.map((link) => [link.id, link]));
+
+    return ((data || []) as SharedDocumentRow[]).map(mapRowToLink).map((link) => {
+      const local = localMap.get(link.id);
+      return {
+        ...link,
+        senha: local?.senha || undefined,
+        senhaHash: link.senhaHash || local?.senhaHash || undefined,
+        link: sanitizeSharedLink(link.link),
+        status: this.resolveStatus(link),
+      };
+    });
   },
 
   save(links: SharedDocumentLink[]) {

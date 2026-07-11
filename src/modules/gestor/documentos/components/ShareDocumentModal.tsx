@@ -28,9 +28,16 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
   const title = useMemo(() => (
     documents.length === 1 ? 'Compartilhar arquivo' : `Compartilhar ${documents.length} arquivos`
   ), [documents.length]);
+  
   const expirationPreview = useMemo(() => (
     formatShareDateTime(new Date(Date.now() + parseShareDurationMs(tempoLimite)))
   ), [tempoLimite]);
+
+  const hasUniqueLink = useMemo(() => {
+    if (createdLinks.length === 0) return false;
+    const firstUrl = createdLinks[0].link;
+    return createdLinks.every((l) => l.link === firstUrl);
+  }, [createdLinks]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -138,7 +145,16 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
               <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
                 Expiração do link
               </label>
-              <select value={tempoLimite} onChange={(event) => setTempoLimite(event.target.value)} style={fieldStyle}>
+              <select 
+                value={tempoLimite} 
+                onChange={(event) => setTempoLimite(event.target.value)} 
+                disabled={createdLinks.length > 0 || isCreating}
+                style={{ 
+                  ...fieldStyle, 
+                  opacity: createdLinks.length > 0 ? 0.75 : 1, 
+                  cursor: createdLinks.length > 0 ? 'not-allowed' : 'default' 
+                }}
+              >
                 {SHARE_EXPIRATION_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
               </select>
             </div>
@@ -148,7 +164,20 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
             <button
               type="button"
               onClick={() => setExigirSenha((current) => !current)}
-              style={{ border: exigirSenha ? '1px solid #d9a441' : '1px solid #d8e0ea', background: exigirSenha ? '#fffbeb' : '#ffffff', borderRadius: '8px', padding: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', color: '#0f172a' }}
+              disabled={createdLinks.length > 0 || isCreating}
+              style={{ 
+                border: exigirSenha ? '1px solid #d9a441' : '1px solid #d8e0ea', 
+                background: exigirSenha ? '#fffbeb' : '#ffffff', 
+                borderRadius: '8px', 
+                padding: '11px', 
+                cursor: createdLinks.length > 0 ? 'not-allowed' : 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                gap: '12px', 
+                color: '#0f172a',
+                opacity: createdLinks.length > 0 ? 0.75 : 1 
+              }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 850, fontSize: '0.82rem' }}>
                 <Key size={16} color={exigirSenha ? '#b45309' : '#94a3b8'} />
@@ -165,8 +194,31 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
                   Senha temporária
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={senha} onChange={(event) => setSenha(event.target.value)} style={fieldStyle} />
-                  <button type="button" onClick={() => setSenha(generateSharePassword())} style={{ border: '1px solid #d8e0ea', background: '#ffffff', borderRadius: '8px', padding: '0 10px', color: '#475569', cursor: 'pointer', fontWeight: 800 }}>
+                  <input 
+                    value={senha} 
+                    onChange={(event) => setSenha(event.target.value)} 
+                    disabled={createdLinks.length > 0 || isCreating}
+                    style={{ 
+                      ...fieldStyle, 
+                      opacity: createdLinks.length > 0 ? 0.75 : 1, 
+                      cursor: createdLinks.length > 0 ? 'not-allowed' : 'text' 
+                    }} 
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setSenha(generateSharePassword())} 
+                    disabled={createdLinks.length > 0 || isCreating}
+                    style={{ 
+                      border: '1px solid #d8e0ea', 
+                      background: '#ffffff', 
+                      borderRadius: '8px', 
+                      padding: '0 10px', 
+                      color: '#475569', 
+                      cursor: createdLinks.length > 0 ? 'not-allowed' : 'pointer', 
+                      fontWeight: 800,
+                      opacity: createdLinks.length > 0 ? 0.75 : 1 
+                    }}
+                  >
                     Gerar
                   </button>
                 </div>
@@ -191,26 +243,81 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
             <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
               {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
             </div>
-            <div style={{ border: '1px solid #d8e0ea', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
-              {createdLinks.map((link, index) => {
-                const isCopied = copiedLinkId === link.id;
-                return (
-                  <div key={link.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', alignItems: 'center', padding: '9px 10px', borderTop: index === 0 ? 'none' : '1px solid #edf2f7' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.documento}</strong>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569', fontSize: '0.72rem', maxWidth: '100%' }}>
-                        <Link2 size={13} color="var(--color-gold-primary)" />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatDisplayLink(link.link)}</span>
+
+            {hasUniqueLink && createdLinks.length > 1 ? (
+              /* Exibição unificada para Lote de Compartilhamento (Evita links repetidos) */
+              <div style={{ border: '1px solid #d8e0ea', borderRadius: '8px', padding: '12px', background: '#ffffff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
+                    <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.76rem', marginBottom: '2px' }}>
+                      Link de lote unificado ({createdLinks.length} arquivos)
+                    </strong>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569', fontSize: '0.72rem', width: '100%' }}>
+                      <Link2 size={13} color="var(--color-gold-primary)" />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {formatDisplayLink(createdLinks[0].link)}
                       </span>
-                    </div>
-                    <button type="button" onClick={() => handleCopyOnlyLink(link)} style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', borderRadius: '7px', padding: '7px 10px', cursor: 'pointer', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem' }}>
-                      {isCopied ? <Check size={14} /> : <Clipboard size={14} />}
-                      {isCopied ? 'Copiado' : 'Copiar link'}
-                    </button>
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <button 
+                    type="button" 
+                    onClick={() => handleCopyOnlyLink(createdLinks[0])} 
+                    style={{ 
+                      border: '1px solid #cbd5e1', 
+                      background: copiedLinkId === createdLinks[0].id ? '#f0fdf4' : '#ffffff', 
+                      color: copiedLinkId === createdLinks[0].id ? '#166534' : '#475569', 
+                      borderRadius: '7px', 
+                      padding: '7px 12px', 
+                      cursor: 'pointer', 
+                      fontWeight: 800, 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '6px', 
+                      fontSize: '0.72rem' 
+                    }}
+                  >
+                    {copiedLinkId === createdLinks[0].id ? <Check size={14} /> : <Clipboard size={14} />}
+                    {copiedLinkId === createdLinks[0].id ? 'Copiado' : 'Copiar link'}
+                  </button>
+                </div>
+                
+                {/* Lista pequena dos arquivos inclusos no lote */}
+                <div style={{ borderTop: '1px solid #edf2f7', marginTop: '10px', paddingTop: '8px', textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.66rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                    Arquivos no compartilhamento:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '72px', overflowY: 'auto' }}>
+                    {createdLinks.map((link) => (
+                      <span key={link.id} style={{ fontSize: '0.7rem', color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        • {link.documento}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Exibição individual padrão */
+              <div style={{ border: '1px solid #d8e0ea', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
+                {createdLinks.map((link, index) => {
+                  const isCopied = copiedLinkId === link.id;
+                  return (
+                    <div key={link.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', alignItems: 'center', padding: '9px 10px', borderTop: index === 0 ? 'none' : '1px solid #edf2f7' }}>
+                      <div style={{ minWidth: 0, textAlign: 'left' }}>
+                        <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.76rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{link.documento}</strong>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569', fontSize: '0.72rem', maxWidth: '100%' }}>
+                          <Link2 size={13} color="var(--color-gold-primary)" />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatDisplayLink(link.link)}</span>
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => handleCopyOnlyLink(link)} style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', borderRadius: '7px', padding: '7px 10px', cursor: 'pointer', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem' }}>
+                        {isCopied ? <Check size={14} /> : <Clipboard size={14} />}
+                        {isCopied ? 'Copiado' : 'Copiar link'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
