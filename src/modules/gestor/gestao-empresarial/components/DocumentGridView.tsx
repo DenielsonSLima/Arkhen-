@@ -219,7 +219,7 @@ const renderThumbnail = (doc: CompanyDocument) => {
         <img
           src={previewUrl}
           alt={doc.nome}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'top center', display: 'block' }}
         />
       );
     }
@@ -230,7 +230,7 @@ const renderThumbnail = (doc: CompanyDocument) => {
           <img
             src={pdfPreviewUrl}
             alt={`Prévia do documento ${doc.nome}`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'top center', display: 'block' }}
           />
         );
       }

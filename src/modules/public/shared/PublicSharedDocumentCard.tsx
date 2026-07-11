@@ -150,7 +150,7 @@ export const PublicSharedDocumentCard: React.FC<PublicSharedDocumentCardProps> =
             <img
               src={previewImageUrl}
               alt={`Prévia de ${document.documento}`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#ffffff' }}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'top center', background: '#ffffff' }}
               loading="lazy"
             />
           ) : null}
