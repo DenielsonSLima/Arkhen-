@@ -301,9 +301,9 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 </div>
 
                 {/* Rodapé do arquivo único */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.8 }}>
-                  <Shield size={14} style={{ color: '#2563eb' }} />
-                  <span>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '24px', opacity: 0.9, textAlign: 'left' }}>
+                  <Shield size={15} style={{ color: '#2563eb', minWidth: '15px', marginTop: '2px' }} />
+                  <span style={{ lineHeight: 1.4 }}>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
                 </div>
               </div>
             ) : (
@@ -395,19 +395,55 @@ export const PublicSharedDocumentPage: React.FC = () => {
           {/* ================= COLUNA DIREITA ================= */}
           <div className="public-shared-body-right">
             <div className="sidebar-scroll-content">
-              {/* 1. Empresa Emissora (Ícone Azul do Mockup) */}
-              <div className="info-row">
-                <div className="info-icon-wrapper" style={{ background: '#eff6ff', color: '#2563eb' }}>
-                  {shareData.empresaLogo ? (
-                    <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-                  ) : (
-                    <Building2 size={20} />
+              {/* 1. Empresa Emissora Destacada */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px', textAlign: 'left' }}>
+                {shareData.empresaLogo ? (
+                  <img 
+                    src={shareData.empresaLogo} 
+                    alt={shareData.empresa} 
+                    style={{ 
+                      width: '52px', 
+                      height: '52px', 
+                      objectFit: 'contain', 
+                      borderRadius: '8px', 
+                      background: '#ffffff', 
+                      border: '1px solid #e2e8f0', 
+                      padding: '3px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                      minWidth: '52px'
+                    }} 
+                  />
+                ) : (
+                  <div 
+                    style={{ 
+                      width: '52px', 
+                      height: '52px', 
+                      borderRadius: '8px', 
+                      background: '#eff6ff', 
+                      border: '1px solid #bfdbfe', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      color: '#2563eb',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                      minWidth: '52px'
+                    }}
+                  >
+                    <Building2 size={24} />
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Empresa Emissora
+                  </span>
+                  <strong style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>
+                    {shareData.empresa}
+                  </strong>
+                  {shareData.empresaCnpj && (
+                    <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 700, marginTop: '1px' }}>
+                      CNPJ {shareData.empresaCnpj}
+                    </span>
                   )}
-                </div>
-                <div className="info-text-group">
-                  <span className="info-title">Empresa Emissora</span>
-                  <strong className="info-value" style={{ color: '#0f172a' }}>{shareData.empresa}</strong>
-                  {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
                 </div>
               </div>
 
@@ -488,7 +524,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
       </div>
 
       {/* 3. Rodapé Centralizado com copyright */}
-      <div style={{ position: 'absolute', bottom: '24px', zIndex: 10, color: '#64748b', fontSize: '0.74rem', fontWeight: 600 }}>
+      <div style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, color: '#64748b', fontSize: '0.74rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
         <span>© 2026 | Arkhen Gestão Contábil</span>
       </div>
 
