@@ -48,14 +48,32 @@ const renderSecretStatus = (configured: boolean) => (
   </span>
 );
 
+const removeButtonStyle: React.CSSProperties = {
+  border: '1px solid #fecaca',
+  background: '#fff1f2',
+  color: '#991b1b',
+  borderRadius: '8px',
+  padding: '6px 10px',
+  fontSize: '0.74rem',
+  fontWeight: 850,
+  cursor: 'pointer',
+};
+
+const undoButtonStyle: React.CSSProperties = {
+  ...removeButtonStyle,
+  borderColor: '#bfdbfe',
+  background: '#eff6ff',
+  color: '#1d4ed8',
+};
+
 export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
   environment,
   config,
   isSaving,
   onChange,
 }) => {
-  const hasApiKey = Boolean(config.apiKeyConfigured || config.apiKey.trim());
-  const hasWebhookToken = Boolean(config.webhookTokenConfigured || config.webhookToken.trim());
+  const hasApiKey = Boolean(!config.clearApiKey && (config.apiKeyConfigured || config.apiKey.trim()));
+  const hasWebhookToken = Boolean(!config.clearWebhookToken && (config.webhookTokenConfigured || config.webhookToken.trim()));
 
   return (
     <div className="config-form" style={{ padding: 0, border: 'none', boxShadow: 'none' }}>
@@ -81,7 +99,22 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
     <div className="form-item-group">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 'min(100%, 720px)', gap: '12px' }}>
         <label style={{ margin: 0 }}>Chave de API</label>
-        {renderSecretStatus(hasApiKey)}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          {renderSecretStatus(hasApiKey)}
+          {config.apiKeyConfigured && (
+            <button
+              type="button"
+              style={config.clearApiKey ? undoButtonStyle : removeButtonStyle}
+              onClick={() => {
+                onChange('clearApiKey', !config.clearApiKey);
+                onChange('apiKey', '');
+              }}
+              disabled={isSaving}
+            >
+              {config.clearApiKey ? 'Desfazer' : 'Remover chave'}
+            </button>
+          )}
+        </div>
       </div>
       <div style={{ position: 'relative', width: 'min(100%, 720px)' }}>
         <input
@@ -91,7 +124,9 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
           placeholder={config.apiKeyConfigured ? maskedSecret : environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
           disabled={isSaving}
           name={`asaas-${environment}-api-key`}
-          autoComplete="new-password"
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
           spellCheck={false}
           style={{ ...secureInputStyle(hasApiKey), width: '100%', boxSizing: 'border-box', paddingRight: '42px' }}
         />
@@ -102,7 +137,9 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
         )}
       </div>
       <span className="input-helper-text">
-        {hasApiKey
+        {config.clearApiKey
+          ? 'Chave marcada para remoção. Clique em Salvar Asaas para apagar da configuração.'
+          : hasApiKey
           ? 'Chave salva com segurança no Supabase Vault. Deixe em branco para manter a atual ou cole uma nova para substituir.'
           : 'Obrigatorio: cole a chave do painel Asaas. Nao compartilhe esse token por print, chat ou e-mail.'}
       </span>
@@ -186,7 +223,22 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
       <div className="form-item-group">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <label style={{ margin: 0 }}>Token de Validação</label>
-          {renderSecretStatus(hasWebhookToken)}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            {renderSecretStatus(hasWebhookToken)}
+            {config.webhookTokenConfigured && (
+              <button
+                type="button"
+                style={config.clearWebhookToken ? undoButtonStyle : removeButtonStyle}
+                onClick={() => {
+                  onChange('clearWebhookToken', !config.clearWebhookToken);
+                  onChange('webhookToken', '');
+                }}
+                disabled={isSaving}
+              >
+                {config.clearWebhookToken ? 'Desfazer' : 'Remover token'}
+              </button>
+            )}
+          </div>
         </div>
         <div style={{ position: 'relative' }}>
           <input
@@ -196,7 +248,9 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
             placeholder={config.webhookTokenConfigured ? maskedSecret : 'asaas-access-token'}
             disabled={isSaving}
             name={`asaas-${environment}-webhook-token`}
-            autoComplete="new-password"
+            autoComplete="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
             spellCheck={false}
             style={{ ...secureInputStyle(hasWebhookToken), width: '100%', boxSizing: 'border-box', paddingRight: '42px' }}
           />
@@ -208,7 +262,9 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
         </div>
         <span className="input-helper-text">
           {config.webhookTokenConfigured
-            ? 'Token salvo criptografado. Deixe em branco para manter o atual ou cole um novo para substituir.'
+            ? config.clearWebhookToken
+              ? 'Token marcado para remoção. Clique em Salvar Asaas para apagar da configuração.'
+              : 'Token salvo criptografado. Deixe em branco para manter o atual ou cole um novo para substituir.'
             : 'Valide o header asaas-access-token antes de processar eventos.'}
         </span>
       </div>

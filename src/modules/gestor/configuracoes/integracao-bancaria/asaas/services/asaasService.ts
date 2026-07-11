@@ -4,10 +4,12 @@ import { getAsaasBaseUrl, type BankEnvironment } from '../../gateway/bankGateway
 export interface AsaasEnvironmentConfig {
   apiKey: string;
   apiKeyConfigured: boolean;
+  clearApiKey: boolean;
   apiVersion: 'v3' | 'v2';
   webhookUrl: string;
   webhookToken: string;
   webhookTokenConfigured: boolean;
+  clearWebhookToken: boolean;
   tipoEnvio: 'sequencial' | 'nao_sequencial';
   filaSincronizacaoAtiva: boolean;
   emailNotificacao: boolean;
@@ -35,10 +37,12 @@ const getAsaasWebhookUrl = (_environment: BankEnvironment) => {
 const defaultEnvironmentConfig = (environment: BankEnvironment): AsaasEnvironmentConfig => ({
   apiKey: '',
   apiKeyConfigured: false,
+  clearApiKey: false,
   apiVersion: 'v3',
   webhookUrl: getAsaasWebhookUrl(environment),
   webhookToken: '',
   webhookTokenConfigured: false,
+  clearWebhookToken: false,
   tipoEnvio: 'sequencial',
   filaSincronizacaoAtiva: false,
   emailNotificacao: true,
@@ -68,10 +72,12 @@ const normalizeEnvironment = (
   return {
     apiKey: typeof candidate.apiKey === 'string' ? candidate.apiKey : '',
     apiKeyConfigured: Boolean(candidate.apiKeyConfigured || candidate.apiKey),
+    clearApiKey: Boolean(candidate.clearApiKey),
     apiVersion: candidate.apiVersion === 'v2' ? 'v2' : 'v3',
     webhookUrl: fallback.webhookUrl,
     webhookToken: typeof candidate.webhookToken === 'string' ? candidate.webhookToken : '',
     webhookTokenConfigured: Boolean(candidate.webhookTokenConfigured || candidate.webhookToken),
+    clearWebhookToken: Boolean(candidate.clearWebhookToken),
     tipoEnvio: candidate.tipoEnvio === 'nao_sequencial' ? 'nao_sequencial' : 'sequencial',
     filaSincronizacaoAtiva: typeof candidate.filaSincronizacaoAtiva === 'boolean' ? candidate.filaSincronizacaoAtiva : fallback.filaSincronizacaoAtiva,
     emailNotificacao: typeof candidate.emailNotificacao === 'boolean' ? candidate.emailNotificacao : fallback.emailNotificacao,
