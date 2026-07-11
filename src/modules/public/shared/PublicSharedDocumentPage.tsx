@@ -261,8 +261,8 @@ export const PublicSharedDocumentPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '1px' }}>ARKHEN</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>GESTÃO CONTÁBIL</span>
+            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '1px' }}>Arkhen</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
           </div>
         </div>
 

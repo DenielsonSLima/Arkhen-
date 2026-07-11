@@ -53,7 +53,7 @@ import { FloatingCalculator } from '../../../components/calculators/FloatingCalc
 import { InternalTabBar } from '../../../components/tabs/InternalTabBar';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
 import { TAB_INFOS } from './gestorTabMetadata';
-import { GuiaDeAjuda } from './GuiaDeAjuda';
+import { GuiaAjudaPage } from '../guia-ajuda/GuiaAjudaPage';
 import { ModuleRenderErrorBoundary } from '../components/ModuleRenderErrorBoundary';
 
 import systemLogoImg from '../../../assets/camada-o.png';
@@ -73,7 +73,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const [isAtividadesExpanded, setIsAtividadesExpanded] = useState(false);
   const [moduleContexts, setModuleContexts] = useState<Record<string, InternalTabContext>>({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
   const [draggedSidebarIndex, setDraggedSidebarIndex] = useState<number | null>(null);
   const [isReadyToDragSidebar, setIsReadyToDragSidebar] = useState(false);
   const [userProfile, setUserProfile] = useState(() => {
@@ -120,22 +119,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     };
   }, [draggedSidebarIndex, isReadyToDragSidebar]);
 
-  useEffect(() => {
-    if (!showHelpModal) {
-      return;
-    }
 
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowHelpModal(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleEsc);
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, [showHelpModal]);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -506,6 +490,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         return <RelatoriosPage />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
+      case 'guia-ajuda':
+        return <GuiaAjudaPage />;
       default:
         return <InicioPage />;
     }
@@ -812,7 +798,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           <div className="header-actions">
             <button
               type="button"
-              onClick={() => setShowHelpModal(true)}
+              onClick={() => openTab('guia-ajuda', 'Guia de Navegação', 'Headphones')}
               className="support-btn"
               title="Ajuda e funcionamento do sistema"
               aria-label="Abrir guia de ajuda"
@@ -876,8 +862,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           </div>
         </div>
       )}
-
-      {showHelpModal && <GuiaDeAjuda onClose={() => setShowHelpModal(false)} />}
 
       <FloatingCalculator userId={currentUser.id} openInternalChatsCount={openInternalChatsCount} />
     </div>

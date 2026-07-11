@@ -33,4 +33,5 @@ export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   financeiro: { title: 'Financeiro', iconName: 'Landmark' },
   relatorios: { title: 'Relatórios', iconName: 'BarChart3' },
   configuracoes: { title: 'Configurações', iconName: 'Settings' },
+  'guia-ajuda': { title: 'Guia de Navegação', iconName: 'Headphones' },
 };
