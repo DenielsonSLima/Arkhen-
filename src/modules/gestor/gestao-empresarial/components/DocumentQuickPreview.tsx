@@ -4,6 +4,7 @@ import { Download, ExternalLink, FileText, Image as ImageIcon, Presentation, She
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 import { isXmlDocument, XmlFiscalViewer } from '../../documentos/xml/XmlFiscalViewer';
 import { documentosService } from '../../documentos/services/documentosService';
+import { renderAsync } from 'docx-preview';
 
 interface DocumentQuickPreviewProps {
   document: CompanyDocument;
@@ -14,12 +15,20 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
   const [accessUrl, setAccessUrl] = React.useState(doc.url || '');
   const [urlStatus, setUrlStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>(doc.url ? 'ready' : 'idle');
   const [urlError, setUrlError] = React.useState('');
+  
+  // Estados e refs para pré-visualização de DOCX
+  const [docxData, setDocxData] = React.useState<ArrayBuffer | null>(null);
+  const [docxLoading, setDocxLoading] = React.useState<boolean>(false);
+  const [docxError, setDocxError] = React.useState<string>('');
+  const docxContainerRef = React.useRef<HTMLDivElement>(null);
+
   const extension = doc.nome.split('.').pop()?.toLowerCase() || '';
   const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(extension);
   const isPdf = extension === 'pdf';
+  const isDocx = extension === 'docx';
   const isSpreadsheet = ['xls', 'xlsx'].includes(extension);
   const isPresentation = ['ppt', 'pptx'].includes(extension);
-  const isTextDocument = ['doc', 'docx', 'txt'].includes(extension);
+  const isTextDocument = ['doc', 'txt'].includes(extension);
   const isXml = isXmlDocument(doc);
 
   useEffect(() => {
@@ -79,6 +88,59 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
       cancelled = true;
     };
   }, [doc]);
+
+  useEffect(() => {
+    if (!isDocx || urlStatus !== 'ready' || !accessUrl) return;
+
+    let cancelled = false;
+    const fetchDocx = async () => {
+      try {
+        setDocxLoading(true);
+        setDocxError('');
+        const response = await fetch(accessUrl);
+        if (!response.ok) {
+          throw new Error(`Erro ao baixar o arquivo: ${response.statusText}`);
+        }
+        const buffer = await response.arrayBuffer();
+        if (!cancelled) {
+          setDocxData(buffer);
+          setDocxLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error fetching docx:', err);
+          setDocxError(err instanceof Error ? err.message : 'Falha ao baixar o arquivo para visualização.');
+          setDocxLoading(false);
+        }
+      }
+    };
+
+    fetchDocx();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDocx, urlStatus, accessUrl]);
+
+  useEffect(() => {
+    if (!docxData || !docxContainerRef.current) return;
+
+    // Limpa qualquer pré-visualização anterior
+    docxContainerRef.current.innerHTML = '';
+    
+    // Chama a biblioteca para renderizar o documento Word
+    renderAsync(docxData, docxContainerRef.current, undefined, {
+      className: "docx-document",
+      inWrapper: true,
+      ignoreWidth: false,
+      ignoreHeight: false,
+      ignoreFonts: false,
+      breakPages: true,
+      experimental: false
+    }).catch((err) => {
+      console.error('Error rendering docx:', err);
+      setDocxError('Não foi possível renderizar este documento Word.');
+    });
+  }, [docxData]);
 
   const handleOpen = () => {
     if (!accessUrl) return;
@@ -141,6 +203,55 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
           <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
             {urlError || 'Não foi possível gerar uma URL assinada para este arquivo.'}
           </p>
+        </div>
+      );
+    }
+
+    if (isDocx) {
+      if (docxLoading) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100%', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', padding: '40px', textAlign: 'center' }}>
+            <div className="loading-spinner" style={{ marginBottom: '16px' }} />
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.98rem', color: '#1e293b' }}>Lendo documento Word...</h4>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b' }}>
+              Carregando páginas e formatação.
+            </p>
+          </div>
+        );
+      }
+
+      if (docxError) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100%', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', padding: '40px', textAlign: 'center' }}>
+            <FileText size={48} style={{ color: '#ef4444', marginBottom: '16px' }} />
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.98rem', color: '#ef4444' }}>Não foi possível visualizar</h4>
+            <p style={{ margin: '0 0 16px 0', fontSize: '0.82rem', color: '#64748b' }}>
+              {docxError}
+            </p>
+            <button
+              onClick={handleDownload}
+              style={{ padding: '8px 16px', background: '#9a6b22', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
+            >
+              Baixar e abrir no Word
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'auto', background: '#2b313b', padding: '26px', boxSizing: 'border-box' }}>
+          <div 
+            ref={docxContainerRef}
+            className="docx-preview-container"
+            style={{ 
+              width: 'min(100%, 980px)', 
+              minHeight: '640px', 
+              margin: '0 auto', 
+              background: '#ffffff', 
+              boxShadow: '0 22px 52px rgba(0,0,0,0.34)',
+              boxSizing: 'border-box'
+            }} 
+          />
         </div>
       );
     }

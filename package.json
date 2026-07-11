@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.101.2",
+    "docx-preview": "^0.4.0",
     "glob": "^13.0.6",
     "jszip": "^3.10.1",
     "lucide-react": "^1.23.0",
