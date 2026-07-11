@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Clipboard, FileText, Key, Link2, Search, ShieldX, Trash2 } from 'lucide-react';
+import { Check, Clipboard, FileText, Key, Link2, Search, ShieldX, Trash2, ExternalLink } from 'lucide-react';
 import { documentShareService, type SharedDocumentLink } from '../services/documentShareService';
 
 interface SharedDocumentsTabProps {
@@ -52,10 +52,14 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [revokingGroupIds, setRevokingGroupIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     let mounted = true;
+    if (refreshKey) {
+      setCurrentPage(1);
+    }
     setIsLoading(true);
     documentShareService.list()
       .then((nextLinks) => {
@@ -155,9 +159,33 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   };
 
   const handleRevoke = async (groupId: string) => {
-    await documentShareService.revoke(groupId);
-    setLinks(await documentShareService.list());
-    onNotify?.('Link de compartilhamento revogado.');
+    setRevokingGroupIds((current) => {
+      const next = new Set(current);
+      next.add(groupId);
+      return next;
+    });
+
+    setLinks((current) => current.map((link) => (
+      link.id === groupId || link.shareGroupId === groupId
+        ? { ...link, status: 'Expirado' }
+        : link
+    )));
+
+    const revoked = await documentShareService.revoke(groupId);
+    const latest = await documentShareService.list();
+    setLinks(latest);
+
+    if (!revoked) {
+      onNotify?.('Não foi possível revogar agora no servidor. Alteração salva localmente.');
+    } else {
+      onNotify?.('Link de compartilhamento revogado.');
+    }
+
+    setRevokingGroupIds((current) => {
+      const next = new Set(current);
+      next.delete(groupId);
+      return next;
+    });
   };
 
   const handleTogglePassword = (groupId: string) => {
@@ -288,20 +316,29 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                     <div style={{ display: 'inline-flex', gap: '6px' }}>
                       <button
                         type="button"
-                        onClick={() => handleCopy(batch)}
-                        disabled={batch.status === 'Expirado'}
+                    onClick={() => handleCopy(batch)}
+                    disabled={batch.status === 'Expirado'}
                         style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
                       >
-                        {isCopied ? <Check size={13} /> : <Clipboard size={13} />}
-                        {isCopied ? 'Copiado' : 'Copiar'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRevoke(batch.groupId)}
-                        title="Revogar"
-                        style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', borderRadius: '7px', width: '32px', height: '32px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      {isCopied ? <Check size={13} /> : <Clipboard size={13} />}
+                      {isCopied ? 'Copiado' : 'Copiar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.open(batch.link, '_blank', 'noopener,noreferrer')}
+                      style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 9px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
+                    >
+                      <ExternalLink size={13} />
+                      Abrir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRevoke(batch.groupId)}
+                        disabled={revokingGroupIds.has(batch.groupId)}
+                        title={revokingGroupIds.has(batch.groupId) ? 'Revogando...' : 'Revogar'}
+                        style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', borderRadius: '7px', width: '32px', height: '32px', cursor: revokingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        {batch.status === 'Ativo' ? <ShieldX size={14} /> : <Trash2 size={14} />}
+                        {revokingGroupIds.has(batch.groupId) ? <span style={{ fontSize: '0.58rem' }}>...</span> : batch.status === 'Ativo' ? <ShieldX size={14} /> : <Trash2 size={14} />}
                       </button>
                     </div>
                   </td>

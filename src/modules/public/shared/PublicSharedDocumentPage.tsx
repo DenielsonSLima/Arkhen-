@@ -167,6 +167,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const activePdfPreviewUrl = activeDocument ? documentPdfPreviews[activeDocument.id] : null;
   const activePdfPreviewStatus = activeDocument ? documentPdfPreviewStatus[activeDocument.id] : undefined;
   const hasMultipleDocuments = Boolean(shareData && documents.length > 1);
+  const activeHasPdfSource = activeMode === 'pdf' && Boolean(activePreviewUrl);
   const canDownloadDocument = (documentId: string) => (
     !isExpired && (shareData?.isLegacy ? Boolean(shareData?.legacyUrl) : Boolean(documentUrls[documentId]))
   );
@@ -177,13 +178,13 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const canDownloadAll = shareData ? documents.every((doc) => canDownloadDocument(doc.id)) : false;
   const fileGridColumns = shareData ? Math.min(Math.max(documents.length, 1), 4) : 1;
   const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
+  const activeLoadingPdfPreview = activeMode === 'pdf' && (activePdfPreviewStatus === 'loading' || (activeHasPdfSource && activePdfPreviewStatus === undefined));
   const activePreviewUnavailable =
     activePreviewError ||
     activeMode === 'generic' ||
     (activeMode === 'image' && !activePreviewUrl) ||
-    (activeMode === 'pdf' && !activePdfPreviewUrl && activePdfPreviewStatus !== 'loading' && activePdfPreviewStatus !== 'ready');
-  const activeLoadingPreview = activeMode === 'pdf'
-    && ((activePdfPreviewStatus === 'loading') || (Boolean(activePreviewUrl) && activePdfPreviewStatus === undefined));
+    (activeMode === 'pdf' && !activePdfPreviewUrl && !activeLoadingPdfPreview);
+  const activeLoadingPreview = activeLoadingPdfPreview;
 
   useEffect(() => {
     setActivePreviewError(false);

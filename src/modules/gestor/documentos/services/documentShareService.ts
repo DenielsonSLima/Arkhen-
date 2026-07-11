@@ -45,13 +45,19 @@ interface SharedDocumentRow {
   documento_nome: string;
   empresa_nome: string;
   gerado_por: string;
-  share_group_id: string | null;
+  share_group_id?: string | null;
   tempo_limite: string;
   expires_at: string;
-  senha_hash: string | null;
   status: 'Ativo' | 'Expirado';
   created_at: string;
 }
+
+const LIST_COLUMNS_WITH_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,status,created_at';
+const LIST_COLUMNS_WITHOUT_GROUP = 'id,documento_id,documento_nome,empresa_nome,gerado_por,tempo_limite,expires_at,status,created_at';
+
+const isMissingColumnError = (error: { message?: string; code?: string } | null | undefined) => (
+  !!error && (error.code === '42703' || (error.message || '').toLowerCase().includes('does not exist'))
+);
 
 export interface LegacySharedPayload {
   id: string;
@@ -69,8 +75,7 @@ const normalizeBase64ForDecode = (value: string) => value
   .replace(/\s+/g, '');
 
 export const parseLegacySharedPayload = (encoded: string): LegacySharedPayload | null => {
-  const padding = '='.repeat((4 - (encoded.length % 4)) % 4);
-  const normalized = `${encoded}${padding}`;
+  const normalized = `${encoded}${'='.repeat((4 - (encoded.length % 4)) % 4)}`;
   try {
     const decoded = atob(normalizeBase64ForDecode(normalized));
     const parsed = JSON.parse(decoded) as Partial<LegacySharedPayload>;
@@ -102,6 +107,12 @@ export const sanitizeSharedLink = (link: string) => {
 
     const shareId = pathParts.at(-1);
     if (!shareId) return withoutHash;
+
+    const normalizedPath = pathParts.join('/');
+    if (normalizedPath.includes('/shared/d/')) {
+      return `${parsed.origin}/shared/d/${shareId}`;
+    }
+
     return `${parsed.origin}/s/${shareId}`;
   } catch {
     return withoutHash;
@@ -146,7 +157,7 @@ export const hashSharePassword = async (password: string) => {
   return Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 };
 
-const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/s/${shareGroupId}`;
+const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/shared/d/${shareGroupId}`;
 
 const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => {
   const linkData: Omit<SharedDocumentLink, 'link'> = {
@@ -188,15 +199,25 @@ export const documentShareService = {
         status: this.resolveStatus(link),
       }));
     } catch {
-      return [];
+      return []; 
     }
   },
 
-  async list(): Promise<SharedDocumentLink[]> {
+  async listRaw(includeGroupColumn: boolean): Promise<{ data: SharedDocumentRow[] | null; error: any | null }> {
+    const columns = includeGroupColumn ? LIST_COLUMNS_WITH_GROUP : LIST_COLUMNS_WITHOUT_GROUP;
     const { data, error } = await supabase
       .from(SHARE_TABLE)
-      .select('id,documento_id,documento_nome,empresa_nome,gerado_por,share_group_id,tempo_limite,expires_at,senha_hash,status,created_at')
+      .select(columns)
       .order('created_at', { ascending: false });
+
+    return { data: (data || null) as SharedDocumentRow[] | null, error };
+  },
+
+  async list(): Promise<SharedDocumentLink[]> {
+    let { data, error } = await this.listRaw(true);
+    if (isMissingColumnError(error)) {
+      ({ data, error } = await this.listRaw(false));
+    }
 
     if (error) return this.listLocal();
 
@@ -260,34 +281,73 @@ export const documentShareService = {
       };
     });
 
-    const rows = nextLinks.map((link) => ({
-      id: link.id,
-      documento_id: link.documentId || null,
-      documento_nome: link.documento,
-      empresa_nome: link.empresa,
-      gerado_por: link.geradoPor,
-      share_group_id: shareGroupId,
-      tempo_limite: link.tempoLimite,
-      expires_at: expiresAt.toISOString(),
-      senha_hash: link.senhaHash || null,
-      status: link.status,
+    const buildRows = (includeShareGroup: boolean, includeSenhaHash: boolean) => nextLinks.map((link) => {
+      const row: Record<string, unknown> = {
+        id: link.id,
+        documento_id: link.documentId || null,
+        documento_nome: link.documento,
+        empresa_nome: link.empresa,
+        gerado_por: link.geradoPor,
+        tempo_limite: link.tempoLimite,
+        expires_at: expiresAt.toISOString(),
+        status: link.status,
+      };
+
+      if (includeShareGroup) {
+        row.share_group_id = shareGroupId;
+      }
+
+      if (includeSenhaHash && link.senhaHash) {
+        row.senha_hash = link.senhaHash;
+      }
+
+      return row;
+    });
+
+    const linksWithGroup = (includeShareGroup: boolean) => nextLinks.map((link) => ({
+      ...link,
+      shareGroupId: includeShareGroup ? shareGroupId : link.id,
+      link: buildPublicLink(includeShareGroup ? shareGroupId : link.id),
     }));
 
-    const { error } = await supabase.from(SHARE_TABLE).insert(rows);
-    if (error) {
-      this.save([...nextLinks, ...existing]);
-    } else {
-      this.save(nextLinks);
+    const insertAttempts: Array<{ includeShareGroup: boolean; includeSenhaHash: boolean; linksWithGroupFallback: boolean }> = [
+      { includeShareGroup: true, includeSenhaHash: true, linksWithGroupFallback: true },
+      { includeShareGroup: false, includeSenhaHash: true, linksWithGroupFallback: false },
+      { includeShareGroup: false, includeSenhaHash: false, linksWithGroupFallback: false },
+    ];
+
+    for (const attempt of insertAttempts) {
+      const rows = buildRows(attempt.includeShareGroup, attempt.includeSenhaHash);
+      const { error } = await supabase.from(SHARE_TABLE).insert(rows);
+
+      if (!error) {
+        const next = linksWithGroup(attempt.linksWithGroupFallback);
+        this.save(next);
+        return next;
+      }
+
+      if (!isMissingColumnError(error)) {
+        break;
+      }
     }
 
+    this.save([...nextLinks, ...existing]);
     return nextLinks;
   },
 
   async revoke(targetId: string) {
-    const { error } = await supabase
+    let { error } = await supabase
       .from(SHARE_TABLE)
       .update({ status: 'Expirado' })
       .or(`id.eq.${targetId},share_group_id.eq.${targetId}`);
+
+    if (isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from(SHARE_TABLE)
+        .update({ status: 'Expirado' })
+        .eq('id', targetId);
+      error = fallback.error;
+    }
 
     const links = this.listLocal().map((link) => (
       (link.id === targetId || (link.shareGroupId && link.shareGroupId === targetId))
@@ -295,6 +355,8 @@ export const documentShareService = {
         : link
     ));
     this.save(links);
-    if (error) return;
+
+    if (error) return false;
+    return true;
   },
 };

@@ -48,8 +48,9 @@ export const PublicSharedDocumentCard: React.FC<PublicSharedDocumentCardProps> =
   const selectedStyle = isSelected ? 'rgba(197, 146, 53, 0.14)' : '#ffffff';
   const selectedBorder = isSelected ? '1px solid rgba(197, 146, 53, 0.46)' : '1px solid #e2e8f0';
   const subtitle = fallbackLabelByMode[mode];
+  const hasPdfSource = mode === 'pdf' && Boolean(previewUrl);
   const isPdfReady = mode === 'pdf' && previewStatus === 'ready' && Boolean(previewImageUrl);
-  const isPdfLoading = mode === 'pdf' && previewStatus === 'loading';
+  const isPdfLoading = hasPdfSource && (previewStatus === 'loading' || previewStatus === undefined);
   const hasImagePreview = mode === 'image' && Boolean(previewUrl);
 
   return (

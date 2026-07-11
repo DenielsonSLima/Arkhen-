@@ -6,9 +6,17 @@ import {
 import { supabase } from '../../../lib/supabase';
 import type { PublicSharedDocumentPayload, SharedDocumentForPublicView } from './types';
 
+const tryDecodeLegacyPayload = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
 type PublicShareRow = {
   id: string;
-  share_group_id: string;
+  share_group_id?: string;
   documento: string;
   documento_id: string;
   empresa: string;
@@ -39,8 +47,12 @@ const parseLegacyDateTime = (value: string) => {
 const uniqueShareRows = (rows: PublicShareRow[]) => {
   const seen = new Set<string>();
   return rows.filter((row) => {
-    if (seen.has(row.id)) return false;
-    seen.add(row.id);
+    const bucketPath = row.storage_bucket && row.storage_path
+      ? `${row.storage_bucket}::${row.storage_path}`
+      : '';
+    const key = `${row.id}::${bucketPath}::${(row.documento || '').toLowerCase().trim()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 };
@@ -55,7 +67,7 @@ const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPaylo
   const expires = parseDate(first.data_expiracao);
 
   return {
-    shareGroupId: first.share_group_id,
+    shareGroupId: first.share_group_id || first.id,
     empresa: first.empresa || 'Biblioteca pessoal',
     empresaCnpj: first.empresa_cnpj,
     geradoPor: first.gerado_por || 'Responsável',
@@ -102,11 +114,35 @@ const buildPayloadFromLegacy = (legacy: ReturnType<typeof parseLegacySharedPaylo
   };
 };
 
-export const getShareIdFromPath = () => window.location.pathname.split('/').filter(Boolean).at(-1) || null;
+export const getShareIdFromPath = () => {
+  const { pathname } = window.location;
+  const normalized = pathname.replace(/\/+$/, '');
+  const segments = normalized.split('/').filter(Boolean);
+
+  if (!segments.length) return null;
+
+  if (segments[0] === 'shared') {
+    if (segments[1] === 'd' && segments[2]) return segments[2];
+    return segments.at(-1) || null;
+  }
+
+  if (segments[0] === 's' && segments[1]) return segments[1];
+
+  return segments.at(-1) || null;
+};
+
+const getLegacyPayloadFromHash = () => {
+  const hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return null;
+
+  return parseLegacySharedPayload(tryDecodeLegacyPayload(hash));
+};
 
 export const fetchPublicShare = async (passwordHash?: string): Promise<PublicSharedDocumentPayload | null> => {
   const shareId = getShareIdFromPath();
-  if (!shareId) return null;
+  if (!shareId) {
+    return buildPayloadFromLegacy(getLegacyPayloadFromHash());
+  }
 
   const { data, error } = await supabase.rpc('get_public_document_share', {
     p_share_id: shareId,
@@ -117,7 +153,7 @@ export const fetchPublicShare = async (passwordHash?: string): Promise<PublicSha
     return buildPayloadFromRows(data as PublicShareRow[]);
   }
 
-  return buildPayloadFromLegacy(parseLegacySharedPayload(window.location.hash.replace(/^#/, '')));
+  return buildPayloadFromLegacy(getLegacyPayloadFromHash());
 };
 
 export const createDocumentAccessUrl = async (
