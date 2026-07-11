@@ -29,6 +29,7 @@ type PublicShareRow = {
   storage_bucket: string | null;
   storage_path: string | null;
   gerado_por: string | null;
+  tamanho_bytes: number | null;
 };
 
 const parseDate = (value: string) => {
@@ -84,6 +85,7 @@ const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPaylo
       documento: row.documento,
       storage_bucket: row.storage_bucket,
       storage_path: row.storage_path,
+      tamanho_bytes: row.tamanho_bytes,
     })),
     isLegacy: false,
   };

@@ -1,91 +1,127 @@
-/* Container Geral Centralizado */
+/* Container Geral Centralizado (Fundo Gradiente Escuro) */
 .public-shared-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background-color: #050608;
+  background: radial-gradient(circle at 50% 50%, #0c1424 0%, #060912 100%);
   overflow: hidden;
   position: relative;
   box-sizing: border-box;
-  padding: 20px;
+  padding: 40px 20px;
 }
 
 .public-shared-page-bg {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  transform: scale(1.02);
-  filter: blur(10px) grayscale(0.8) brightness(0.18) contrast(1.1);
-  z-index: 0;
+  display: none; /* Desativamos a imagem desfocada para usar o gradiente escuro liso do mockup */
 }
 
 .public-shared-page-overlay {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(5, 6, 8, 0.3) 0%, rgba(5, 6, 8, 0.96) 100%);
-  z-index: 1;
+  display: none;
 }
 
-/* Modal Centralizado Glassmorphism */
+/* Card Centralizado Branco */
 .public-shared-glass-modal {
   position: relative;
   z-index: 5;
   width: 100%;
-  max-width: 980px;
+  max-width: 1000px;
   height: 100%;
-  max-height: 610px;
-  background: rgba(14, 16, 20, 0.95);
-  border: 2px solid #ffffff;
+  max-height: 600px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
-  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 }
 
-/* Header Superior do Modal (Área Preta) */
-.public-shared-modal-header {
-  height: 64px;
-  min-height: 64px;
-  background: #090b0e;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Coluna Esquerda: Listagem de Arquivos ou Card Único */
+.public-shared-body-left {
+  flex: 0 0 58%;
+  height: 100%;
+  background: #ffffff;
+  padding: 35px;
   box-sizing: border-box;
-}
-
-.public-shared-header-left {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  overflow-y: auto;
+  text-align: center;
+  justify-content: center;
 }
 
-.public-shared-header-center {
+/* Pílula de Tamanho do Lote */
+.batch-size-pill {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.74rem;
+  color: #475569;
+  font-weight: 600;
+  display: inline-flex;
+  gap: 8px;
+  width: fit-content;
+  margin: 12px auto 20px auto;
+}
+
+/* Tabela de Arquivos */
+.files-table-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.files-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.files-table th {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.files-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.8rem;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.file-row-name-cell {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px 16px;
-  max-width: 480px;
+  font-weight: 600;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.public-shared-header-right {
+.file-icon-bg {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.public-shared-close-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
+.file-download-btn {
+  background: #f1f5f9;
+  border: none;
+  color: #2563eb;
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -96,114 +132,25 @@
   transition: all 0.2s ease;
 }
 
-.public-shared-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+.file-download-btn:hover {
+  background: #e0f2fe;
+  color: #1d4ed8;
 }
 
-/* Corpo Principal (Dividido) */
-.public-shared-modal-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  width: 100%;
-  height: calc(100% - 64px);
-  box-sizing: border-box;
-}
-
-/* Coluna Esquerda: Visualizador do PDF */
-.public-shared-body-left {
-  flex: 0 0 65%;
-  height: 100%;
-  background: #14171d;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-  position: relative;
-}
-
-/* Barra de Ferramentas do PDF */
-.pdf-tools-bar {
-  height: 48px;
-  background: #191c23;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  box-sizing: border-box;
-  color: #94a3b8;
-  font-size: 0.8rem;
-}
-
-.pdf-tools-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pdf-tool-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.pdf-tool-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
-}
-
-.pdf-viewer-content {
-  flex: 1;
-  width: 100%;
-  height: calc(100% - 48px);
-  overflow: hidden;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-/* Coluna Direita: Informações no Card Branco */
+/* Coluna Direita: Informações (Metadados) */
 .public-shared-body-right {
   flex: 1;
   height: 100%;
-  padding: 20px;
+  padding: 35px 30px;
   box-sizing: border-box;
-  background: #090b0e;
-  overflow-y: auto;
-}
-
-.sidebar-info-card {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  padding: 20px;
-  height: 100%;
-  box-sizing: border-box;
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.sidebar-scroll-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-/* Linhas com ícones circulares */
+/* Linhas com ícones circulares azuis/vermelhos */
 .info-row {
   display: flex;
   align-items: center;
@@ -212,107 +159,139 @@
 }
 
 .info-icon-wrapper {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
   border-radius: 50%;
-  background: #fef8ec; /* Bege claro padrão */
+  background: #eff6ff; /* Azul clarinho do mockup */
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #c59235; /* Dourado */
+  color: #2563eb; /* Azul */
 }
 
 .info-icon-wrapper.danger {
-  background: #fef2f2; /* Vermelhinho claro */
-  color: #ef4444; /* Vermelho */
+  background: #fef2f2;
+  color: #ef4444;
 }
 
 .info-text-group {
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 .info-title {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .info-value {
-  font-size: 0.88rem;
+  font-size: 0.94rem;
   color: #0f172a;
   font-weight: 700;
 }
 
-/* Card de Aviso no rodapé da barra lateral */
+/* Caixas de Aviso no Rodapé */
 .sidebar-warning-box {
-  background: #fefcf6;
-  border: 1px solid #fef08a;
+  background: #f0fdf4; /* Verde/azul muito claro */
+  border: 1px solid #bbf7d0;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   text-align: left;
+}
+
+.sidebar-warning-box.info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
 }
 
 .sidebar-warning-text {
   font-size: 0.74rem;
-  color: #713f12;
+  color: #1e3a8a;
   line-height: 1.4;
 }
 
-/* Custom Scrollbar */
-.sidebar-scroll-content::-webkit-scrollbar {
-  width: 4px;
+/* Botões Azuis de Ação */
+.btn-primary-blue {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
 }
 
-.sidebar-scroll-content::-webkit-scrollbar-track {
-  background: transparent;
+.btn-primary-blue:hover {
+  background: #1d4ed8;
 }
 
-.sidebar-scroll-content::-webkit-scrollbar-thumb {
+.btn-primary-blue:disabled {
   background: #cbd5e1;
-  border-radius: 2px;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-secondary-outline {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 11px;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-outline:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 /* Responsividade */
 @media (max-width: 992px) {
   .public-shared-container {
-    padding: 10px;
+    padding: 20px 10px;
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
   }
 
   .public-shared-glass-modal {
+    flex-direction: column;
     height: auto;
     max-height: none;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .public-shared-modal-body {
-    flex-direction: column;
-    height: auto;
-    overflow: visible;
   }
 
   .public-shared-body-left {
     flex: 0 0 auto;
-    height: 480px;
+    width: 100%;
+    padding: 24px;
   }
 
   .public-shared-body-right {
     flex: 0 0 auto;
-    height: auto;
-    padding: 16px;
-  }
-
-  .sidebar-info-card {
-    height: auto;
-    gap: 20px;
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+    padding: 24px;
   }
 }

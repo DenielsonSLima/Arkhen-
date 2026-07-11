@@ -1,4 +1,4 @@
--- Adiciona retorno do logotipo da empresa no compartilhamento público de documentos.
+-- Adiciona retorno do logotipo e tamanho dos bytes do documento no compartilhamento público de documentos.
 
 DROP FUNCTION IF EXISTS public.get_public_document_share(uuid, text);
 
@@ -20,7 +20,8 @@ RETURNS TABLE (
   senha_obrigatoria boolean,
   storage_bucket text,
   storage_path text,
-  gerado_por text
+  gerado_por text,
+  tamanho_bytes bigint
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -48,7 +49,8 @@ BEGIN
       WHEN dc.senha_hash IS NULL OR dc.senha_hash = p_password_hash THEN d.storage_path
       ELSE NULL
     END,
-    dc.gerado_por
+    dc.gerado_por,
+    d.tamanho_bytes
   FROM public.documentos_compartilhamentos dc
   JOIN public.documentos d ON d.id = dc.documento_id
   LEFT JOIN public.empresas e ON e.id = dc.empresa_id

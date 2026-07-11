@@ -1,28 +1,45 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, Timer, Calendar, Building2, FileText, X, Shield } from 'lucide-react';
-import sharedBackground from '../../../assets/office-scene-meeting.png';
+import { Download, Loader2, Timer, Calendar, Building2, Shield, Info, FileText } from 'lucide-react';
 import signatureLogoImg from '../../../assets/chatgpt-login.png';
 import loginLogoImg from '../../../assets/camada-o.png';
-import { PublicSharedDocumentCard } from './PublicSharedDocumentCard';
-import './PublicSharedDocument.css';
 import {
   fetchPublicShare,
   checkPassword,
   createDocumentAccessUrl,
   formatCountdownLabel,
-  getDocumentMode,
-  loadPdfFirstPagePreview,
 } from './publicSharedDocumentHelpers';
 import type { PublicSharedDocumentPayload } from './types';
 import { parseShareDurationMs } from '../../gestor/documentos/services/documentShareService';
 import { usePublicSharedDownloads } from './hooks/usePublicSharedDownloads';
+import './PublicSharedDocument.css';
 
 // Subcomponentes modulares
 import { SharedDocumentUnlockForm } from './components/SharedDocumentUnlockForm';
-import { SharedDocumentViewer } from './components/SharedDocumentViewer';
 
 const buildPageTitle = (shareData: PublicSharedDocumentPayload | null) => (
   shareData ? `${shareData.documents[0]?.documento ?? 'Arquivo'} | Arquivo compartilhado` : 'Link indisponível | Arkhen'
+);
+
+const formatBytes = (bytes?: number | null) => {
+  if (bytes === undefined || bytes === null || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+const getFileExtension = (filename: string) => {
+  const parts = filename.split('.');
+  return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
+};
+
+// Componente inline do Logotipo do Google Drive em SVG
+const GoogleDriveLogo: React.FC = () => (
+  <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '6px' }}>
+    <path d="M6.6 74.3l14.4-25h47.2l-14.4 25H6.6z" fill="#0066DA"/>
+    <path d="M28.2 49.3L6.6 12.3l14.4-25 21.6 37.3-14.4 25z" fill="#00A859"/>
+    <path d="M51.6 24.3L30 12.3l14.4-25 42.9 37.7-14.4 25-22.9-25.7z" fill="#FFD000"/>
+  </svg>
 );
 
 export const PublicSharedDocumentPage: React.FC = () => {
@@ -34,9 +51,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const [documentUrls, setDocumentUrls] = useState<Record<string, string | null>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activePreviewError, setActivePreviewError] = useState(false);
-  const [documentPdfPreviews, setDocumentPdfPreviews] = useState<Record<string, string | null>>({});
-  const [documentPdfPreviewStatus, setDocumentPdfPreviewStatus] = useState<Record<string, 'loading' | 'ready' | 'error'>>({});
 
   const documents = useMemo(() => {
     const normalized = shareData?.documents || [];
@@ -138,80 +152,23 @@ export const PublicSharedDocumentPage: React.FC = () => {
     };
   }, [shareData, isUnlocked, documents]);
 
-  // Carrega as prévias de páginas de arquivos PDF (apenas para thumbnails se múltiplos)
-  useEffect(() => {
-    if (!shareData || !isUnlocked || documents.length <= 1) return;
-    let mounted = true;
-    const pdfDocuments = documents.filter((doc) => getDocumentMode(doc.documento) === 'pdf');
-    if (pdfDocuments.length === 0) return;
-
-    void (async () => {
-      await Promise.all(pdfDocuments.map(async (doc) => {
-        if (documentPdfPreviews[doc.id] !== undefined) return;
-        if (documentPdfPreviewStatus[doc.id] === 'loading' || documentPdfPreviewStatus[doc.id] === 'ready' || documentPdfPreviewStatus[doc.id] === 'error') return;
-
-        const previewSource = shareData.isLegacy ? shareData.legacyUrl : documentUrls[doc.id];
-        if (!previewSource) return;
-
-        setDocumentPdfPreviewStatus((current) => ({
-          ...current,
-          [doc.id]: 'loading',
-        }));
-
-        const generated = await loadPdfFirstPagePreview(previewSource);
-        if (!mounted) return;
-
-        setDocumentPdfPreviews((current) => ({
-          ...current,
-          [doc.id]: generated,
-        }));
-        setDocumentPdfPreviewStatus((current) => ({
-          ...current,
-          [doc.id]: generated ? 'ready' : 'error',
-        }));
-      }));
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [documentUrls, isUnlocked, shareData, documents, documentPdfPreviews, documentPdfPreviewStatus]);
-
   const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
   const activeDocument = documents.find((doc) => doc.id === activeId) || documents[0] || null;
   const activePreviewUrl = shareData?.isLegacy ? shareData.legacyUrl : (activeDocument ? documentUrls[activeDocument.id] : null);
-  const activeMode = getDocumentMode(activeDocument?.documento || '');
-  const activePdfPreviewUrl = activeDocument ? documentPdfPreviews[activeDocument.id] : null;
-  const activePdfPreviewStatus = activeDocument ? documentPdfPreviewStatus[activeDocument.id] : undefined;
-  const activeHasPdfSource = activeMode === 'pdf' && Boolean(activePreviewUrl);
-  
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const isSingleFile = documents.length === 1;
+
+  const totalSizeFormatted = useMemo(() => {
+    const totalBytes = documents.reduce((acc, doc) => acc + (doc.tamanho_bytes || 0), 0);
+    return formatBytes(totalBytes);
+  }, [documents]);
+
   const canDownloadAll = shareData ? documents.every((doc) => canDownloadDocument(doc.id)) : false;
-  const activePdfFailedToPreview = activeMode === 'pdf' && activePdfPreviewStatus === 'error';
-  const activeLoadingPdfPreview = activeMode === 'pdf' && (activePdfPreviewStatus === 'loading' || (activeHasPdfSource && activePdfPreviewStatus === undefined));
-  
-  const activePreviewUnavailable =
-    activePreviewError ||
-    activeMode === 'generic' ||
-    (activeMode === 'image' && !activePreviewUrl);
-
-  const activeLoadingPreview = activeLoadingPdfPreview;
-
-  useEffect(() => {
-    setActivePreviewError(false);
-  }, [activeId, activePreviewUrl]);
-
-  const openPreview = (documentId: string) => {
-    setActiveId(documentId);
-    setSelectedIds((current) => (current.includes(documentId) ? current : [...current, documentId]));
-  };
 
   const toggleSelection = (documentId: string) => {
     setSelectedIds((current) => (
       current.includes(documentId) ? current.filter((id) => id !== documentId) : [...current, documentId]
     ));
   };
-
 
   const handleUnlock = async (password: string) => {
     if (!shareData) return;
@@ -226,8 +183,6 @@ export const PublicSharedDocumentPage: React.FC = () => {
     }
     const cleanShare = sanitizeShare(result.share);
     setPasswordError('');
-    setDocumentPdfPreviews({});
-    setDocumentPdfPreviewStatus({});
     setShareData(cleanShare);
     setIsUnlocked(true);
     const firstDocument = cleanShare?.documents?.[0];
@@ -235,6 +190,35 @@ export const PublicSharedDocumentPage: React.FC = () => {
       setSelectedIds([firstDocument.id]);
       setActiveId(firstDocument.id);
     }
+  };
+
+  const renderFileIcon = (filename: string, size = 18) => {
+    const ext = getFileExtension(filename);
+    let color = '#64748b'; // default gray
+    let bg = '#f1f5f9';
+
+    if (ext === 'pdf') {
+      color = '#ef4444';
+      bg = '#fef2f2';
+    } else if (['xlsx', 'xls', 'ods'].includes(ext)) {
+      color = '#22c55e';
+      bg = '#f0fdf4';
+    } else if (['docx', 'doc', 'odt'].includes(ext)) {
+      color = '#3b82f6';
+      bg = '#eff6ff';
+    } else if (['pptx', 'ppt', 'odp'].includes(ext)) {
+      color = '#f97316';
+      bg = '#fff7ed';
+    } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+      color = '#64748b';
+      bg = '#f8fafc';
+    }
+
+    return (
+      <div className="file-icon-bg" style={{ backgroundColor: bg, color }}>
+        <FileText size={size} />
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -273,246 +257,258 @@ export const PublicSharedDocumentPage: React.FC = () => {
 
   return (
     <main className="public-shared-container">
-      {/* Background desfocado da página inteira */}
-      <div className="public-shared-page-bg" style={{ backgroundImage: `url(${sharedBackground})` }} />
-      <div className="public-shared-page-overlay" />
-
-      {/* Marca Arkhen no canto esquerdo superior da tela de fundo */}
-      <div className="brand-header animate-fade-in" style={{ position: 'absolute', top: '24px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-        <div className="brand-title-group" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span className="brand-name" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', letterSpacing: '1px' }}>Arkhen</span>
-          <span className="brand-subtitle" style={{ fontSize: '0.76rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>Gestão Contábil</span>
+      {/* 1. Topo Esquerdo: Logo Arkhen */}
+      <div style={{ position: 'absolute', top: '30px', left: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <img src={loginLogoImg} alt="Logo Arkhen" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, textAlign: 'left' }}>
+          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', letterSpacing: '1px' }}>ARKHEN</span>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-primary)', fontWeight: 600, letterSpacing: '0.5px' }}>GESTÃO CONTÁBIL</span>
         </div>
       </div>
 
-      {/* Modal Centralizado Glassmorphism conforme Imagem 2 */}
+      {/* 2. Topo Direito: Compartilhamento Seguro */}
+      <div style={{ position: 'absolute', top: '38px', right: '30px', zIndex: 10, display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontSize: '0.8rem', opacity: 0.9 }}>
+        <Shield size={16} style={{ color: '#22c55e' }} />
+        <span>Compartilhamento seguro</span>
+      </div>
+
+      {/* 3. Card Centralizado Branco */}
       <div className="public-shared-glass-modal animate-slide-up">
-        {/* Header Superior do Modal (Área Preta) */}
-        <div className="public-shared-modal-header">
-          {/* Lado Esquerdo: Espaçador para manter o centro alinhado */}
-          <div style={{ width: '120px' }} />
+        {/* ================= COLUNA ESQUERDA ================= */}
+        <div className="public-shared-body-left">
+          {isSingleFile && activeDocument ? (
+            /* Layout Arquivo Único (Imagem 2) */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', justifyContent: 'center', height: '100%' }}>
+              {/* Ícone Gigante do Formato */}
+              <div style={{ width: '96px', height: '96px', borderRadius: '16px', background: getFileExtension(activeDocument.documento) === 'pdf' ? '#fef2f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(0,0,0,0.04)', color: getFileExtension(activeDocument.documento) === 'pdf' ? '#ef4444' : '#64748b', boxShadow: '0 8px 16px rgba(0,0,0,0.03)' }}>
+                <FileText size={48} />
+              </div>
 
-          {/* Centro: Nome do Arquivo e tipo */}
-          <div className="public-shared-header-center">
-            <FileText size={16} style={{ color: 'var(--color-gold-primary)', minWidth: '16px' }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, textAlign: 'left', overflow: 'hidden' }}>
-              <span style={{ fontSize: '0.78rem', color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '340px' }} title={activeDocument?.documento}>
-                {activeDocument?.documento || 'Documento'}
+              {/* Nome do Arquivo */}
+              <h2 style={{ margin: '8px 0 2px', fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', maxWidth: '400px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={activeDocument.documento}>
+                {activeDocument.documento}
+              </h2>
+              <span style={{ fontSize: '0.84rem', color: '#64748b', fontWeight: 600 }}>
+                {getFileExtension(activeDocument.documento).toUpperCase()} • {formatBytes(activeDocument.tamanho_bytes)}
               </span>
-              <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>
-                {activeMode.toUpperCase()} • {documents.length > 1 ? `${documents.length} páginas/arquivos` : '1 arquivo'}
-              </span>
-            </div>
-          </div>
 
-          {/* Lado Direito: Botão Fechar */}
-          <div className="public-shared-header-right">
-            <button 
-              type="button" 
-              className="public-shared-close-btn" 
-              onClick={() => { window.location.href = '/login'; }}
-              title="Voltar ao login"
-            >
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Corpo do Modal (Visualizador + Sidebar de Info) */}
-        <div className="public-shared-modal-body">
-          {/* Lado Esquerdo: PDF */}
-          <div className="public-shared-body-left">
-            {/* Barra de Ferramentas de PDF */}
-            <div className="pdf-tools-bar">
-              <div className="pdf-tools-group">
-                <span style={{ fontWeight: 600 }}>1 / 1</span>
-              </div>
-              <div className="pdf-tools-group">
-                <button type="button" className="pdf-tool-btn" style={{ fontSize: '1rem', padding: '0 8px' }}>—</button>
-                <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', color: '#ffffff' }}>100%</span>
-                <button type="button" className="pdf-tool-btn" style={{ fontSize: '1rem', padding: '0 8px' }}>+</button>
-              </div>
-              <div className="pdf-tools-group">
-                <button type="button" className="pdf-tool-btn" onClick={handleDownloadSelected} title="Baixar arquivo"><Download size={15} /></button>
-              </div>
-            </div>
-
-            {/* Visualizador do PDF */}
-            <div className="pdf-viewer-content">
-              <SharedDocumentViewer
-                activeDocument={activeDocument}
-                activePreviewUrl={activePreviewUrl || null}
-                activeMode={activeMode}
-                activePdfPreviewUrl={activePdfPreviewUrl}
-                activePdfPreviewStatus={activePdfPreviewStatus}
-                activeLoadingPreview={activeLoadingPreview}
-                activePdfFailedToPreview={activePdfFailedToPreview}
-                activePreviewUnavailable={activePreviewUnavailable}
-                activePreviewError={activePreviewError}
-                onPreviewError={() => setActivePreviewError(true)}
-              />
-            </div>
-          </div>
-
-          {/* Lado Direito: Card Branco de Informações */}
-          <div className="public-shared-body-right">
-            <div className="sidebar-info-card">
-              <div className="sidebar-scroll-content">
-                {/* 1. Dados da Empresa */}
-                <div className="info-row" style={{ gap: '14px', alignItems: 'center' }}>
-                  {shareData.empresaLogo ? (
-                    <img 
-                      src={shareData.empresaLogo} 
-                      alt={shareData.empresa} 
-                      style={{ 
-                        width: '56px', 
-                        height: '56px', 
-                        objectFit: 'contain', 
-                        borderRadius: '8px', 
-                        background: '#ffffff', 
-                        border: '1px solid #e2e8f0', 
-                        padding: '4px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        minWidth: '56px'
-                      }} 
-                    />
-                  ) : (
-                    <div 
-                      style={{ 
-                        width: '56px', 
-                        height: '56px', 
-                        borderRadius: '8px', 
-                        background: '#fef8ec', 
-                        border: '1px solid rgba(197, 146, 53, 0.3)', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        color: '#c59235',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                        minWidth: '56px'
-                      }}
-                    >
-                      <Building2 size={28} />
-                    </div>
-                  )}
-                  <div className="info-text-group" style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.25 }}>
-                    <span className="info-title">Empresa Emissora</span>
-                    <strong className="info-value" style={{ fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>{shareData.empresa}</strong>
-                    {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 700 }}>CNPJ {shareData.empresaCnpj}</span>}
-                  </div>
-                </div>
-
-                {/* 2. Compartilhado em */}
-                <div className="info-row">
-                  <div className="info-icon-wrapper">
-                    <Calendar size={18} />
-                  </div>
-                  <div className="info-text-group">
-                    <span className="info-title">Compartilhado em</span>
-                    <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
-                  </div>
-                </div>
-
-                {/* 3. Prazo de acesso */}
-                <div className="info-row">
-                  <div className="info-icon-wrapper">
-                    <Timer size={18} />
-                  </div>
-                  <div className="info-text-group">
-                    <span className="info-title">Prazo de acesso</span>
-                    <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
-                  </div>
-                </div>
-
-                {/* 4. Tempo restante */}
-                <div className="info-row">
-                  <div className="info-icon-wrapper">
-                    <Timer size={18} />
-                  </div>
-                  <div className="info-text-group">
-                    <span className="info-title">Tempo restante</span>
-                    <strong className="info-value" style={{ color: isExpired ? '#ef4444' : '#c59235', background: '#fef8ec', border: '1px solid rgba(197, 146, 53, 0.2)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontFamily: 'monospace', width: 'fit-content', marginTop: '2px' }}>
-                      {remainingLabel || '...'}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* 5. Expira em (Vermelho) */}
-                <div className="info-row">
-                  <div className="info-icon-wrapper danger">
-                    <Calendar size={18} />
-                  </div>
-                  <div className="info-text-group">
-                    <span className="info-title">Expira em</span>
-                    <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
-                  </div>
-                </div>
-
-                {/* Listagem de outros arquivos no lote (se aplicável) */}
-                {documents.length > 1 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                    <span className="info-title" style={{ fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Outros Arquivos</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '110px', overflowY: 'auto' }} className="scrollbar-premium">
-                      {documents.map((doc) => (
-                        <PublicSharedDocumentCard
-                          key={doc.id}
-                          document={doc}
-                          isSelected={doc.id === activeDocument?.id}
-                          isChecked={selectedSet.has(doc.id)}
-                          previewUrl={documentUrls[doc.id] || (shareData.isLegacy ? shareData.legacyUrl : undefined)}
-                          previewImageUrl={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviews[doc.id] : undefined}
-                          previewStatus={getDocumentMode(doc.documento) === 'pdf' ? documentPdfPreviewStatus[doc.id] : undefined}
-                          canDownload={canDownloadDocument(doc.id)}
-                          onSelect={toggleSelection}
-                          onPreview={openPreview}
-                          onDownload={handleDownloadOne}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Botões e Aviso no Rodapé do Card */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
+              {/* Botões de Ação */}
+              <div style={{ width: '100%', maxWidth: '340px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
                 <button
                   type="button"
-                  style={{ width: '100%', border: 'none', borderRadius: '8px', padding: '12px', background: isExpired ? '#e2e8f0' : 'var(--color-gold-gradient)', color: isExpired ? '#94a3b8' : '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}
+                  className="btn-primary-blue"
                   onClick={handleDownloadSelected}
                   disabled={isExpired || isBatchDownloading}
                 >
-                  {isBatchDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                   Baixar arquivo
                 </button>
 
-                {documents.length > 1 && (
-                  <button
-                    type="button"
-                    style={{ width: '100%', border: '1px solid rgba(197, 146, 53, 0.5)', borderRadius: '8px', padding: '11px', background: '#ffffff', color: '#c59235', fontWeight: 700, fontSize: '0.8rem', cursor: isExpired ? 'not-allowed' : 'pointer', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={handleDownloadAll}
-                    disabled={isExpired || !canDownloadAll || isBatchDownloading}
-                  >
-                    {isBatchDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                    Baixar todos como ZIP
-                  </button>
-                )}
-
-                {/* Caixa de aviso de segurança no rodapé do card */}
-                <div className="sidebar-warning-box">
-                  <Shield size={16} style={{ color: '#c59235', minWidth: '16px', marginTop: '2px' }} />
-                  <span className="sidebar-warning-text">
-                    O link e os arquivos estarão disponíveis até a <strong style={{ color: '#c59235' }}>data de expiração</strong>.
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', margin: '4px 0' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>ou</span>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
                 </div>
+
+                <button
+                  type="button"
+                  className="btn-secondary-outline"
+                  onClick={() => {
+                    if (activePreviewUrl) {
+                      window.open(activePreviewUrl, '_blank');
+                    }
+                  }}
+                  disabled={isExpired || !activePreviewUrl}
+                >
+                  <GoogleDriveLogo />
+                  Salvar no Google Drive
+                </button>
+              </div>
+
+              {/* Rodapé do arquivo único */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.76rem', marginTop: '16px', opacity: 0.8 }}>
+                <Shield size={14} style={{ color: '#2563eb' }} />
+                <span>Este arquivo foi compartilhado de forma segura. Não é necessário fazer login para acessar.</span>
+              </div>
+            </div>
+          ) : (
+            /* Layout Lote de Múltiplos Arquivos (Imagem 1) */
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {/* Ícone de Pasta Azul no topo */}
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', margin: '0 auto 12px auto' }}>
+                <FileText size={22} />
+              </div>
+
+              {/* Título de Arquivos Compartilhados */}
+              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Arquivos compartilhados</h2>
+              <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                Alguém compartilhou os seguintes arquivos com você.
+              </p>
+
+              {/* Pílula de Detalhe de Tamanho */}
+              <div className="batch-size-pill">
+                <span>{documents.length} arquivos</span>
+                <span style={{ color: '#cbd5e1' }}>|</span>
+                <span>{totalSizeFormatted}</span>
+              </div>
+
+              {/* Tabela de listagem dos arquivos com scroll */}
+              <div className="files-table-container scrollbar-premium">
+                <table className="files-table">
+                  <thead>
+                    <tr>
+                      <th align="left">Nome do arquivo</th>
+                      <th align="right" style={{ paddingRight: '20px' }}>Tamanho</th>
+                      <th align="center"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.map((doc) => (
+                      <tr key={doc.id}>
+                        <td align="left">
+                          <div className="file-row-name-cell">
+                            {renderFileIcon(doc.documento)}
+                            <span 
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setActiveId(doc.id);
+                                toggleSelection(doc.id);
+                              }}
+                              title="Visualizar este arquivo"
+                            >
+                              {doc.documento}
+                            </span>
+                          </div>
+                        </td>
+                        <td align="right" style={{ fontWeight: 600, paddingRight: '20px', color: '#64748b' }}>
+                          {formatBytes(doc.tamanho_bytes)}
+                        </td>
+                        <td align="center" style={{ width: '40px' }}>
+                          <button
+                            type="button"
+                            className="file-download-btn"
+                            onClick={() => handleDownloadOne(doc.id)}
+                            title="Baixar este arquivo"
+                            disabled={isExpired}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Botão de download do zip */}
+              <button
+                type="button"
+                className="btn-primary-blue"
+                onClick={handleDownloadAll}
+                disabled={isExpired || !canDownloadAll || isBatchDownloading}
+              >
+                {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                Baixar todos os arquivos (.zip)
+              </button>
+              <span style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginTop: '6px' }}>
+                Todos os arquivos serão baixados compactados em um único arquivo .zip
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* ================= COLUNA DIREITA ================= */}
+        <div className="public-shared-body-right">
+          <div className="sidebar-scroll-content">
+            {/* 1. Empresa Emissora */}
+            <div className="info-row">
+              <div className="info-icon-wrapper" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                {shareData.empresaLogo ? (
+                  <img src={shareData.empresaLogo} alt={shareData.empresa} style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+                ) : (
+                  <Building2 size={20} />
+                )}
+              </div>
+              <div className="info-text-group">
+                <span className="info-title">Empresa Emissora</span>
+                <strong className="info-value" style={{ color: '#0f172a' }}>{shareData.empresa}</strong>
+                {shareData.empresaCnpj && <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 600 }}>CNPJ {shareData.empresaCnpj}</span>}
+              </div>
+            </div>
+
+            {/* 2. Compartilhado em */}
+            <div className="info-row">
+              <div className="info-icon-wrapper">
+                <Calendar size={18} />
+              </div>
+              <div className="info-text-group">
+                <span className="info-title">Compartilhado em</span>
+                <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
+              </div>
+            </div>
+
+            {/* 3. Prazo de acesso */}
+            <div className="info-row">
+              <div className="info-icon-wrapper">
+                <Timer size={18} />
+              </div>
+              <div className="info-text-group">
+                <span className="info-title">Prazo de acesso</span>
+                <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
+              </div>
+            </div>
+
+            {/* 4. Tempo restante (Vermelho, grande) */}
+            <div className="info-row">
+              <div className="info-icon-wrapper">
+                <Timer size={18} />
+              </div>
+              <div className="info-text-group">
+                <span className="info-title">Tempo restante</span>
+                <strong className="info-value" style={{ color: '#ef4444', fontSize: '1.25rem', fontFamily: 'monospace', fontWeight: 800, marginTop: '2px' }}>
+                  {remainingLabel || '...'}
+                </strong>
+              </div>
+            </div>
+
+            {/* 5. Expira em (Vermelho) */}
+            <div className="info-row">
+              <div className="info-icon-wrapper danger">
+                <Calendar size={18} />
+              </div>
+              <div className="info-text-group">
+                <span className="info-title">Expira em</span>
+                <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
               </div>
             </div>
           </div>
+
+          {/* Caixas de Aviso no Rodapé do Card da Direita */}
+          {isSingleFile ? (
+            <div className="sidebar-warning-box info">
+              <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
+              <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
+                Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
+              </span>
+            </div>
+          ) : (
+            <div className="sidebar-warning-box">
+              <Shield size={18} style={{ color: '#15803d', minWidth: '18px', marginTop: '2px' }} />
+              <span className="sidebar-warning-text" style={{ color: '#14532d' }}>
+                <strong style={{ color: '#15803d' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Assinatura Dailabs no canto inferior direito da tela (cor branca/clara legível) */}
-      <div className="developer-signature" style={{ color: '#ffffff', opacity: 0.75, right: '30px', bottom: '24px' }}>
+      {/* 4. Rodapé Centralizado com copyright */}
+      <div style={{ position: 'absolute', bottom: '24px', zIndex: 10, color: '#94a3b8', fontSize: '0.74rem', fontWeight: 600 }}>
+        <span>© 2026 | Arkhen Gestão Contábil</span>
+      </div>
+
+      {/* 5. Assinatura Dailabs no canto inferior direito da tela */}
+      <div className="developer-signature" style={{ color: '#ffffff', opacity: 0.75, right: '30px', bottom: '24px', position: 'absolute', zIndex: 10 }}>
         <img src={signatureLogoImg} alt="Dailabs Logo" className="developer-signature-icon" />
         <div className="developer-signature-copy">
           <span className="developer-signature-brand">DAILABS</span>

@@ -3,6 +3,7 @@ export interface SharedDocumentForPublicView {
   documento: string;
   storage_bucket: string | null;
   storage_path: string | null;
+  tamanho_bytes?: number | null;
 }
 
 export interface PublicSharedDocumentPayload {
