@@ -9,6 +9,7 @@ export interface PublicSharedDocumentPayload {
   shareGroupId: string;
   empresa: string;
   empresaCnpj: string | null;
+  empresaLogo?: string | null;
   geradoPor: string;
   tempoLimite: string;
   dataGeracao: string;

@@ -21,6 +21,7 @@ type PublicShareRow = {
   documento_id: string;
   empresa: string;
   empresa_cnpj: string | null;
+  empresa_logo: string | null;
   tempo_limite: string;
   data_geracao: string;
   data_expiracao: string;
@@ -70,6 +71,7 @@ const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPaylo
     shareGroupId: first.share_group_id || first.id,
     empresa: first.empresa || 'Biblioteca pessoal',
     empresaCnpj: first.empresa_cnpj,
+    empresaLogo: first.empresa_logo,
     geradoPor: first.gerado_por || 'Responsável',
     tempoLimite: first.tempo_limite || '1 hora',
     dataGeracao: formatShareDateTime(created || new Date(), 'America/Sao_Paulo'),

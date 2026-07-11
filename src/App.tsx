@@ -175,7 +175,7 @@ function App() {
   useEffect(() => {
     if (view !== 'gestor') return undefined;
 
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let timeoutId: any;
     const resetTimer = () => {
       window.clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
