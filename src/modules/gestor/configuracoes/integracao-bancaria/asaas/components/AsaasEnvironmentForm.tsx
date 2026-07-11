@@ -30,13 +30,35 @@ const secureInputStyle = (configured: boolean): React.CSSProperties => configure
     color: '#991b1b',
   };
 
+const renderSecretStatus = (configured: boolean) => (
+  <span style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    border: `1px solid ${configured ? '#86efac' : '#fecaca'}`,
+    background: configured ? '#f0fdf4' : '#fff1f2',
+    color: configured ? '#166534' : '#991b1b',
+    borderRadius: '999px',
+    padding: '4px 9px',
+    fontSize: '0.72rem',
+    fontWeight: 850,
+  }}>
+    {configured ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+    {configured ? 'Configurada' : 'Pendente'}
+  </span>
+);
+
 export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
   environment,
   config,
   isSaving,
   onChange,
-}) => (
-  <div className="config-form" style={{ padding: 0, border: 'none', boxShadow: 'none' }}>
+}) => {
+  const hasApiKey = Boolean(config.apiKeyConfigured || config.apiKey.trim());
+  const hasWebhookToken = Boolean(config.webhookTokenConfigured || config.webhookToken.trim());
+
+  return (
+    <div className="config-form" style={{ padding: 0, border: 'none', boxShadow: 'none' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '14px 16px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#f8fafc', marginBottom: '18px' }}>
       <div>
         <strong style={{ display: 'block', color: '#0f172a', fontSize: '0.92rem' }}>{environmentLabel[environment]}</strong>
@@ -48,8 +70,19 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
       </span>
     </div>
 
+    {(!hasApiKey || !hasWebhookToken) && (
+      <div style={{ border: '1px solid #fecaca', background: '#fff1f2', color: '#991b1b', borderRadius: '10px', padding: '12px 14px', fontSize: '0.82rem', lineHeight: 1.45, marginBottom: '18px' }}>
+        <strong style={{ display: 'block', marginBottom: '4px' }}>Integração incompleta</strong>
+        {!hasApiKey && <span style={{ display: 'block' }}>Chave de API obrigatória pendente.</span>}
+        {!hasWebhookToken && <span style={{ display: 'block' }}>Token de validação do webhook pendente.</span>}
+      </div>
+    )}
+
     <div className="form-item-group">
-      <label>Chave de API</label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 'min(100%, 720px)', gap: '12px' }}>
+        <label style={{ margin: 0 }}>Chave de API</label>
+        {renderSecretStatus(hasApiKey)}
+      </div>
       <div style={{ position: 'relative', width: 'min(100%, 720px)' }}>
         <input
           type="password"
@@ -57,16 +90,19 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
           onChange={(event) => onChange('apiKey', event.target.value)}
           placeholder={config.apiKeyConfigured ? maskedSecret : environment === 'producao' ? '$aact_prod_...' : '$aact_hmlg_...'}
           disabled={isSaving}
-          style={{ ...secureInputStyle(Boolean(config.apiKeyConfigured || config.apiKey)), paddingRight: config.apiKeyConfigured ? '42px' : undefined }}
+          name={`asaas-${environment}-api-key`}
+          autoComplete="new-password"
+          spellCheck={false}
+          style={{ ...secureInputStyle(hasApiKey), width: '100%', boxSizing: 'border-box', paddingRight: '42px' }}
         />
-        {config.apiKeyConfigured || config.apiKey ? (
+        {hasApiKey ? (
           <CheckCircle2 size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
         ) : (
           <AlertCircle size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#dc2626' }} />
         )}
       </div>
       <span className="input-helper-text">
-        {config.apiKeyConfigured || config.apiKey
+        {hasApiKey
           ? 'Chave salva com segurança no Supabase Vault. Deixe em branco para manter a atual ou cole uma nova para substituir.'
           : 'Obrigatorio: cole a chave do painel Asaas. Nao compartilhe esse token por print, chat ou e-mail.'}
       </span>
@@ -148,7 +184,10 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
         <span className="input-helper-text">URL travada e gerada automaticamente pela Edge Function do Supabase.</span>
       </div>
       <div className="form-item-group">
-        <label>Token de Validação</label>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <label style={{ margin: 0 }}>Token de Validação</label>
+          {renderSecretStatus(hasWebhookToken)}
+        </div>
         <div style={{ position: 'relative' }}>
           <input
             type="password"
@@ -156,9 +195,12 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
             onChange={(event) => onChange('webhookToken', event.target.value)}
             placeholder={config.webhookTokenConfigured ? maskedSecret : 'asaas-access-token'}
             disabled={isSaving}
-            style={{ ...secureInputStyle(Boolean(config.webhookTokenConfigured || config.webhookToken)), paddingRight: config.webhookTokenConfigured ? '42px' : undefined }}
+            name={`asaas-${environment}-webhook-token`}
+            autoComplete="new-password"
+            spellCheck={false}
+            style={{ ...secureInputStyle(hasWebhookToken), width: '100%', boxSizing: 'border-box', paddingRight: '42px' }}
           />
-          {config.webhookTokenConfigured || config.webhookToken ? (
+          {hasWebhookToken ? (
             <CheckCircle2 size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
           ) : (
             <AlertCircle size={18} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: '#dc2626' }} />
@@ -194,4 +236,5 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
       Enviar alertas automáticos de cobrança para o e-mail do cliente
     </label>
   </div>
-);
+  );
+};
