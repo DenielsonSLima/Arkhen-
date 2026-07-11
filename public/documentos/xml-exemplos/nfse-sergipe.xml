@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CompNfse>
+  <Nfse>
+    <InfNfse Id="NFSE202607100001">
+      <Numero>202600001</Numero>
+      <CodigoVerificacao>SE-ARKHEN-001</CodigoVerificacao>
+      <DataEmissao>2026-07-10T10:30:00</DataEmissao>
+      <PrestadorServico>
+        <IdentificacaoPrestador>
+          <Cnpj>12345678000190</Cnpj>
+          <InscricaoMunicipal>123456</InscricaoMunicipal>
+        </IdentificacaoPrestador>
+        <RazaoSocial>Arkhentech Servicos Contabeis Ltda</RazaoSocial>
+        <Email>financeiro@arkhentech.com.br</Email>
+        <Endereco>
+          <Endereco>Avenida Rio Branco</Endereco>
+          <Numero>1200</Numero>
+          <Bairro>Centro</Bairro>
+          <Municipio>Aracaju</Municipio>
+          <Uf>SE</Uf>
+          <Cep>49010030</Cep>
+        </Endereco>
+      </PrestadorServico>
+      <TomadorServico>
+        <IdentificacaoTomador>
+          <CpfCnpj><Cnpj>99888777000166</Cnpj></CpfCnpj>
+        </IdentificacaoTomador>
+        <RazaoSocial>Cliente Exemplo Sergipe Ltda</RazaoSocial>
+        <Email>contato@clienteexemplo.com.br</Email>
+        <Endereco>
+          <Endereco>Rua das Laranjeiras</Endereco>
+          <Numero>450</Numero>
+          <Bairro>Jardins</Bairro>
+          <Municipio>Aracaju</Municipio>
+          <Uf>SE</Uf>
+          <Cep>49025080</Cep>
+        </Endereco>
+      </TomadorServico>
+      <Servico>
+        <Valores>
+          <ValorServicos>1250.00</ValorServicos>
+          <ValorDeducoes>0.00</ValorDeducoes>
+          <ValorPis>8.13</ValorPis>
+          <ValorCofins>37.50</ValorCofins>
+          <ValorInss>0.00</ValorInss>
+          <ValorIr>18.75</ValorIr>
+          <ValorCsll>12.50</ValorCsll>
+          <BaseCalculo>1250.00</BaseCalculo>
+          <ValorIss>62.50</ValorIss>
+          <Aliquota>0.05</Aliquota>
+          <ValorLiquidoNfse>1173.12</ValorLiquidoNfse>
+          <IssRetido>2</IssRetido>
+        </Valores>
+        <ItemListaServico>17.19</ItemListaServico>
+        <CodigoTributacaoMunicipio>17.19.001</CodigoTributacaoMunicipio>
+        <CodigoCnae>6920601</CodigoCnae>
+        <Discriminacao>Servicos contabeis mensais, conferencia fiscal, fechamento de competencia, conciliacao de documentos e suporte consultivo ao cliente.</Discriminacao>
+        <CodigoMunicipio>2800308</CodigoMunicipio>
+      </Servico>
+      <Competencia>2026-07</Competencia>
+      <NaturezaOperacao>Tributacao no municipio</NaturezaOperacao>
+      <RegimeEspecialTributacao>Microempresa municipal</RegimeEspecialTributacao>
+      <OptanteSimplesNacional>1</OptanteSimplesNacional>
+      <IncentivadorCultural>2</IncentivadorCultural>
+      <OutrasInformacoes>Esta NFS-e de demonstracao foi gerada para validacao visual do espelho de nota fiscal de servico.</OutrasInformacoes>
+    </InfNfse>
+  </Nfse>
+</CompNfse>

@@ -1,0 +1,8 @@
+.gestor-main {
+  min-width: 0;
+}
+
+.gestor-content-viewport {
+  min-width: 0;
+  overflow-x: hidden;
+}

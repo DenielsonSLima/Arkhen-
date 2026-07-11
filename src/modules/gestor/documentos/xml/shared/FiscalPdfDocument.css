@@ -1,0 +1,177 @@
+.fiscal-pdf-viewer {
+  height: 100%;
+  overflow: auto;
+  background: #d9dde3;
+  color: #111827;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.fiscal-pdf-page {
+  position: relative;
+  width: min(1020px, 100%);
+  min-height: 1320px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #111827;
+  box-shadow: 0 22px 58px rgba(15, 23, 42, 0.26);
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.fiscal-pdf-watermark {
+  position: absolute;
+  inset: 38% auto auto 10%;
+  transform: rotate(-34deg);
+  font-size: 4.8rem;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.055);
+  letter-spacing: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.fiscal-pdf-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #111827;
+}
+
+.fiscal-pdf-header > div {
+  padding: 10px;
+}
+
+.fiscal-pdf-header > div:first-child {
+  border-right: 1px solid #111827;
+}
+
+.fiscal-pdf-kicker {
+  margin: 0 0 5px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #475569;
+}
+
+.fiscal-pdf-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+}
+
+.fiscal-pdf-header span,
+.fiscal-pdf-key span {
+  display: block;
+  font-size: 0.62rem;
+  color: #475569;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.fiscal-pdf-key strong {
+  display: block;
+  margin: 4px 0 8px;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.fiscal-barcode {
+  height: 54px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  background: #ffffff;
+  border: 1px solid #111827;
+  padding: 5px;
+  overflow: hidden;
+}
+
+.fiscal-barcode span {
+  display: block;
+  background: #111827;
+}
+
+.fiscal-pdf-box {
+  position: relative;
+  z-index: 1;
+  border: 1px solid #111827;
+  border-top: 0;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.fiscal-pdf-box h3 {
+  margin: 0;
+  padding: 5px 8px;
+  border-bottom: 1px solid #111827;
+  background: #f8fafc;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.fiscal-pdf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fiscal-field {
+  min-height: 42px;
+  border-right: 1px solid #111827;
+  border-bottom: 1px solid #111827;
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+.fiscal-field:nth-child(3n) {
+  border-right: 0;
+}
+
+.fiscal-field-wide {
+  grid-column: span 3;
+}
+
+.fiscal-field span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.57rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.fiscal-field strong {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #111827;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .fiscal-pdf-viewer {
+    padding: 12px;
+  }
+
+  .fiscal-pdf-page {
+    min-height: 0;
+  }
+
+  .fiscal-pdf-header,
+  .fiscal-pdf-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fiscal-pdf-header > div:first-child,
+  .fiscal-field,
+  .fiscal-field:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .fiscal-field-wide {
+    grid-column: auto;
+  }
+}

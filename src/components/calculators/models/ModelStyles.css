@@ -1,0 +1,435 @@
+/* Estilos das Sub-Calculadoras (Normal, Contábil, Tributária) */
+
+/* --- MODELO COMUM DE FORMULÁRIOS (CONTÁBIL E TRIBUTÁRIA) --- */
+.accounting-calculator-wrapper,
+.tax-calculator-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Sub-Menu da Calculadora (Abas de Ferramentas) */
+.acc-submenu {
+  display: flex;
+  gap: 2px;
+  background-color: #f1f3f5;
+  padding: 3px;
+  border-radius: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.acc-submenu::-webkit-scrollbar {
+  display: none;
+}
+
+.acc-sub-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6c757d;
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: all var(--transition-normal);
+  text-align: center;
+}
+
+.acc-sub-btn:hover {
+  color: #1a1a1a;
+}
+
+.acc-sub-btn.active {
+  background-color: #ffffff;
+  color: var(--color-gold-dark);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Viewport dos Formulários */
+.acc-form-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  min-height: 160px;
+}
+
+.acc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.acc-form-double {
+  display: flex;
+  gap: 12px;
+}
+
+.acc-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.divider-left {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  padding-left: 12px;
+}
+
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-gold-primary);
+  margin-bottom: 2px;
+}
+
+/* Input Groups */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-group label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-dark-muted);
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  outline: none;
+  background-color: #ffffff;
+  color: #212529;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+  border-color: var(--color-gold-primary);
+  box-shadow: 0 0 0 2px var(--color-gold-glow);
+}
+
+.input-group-row {
+  display: flex;
+  gap: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-dark-muted);
+  cursor: pointer;
+}
+
+/* Regra de Três */
+.regra-tres-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  grid-column: span 2;
+}
+
+.rt-arrow {
+  font-size: 1.1rem;
+  color: var(--color-gold-primary);
+  padding-bottom: 4px;
+}
+
+/* Resultados e Ações */
+.acc-result-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 8px;
+}
+
+.acc-result-box {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.acc-result-box pre {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #212529;
+  white-space: pre-wrap;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.acc-result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.result-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #ced4da;
+  color: #495057;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.result-action-btn:hover {
+  background-color: #f1f3f5;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.result-action-btn:focus-visible,
+.acc-sub-btn:focus-visible,
+.calc-btn:focus-visible,
+.calc-icon-btn:focus-visible,
+.history-clear-btn:focus-visible {
+  outline: 2px solid rgba(197, 146, 53, 0.42);
+  outline-offset: 2px;
+}
+
+.result-action-btn.primary-btn {
+  background-color: var(--color-gold-primary);
+  border-color: var(--color-gold-primary);
+  color: #ffffff;
+}
+
+.result-action-btn.primary-btn:hover {
+  background-color: var(--color-gold-dark);
+  border-color: var(--color-gold-dark);
+}
+
+
+/* --- CALCULADORA NORMAL --- */
+.normal-calculator-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  outline: none;
+}
+
+.calc-display-section {
+  background:
+    radial-gradient(circle at top left, rgba(197, 146, 53, 0.22), transparent 36%),
+    #161616;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  border: 1px solid rgba(197, 146, 53, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.calc-equation {
+  font-size: 0.72rem;
+  color: var(--color-gold-light);
+  height: 14px;
+  line-height: 14px;
+  margin-bottom: 2px;
+}
+
+.calc-display-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calc-icon-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.calc-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.calc-main-display {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calc-keyboard-and-history {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(42px, 1fr);
+  gap: 6px;
+  min-height: 0;
+}
+
+.calc-btn {
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  color: #212529;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-height: 42px;
+  padding: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.calc-btn:hover {
+  background-color: #f1f3f5;
+}
+
+.calc-btn:active {
+  transform: scale(0.95);
+}
+
+.calc-btn.btn-op {
+  background-color: #f8f9fa;
+  color: var(--color-gold-dark);
+  font-size: 0.9rem;
+}
+
+.calc-btn.btn-op:hover {
+  background-color: rgba(197, 146, 53, 0.06);
+}
+
+.calc-btn.btn-special {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.calc-btn.btn-double {
+  grid-column: span 2;
+}
+
+.calc-btn.btn-equals {
+  background: var(--color-gold-gradient);
+  border-color: var(--color-gold-primary);
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.calc-btn.btn-equals:hover {
+  opacity: 0.9;
+}
+
+/* Histórico da Normal */
+.calc-history-section {
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-dark-muted);
+}
+
+.history-clear-btn {
+  background: none;
+  border: none;
+  color: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.history-clear-btn:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-empty {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding-top: 10px;
+}
+
+.history-item {
+  font-size: 0.68rem;
+  color: #495057;
+  padding: 4px 6px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  cursor: pointer;
+  word-break: break-all;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.history-item:hover {
+  background-color: rgba(197, 146, 53, 0.05);
+  border-color: rgba(197, 146, 53, 0.15);
+  color: var(--color-gold-dark);
+}

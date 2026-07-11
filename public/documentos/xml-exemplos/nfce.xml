@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <NFe>
+    <infNFe Id="NFe28260712345678000190650010000000011000000018" versao="4.00">
+      <ide>
+        <cUF>28</cUF><natOp>VENDA</natOp><mod>65</mod><serie>1</serie><nNF>1</nNF>
+        <dhEmi>2026-07-10T11:20:00-03:00</dhEmi><tpNF>1</tpNF><idDest>1</idDest>
+      </ide>
+      <emit>
+        <CNPJ>12345678000190</CNPJ><xNome>Mercado Exemplo NFC-e Ltda</xNome>
+        <enderEmit><xMun>Aracaju</xMun><UF>SE</UF></enderEmit>
+      </emit>
+      <dest><CPF>12345678909</CPF><xNome>Consumidor Final</xNome></dest>
+      <det nItem="1">
+        <prod><cProd>001</cProd><xProd>Produto de demonstracao</xProd><qCom>1.0000</qCom><vUnCom>25.90</vUnCom><vProd>25.90</vProd></prod>
+      </det>
+      <total><ICMSTot><vNF>25.90</vNF></ICMSTot></total>
+    </infNFe>
+  </NFe>
+  <protNFe><infProt><nProt>328260000000001</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>
+</nfeProc>

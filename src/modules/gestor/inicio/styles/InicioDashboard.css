@@ -1,0 +1,137 @@
+.inicio-agenda-list,
+.inicio-week-list,
+.inicio-risk-list,
+.inicio-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inicio-agenda-item,
+.inicio-week-row,
+.inicio-risk-row,
+.inicio-task-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e6edf5;
+  border-radius: 9px;
+  display: grid;
+  gap: 12px;
+  min-height: 62px;
+  padding: 11px 12px;
+}
+
+.inicio-agenda-item,
+.inicio-week-row {
+  grid-template-columns: auto 1fr;
+}
+
+.inicio-risk-row {
+  grid-template-columns: auto 1fr auto;
+}
+
+.inicio-task-row {
+  grid-template-columns: auto 1fr;
+}
+
+.inicio-agenda-item strong,
+.inicio-week-row strong,
+.inicio-risk-row strong,
+.inicio-task-row strong,
+.inicio-user-card strong {
+  color: #0f172a;
+  display: block;
+  font-size: 0.88rem;
+}
+
+.inicio-agenda-item small,
+.inicio-week-row small,
+.inicio-risk-row small,
+.inicio-task-row small,
+.inicio-user-card small {
+  color: #64748b;
+  display: block;
+  font-size: 0.76rem;
+  margin-top: 3px;
+}
+
+.inicio-origin-dot {
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.inicio-origin-dot.manual { background: #2563eb; }
+.inicio-origin-dot.prazo-fiscal { background: #ef4444; }
+.inicio-origin-dot.atividade { background: #c59235; }
+
+.inicio-agenda-date {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.inicio-agenda-date strong {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.inicio-agenda-date span {
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.inicio-risk-row svg {
+  color: #c59235;
+}
+
+.inicio-risk-row.late {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.inicio-risk-row.late svg,
+.inicio-risk-row.late > span {
+  color: #dc2626;
+}
+
+.inicio-risk-row > span {
+  color: #b45309;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-align: right;
+}
+
+.inicio-status-pill {
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 6px 9px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.inicio-status-pill.done { background: #ecfdf5; color: #16803c; }
+.inicio-status-pill.progress { background: #fff7ed; color: #b45309; }
+.inicio-status-pill.pending { background: #f1f5f9; color: #475569; }
+
+.inicio-empty-row {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9px;
+  color: #64748b;
+  display: flex;
+  font-size: 0.84rem;
+  font-weight: 700;
+  min-height: 62px;
+  padding: 12px;
+}

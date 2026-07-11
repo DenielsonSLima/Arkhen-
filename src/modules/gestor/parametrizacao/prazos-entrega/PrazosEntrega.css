@@ -1,0 +1,185 @@
+.prazos-entrega-page .config-table input[type="number"],
+.prazos-entrega-page .config-table select {
+  width: 100%;
+  min-width: 86px;
+  height: 34px;
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fafbfc;
+  color: #0f172a;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.prazos-entrega-page .config-table input:focus,
+.prazos-entrega-page .config-table select:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.12);
+  background: #ffffff;
+}
+
+.prazos-entrega-page .config-table input:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.prazos-regime-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.prazos-regime-tabs .btn-tab {
+  gap: 7px;
+}
+
+.prazos-tab-count {
+  min-width: 22px;
+  height: 20px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prazos-regime-tabs .btn-tab.active .prazos-tab-count {
+  color: #92400e;
+  background: rgba(197, 146, 53, 0.14);
+}
+
+.prazos-regime-context {
+  margin-top: 14px;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.prazos-regime-context > div:first-child span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.prazos-regime-context h3 {
+  margin: 4px 0 3px;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.prazos-regime-context p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.prazos-context-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.prazos-context-metrics article {
+  min-height: 72px;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #fafbfc;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.prazos-context-metrics svg {
+  color: #c59235;
+}
+
+.prazos-context-metrics span {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.prazos-context-metrics strong {
+  color: #0f172a;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.prazos-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(197, 146, 53, 0.18);
+  border-radius: 8px;
+  background: rgba(197, 146, 53, 0.06);
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.prazos-note strong {
+  flex: 0 0 auto;
+  color: #92400e;
+}
+
+.prazos-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prazos-entrega-page input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #c59235;
+}
+
+.prazos-table td:first-child {
+  min-width: 190px;
+  color: #0f172a;
+}
+
+.prazos-empty-state {
+  width: 100%;
+  border: 1px dashed #d8e0eb;
+  border-radius: 8px;
+  padding: 22px;
+  text-align: center;
+  color: #64748b;
+  background: #fbfcfd;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .prazos-regime-context {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .prazos-context-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .prazos-note {
+    flex-direction: column;
+  }
+}

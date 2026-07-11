@@ -1,0 +1,6 @@
+{
+  "name": "ARKHEN Gestão Contábil",
+  "description": "Accounting and management system for businesses",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

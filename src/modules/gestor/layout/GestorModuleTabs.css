@@ -1,0 +1,80 @@
+.menu-action-row {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.submenu-action-row {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.menu-action-row .menu-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.submenu-action-row .submenu-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-open-tab-btn {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  margin-left: auto;
+  opacity: 0;
+  padding: 0;
+  transition: var(--transition-normal);
+  width: 28px;
+}
+
+.menu-action-row:hover .sidebar-open-tab-btn,
+.submenu-action-row:hover .sidebar-open-tab-btn,
+.sidebar-open-tab-btn:focus-visible {
+  opacity: 1;
+}
+
+.sidebar-open-tab-btn:hover,
+.sidebar-open-tab-btn:focus-visible {
+  background: rgba(197, 146, 53, 0.13);
+  border-color: rgba(197, 146, 53, 0.34);
+  color: var(--color-gold-light);
+  outline: none;
+}
+
+.menu-open-tab-btn {
+  flex: 0 0 28px;
+}
+
+.submenu-open-tab-btn {
+  flex: 0 0 26px;
+  height: 26px;
+  width: 26px;
+}
+
+/* Sidebar Drag-and-Drop Enhancements */
+.sidebar-drag-handle {
+  opacity: 0.15;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.menu-action-row:hover .sidebar-drag-handle,
+.menu-collapsible-container:hover .sidebar-drag-handle {
+  opacity: 0.7;
+}
+
+.sidebar-drag-handle:hover {
+  opacity: 1 !important;
+  color: var(--color-gold-light) !important;
+}

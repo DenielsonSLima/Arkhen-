@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 96" role="img" aria-labelledby="title desc">
+  <title id="title">Prefeitura Municipal de Aracaju</title>
+  <desc id="desc">Marca interna usada em espelhos fiscais emitidos pelo sistema.</desc>
+  <rect width="240" height="96" rx="10" fill="#ffffff"/>
+  <path d="M18 17h58v62H18z" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
+  <path d="M23 22h48v10H23z" fill="#047857"/>
+  <path d="M23 37h48v10H23z" fill="#facc15"/>
+  <path d="M23 52h48v10H23z" fill="#047857"/>
+  <path d="M23 67h48v7H23z" fill="#facc15"/>
+  <path d="M39 34h17v28H39z" fill="#ffffff" stroke="#0f172a" stroke-width="1.4"/>
+  <path d="M43 39h9v7h-9zM43 50h9v7h-9z" fill="#2563eb"/>
+  <text x="92" y="35" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0f172a">PREFEITURA</text>
+  <text x="92" y="54" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="800" fill="#0f172a">MUNICIPAL</text>
+  <text x="92" y="73" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="900" fill="#047857">ARACAJU</text>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 96" role="img" aria-labelledby="title desc">
+  <title id="title">Prefeitura Municipal de Itabaiana</title>
+  <desc id="desc">Marca interna usada em espelhos fiscais emitidos pelo sistema.</desc>
+  <rect width="260" height="96" rx="10" fill="#ffffff"/>
+  <path d="M18 17h58v62H18z" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
+  <path d="M26 64h42L54 26 44 50 38 42z" fill="#16a34a" stroke="#0f172a" stroke-width="1.5"/>
+  <circle cx="45" cy="58" r="5" fill="#f59e0b"/>
+  <path d="M28 72h38" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <text x="92" y="35" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#0f172a">PREFEITURA</text>
+  <text x="92" y="54" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="800" fill="#0f172a">MUNICIPAL</text>
+  <text x="92" y="73" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="900" fill="#16a34a">ITABAIANA</text>
+</svg>

@@ -1,0 +1,311 @@
+/* CSS Personalizado Premium - Módulo de Relatórios */
+
+.relatorios-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.relatorios-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.relatorios-title h1 {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  color: var(--color-text-dark);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.relatorios-title p {
+  font-size: 0.9rem;
+  color: var(--color-text-dark-muted);
+}
+
+/* Layout Split: Menu de seleção à esquerda e Conteúdo à direita */
+.relatorios-split-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.relatorios-menu-card {
+  background-color: #ffffff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.01);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relatorios-menu-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 8px 8px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.btn-relatorio-option {
+  background: none;
+  border: none;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  transition: var(--transition-normal);
+}
+
+.btn-relatorio-option:hover {
+  color: var(--color-text-dark);
+  background-color: #f8fafc;
+}
+
+.btn-relatorio-option.active {
+  background-color: rgba(197, 146, 53, 0.08);
+  color: var(--color-gold-dark);
+}
+
+.relatorio-content-card {
+  background-color: #ffffff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.015);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 450px;
+}
+
+.relatorio-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+
+.relatorio-details-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.relatorio-details-header p {
+  font-size: 0.82rem;
+  color: var(--color-text-dark-muted);
+  margin-top: 4px;
+}
+
+/* Barra de Filtros Interna */
+.relatorio-internal-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.relatorio-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.relatorio-filter-item label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.relatorio-filter-item select, 
+.relatorio-filter-item input {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #1e293b;
+  outline: none;
+  width: 100%;
+}
+
+.btn-generate-report {
+  background: var(--color-gold-gradient);
+  color: var(--color-bg-dark);
+  border: none;
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  transition: var(--transition-normal);
+}
+
+.btn-generate-report:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(197, 146, 53, 0.25);
+}
+
+.btn-print-report {
+  background-color: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  transition: var(--transition-normal);
+}
+
+.btn-print-report:hover {
+  background-color: #f1f5f9;
+  color: var(--color-text-dark);
+  border-color: #94a3b8;
+}
+
+/* Gráfico de barras simples em CSS */
+.relatorio-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.relatorio-bar-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 100px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+}
+
+.relatorio-bar-label {
+  font-weight: 600;
+  color: var(--color-text-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.relatorio-bar-container {
+  background-color: #f1f5f9;
+  border-radius: 6px;
+  height: 16px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.relatorio-bar-fill {
+  background: var(--color-gold-gradient);
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease-out;
+}
+
+.relatorio-bar-value {
+  font-weight: 700;
+  color: #1e293b;
+  text-align: right;
+}
+
+/* @media print para impressão em PDF limpa */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  /* Oculta tudo que não faz parte do relatório em si */
+  .gestor-sidebar, 
+  .gestor-header, 
+  .relatorios-header-row, 
+  .relatorios-menu-card, 
+  .relatorio-internal-filters,
+  .btn-print-report,
+  .sidebar-brand,
+  .sidebar-menu,
+  .sidebar-footer {
+    display: none !important;
+  }
+
+  /* Ajusta o layout do container principal para usar 100% da folha */
+  .gestor-main, 
+  .gestor-panel-container, 
+  .relatorios-split-layout {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .relatorio-content-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .config-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .config-table th, 
+  .config-table td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+  }
+
+  .relatorio-internal-filters,
+  .financeiro-view-modes {
+    display: none !important;
+  }
+
+  /* Evita quebras de linha/página feias */
+  tr {
+    page-break-inside: avoid !important;
+  }
+  
+  h2, h3 {
+    page-break-after: avoid !important;
+  }
+}

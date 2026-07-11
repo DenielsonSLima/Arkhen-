@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cteProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/cte">
+  <CTe>
+    <infCte Id="CTe28260712345678000190570010000000011000000012" versao="4.00">
+      <ide>
+        <cUF>28</cUF><natOp>PRESTACAO DE SERVICO DE TRANSPORTE</natOp><mod>57</mod><serie>1</serie><nCT>1</nCT>
+        <dhEmi>2026-07-10T13:10:00-03:00</dhEmi><modal>01</modal>
+      </ide>
+      <emit><CNPJ>12345678000190</CNPJ><xNome>Transportadora Exemplo Ltda</xNome><enderEmit><xMun>Aracaju</xMun><UF>SE</UF></enderEmit></emit>
+      <rem><CNPJ>99888777000166</CNPJ><xNome>Remetente Exemplo Ltda</xNome></rem>
+      <dest><CNPJ>88777666000155</CNPJ><xNome>Destinatario Exemplo Ltda</xNome></dest>
+      <vPrest><vTPrest>450.00</vTPrest><vRec>450.00</vRec></vPrest>
+    </infCte>
+  </CTe>
+  <protCTe><infProt><nProt>328260000000057</nProt><cStat>100</cStat><xMotivo>Autorizado o uso do CT-e</xMotivo></infProt></protCTe>
+</cteProc>

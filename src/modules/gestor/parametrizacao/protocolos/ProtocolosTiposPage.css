@@ -1,0 +1,425 @@
+.protocolos-tipos-page .protocolos-regime-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.protocolos-tipos-page .protocolos-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.protocolos-tipos-page .protocolos-resumo-metricas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.protocolos-tipos-page .protocolos-resumo-metricas article {
+  min-height: 96px;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.protocolos-tipos-page .protocolos-resumo-metricas svg {
+  color: #c59235;
+}
+
+.protocolos-tipos-page .protocolos-resumo-metricas span {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.protocolos-tipos-page .protocolos-resumo-metricas strong {
+  font-size: 1.7rem;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.protocolos-tipos-page .protocolos-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.protocolos-tipos-page .protocolos-resumo-panel {
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+  min-height: 220px;
+}
+
+.protocolos-tipos-page .protocolos-resumo-panel h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+}
+
+.protocolos-tipos-page .protocolos-resumo-row {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 8px;
+  border: 1px solid #f1f5f9;
+  border-radius: 7px;
+  background: #fafbfc;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #334155;
+  font-size: 0.8rem;
+}
+
+.protocolos-tipos-page .protocolos-resumo-row strong {
+  color: #c59235;
+}
+
+.protocolos-tipos-page .protocolos-resumo-link {
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.protocolos-tipos-page .protocolos-resumo-link:hover {
+  border-color: rgba(197, 146, 53, 0.4);
+  background: rgba(197, 146, 53, 0.06);
+}
+
+.protocolos-tipos-controls .parceiros-controls-bar {
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.protocolos-tipos-controls .parceiros-controls-bar input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 0.82rem;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.protocolos-tipos-page .protocolos-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+.protocolos-tipos-page .protocolos-list-panel,
+.protocolos-tipos-page .protocolos-editor-panel {
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.protocolos-tipos-page .protocolos-list-panel {
+  max-height: 680px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.protocolos-tipos-page .protocolos-list-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 2px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.protocolos-tipos-page .protocolos-list-panel-head span,
+.protocolos-tipos-page .protocolos-editor-header > div > span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.protocolos-tipos-page .protocolos-list-panel-head strong {
+  color: #c59235;
+  font-size: 0.75rem;
+}
+
+.protocolos-tipos-page .protocolos-list-group {
+  margin-top: 12px;
+}
+
+.protocolos-tipos-page .protocolos-list-group h3 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 0.82rem;
+}
+
+.protocolos-tipos-page .protocolos-list-button {
+  width: 100%;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  text-align: left;
+  display: grid;
+  gap: 5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.protocolos-tipos-page .protocolos-list-button + .protocolos-list-button {
+  margin-top: 7px;
+}
+
+.protocolos-tipos-page .protocolos-list-button:hover,
+.protocolos-tipos-page .protocolos-list-button.active {
+  border-color: rgba(197, 146, 53, 0.45);
+  background: rgba(197, 146, 53, 0.06);
+}
+
+.protocolos-tipos-page .protocolos-list-button.active {
+  box-shadow: inset 3px 0 0 #c59235;
+}
+
+.protocolos-tipos-page .protocolos-list-title {
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.protocolos-tipos-page .protocolos-list-meta {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.protocolos-tipos-page .protocolos-list-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.protocolos-tipos-page .protocolos-status-pill {
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.protocolos-tipos-page .protocolos-status-pill.active {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.protocolos-tipos-page .protocolos-status-pill.inactive {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.protocolos-tipos-page .protocolos-editor-panel {
+  min-height: 560px;
+  padding: 16px;
+}
+
+.protocolos-tipos-page .protocolos-editor-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.protocolos-tipos-page .protocolos-editor-header h3 {
+  margin: 4px 0 3px;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.protocolos-tipos-page .protocolos-editor-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.protocolos-tipos-page .protocolos-editor-section {
+  padding-top: 14px;
+}
+
+.protocolos-tipos-page .protocolos-editor-section h4 {
+  margin: 0 0 10px;
+  color: #0f172a;
+  font-size: 0.86rem;
+}
+
+.protocolos-tipos-page .protocolos-editor-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.protocolos-tipos-page .protocolos-editor-grid.two-columns {
+  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
+}
+
+.protocolos-tipos-page .protocolos-editor-grid.three-columns {
+  grid-template-columns: minmax(120px, 0.8fr) minmax(180px, 1fr) minmax(190px, 1fr);
+}
+
+.protocolos-tipos-page .protocolos-editor-grid label,
+.protocolos-tipos-page .protocolos-editor-description {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.protocolos-tipos-page .protocolos-editor-description {
+  margin-top: 10px;
+}
+
+.protocolos-tipos-page .protocolos-editor-panel label > span,
+.protocolos-tipos-page .protocolos-section-heading h4 {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.protocolos-tipos-page .protocolos-editor-panel input,
+.protocolos-tipos-page .protocolos-editor-panel select,
+.protocolos-tipos-page .protocolos-editor-panel textarea {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fafbfc;
+  color: #0f172a;
+  font-size: 0.8rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.protocolos-tipos-page .protocolos-editor-panel textarea {
+  min-height: 90px;
+  height: auto;
+  resize: vertical;
+}
+
+.protocolos-tipos-page .protocolos-editor-panel select:focus,
+.protocolos-tipos-page .protocolos-editor-panel input:focus,
+.protocolos-tipos-page .protocolos-editor-panel textarea:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.12);
+  background: #ffffff;
+}
+
+.protocolos-tipos-page .protocolos-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.protocolos-tipos-page .protocolos-section-heading h4 {
+  margin: 0;
+}
+
+.protocolos-tipos-page .protocolos-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fafbfc;
+}
+
+.protocolos-tipos-page .protocolos-status-toggle input,
+.protocolos-tipos-page .protocolos-regimes-grid input {
+  width: 14px;
+  height: 14px;
+  accent-color: #c59235;
+}
+
+.protocolos-tipos-page .protocolos-status-toggle span {
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.protocolos-tipos-page .protocolos-regimes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.protocolos-tipos-page .protocolos-regimes-grid label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #eef1f5;
+  border-radius: 7px;
+  background: #fafbfc;
+  padding: 9px 10px;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.protocolos-tipos-page .protocolos-empty-state {
+  border: 1px dashed #d8e0eb;
+  border-radius: 8px;
+  padding: 18px;
+  color: #64748b;
+  background: #fbfcfd;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.protocolos-tipos-page .protocolos-empty-state.large {
+  min-height: 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.protocolos-tipos-page .badge-success {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.protocolos-tipos-page .badge-warning {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+@media (max-width: 900px) {
+  .protocolos-tipos-page .protocolos-resumo-metricas,
+  .protocolos-tipos-page .protocolos-resumo-grid,
+  .protocolos-tipos-page .protocolos-editor-layout,
+  .protocolos-tipos-page .protocolos-editor-grid.two-columns,
+  .protocolos-tipos-page .protocolos-editor-grid.three-columns,
+  .protocolos-tipos-page .protocolos-regimes-grid {
+    grid-template-columns: 1fr;
+  }
+}

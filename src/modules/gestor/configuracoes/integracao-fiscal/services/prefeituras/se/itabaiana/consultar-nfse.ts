@@ -1,0 +1,51 @@
+import type { FiscalPrefeituraOperacao } from '../../types';
+
+export const itabaianaConsultarNFSEOperacoes: FiscalPrefeituraOperacao[] = [
+  {
+    id: 'itabaiana-consultar-nfse-por-faixa',
+    categoria: 'consulta',
+    titulo: 'Consulta NFS-e por faixa',
+    metodoAbraf: 'ConsultarNfsePorFaixa',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfsePorFaixa',
+    descricao: 'Usado para recuperar notas em lote por período/faixa quando aplicável.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    observacoes: [
+      'Também descrito no manual como serviço de consulta para lote de documentos.',
+    ],
+    referencias: ['https://itabaianase.webiss.com.br/ws/nfse.asmx?op=ConsultarNfsePorFaixa'],
+  },
+  {
+    id: 'itabaiana-consultar-servico-prestado',
+    categoria: 'consulta',
+    titulo: 'Consulta de NFS-e por serviço prestado',
+    metodoAbraf: 'ConsultarNfseServicoPrestado',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfseServicoPrestado',
+    descricao: 'Consulta notas emitidas sob o CNPJ prestador e intervalo/criterios do serviço.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://itabaianase.webiss.com.br/ws/nfse.asmx?op=ConsultarNfseServicoPrestado'],
+  },
+  {
+    id: 'itabaiana-consultar-nfse-servico-tomado',
+    categoria: 'consulta',
+    titulo: 'Consulta de NFS-e por serviço tomado',
+    metodoAbraf: 'ConsultarNfseServicoTomado',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfseServicoTomado',
+    descricao: 'Consulta notas identificadas com tomador para reconciliação contábil.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://itabaianase.webiss.com.br/ws/nfse.asmx?op=ConsultarNfseServicoTomado'],
+  },
+  {
+    id: 'itabaiana-consultar-lote-rps',
+    categoria: 'consulta',
+    titulo: 'Consulta de lote de RPS',
+    metodoAbraf: 'ConsultarLoteRps',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarLoteRps',
+    descricao: 'Consulta o resultado de lote de RPS enviado anteriormente.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://itabaianase.webiss.com.br/ws/nfse.asmx?op=ConsultarLoteRps'],
+  },
+];

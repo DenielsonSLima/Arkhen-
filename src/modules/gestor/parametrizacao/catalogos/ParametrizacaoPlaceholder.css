@@ -1,0 +1,240 @@
+.parametrizacao-page {
+  height: 100%;
+}
+
+.parametrizacao-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.parametrizacao-title-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #92400e;
+  background: rgba(197, 146, 53, 0.12);
+  border: 1px solid rgba(197, 146, 53, 0.22);
+}
+
+.parametrizacao-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(420px, 100%);
+  margin: 18px 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.parametrizacao-toolbar input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  color: #0f172a;
+  font-size: 0.86rem;
+}
+
+.parametrizacao-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #166534;
+  background: #dcfce7;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.btn-table-action {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.parametrizacao-docs-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+
+.parametrizacao-docs-header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.parametrizacao-docs-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.parametrizacao-docs-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.parametrizacao-docs-summary article {
+  min-height: 78px;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.parametrizacao-docs-summary span {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.parametrizacao-docs-summary strong {
+  color: #0f172a;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.parametrizacao-docs-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(197, 146, 53, 0.18);
+  border-radius: 8px;
+  background: rgba(197, 146, 53, 0.06);
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.parametrizacao-docs-note svg {
+  flex: 0 0 auto;
+  color: #c59235;
+  margin-top: 1px;
+}
+
+.parametrizacao-origin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.parametrizacao-origin.system {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.parametrizacao-origin.custom {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.parametrizacao-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.parametrizacao-empty-row {
+  padding: 32px;
+  color: #64748b;
+  text-align: center;
+}
+
+.parametrizacao-modal-overlay {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+}
+
+.parametrizacao-docs-modal {
+  max-width: 480px;
+}
+
+.parametrizacao-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.parametrizacao-form-stack label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.parametrizacao-form-stack label > span {
+  color: #475569;
+  font-size: 0.825rem;
+  font-weight: 700;
+}
+
+.parametrizacao-form-stack input[type="text"],
+.parametrizacao-form-stack textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.parametrizacao-form-stack textarea {
+  resize: vertical;
+}
+
+.parametrizacao-form-stack input:focus,
+.parametrizacao-form-stack textarea:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.12);
+}
+
+.parametrizacao-check-line {
+  flex-direction: row !important;
+  align-items: center;
+}
+
+.parametrizacao-check-line input {
+  width: 16px;
+  height: 16px;
+  accent-color: #c59235;
+}
+
+.parametrizacao-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .parametrizacao-docs-summary {
+    grid-template-columns: 1fr;
+  }
+}

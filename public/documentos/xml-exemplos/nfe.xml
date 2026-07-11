@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc versao="4.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <NFe>
+    <infNFe Id="NFe28260712345678000190550010000000021000000025" versao="4.00">
+      <ide>
+        <cUF>28</cUF><natOp>VENDA DE MERCADORIA</natOp><mod>55</mod><serie>1</serie><nNF>2</nNF>
+        <dhEmi>2026-07-10T12:00:00-03:00</dhEmi><tpNF>1</tpNF><idDest>1</idDest>
+      </ide>
+      <emit>
+        <CNPJ>12345678000190</CNPJ><xNome>Distribuidora Exemplo Ltda</xNome>
+        <enderEmit><xMun>Aracaju</xMun><UF>SE</UF></enderEmit>
+      </emit>
+      <dest>
+        <CNPJ>99888777000166</CNPJ><xNome>Cliente Exemplo Comercio Ltda</xNome>
+        <enderDest><xMun>Itabaiana</xMun><UF>SE</UF></enderDest>
+      </dest>
+      <det nItem="1">
+        <prod><cProd>VENDA-001</cProd><xProd>Mercadoria de demonstracao</xProd><qCom>10.0000</qCom><vUnCom>19.90</vUnCom><vProd>199.00</vProd></prod>
+      </det>
+      <total><ICMSTot><vNF>199.00</vNF></ICMSTot></total>
+    </infNFe>
+  </NFe>
+  <protNFe><infProt><nProt>328260000000002</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>
+</nfeProc>

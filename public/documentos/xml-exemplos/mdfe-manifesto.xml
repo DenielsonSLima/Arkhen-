@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mdfeProc versao="3.00" xmlns="http://www.portalfiscal.inf.br/mdfe">
+  <MDFe>
+    <infMDFe Id="MDFe28260712345678000190580010000000011000000010" versao="3.00">
+      <ide>
+        <cUF>28</cUF><tpEmit>1</tpEmit><mod>58</mod><serie>1</serie><nMDF>1</nMDF>
+        <dhEmi>2026-07-10T14:00:00-03:00</dhEmi><UFIni>SE</UFIni><UFFim>BA</UFFim>
+      </ide>
+      <emit><CNPJ>12345678000190</CNPJ><xNome>Transportadora Manifesto Exemplo Ltda</xNome></emit>
+      <infModal><rodo><infANTT><RNTRC>12345678</RNTRC></infANTT></rodo></infModal>
+      <tot><qCTe>1</qCTe><vCarga>450.00</vCarga></tot>
+    </infMDFe>
+  </MDFe>
+  <protMDFe><infProt><nProt>328260000000058</nProt><cStat>100</cStat><xMotivo>Autorizado o uso do MDF-e</xMotivo></infProt></protMDFe>
+</mdfeProc>

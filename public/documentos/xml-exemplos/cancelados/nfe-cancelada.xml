@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<procEventoNFe versao="1.00" xmlns="http://www.portalfiscal.inf.br/nfe">
+  <evento versao="1.00">
+    <infEvento Id="ID1101112826071234567800019055001000000002100000002501">
+      <cOrgao>28</cOrgao><tpAmb>2</tpAmb><CNPJ>12345678000190</CNPJ>
+      <chNFe>28260712345678000190550010000000021000000025</chNFe>
+      <dhEvento>2026-07-10T15:00:00-03:00</dhEvento><tpEvento>110111</tpEvento>
+      <nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento>
+      <detEvento versao="1.00"><descEvento>Cancelamento</descEvento><nProt>328260000000002</nProt><xJust>Cancelamento de demonstracao para modelo visual.</xJust></detEvento>
+    </infEvento>
+  </evento>
+  <retEvento versao="1.00"><infEvento><cStat>135</cStat><xMotivo>Evento registrado e vinculado a NF-e</xMotivo></infEvento></retEvento>
+</procEventoNFe>

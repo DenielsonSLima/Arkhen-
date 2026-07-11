@@ -1,0 +1,459 @@
+.atividades-redesign-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.atividades-redesign-header {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.atividades-redesign-header h2 {
+  color: #0f172a;
+  font-size: 1.22rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.atividades-redesign-header p {
+  color: #64748b;
+  font-size: 0.82rem;
+  margin: 3px 0 0;
+}
+
+.atividades-redesign-header > span {
+  background: rgba(197, 146, 53, 0.08);
+  border: 1px solid rgba(197, 146, 53, 0.28);
+  border-radius: 8px;
+  color: #aa7c28;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.atividades-overview-grid,
+.funcionario-user-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.atividades-overview-card,
+.funcionario-user-card,
+.atividades-panel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.atividades-overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 124px;
+  padding: 15px;
+}
+
+.atividades-overview-card div:first-child,
+.atividades-section-title {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  gap: 8px;
+}
+
+.atividades-overview-card span,
+.atividades-overview-card small {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.atividades-overview-card strong {
+  color: #0f172a;
+  font-size: 1.55rem;
+}
+
+.atividades-two-column,
+.atividades-rotinas-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+}
+
+.atividades-panel-card {
+  padding: 18px;
+}
+
+.atividades-section-title {
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.atividades-section-title h3 {
+  color: #0f172a;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.atividades-team-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atividades-team-progress > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr auto;
+  padding: 12px;
+}
+
+.atividades-team-progress span,
+.atividades-team-progress small {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.atividades-team-progress strong {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.atividades-team-progress .atividade-period-track {
+  grid-column: 1 / -1;
+}
+
+.gestor-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gestor-task-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #cbd5e1;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+}
+
+.gestor-task-card.done {
+  border-left-color: #16a34a;
+}
+
+.gestor-task-card.progress {
+  border-left-color: #c59235;
+}
+
+.gestor-task-card.late {
+  border-left-color: #ef4444;
+}
+
+.gestor-task-card.pending {
+  border-left-color: #f97316;
+}
+
+.gestor-task-main,
+.gestor-task-footer {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.gestor-task-main strong {
+  color: #0f172a;
+  display: block;
+  font-size: 0.88rem;
+}
+
+.gestor-task-main span,
+.gestor-task-badges b,
+.gestor-task-footer input,
+.gestor-task-footer select {
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+.gestor-task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.gestor-task-badges b {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.gestor-task-checklist {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.gestor-task-checklist label {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  display: flex;
+  font-size: 0.76rem;
+  gap: 8px;
+  padding: 7px 9px;
+}
+
+.gestor-task-checklist input {
+  accent-color: var(--color-gold-primary);
+}
+
+.gestor-task-footer {
+  grid-template-columns: 140px minmax(0, 1fr) 36px;
+}
+
+.gestor-task-footer input,
+.gestor-task-footer select,
+.atividades-toolbar input,
+.atividades-toolbar select {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 7px 9px;
+}
+
+.gestor-task-footer button {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.gestor-task-footer button:hover {
+  color: #ef4444;
+}
+
+.atividades-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.atividades-segmented {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+}
+
+.atividades-segmented button {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 7px 11px;
+}
+
+.atividades-segmented button.active,
+.atividades-segmented button:hover {
+  background: rgba(197, 146, 53, 0.1);
+  color: #aa7c28;
+}
+
+.atividades-agenda-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+}
+
+.atividades-agenda-strip button,
+.funcionario-user-card {
+  cursor: pointer;
+  text-align: left;
+}
+
+.atividades-agenda-strip button {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 90px;
+  padding: 11px;
+}
+
+.atividades-agenda-strip button.active,
+.funcionario-user-card.active {
+  background: rgba(197, 146, 53, 0.07);
+  border-color: rgba(197, 146, 53, 0.7);
+}
+
+.atividades-agenda-strip span,
+.atividades-agenda-strip small,
+.funcionario-user-card span,
+.funcionario-user-card small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.atividades-agenda-strip strong,
+.funcionario-user-card strong {
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.funcionario-user-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 118px;
+  padding: 14px;
+}
+
+.funcionario-user-card span {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+
+.atividades-equipe-form .btn-add-user,
+.atividades-rotina-form .btn-add-user {
+  justify-content: center;
+  width: 100%;
+}
+
+.atividades-company-compact {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.atividades-company-compact strong {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.atividades-company-compact span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.atividades-form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.atividades-rotina-form textarea {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.82rem;
+  min-height: 78px;
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+.atividades-rotina-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atividades-rotina-list article {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  padding: 12px;
+}
+
+.atividades-rotina-list strong {
+  color: #0f172a;
+  display: block;
+  font-size: 0.85rem;
+}
+
+.atividades-rotina-list span,
+.atividades-rotina-list small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.atividades-rotina-list button {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 6px 9px;
+}
+
+@media (max-width: 1100px) {
+  .atividades-two-column,
+  .atividades-rotinas-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .atividades-redesign-header,
+  .gestor-task-main,
+  .gestor-task-footer,
+  .atividades-rotina-list article {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+  .atividades-redesign-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .atividades-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

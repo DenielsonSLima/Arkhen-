@@ -1,0 +1,48 @@
+import type { FiscalPrefeituraOperacao } from '../../types';
+
+export const aracajuConsultarNFSEOperacoes: FiscalPrefeituraOperacao[] = [
+  {
+    id: 'aracaju-consultar-servico-prestado',
+    categoria: 'consulta',
+    titulo: 'Consulta de NFS-e por serviço prestado',
+    metodoAbraf: 'ConsultarNfseServicoPrestado',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfseServicoPrestado',
+    descricao: 'Consulta notas emitidas para controle de prestação por CNPJ prestador.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://aracajuse.webiss.com.br/ws/nfse.asmx?op=ConsultarNfseServicoPrestado'],
+  },
+  {
+    id: 'aracaju-consultar-faixa',
+    categoria: 'consulta',
+    titulo: 'Consulta de NFS-e por faixa',
+    metodoAbraf: 'ConsultarNfsePorFaixa',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfsePorFaixa',
+    descricao: 'Consulta notas por intervalo de número/data para conciliação e filtros de relatórios.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://aracajuse.webiss.com.br/ws/nfse.asmx?op=ConsultarNfsePorFaixa'],
+  },
+  {
+    id: 'aracaju-consultar-lote-rps',
+    categoria: 'consulta',
+    titulo: 'Consulta de lote RPS',
+    metodoAbraf: 'ConsultarLoteRps',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarLoteRps',
+    descricao: 'Usado para conferir protocolo e status do lote enviado.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://aracajuse.webiss.com.br/ws/nfse.asmx?op=ConsultarLoteRps'],
+  },
+  {
+    id: 'aracaju-consultar-nfse-tomado',
+    categoria: 'consulta',
+    titulo: 'Consulta de NFS-e por serviço tomado',
+    metodoAbraf: 'ConsultarNfseServicoTomado',
+    soapAction: 'http://nfse.abrasf.org.br/ConsultarNfseServicoTomado',
+    descricao: 'Consulta recebidas para validação com tomador e fiscalização documental.',
+    ativa: true,
+    ambientes: { homologacao: true, producao: true },
+    referencias: ['https://aracajuse.webiss.com.br/ws/nfse.asmx?op=ConsultarNfseServicoTomado'],
+  },
+];

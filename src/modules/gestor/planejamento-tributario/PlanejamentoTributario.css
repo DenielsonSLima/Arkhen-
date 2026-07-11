@@ -1,0 +1,773 @@
+/* ============================================================
+   PLANEJAMENTO TRIBUTÁRIO — CSS
+   ============================================================ */
+
+.planejamento-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
+}
+
+/* Header */
+.planejamento-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.planejamento-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.planejamento-header p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Abas horizontais */
+.planejamento-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #eef1f5;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.planejamento-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.planejamento-tab-btn:hover {
+  color: #0f172a;
+  background-color: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+}
+
+.planejamento-tab-btn.active {
+  color: #c59235;
+  font-weight: 700;
+  border-bottom-color: #c59235;
+}
+
+/* Conteúdo das abas */
+.planejamento-tab-content {
+  animation: fadeInTab 0.25s ease;
+}
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Comparador de Regimes ─────────────────────────────── */
+.comparador-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.comparador-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comparador-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.comparador-field input,
+.comparador-field select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fafbfc;
+  min-width: 180px;
+}
+
+.comparador-field input:focus,
+.comparador-field select:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197,146,53,0.12);
+  background: #fff;
+}
+
+.comparador-sugestao {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(197,146,53,0.08);
+  border: 1px solid rgba(197,146,53,0.2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: #92691e;
+  font-weight: 600;
+}
+
+/* Cards de regime */
+.regimes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.regime-card {
+  background: #ffffff;
+  border: 1.5px solid #eef1f5;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.regime-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.regime-card.melhor {
+  border-color: #c59235;
+  box-shadow: 0 4px 20px rgba(197,146,53,0.18);
+}
+
+.regime-card-badge {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  background: linear-gradient(135deg, #c59235, #d4a840);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.regime-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.regime-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.regime-icon.verde { background: rgba(16,185,129,0.1); color: #059669; }
+.regime-icon.azul { background: rgba(59,130,246,0.1); color: #2563eb; }
+.regime-icon.roxo { background: rgba(139,92,246,0.1); color: #7c3aed; }
+
+.regime-card-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.regime-aliquota {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.regime-aliquota span {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.regime-imposto-anual {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.regime-imposto-anual strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.regime-divider {
+  height: 1px;
+  background: #f1f5f9;
+}
+
+.regime-listas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.regime-lista-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.regime-lista-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.dot-verde { color: #10b981; }
+.dot-vermelho { color: #ef4444; }
+
+.regime-detalhes-btn {
+  width: 100%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.regime-detalhes-btn:hover {
+  border-color: rgba(197,146,53,0.35);
+  background: #fffbf2;
+  color: #92691e;
+}
+
+.regime-detalhes {
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  background: #fbfdff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  animation: fadeInTab 0.2s ease;
+}
+
+.regime-detalhes-header,
+.regime-detalhes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.regime-detalhes-header {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.regime-detalhes-header span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.regime-detalhes-header strong {
+  font-size: 0.72rem;
+  color: #92691e;
+  background: rgba(197,146,53,0.1);
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.regime-detalhes-row span {
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.regime-detalhes-row strong {
+  font-size: 0.78rem;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.regime-detalhes-row .valor-economia {
+  color: #059669;
+}
+
+.regime-detalhes-row .valor-alerta {
+  color: #dc2626;
+}
+
+.recomendacao-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.recomendacao-card,
+.limite-simples-alerta {
+  background: #ffffff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.recomendacao-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recomendacao-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #c59235;
+}
+
+.recomendacao-header h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 3px 0;
+}
+
+.recomendacao-header span {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.recomendacao-motivos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+.recomendacao-motivo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #059669;
+}
+
+.recomendacao-motivo span {
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.limite-simples-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-color: rgba(245,158,11,0.28);
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.limite-simples-alerta strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #92400e;
+  margin-bottom: 4px;
+}
+
+.limite-simples-alerta span {
+  display: block;
+  font-size: 0.8rem;
+  color: #78350f;
+  line-height: 1.45;
+}
+
+/* Economia estimada */
+.economia-card {
+  background: linear-gradient(135deg, rgba(197,146,53,0.08), rgba(197,146,53,0.04));
+  border: 1px solid rgba(197,146,53,0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.economia-card-text h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 4px 0;
+}
+
+.economia-valor {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #c59235;
+}
+
+/* ── Análise por Cliente ───────────────────────────────── */
+.analise-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.analise-toolbar label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.analise-toolbar select {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #0f172a;
+  min-width: 280px;
+  outline: none;
+  background: #fff;
+}
+
+.analise-toolbar select:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197,146,53,0.12);
+}
+
+.analise-info-card {
+  background: #fff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.analise-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.analise-info-item span:first-child {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analise-info-item strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Barra comparativa */
+.barras-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.barra-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.barra-label {
+  width: 160px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.barra-track {
+  flex: 1;
+  height: 28px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.barra-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.barra-fill.sn { background: linear-gradient(90deg, #10b981, #34d399); }
+.barra-fill.lp { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.barra-fill.lr { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.barra-fill.melhor { background: linear-gradient(90deg, #c59235, #d4a840); }
+
+.barra-valor {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  width: 120px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── Tabela contextual do enquadramento ────────────────── */
+.tabela-anexos-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.anexo-tab-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.anexo-tab-btn:hover {
+  border-color: #c59235;
+  color: #c59235;
+}
+
+.anexo-tab-btn.active {
+  background: #c59235;
+  border-color: #c59235;
+  color: #fff;
+}
+
+.tabela-aliquotas-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #eef1f5;
+}
+
+.tabela-aliquotas-table th {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.tabela-aliquotas-table td {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: #0f172a;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tabela-aliquotas-table tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela-aliquotas-table tr:hover td {
+  background: #fffbf2;
+}
+
+.faixa-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(197,146,53,0.1);
+  color: #c59235;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── Histórico ─────────────────────────────────────────── */
+.historico-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.historico-item {
+  background: #fff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  transition: box-shadow 0.2s;
+}
+
+.historico-item:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.historico-data {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.historico-empresa {
+  flex: 1;
+}
+
+.historico-empresa strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.historico-empresa span {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.historico-economia {
+  text-align: right;
+}
+
+.historico-economia .valor {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #10b981;
+}
+
+.historico-economia .label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.historico-regime-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(197,146,53,0.08);
+  color: #c59235;
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .regimes-grid,
+  .recomendacao-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparador-sugestao {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .comparador-toolbar,
+  .economia-card,
+  .barra-row,
+  .historico-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .comparador-field input,
+  .comparador-field select,
+  .analise-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .recomendacao-motivos {
+    grid-template-columns: 1fr;
+  }
+
+  .barra-label,
+  .barra-valor {
+    width: auto;
+    text-align: left;
+  }
+}

@@ -1,0 +1,145 @@
+.xml-modelos-config {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xml-modelos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.xml-modelos-header h2 {
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+
+.xml-modelos-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.xml-modelos-tabs,
+.xml-modelos-state-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.xml-modelos-tab,
+.xml-modelos-state-tab {
+  border: 1px solid #d8e0ea;
+  background: #ffffff;
+  color: #64748b;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.xml-modelos-tab.active,
+.xml-modelos-state-tab.active {
+  color: #9a6b22;
+  background: #fffbeb;
+  border-color: #f3d28c;
+}
+
+.xml-modelos-editor {
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 18px;
+}
+
+.xml-modelos-form {
+  display: grid;
+  gap: 12px;
+}
+
+.xml-modelos-field {
+  display: grid;
+  gap: 6px;
+}
+
+.xml-modelos-field label {
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.xml-modelos-field input,
+.xml-modelos-field textarea {
+  border: 1px solid #d8e0ea;
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.xml-modelos-field textarea {
+  min-height: 160px;
+  resize: vertical;
+}
+
+.xml-modelos-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.xml-modelos-preview {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.xml-modelos-preview h3 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.xml-modelos-preview ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.xml-modelos-sample {
+  display: inline-flex;
+  color: #9a6b22;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.xml-modelos-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .xml-modelos-editor {
+    grid-template-columns: 1fr;
+  }
+}

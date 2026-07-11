@@ -1,0 +1,321 @@
+.legislacao-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.legislacao-consulta-card,
+.base-conhecimento-card,
+.legislacao-table-card,
+.legislacao-rule-card {
+  background: #fff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.legislacao-consulta-card {
+  padding: 20px;
+}
+
+.legislacao-card-heading,
+.base-conhecimento-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.legislacao-card-heading span,
+.base-conhecimento-header span {
+  display: block;
+  color: #c59235;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.legislacao-card-heading h2,
+.base-conhecimento-header h3 {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.legislacao-card-heading svg {
+  color: #c59235;
+}
+
+.legislacao-consulta-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.2fr) repeat(2, minmax(180px, 0.7fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.enquadramento-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) repeat(3, minmax(120px, 0.6fr));
+  gap: 12px;
+  align-items: stretch;
+  padding: 14px;
+  border: 1px solid rgba(197, 146, 53, 0.18);
+  border-radius: 10px;
+  background: rgba(197, 146, 53, 0.06);
+}
+
+.enquadramento-panel > div:first-child,
+.enquadramento-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.enquadramento-panel span,
+.enquadramento-metric span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.enquadramento-panel strong,
+.enquadramento-metric strong {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 850;
+  margin-top: 3px;
+}
+
+.enquadramento-panel small {
+  color: #64748b;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.enquadramento-metric {
+  min-height: 76px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.enquadramento-metric.highlight strong {
+  color: #10b981;
+}
+
+.legislacao-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #92691e;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.legislacao-alert svg {
+  flex-shrink: 0;
+}
+
+.legislacao-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.legislacao-rule-card {
+  padding: 18px;
+}
+
+.legislacao-rule-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+
+.legislacao-rule-card h3 svg {
+  color: #c59235;
+}
+
+.legislacao-rule-card p {
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+
+.legislacao-rule-card strong {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+
+.legislacao-rule-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.legislacao-rule-card li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.legislacao-rule-card li svg {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.base-conhecimento-card,
+.legislacao-table-card {
+  padding: 20px;
+}
+
+.base-conhecimento-header.compact {
+  margin-bottom: 12px;
+}
+
+.base-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(420px, 100%);
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafbfc;
+  color: #94a3b8;
+}
+
+.base-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  background: transparent;
+  font-size: 0.84rem;
+}
+
+.artigos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.artigo-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+  padding: 16px;
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.artigo-card > span {
+  color: #c59235;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.artigo-card h4 {
+  color: #0f172a;
+  font-size: 0.93rem;
+  font-weight: 850;
+  margin: 6px 0 8px;
+}
+
+.artigo-card p,
+.artigo-card li {
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+
+.artigo-card p {
+  margin: 0 0 10px;
+}
+
+.artigo-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-left: 16px;
+  margin: 0 0 14px;
+}
+
+.artigo-card button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: auto;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.artigo-card button:hover {
+  border-color: rgba(197, 146, 53, 0.45);
+  color: #92691e;
+  background: #fffbf2;
+}
+
+.tabela-aliquotas-table tr.linha-faixa-atual td {
+  background: #fffbf2;
+  border-top: 1px solid rgba(197, 146, 53, 0.18);
+  border-bottom: 1px solid rgba(197, 146, 53, 0.18);
+}
+
+.tabela-aliquotas-table tr.linha-faixa-atual td:last-child {
+  color: #10b981;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .legislacao-consulta-grid,
+  .enquadramento-panel,
+  .legislacao-rules-grid,
+  .artigos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .base-conhecimento-header {
+    flex-direction: column;
+  }
+
+  .base-search {
+    width: 100%;
+  }
+}

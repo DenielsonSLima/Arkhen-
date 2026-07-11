@@ -1,0 +1,368 @@
+.nfse-viewer {
+  height: 100%;
+  overflow: auto;
+  background: #d9dde3;
+  color: #101827;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.nfse-page {
+  position: relative;
+  width: min(980px, 100%);
+  min-height: 1320px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #111827;
+  box-shadow: 0 22px 58px rgba(15, 23, 42, 0.26);
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.nfse-watermark {
+  position: absolute;
+  inset: 36% auto auto 14%;
+  transform: rotate(-34deg);
+  font-size: 5.2rem;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.055);
+  letter-spacing: 0;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nfse-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr 0.7fr 118px;
+  border: 1px solid #111827;
+  min-height: 128px;
+  z-index: 1;
+}
+
+.nfse-header > * {
+  border-right: 1px solid #111827;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.nfse-header > *:last-child {
+  border-right: 0;
+}
+
+.nfse-city {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.nfse-seal {
+  width: 58px;
+  height: 58px;
+  border: 2px solid #111827;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #0f766e;
+}
+
+.nfse-prefeitura-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+}
+
+.nfse-city p,
+.nfse-brand span,
+.nfse-qr-wrap span {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  color: #334155;
+}
+
+.nfse-city p {
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #111827;
+}
+
+.nfse-city strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.nfse-city span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.68rem;
+}
+
+.nfse-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.nfse-logo {
+  font-size: 2.45rem;
+  line-height: 1;
+  font-weight: 950;
+  color: #059669;
+  letter-spacing: 0;
+}
+
+.nfse-logo::first-letter {
+  color: #2563eb;
+}
+
+.nfse-company-logo {
+  max-width: 128px;
+  max-height: 54px;
+  object-fit: contain;
+}
+
+.nfse-number-box {
+  display: grid;
+  align-content: stretch;
+  padding: 0;
+}
+
+.nfse-number-box .nfse-field {
+  padding: 6px 7px;
+  border-bottom: 1px solid #111827;
+}
+
+.nfse-number-box .nfse-field:last-child {
+  border-bottom: 0;
+}
+
+.nfse-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  text-align: center;
+}
+
+.nfse-qr {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 2px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #111827;
+}
+
+.nfse-qr span {
+  background: #ffffff;
+}
+
+.nfse-qr span.active {
+  background: #111827;
+}
+
+.nfse-strip,
+.nfse-party-grid,
+.nfse-service-grid,
+.nfse-tax-grid {
+  display: grid;
+  gap: 0;
+}
+
+.nfse-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #111827;
+  border-top: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.nfse-strip .nfse-field,
+.nfse-party-grid .nfse-field,
+.nfse-service-grid .nfse-field,
+.nfse-tax-cell {
+  border-right: 1px solid #111827;
+  border-bottom: 1px solid #111827;
+  padding: 6px 8px;
+  min-height: 38px;
+  box-sizing: border-box;
+}
+
+.nfse-strip .nfse-field:last-child,
+.nfse-party-grid .nfse-field:nth-child(3n),
+.nfse-service-grid .nfse-field:nth-child(3n),
+.nfse-tax-cell:nth-child(4n) {
+  border-right: 0;
+}
+
+.nfse-box {
+  position: relative;
+  z-index: 1;
+  border: 1px solid #111827;
+  border-top: 0;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.nfse-box h3 {
+  margin: 0;
+  padding: 5px 8px;
+  border-bottom: 1px solid #111827;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  letter-spacing: 0;
+  background: #f8fafc;
+}
+
+.nfse-party-grid,
+.nfse-service-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.nfse-field-wide {
+  grid-column: span 3;
+}
+
+.nfse-field span,
+.nfse-tax-cell span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.57rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.nfse-field strong,
+.nfse-tax-cell strong {
+  display: block;
+  min-height: 14px;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #111827;
+  word-break: break-word;
+}
+
+.nfse-service-text {
+  min-height: 210px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #111827;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.nfse-tax-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.nfse-tax-grid.federal {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.nfse-tax-grid.federal .nfse-tax-cell:nth-child(4n) {
+  border-right: 1px solid #111827;
+}
+
+.nfse-tax-grid.federal .nfse-tax-cell:last-child {
+  border-right: 0;
+}
+
+.nfse-total-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #111827;
+  border-top: 0;
+  padding: 9px 12px;
+  background: #f8fafc;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.nfse-total-row strong {
+  font-size: 1rem;
+}
+
+.nfse-info {
+  min-height: 120px;
+}
+
+.nfse-info p,
+.nfse-empty p {
+  margin: 10px 12px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.nfse-empty {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.nfse-empty h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 900px) {
+  .nfse-viewer {
+    padding: 12px;
+  }
+
+  .nfse-page {
+    min-height: 0;
+  }
+
+  .nfse-header,
+  .nfse-strip,
+  .nfse-party-grid,
+  .nfse-service-grid,
+  .nfse-tax-grid,
+  .nfse-tax-grid.federal {
+    grid-template-columns: 1fr;
+  }
+
+  .nfse-header > *,
+  .nfse-strip .nfse-field,
+  .nfse-party-grid .nfse-field,
+  .nfse-service-grid .nfse-field,
+  .nfse-tax-cell,
+  .nfse-tax-grid.federal .nfse-tax-cell:nth-child(4n) {
+    border-right: 0;
+  }
+
+  .nfse-field-wide {
+    grid-column: auto;
+  }
+
+  .nfse-watermark {
+    font-size: 2.8rem;
+    left: 3%;
+  }
+}

@@ -1,0 +1,144 @@
+.inicio-team-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inicio-user-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inicio-user-card {
+  background: #ffffff;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.inicio-user-head {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto 1fr auto;
+}
+
+.inicio-user-head > span {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.inicio-avatar {
+  align-items: center;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  color: #b45309;
+  display: grid;
+  font-size: 0.72rem;
+  font-weight: 900;
+  height: 38px;
+  place-items: center;
+  width: 38px;
+}
+
+.inicio-progress-track,
+.inicio-mini-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.inicio-progress-track div,
+.inicio-mini-track div {
+  background: linear-gradient(90deg, #c59235, #10b981);
+  height: 100%;
+}
+
+.inicio-period-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inicio-period-box {
+  background: #f8fafc;
+  border: 1px solid #e6edf5;
+  border-radius: 8px;
+  padding: 9px;
+}
+
+.inicio-period-box span,
+.inicio-period-box small {
+  color: #64748b;
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.inicio-period-box strong {
+  color: #0f172a;
+  font-size: 0.94rem;
+  margin: 4px 0;
+}
+
+.inicio-mini-track {
+  height: 5px;
+  margin-top: 7px;
+}
+
+.inicio-user-warning {
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  display: flex;
+  font-size: 0.74rem;
+  font-weight: 900;
+  gap: 6px;
+  padding: 8px;
+}
+
+@media (max-width: 1280px) {
+  .inicio-user-grid,
+  .inicio-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .inicio-dashboard-grid,
+  .inicio-executive-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .inicio-hero-date {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .inicio-user-grid,
+  .inicio-metrics-grid,
+  .inicio-period-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inicio-risk-row,
+  .inicio-task-row {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .inicio-executive-hero {
+    padding: 20px;
+  }
+}

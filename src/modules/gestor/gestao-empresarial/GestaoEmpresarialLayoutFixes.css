@@ -1,0 +1,73 @@
+.gestao-empresarial-container {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.gestao-empresarial-header-row,
+.gestao-controls-bar,
+.search-input-wrapper,
+.companies-cards-grid,
+.company-card,
+.company-card-footer {
+  min-width: 0;
+}
+
+.gestao-empresarial-title {
+  min-width: 0;
+}
+
+.gestao-controls-bar {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.category-filter-tabs {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.companies-cards-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  width: 100%;
+  max-width: 100%;
+}
+
+.company-card {
+  box-sizing: border-box;
+}
+
+.company-card-info h3,
+.company-card-info p {
+  overflow-wrap: anywhere;
+}
+
+.company-card-footer {
+  gap: 8px;
+}
+
+.company-card-details {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.company-card-details span {
+  overflow-wrap: anywhere;
+}
+
+.company-card-details strong {
+  color: #334155;
+  font-weight: 800;
+}
+
+@media (max-width: 1024px) {
+  .companies-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}

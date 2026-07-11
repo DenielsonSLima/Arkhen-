@@ -1,0 +1,27 @@
+.regime-badge.pf {
+  background-color: rgba(170, 124, 40, 0.1);
+  color: #aa7c28;
+}
+
+.regime-badge.isenta {
+  background-color: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+}
+
+.partner-badge.simples {
+  background-color: rgba(74, 20, 140, 0.08);
+  color: #4a148c;
+  border: 1px solid rgba(74, 20, 140, 0.2);
+}
+
+.partner-badge.pf {
+  background-color: rgba(170, 124, 40, 0.1);
+  color: #aa7c28;
+  border: 1px solid rgba(170, 124, 40, 0.24);
+}
+
+.partner-badge.isenta {
+  background-color: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+}

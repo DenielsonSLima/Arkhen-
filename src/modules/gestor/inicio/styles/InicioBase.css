@@ -1,0 +1,315 @@
+.inicio-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 40px;
+}
+
+.inicio-loading {
+  color: #64748b;
+  display: grid;
+  font-weight: 700;
+  min-height: 420px;
+  place-items: center;
+}
+
+.inicio-executive-hero {
+  align-items: center;
+  background: linear-gradient(135deg, #151515, #292114);
+  border: 1px solid rgba(197, 146, 53, 0.32);
+  border-radius: 10px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+  color: #ffffff;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 150px;
+  padding: 26px;
+}
+
+.inicio-motivation-card {
+  background:
+    linear-gradient(135deg, rgba(8, 8, 8, 0.98), rgba(45, 45, 45, 0.82)),
+    linear-gradient(130deg, #0f0f0f 0%, #272727 78%, #1a1a1a 100%);
+  border: 1px solid rgba(197, 146, 53, 0.28);
+  border-radius: 10px;
+  box-shadow:
+    0 22px 36px rgba(11, 11, 16, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  display: grid;
+  gap: 10px;
+  min-height: 112px;
+  padding: 16px 18px;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+
+.inicio-motivation-card__backdrop {
+  inset: -8%;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.72), rgba(72, 72, 72, 0.3) 48%, rgba(0, 0, 0, 0.76)),
+    var(--inicio-motivation-bg, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-radius: inherit;
+  filter: blur(2.2px) grayscale(0.48) brightness(0.28) contrast(1.08);
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.inicio-motivation-card::before {
+  background:
+    linear-gradient(180deg, rgba(140, 140, 140, 0.2), rgba(140, 140, 140, 0) 52%, rgba(140, 140, 140, 0)),
+    radial-gradient(circle at 35% 20%, rgba(60, 60, 60, 0.35), transparent 48%);
+  border-radius: inherit;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 4;
+}
+
+.inicio-motivation-card__bg-icon {
+  color: rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.55));
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+
+.inicio-motivation-card__rays {
+  background:
+    radial-gradient(circle at 80% 22%, rgba(120, 120, 120, 0.14), transparent 42%),
+    linear-gradient(140deg, rgba(28, 28, 28, 0.55), rgba(140, 140, 140, 0.16));
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 6;
+}
+
+.inicio-motivation-card__grain {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.025) 2px,
+      rgba(255, 255, 255, 0.025) 3px
+    );
+  inset: 0;
+  opacity: 0.12;
+  pointer-events: none;
+  position: absolute;
+  z-index: 7;
+}
+
+.inicio-motivation-card__content {
+  display: grid;
+  gap: 8px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), transparent 40%);
+  border-left: 3px solid rgba(233, 188, 113, 0.9);
+  padding: 6px 0 4px 12px;
+  position: relative;
+  z-index: 4;
+}
+
+.inicio-motivation-card__eyebrow {
+  color: #d4d4d4;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.inicio-motivation-card blockquote {
+  color: #f5ecd3;
+  font-size: 1.05rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 92ch;
+  text-wrap: pretty;
+}
+
+.inicio-motivation-card cite {
+  background: linear-gradient(90deg, #e5ba68 0%, #b27c2d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: block;
+  font-size: 0.82rem;
+  font-style: normal;
+  font-weight: 800;
+  margin: 0;
+}
+
+.inicio-motivation-card__content::before,
+.inicio-motivation-card__content::after {
+  content: '';
+  display: block;
+  left: -14px;
+  position: absolute;
+  right: 0;
+}
+
+.inicio-motivation-card__content::before {
+  background: linear-gradient(120deg, rgba(233, 188, 113, 0.35), transparent);
+  height: 1px;
+  top: 0;
+}
+
+.inicio-motivation-card__content::after {
+  background: linear-gradient(120deg, transparent, rgba(233, 188, 113, 0.35));
+  bottom: -2px;
+  height: 1px;
+}
+
+.inicio-kicker {
+  color: #c59235;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.inicio-executive-hero h1 {
+  font-size: 1.9rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.inicio-executive-hero p {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: 8px 0 0;
+  max-width: 760px;
+}
+
+.inicio-hero-date {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 190px;
+  padding: 16px;
+}
+
+.inicio-hero-date svg {
+  color: #d9ad52;
+}
+
+.inicio-hero-date strong {
+  font-size: 0.98rem;
+  text-transform: capitalize;
+}
+
+.inicio-hero-date span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.inicio-metrics-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inicio-metric-card,
+.inicio-panel,
+.inicio-team-panel {
+  background: #ffffff;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.inicio-metric-card {
+  min-height: 126px;
+  padding: 16px;
+}
+
+.inicio-metric-icon {
+  align-items: center;
+  border-radius: 9px;
+  display: grid;
+  height: 40px;
+  margin-bottom: 12px;
+  place-items: center;
+  width: 40px;
+}
+
+.inicio-metric-icon.gold { background: #fff7ed; color: #b7862e; }
+.inicio-metric-icon.blue { background: #eff6ff; color: #2563eb; }
+.inicio-metric-icon.orange { background: #fff1e7; color: #ea580c; }
+.inicio-metric-icon.green { background: #ecfdf3; color: #16803c; }
+
+.inicio-metric-card span {
+  color: #64748b;
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.inicio-metric-card strong {
+  color: #0f172a;
+  display: block;
+  font-size: 1.75rem;
+  line-height: 1;
+  margin: 8px 0;
+}
+
+.inicio-metric-card small {
+  color: #7a8699;
+  font-weight: 700;
+}
+
+.inicio-dashboard-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.inicio-panel,
+.inicio-team-panel {
+  padding: 18px;
+}
+
+.inicio-panel-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.inicio-panel-header h2 {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.inicio-panel-header > svg {
+  color: #c59235;
+}
