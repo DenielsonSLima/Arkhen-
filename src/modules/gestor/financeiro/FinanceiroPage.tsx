@@ -1,53 +1,63 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
   Banknote,
-  MinusCircle,
-  PlusCircle,
-  RefreshCw,
+  Receipt,
 } from 'lucide-react';
 import { useFinanceiro } from './hooks/useFinanceiro';
 import { useFinanceiroRealtime } from './hooks/useFinanceiroRealtime';
 import { CaixaTab } from './components/CaixaTab';
 import { ContasAReceberTab } from './components/ContasAReceberTab';
 import { ContasAPagarTab } from './components/ContasAPagarTab';
-import { TransferenciaEntreContasTab } from './components/TransferenciaEntreContasTab';
-import { OutrosCreditosTab } from './components/OutrosCreditosTab';
-import { OutrosDebitosTab } from './components/OutrosDebitosTab';
+import { LancamentosTab } from './components/LancamentosTab';
+import { ManualSettlementModal } from './components/ManualSettlementModal';
 import './Financeiro.css';
 
 type FinanceiroTab =
   | 'caixa'
   | 'receber'
   | 'pagar'
-  | 'transferencia'
-  | 'outros-creditos'
-  | 'outros-debitos';
+  | 'lancamentos';
 
 const FINANCEIRO_TABS: { id: FinanceiroTab; label: string; icon: React.ReactNode }[] = [
   { id: 'caixa', label: 'Caixa', icon: <Banknote size={16} /> },
   { id: 'receber', label: 'Contas a Receber', icon: <ArrowUpCircle size={16} /> },
   { id: 'pagar', label: 'Contas a Pagar', icon: <ArrowDownCircle size={16} /> },
-  { id: 'transferencia', label: 'Transferência entre Contas', icon: <RefreshCw size={16} /> },
-  { id: 'outros-creditos', label: 'Outros Créditos', icon: <PlusCircle size={16} /> },
-  { id: 'outros-debitos', label: 'Outros Débitos', icon: <MinusCircle size={16} /> },
+  { id: 'lancamentos', label: 'Lançamentos / Extrato', icon: <Receipt size={16} /> },
 ];
 
-export const FinanceiroPage: React.FC = () => {
+type FinanceiroPageProps = {
+  initialTab?: string;
+};
+
+export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) => {
   useFinanceiroRealtime();
   const {
     filteredCobranças,
     stats,
     companyMap,
     isLoading,
+    lancamentos,
     contasPagar,
-    transferencias,
-    outrosCreditos,
-    outrosDebitos,
     handleCreateLancamento,
+    showManualSettlementModal,
+    setShowManualSettlementModal,
+    settlementCobranca,
+    setSettlementCobranca,
+    handleBaixarManualCobrancaCustom,
+    isCustomSettlementLoading,
   } = useFinanceiro();
   const [activeTab, setActiveTab] = useState<FinanceiroTab>('caixa');
+
+  useEffect(() => {
+    if (initialTab) {
+      const tabId = initialTab.startsWith('lancamentos-') || initialTab === 'transferencia' || initialTab === 'creditos' || initialTab === 'debitos' || initialTab === 'transferencias'
+        ? 'lancamentos'
+        : (initialTab === 'receber' ? 'receber' : initialTab === 'pagar' ? 'pagar' : 'caixa');
+      setActiveTab(tabId as FinanceiroTab);
+    }
+  }, [initialTab]);
 
   const contasReceber = useMemo(() => filteredCobranças, [filteredCobranças]);
 
@@ -60,6 +70,7 @@ export const FinanceiroPage: React.FC = () => {
   };
 
   const getCompanyName = (companyId: string) => companyMap.get(companyId)?.nome || 'Cliente removido';
+  const getCompanyDetails = (companyId: string) => companyMap.get(companyId) || { nome: 'Cliente removido', cnpj: '-' };
 
   const renderContent = () => {
     if (isLoading) return <div className="sub-loading">Carregando controle financeiro...</div>;
@@ -71,24 +82,43 @@ export const FinanceiroPage: React.FC = () => {
           onFormatCurrency={formatCurrency}
           onFormatDate={formatDate}
           getCompanyName={getCompanyName}
+          getCompanyDetails={getCompanyDetails}
+          onManualSettlement={(item) => {
+            setSettlementCobranca(item);
+            setShowManualSettlementModal(true);
+          }}
+          isManualSettlementLoading={isCustomSettlementLoading}
         />
       );
     }
 
     if (activeTab === 'pagar') {
-      return <ContasAPagarTab dados={contasPagar} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return (
+        <ContasAPagarTab
+          dados={contasPagar}
+          onFormatCurrency={formatCurrency}
+          onFormatDate={formatDate}
+          onCreateContasAPagar={handleCreateLancamento}
+        />
+      );
     }
 
-    if (activeTab === 'transferencia') {
-      return <TransferenciaEntreContasTab dados={transferencias} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
-    }
+    if (activeTab === 'lancamentos') {
+      const initialFilter = initialTab?.startsWith('lancamentos-')
+        ? initialTab.replace('lancamentos-', '')
+        : (initialTab === 'transferencias' || initialTab === 'transferencia'
+          ? 'transferencias'
+          : (initialTab === 'creditos' ? 'creditos' : (initialTab === 'debitos' ? 'debitos' : 'todos')));
 
-    if (activeTab === 'outros-creditos') {
-      return <OutrosCreditosTab dados={outrosCreditos} onCreateLancamento={handleCreateLancamento} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
-    }
-
-    if (activeTab === 'outros-debitos') {
-      return <OutrosDebitosTab dados={outrosDebitos} onCreateLancamento={handleCreateLancamento} onFormatCurrency={formatCurrency} onFormatDate={formatDate} />;
+      return (
+        <LancamentosTab
+          initialFilter={initialFilter}
+          lancamentos={lancamentos}
+          onCreateLancamento={handleCreateLancamento}
+          onFormatCurrency={formatCurrency}
+          onFormatDate={formatDate}
+        />
+      );
     }
 
     return <CaixaTab stats={stats} onFormatCurrency={formatCurrency} />;
@@ -109,6 +139,32 @@ export const FinanceiroPage: React.FC = () => {
       </div>
 
       {renderContent()}
+
+      {settlementCobranca && (
+        <ManualSettlementModal
+          isOpen={showManualSettlementModal}
+          onClose={() => {
+            setShowManualSettlementModal(false);
+            setSettlementCobranca(null);
+          }}
+          cobranca={{
+            id: settlementCobranca.id,
+            valor: settlementCobranca.valor,
+            descricao: settlementCobranca.descricao,
+            pagadorNome: getCompanyName(settlementCobranca.clienteEmpresaId),
+            pagadorCnpj: getCompanyDetails(settlementCobranca.clienteEmpresaId).cnpj,
+            dataVencimento: settlementCobranca.dataVencimento,
+            dataVencimentoFormatted: formatDate(settlementCobranca.dataVencimento),
+          }}
+          onSubmit={async (data) => {
+            await handleBaixarManualCobrancaCustom({
+              cobrancaId: settlementCobranca.id,
+              ...data,
+            });
+          }}
+          isLoading={isCustomSettlementLoading}
+        />
+      )}
     </div>
   );
 };

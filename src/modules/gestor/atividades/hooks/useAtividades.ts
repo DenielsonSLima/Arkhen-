@@ -52,15 +52,45 @@ const getInstanceProgress = (instancia: AtividadeInstancia) => {
   return Math.round((completed / steps.length) * 100);
 };
 
+const isModeloAplicavelAoCliente = (modelo: ModeloAtividade, cliente: ClienteEmpresa) => {
+  if (!modelo.tipos || modelo.tipos.length === 0) return true;
+  if (modelo.tipos.includes(cliente.regime)) return true;
+  return (cliente.regime === 'Isenta' && modelo.tipos.includes('Isento')) ||
+    (cliente.regime === 'Isento' && modelo.tipos.includes('Isenta'));
+};
+
+const getDefaultModelosForCliente = (
+  cliente: ClienteEmpresa,
+  modelos: ModeloAtividade[]
+) => {
+  const aplicaveis = modelos
+    .filter((modelo) => isModeloAplicavelAoCliente(modelo, cliente))
+    .map((modelo) => modelo.id);
+
+  return aplicaveis.length > 0 ? aplicaveis : modelos.map((modelo) => modelo.id);
+};
+
+const clienteHasValidModelo = (cliente: ClienteEmpresa, modelos: ModeloAtividade[]) => (
+  cliente.modelosAtivos.some((modeloAtivo) => (
+    modelos.some((modelo) => modelo.id === modeloAtivo || modelo.codigo === modeloAtivo)
+  ))
+);
+
 const isClientCompetenciaComplete = (
   cliente: ClienteEmpresa,
   modelos: ModeloAtividade[],
   instancias: AtividadeInstancia[]
 ) => {
-  const activeModelos = cliente.modelosAtivos.filter((modeloId) => modelos.some((modelo) => modelo.id === modeloId));
+  const activeModelos = cliente.modelosAtivos.filter((modeloId) => (
+    modelos.some((modelo) => modelo.id === modeloId || modelo.codigo === modeloId)
+  ));
   if (activeModelos.length === 0) return false;
   return activeModelos.every((modeloId) => {
-    const instancia = instancias.find((item) => item.clienteId === cliente.id && item.modeloId === modeloId);
+    const modelo = modelos.find((item) => item.id === modeloId || item.codigo === modeloId);
+    const instancia = instancias.find((item) => (
+      item.clienteId === cliente.id &&
+      (item.modeloId === modeloId || item.modeloId === modelo?.id || item.modeloId === modelo?.codigo)
+    ));
     return !!instancia && getInstanceProgress(instancia) === 100;
   });
 };
@@ -116,17 +146,41 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const cli = await atividadesService.getClientes();
       const mod = await atividadesService.getModelos();
+      const loadedClientes = await atividadesService.getClientes();
+      const cli = await Promise.all(loadedClientes.map(async (cliente) => {
+        if (clienteHasValidModelo(cliente, mod)) return cliente;
+
+        const modelosAtivos = getDefaultModelosForCliente(cliente, mod);
+        if (modelosAtivos.length === 0) return cliente;
+
+        const updatedCliente = { ...cliente, modelosAtivos };
+        try {
+          return await atividadesService.saveCliente(updatedCliente);
+        } catch (err) {
+          console.error('Erro ao vincular modelos padrao ao cliente:', err);
+          return updatedCliente;
+        }
+      }));
       const visibleById = new Map<string, AtividadeInstancia>();
+      const instanciasByCompetencia = new Map<string, AtividadeInstancia[]>();
       const baseCompetencia = getPreviousMonthCompetencia();
+      const getInstanciasForCompetencia = async (targetCompetencia: string) => {
+        const cached = instanciasByCompetencia.get(targetCompetencia);
+        if (cached) return cached;
+
+        await atividadesService.ensureInstancias(targetCompetencia);
+        const competenciaInstancias = await atividadesService.getInstancias(targetCompetencia);
+        instanciasByCompetencia.set(targetCompetencia, competenciaInstancias);
+        return competenciaInstancias;
+      };
 
       for (const cliente of cli) {
         let activeCompetencia = baseCompetencia;
         let safety = 0;
 
         while (safety < 12) {
-          const competenciaInstancias = await atividadesService.getInstancias(activeCompetencia);
+          const competenciaInstancias = await getInstanciasForCompetencia(activeCompetencia);
           const clientInstancias = competenciaInstancias.filter((instancia) => instancia.clienteId === cliente.id);
           clientInstancias.forEach((instancia) => visibleById.set(instancia.id, instancia));
 

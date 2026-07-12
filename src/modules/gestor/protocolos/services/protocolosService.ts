@@ -67,6 +67,13 @@ const addMonths = (date: Date, amount: number) => {
   return next;
 };
 
+const getCompanyStartMonthKey = (company: Company) => {
+  if (!company.createdAt) return '';
+  const createdAt = new Date(company.createdAt);
+  if (Number.isNaN(createdAt.getTime())) return '';
+  return getMonthKey(createdAt);
+};
+
 const readJson = <T,>(key: string, fallback: T): T => {
   const raw = localStorage.getItem(key);
   if (!raw) return fallback;
@@ -145,6 +152,28 @@ const shouldSkipPeriodo = (fechamento: TipoFechamentoEntrega, competencia: strin
   return false;
 };
 
+const getCompetenciasForCompany = (company: Company, now: Date) => {
+  const allCompetencias = [-2, -1, 0].map((offset) => getMonthKey(addMonths(now, offset)));
+  const startMonth = getCompanyStartMonthKey(company);
+  if (!startMonth) return allCompetencias;
+  return allCompetencias.filter((competencia) => competencia >= startMonth);
+};
+
+const pruneLocalProtocolStorage = (companies: Company[]) => {
+  const activeCompanyIds = new Set(companies.map((company) => company.id));
+
+  const savedConfig = readJson<CompanyProtocolConfigMap>(CONFIG_KEY, {});
+  const prunedConfig = Object.fromEntries(
+    Object.entries(savedConfig).filter(([companyId]) => activeCompanyIds.has(companyId))
+  );
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(prunedConfig));
+
+  const savedProtocolos = readJson<ProtocoloEntrega[]>(PROTOCOLOS_KEY, []);
+  const prunedProtocolos = savedProtocolos.filter((item) => activeCompanyIds.has(item.empresaId));
+  localStorage.setItem(PROTOCOLOS_KEY, JSON.stringify(prunedProtocolos));
+  return prunedProtocolos;
+};
+
 export const protocolosService = {
   getCatalogoEntregas(): ProtocoloTipoConfig[] {
     return protocolosCatalogoService.getCatalogoAtivo();
@@ -217,13 +246,13 @@ export const protocolosService = {
 
   async getProtocolos(): Promise<ProtocoloEntrega[]> {
     const companies = await gestaoEmpresarialService.getCompanies();
-    const existing = readJson<ProtocoloEntrega[]>(PROTOCOLOS_KEY, []);
+    const existing = pruneLocalProtocolStorage(companies);
     const byId = new Map(existing.map((item) => [item.id, item]));
     const now = new Date();
-    const competencias = [-2, -1, 0].map((offset) => getMonthKey(addMonths(now, offset)));
     const activeIds = new Set<string>();
 
     companies.forEach((company) => {
+      const competencias = getCompetenciasForCompany(company, now);
       const configs = this.getEntregasEmpresaConfig(company);
       const catalogo = this.getCatalogoPorRegime(company);
       const catalogoById = new Map(catalogo.map((item) => [item.id, item]));

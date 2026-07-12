@@ -7,8 +7,13 @@ interface FiscalLocationFormProps {
   selectedCompanyId: string;
   selectedUf: string;
   selectedMunicipio: string;
+  availableUfs: string[];
+  availableMunicipios: string[];
   loading?: boolean;
   selectedProfile?: FiscalPrefeituraProfile | null;
+  onSelectCompany: (companyId: string) => void;
+  onSelectUf: (uf: string) => void;
+  onSelectMunicipio: (municipio: string) => void;
   onOpenIntegration: () => void;
 }
 
@@ -17,14 +22,16 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
   selectedCompanyId,
   selectedUf,
   selectedMunicipio,
+  availableUfs,
+  availableMunicipios,
   loading,
   selectedProfile,
+  onSelectCompany,
+  onSelectUf,
+  onSelectMunicipio,
   onOpenIntegration,
 }) => {
-  const selectedCompanyName = companies.find((item) => item.id === selectedCompanyId)?.nome
-    || companies.find((item) => item.id === selectedCompanyId)?.razaoSocial;
   const selectedCompany = companies.find((item) => item.id === selectedCompanyId);
-  const empresaUf = selectedCompany?.uf || selectedUf || 'UF não informada';
   const empresaCidade = selectedCompany?.cidade || selectedMunicipio || 'Cidade não informada';
   const operations = Array.isArray(selectedProfile?.operacoes) ? selectedProfile.operacoes : [];
   const operationSummary = operations.length > 0 ? operations.reduce(
@@ -49,19 +56,17 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
     <div className="fiscal-location-form">
       <div className="fiscal-location-grid">
         <div className="form-item-group">
-          <label>Empresa emissora (contabilidade)</label>
-          <div
-            style={{
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '10px 12px',
-              color: 'var(--color-text-dark)',
-              background: '#f8fafc',
-              fontSize: '0.84rem',
-            }}
+          <label>Empresa emissora</label>
+          <select
+            value={selectedCompanyId}
+            onChange={(e) => onSelectCompany(e.target.value)}
           >
-            {selectedCompanyName || 'Escritório (contabilidade)'}
-          </div>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.nome || company.razaoSocial || 'Empresa sem nome'}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="form-item-group">
@@ -71,7 +76,14 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
 
         <div className="form-item-group">
           <label>UF</label>
-          <div className="fiscal-location-summary-value">{empresaUf}</div>
+          <select
+            value={selectedUf}
+            onChange={(e) => onSelectUf(e.target.value)}
+          >
+            {availableUfs.map((uf) => (
+              <option key={uf} value={uf}>{uf}</option>
+            ))}
+          </select>
         </div>
 
         <div className="form-item-group">
@@ -81,7 +93,14 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
 
         <div className="form-item-group">
           <label>Município de emissão</label>
-          <div className="fiscal-location-summary-value">{selectedMunicipio || '-'}</div>
+          <select
+            value={selectedMunicipio}
+            onChange={(e) => onSelectMunicipio(e.target.value)}
+          >
+            {availableMunicipios.map((municipio) => (
+              <option key={municipio} value={municipio}>{municipio}</option>
+            ))}
+          </select>
         </div>
 
         <div className="form-item-group">
@@ -98,7 +117,7 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
       </div>
 
       <p className="input-helper-text" style={{ marginTop: '2px' }}>
-        Aqui você define apenas o emitente da NFS-e e o município de emissão por configuração local.
+        Aqui você define o emitente da NFS-e e o município de emissão. Cada empresa mantém configuração e histórico separados no Supabase.
       </p>
 
       {selectedCompany && (

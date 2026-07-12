@@ -5,7 +5,10 @@ export interface FiscalConfigData {
   provedor: string;
   usuarioWebService: string;
   senhaWebService: string;
+  senhaWebServiceConfigured?: boolean;
   certificadoSenha?: string;
+  certificadoSenhaConfigured?: boolean;
+  certificadoArquivoConfigured?: boolean;
   certificadoNome?: string;
   certificadoEmpresa?: string;
   certificadoCNPJ?: string;

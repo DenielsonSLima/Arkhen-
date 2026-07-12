@@ -1,5 +1,6 @@
 import React from 'react';
 import { AsaasCredentialsSection } from './form/AsaasCredentialsSection';
+import { AsaasCheckoutSection } from './form/AsaasCheckoutSection';
 import { AsaasDeploymentChecklist } from './form/AsaasDeploymentChecklist';
 import { AsaasEnvironmentHeader } from './form/AsaasEnvironmentHeader';
 import { AsaasPaymentsSection } from './form/AsaasPaymentsSection';
@@ -54,6 +55,7 @@ export const AsaasEnvironmentForm: React.FC<AsaasEnvironmentFormProps> = ({
       </div>
 
       <AsaasPaymentsSection config={config} isSaving={isSaving} onChange={onChange} />
+      <AsaasCheckoutSection config={config} isSaving={isSaving} onChange={onChange} />
 
       <AsaasWebhookSection
         environment={environment}

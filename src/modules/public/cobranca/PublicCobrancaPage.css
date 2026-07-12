@@ -1,0 +1,139 @@
+.public-charge-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #f1f5f9; }
+.public-charge-site-header { height: 70px; min-height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; background: #090b0e; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.public-charge-brand,
+.public-charge-secure,
+.public-charge-document-heading,
+.public-charge-safe-note,
+.public-charge-info-row,
+.public-charge-feedback,
+.public-charge-actions a,
+.public-charge-pix-head { display: flex; align-items: center; }
+.public-charge-brand { gap: 12px; }
+.public-charge-brand img { width: 38px; height: 38px; object-fit: contain; }
+.public-charge-brand strong,
+.public-charge-brand span { display: block; line-height: 1.12; }
+.public-charge-brand strong { color: #ffffff; font-size: 1.2rem; letter-spacing: 1px; }
+.public-charge-brand span { color: #c59235; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px; }
+.public-charge-secure { gap: 8px; color: #ffffff; font-size: 0.8rem; font-weight: 700; opacity: 0.92; }
+.public-charge-secure svg { color: #22c55e; }
+.public-charge-content-area { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 0; }
+.public-charge-glass-modal { width: 100%; max-width: 1180px; height: 100%; max-height: 675px; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 0.8fr); overflow: hidden; margin-top: -30px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08); }
+.public-charge-body-left { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 30px; background: #ffffff; }
+.public-charge-document-heading { gap: 14px; min-width: 0; }
+.public-charge-file-icon { width: 54px; height: 54px; min-width: 54px; display: flex; align-items: center; justify-content: center; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 50%; }
+.public-charge-document-heading h1 { margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.public-charge-document-heading span { display: block; margin-top: 4px; color: #64748b; font-size: 0.8rem; font-weight: 750; }
+.public-charge-preview-frame { flex: 1; min-height: 0; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+.public-charge-preview-frame iframe { width: 100%; height: 100%; border: 0; background: #ffffff; }
+.public-charge-empty-preview { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; color: #64748b; text-align: center; }
+.public-charge-empty-preview strong { color: #0f172a; }
+.public-charge-empty-preview span { max-width: 300px; font-size: 0.8rem; line-height: 1.45; }
+.public-charge-safe-note { align-items: flex-start; gap: 8px; color: #64748b; font-size: 0.76rem; line-height: 1.4; }
+.public-charge-safe-note svg { flex: 0 0 auto; color: #2563eb; margin-top: 1px; }
+.public-charge-body-right { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 24px 18px; background: #f8fafc; border-left: 1px solid #e2e8f0; }
+.public-charge-sidebar-scroll { min-height: 0; overflow-y: auto; padding-right: 2px; }
+.public-charge-expired-box { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 11px 12px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.8rem; font-weight: 850; }
+.public-charge-party-stack { display: grid; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+.public-charge-party-card { display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; padding: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; text-align: left; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04); }
+.public-charge-party-card.emitter { border-color: #d7e4f5; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06); }
+.public-charge-party-card img,
+.public-charge-party-avatar { width: 54px; height: 54px; min-width: 54px; border-radius: 50%; }
+.public-charge-party-card img { object-fit: contain; padding: 6px; background: #ffffff; border: 1px solid #e2e8f0; }
+.public-charge-party-avatar { display: flex; align-items: center; justify-content: center; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+.public-charge-party-card span,
+.public-charge-party-card strong,
+.public-charge-party-card small,
+.public-charge-party-card p { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.public-charge-party-card span { color: #64748b; font-size: 0.64rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+.public-charge-party-card strong { margin-top: 2px; color: #0f172a; font-size: 0.92rem; font-weight: 900; line-height: 1.18; overflow-wrap: anywhere; }
+.public-charge-party-card p { margin: 2px 0 0; color: #64748b; font-size: 0.7rem; font-weight: 750; }
+.public-charge-party-card small { margin-top: 3px; color: #c59235; font-size: 0.7rem; font-weight: 850; }
+.public-charge-client-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.public-charge-client-tags em { padding: 3px 7px; color: #334155; background: #ffffff; border: 1px solid #dbe3ee; border-radius: 999px; font-size: 0.64rem; font-style: normal; font-weight: 850; }
+.public-charge-service-card { display: flex; gap: 10px; margin-bottom: 12px; padding: 10px; background: #fffaf0; border: 1px solid #f0d9a8; border-radius: 10px; }
+.public-charge-service-card > span { width: 34px; height: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; color: #9a6b18; background: #fff7df; border-radius: 8px; }
+.public-charge-service-card small,
+.public-charge-service-card strong { display: block; line-height: 1.35; }
+.public-charge-service-card small { color: #9a6b18; font-size: 0.7rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+.public-charge-service-card strong { margin-top: 3px; color: #0f172a; font-size: 0.9rem; font-weight: 850; }
+.public-charge-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.public-charge-info-row { gap: 9px; min-width: 0; padding: 9px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 9px; text-align: left; }
+.public-charge-info-row > span { width: 32px; height: 32px; min-width: 32px; display: flex; align-items: center; justify-content: center; color: #2563eb; background: #eff6ff; border-radius: 50%; }
+.public-charge-info-row small,
+.public-charge-info-row strong { display: block; line-height: 1.25; overflow-wrap: anywhere; }
+.public-charge-info-row small { color: #64748b; font-size: 0.66rem; font-weight: 800; }
+.public-charge-info-row strong { color: #0f172a; font-size: 0.82rem; font-weight: 900; }
+.public-charge-pix-box { margin-bottom: 14px; padding: 12px; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 58%, #fffaf0 100%); border: 1px solid #bfdbfe; border-radius: 12px; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.1); }
+.public-charge-pix-head { gap: 10px; margin-bottom: 10px; }
+.public-charge-pix-head > span { width: 36px; height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; color: #2563eb; background: #ffffff; border: 1px solid #bfdbfe; border-radius: 10px; }
+.public-charge-pix-head strong,
+.public-charge-pix-head small { display: block; line-height: 1.25; }
+.public-charge-pix-head strong { color: #0f172a; font-size: 0.86rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.04em; }
+.public-charge-pix-head small { margin-top: 2px; color: #64748b; font-size: 0.7rem; font-weight: 750; }
+.public-charge-pix-box > div:last-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.public-charge-pix-box input { min-width: 0; height: 44px; padding: 0 12px; color: #0f172a; background: #ffffff; border: 1px solid #bfdbfe; border-radius: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.76rem; font-weight: 700; box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03); }
+.public-charge-pix-box button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 13px; color: #ffffff; background: #2563eb; border: 1px solid #1d4ed8; border-radius: 9px; font-size: 0.78rem; font-weight: 900; cursor: pointer; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22); }
+.public-charge-pix-box button:hover { background: #1d4ed8; }
+.public-charge-feedback { position: fixed; top: 86px; right: 28px; z-index: 20; gap: 8px; max-width: min(360px, calc(100vw - 32px)); padding: 11px 13px; border-radius: 10px; font-size: 0.8rem; font-weight: 850; box-shadow: 0 16px 38px rgba(15, 23, 42, 0.2); }
+.public-charge-feedback.success { color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; }
+.public-charge-feedback.error { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
+.public-charge-actions { display: grid; grid-template-columns: 1fr; gap: 9px; margin-top: auto; }
+.public-charge-actions a { min-height: 40px; justify-content: center; gap: 7px; padding: 9px 10px; color: #334155; background: #ffffff; border: 1px solid #dbe3ee; border-radius: 8px; font-size: 0.78rem; font-weight: 850; text-decoration: none; cursor: pointer; }
+.public-charge-actions a:hover { color: #9a6b18; border-color: #c59235; }
+.public-charge-actions a.disabled { pointer-events: none; cursor: not-allowed; opacity: 0.55; }
+.public-charge-footer { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); color: #64748b; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
+.public-charge-signature { position: absolute; right: 30px; bottom: 24px; z-index: 1; display: flex; align-items: center; gap: 8px; color: #0f172a; opacity: 0.8; }
+.public-charge-signature img { width: 24px; height: 24px; }
+.public-charge-signature strong,
+.public-charge-signature span { display: block; line-height: 1.1; }
+.public-charge-signature strong { font-size: 0.72rem; }
+.public-charge-signature span { color: #475569; font-size: 0.55rem; letter-spacing: 0.8px; }
+.public-charge-unavailable { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: #090b0f; }
+.public-charge-unavailable > div { width: 100%; max-width: 480px; padding: 24px; background: #ffffff; border: 1.5px solid #ef4444; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); text-align: center; }
+.public-charge-unavailable h1 { margin: 0 0 10px; color: #dc2626; font-size: 1.25rem; }
+.public-charge-unavailable p { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.5; }
+@media (max-width: 992px) { .public-charge-container { height: auto; min-height: 100vh; overflow-y: auto; }
+.public-charge-site-header { height: 60px; min-height: 60px; padding: 0 20px; }
+.public-charge-content-area { align-items: flex-start; padding: 16px; }
+.public-charge-glass-modal { height: auto; max-height: none; grid-template-columns: 1fr; margin-top: 0; overflow: visible; }
+.public-charge-body-left { order: 2; }
+.public-charge-body-right { order: 1; }
+.public-charge-body-left,
+.public-charge-body-right { padding: 24px; }
+.public-charge-sidebar-scroll { overflow: visible; padding-right: 0; }
+.public-charge-preview-frame { height: min(62vh, 560px); min-height: 430px; }
+.public-charge-body-right { border-left: 0; border-top: 1px solid #e2e8f0; }
+.public-charge-footer,
+.public-charge-signature { display: none; }
+}
+@media (max-width: 560px) { .public-charge-container { background: #eef3f8; }
+.public-charge-site-header { height: 58px; min-height: 58px; padding: 0 14px; }
+.public-charge-brand { gap: 9px; }
+.public-charge-brand img { width: 32px; height: 32px; }
+.public-charge-brand strong { font-size: 1rem; }
+.public-charge-brand span { font-size: 0.62rem; }
+.public-charge-secure { display: none; }
+.public-charge-content-area { padding: 10px; }
+.public-charge-glass-modal { border-radius: 12px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12); }
+.public-charge-body-left,
+.public-charge-body-right { padding: 14px; }
+.public-charge-document-heading { gap: 10px; }
+.public-charge-file-icon { width: 42px; height: 42px; min-width: 42px; }
+.public-charge-document-heading h1 { font-size: 1rem; }
+.public-charge-document-heading span { font-size: 0.74rem; }
+.public-charge-document-heading h1 { white-space: normal; }
+.public-charge-party-card { grid-template-columns: 46px minmax(0, 1fr); gap: 10px; padding: 9px; }
+.public-charge-party-card img,
+.public-charge-party-avatar { width: 46px; height: 46px; min-width: 46px; }
+.public-charge-service-card { margin-bottom: 10px; }
+.public-charge-info-grid { grid-template-columns: 1fr; }
+.public-charge-pix-box { padding: 11px; }
+.public-charge-pix-head { align-items: flex-start; }
+.public-charge-pix-box > div:last-child { grid-template-columns: 1fr; }
+.public-charge-pix-box button { width: 100%; }
+.public-charge-actions { grid-template-columns: 1fr; }
+.public-charge-actions a { min-height: 44px; }
+.public-charge-preview-frame { height: 430px; min-height: 430px; }
+.public-charge-safe-note { font-size: 0.72rem; }
+.public-charge-feedback { top: 68px; right: 10px; left: 10px; max-width: none; justify-content: center; }
+}

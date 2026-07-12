@@ -112,8 +112,9 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
 
   const categoriesList = useMemo(() => {
     const personal = (meusDocs.categorias || []).filter((item) => item.ativo).map((item) => item.nome);
+    const companyCategories = companies.flatMap((company) => company.categoriasDocumentos || []);
     const clientDocs = companies.flatMap((company) => (company.documentos || []).map((doc) => doc.tipo));
-    return Array.from(new Set([...personal, ...clientDocs]));
+    return Array.from(new Set([...personal, ...companyCategories, ...clientDocs]));
   }, [meusDocs.categorias, companies]);
 
   useEffect(() => {

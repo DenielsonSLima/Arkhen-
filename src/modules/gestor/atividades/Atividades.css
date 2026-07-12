@@ -110,6 +110,50 @@
   color: #ed6c02;
 }
 
+.sub-loading,
+.empty-state-card {
+  color: #475569;
+}
+
+.sub-loading {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  font-size: 0.86rem;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 140px;
+  padding: 24px;
+}
+
+.empty-state-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  min-height: 180px;
+  padding: 28px;
+  text-align: center;
+}
+
+.empty-state-card p {
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.empty-state-icon {
+  color: #c59235;
+  opacity: 0.95;
+}
+
 /* Progress bar inside tables */
 .progress-column-wrapper {
   display: flex;

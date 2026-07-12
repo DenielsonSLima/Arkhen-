@@ -103,6 +103,25 @@ export const useConfirmarRecebimentoFinanceiroMutation = () => {
   });
 };
 
+export const useBaixarManualCobrancaCustomMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dados: {
+      cobrancaId: string;
+      dataPagamento: string;
+      formaPagamento: string;
+      valorRecebido: number;
+      desconto: number;
+      juros: number;
+      observacao: string;
+      baixarParcial: boolean;
+      contaBancariaId?: string;
+    }) => financeiroService.baixarManualCobrancaCustom(dados),
+    onSuccess: () => invalidateFinanceiro(queryClient),
+  });
+};
+
 export const useCreateCobrancaFinanceiraMutation = () => {
   const queryClient = useQueryClient();
 
@@ -115,6 +134,10 @@ export const useCreateCobrancaFinanceiraMutation = () => {
       descricao: string;
       categoria?: string;
       meioPagamento: CobrancaFinanceira['meioPagamento'];
+      descontoPercentual?: number;
+      jurosPercentual?: number;
+      multaPercentual?: number;
+      mensagemBoleto?: string;
     }) => financeiroService.gerarCobrançaManual(dados),
     onSuccess: () => invalidateFinanceiro(queryClient),
   });

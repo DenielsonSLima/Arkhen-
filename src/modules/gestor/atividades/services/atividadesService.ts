@@ -173,6 +173,15 @@ export const atividadesService = {
     return ((data || []) as ModeloRow[]).map(toModelo);
   },
 
+  async ensureInstancias(competencia: string): Promise<number> {
+    const { data, error } = await supabase.rpc('ensure_atividades_instancias', {
+      p_competencia: competencia,
+    });
+
+    if (error) throw error;
+    return typeof data === 'number' ? data : 0;
+  },
+
   async saveModelo(modelo: ModeloAtividade): Promise<ModeloAtividade> {
     const empresaId = await getCurrentEmpresaId();
     const payload = {

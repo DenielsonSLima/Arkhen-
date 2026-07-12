@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode, type ErrorInfo, Component } from 'react';
 import { LoginPage } from './modules/public/login/LoginPage';
 import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
+import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
 import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/useConfiguracoesRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
@@ -89,31 +90,28 @@ class GestorErrorBoundary extends Component<GestorErrorBoundaryProps, GestorErro
 
 function App() {
   const isSharedDocumentRoute = /^(?:\/shared|\/s)(?:\/|$)/.test(window.location.pathname);
+  const isPublicCobrancaRoute = /^\/cobranca(?:\/|$)/.test(window.location.pathname);
 
-  const getInitialView = () => {
-    try {
-      return localStorage.getItem('contabil_auth') === 'gestor' ? 'gestor' : 'login';
-    } catch (error) {
-      console.error('Erro ao ler auth no localStorage:', error);
-      return 'login';
-    }
-  };
-
-  const [view, setView] = useState<'login' | 'gestor'>(() => {
-    const initial = getInitialView();
-    if (initial === 'gestor') {
-      internalTabsStore.resetToInicio();
-    }
-    return initial;
-  });
+  const [view, setView] = useState<'login' | 'gestor'>('login');
 
   useConfiguracoesRealtime(view === 'gestor');
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted || !data.session) return;
+    supabase.auth.getSession().then(async ({ data, error }) => {
+      if (!mounted) return;
+
+      if (error || !data.session) {
+        try {
+          localStorage.removeItem('contabil_auth');
+        } catch (error) {
+          console.error('Erro ao remover auth do localStorage:', error);
+        }
+        setView('login');
+        return;
+      }
+
       try {
         await loginService.completeOnboarding({ email: data.session.user.email || undefined });
       } catch (error) {
@@ -163,13 +161,23 @@ function App() {
   };
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem('contabil_auth');
-    } catch (error) {
-      console.error('Erro ao remover auth do localStorage:', error);
-    }
-    void supabase.auth.signOut();
-    setView('login');
+    void (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.error('Erro ao realizar logout no Supabase:', error);
+      } finally {
+        try {
+          localStorage.removeItem('contabil_auth');
+        } catch (error) {
+          console.error('Erro ao remover auth do localStorage:', error);
+        }
+        setView('login');
+      }
+    })();
   };
 
   useEffect(() => {
@@ -197,6 +205,14 @@ function App() {
     return (
       <div className="animate-page-fade">
         <PublicSharedDocumentPage />
+      </div>
+    );
+  }
+
+  if (isPublicCobrancaRoute) {
+    return (
+      <div className="animate-page-fade">
+        <PublicCobrancaPage />
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { supabase, supabaseProjectUrl } from '../../../../../lib/supabase';
 import {
   getAvailableUfs,
   getMunicipiosByUf,
@@ -6,13 +7,8 @@ import { getEnvironmentUrlForProfile, getPrefeituraProfile } from './prefeituras
 import { getAllPrefeituraProfiles } from './prefeituras';
 import {
   DEFAULT_CONFIG,
-  DEFAULT_HISTORY,
   DEFAULT_STATS,
   MAX_HISTORY_ITEMS,
-  STORAGE_CONTEXTS_KEY,
-  STORAGE_LEGACY_CONFIG_KEY,
-  STORAGE_LEGACY_HISTORY_KEY,
-  STORAGE_LEGACY_STATS_KEY,
 } from './fiscalIntegrationDefaults';
 import {
   groupContextsByLocation,
@@ -31,23 +27,17 @@ import type {
   NfsStats,
 } from './fiscalIntegrationTypes';
 
-export type { FiscalConfigData, NfsStats, NfsHistoryItem, FiscalMunicipalityContext, FiscalMunicipalityData, NfsProviderAdapter, FiscalLocationGroup, FiscalPrefeituraProfile } from './fiscalIntegrationTypes';
+export type {
+  FiscalConfigData,
+  NfsStats,
+  NfsHistoryItem,
+  FiscalMunicipalityContext,
+  FiscalMunicipalityData,
+  NfsProviderAdapter,
+  FiscalLocationGroup,
+  FiscalPrefeituraProfile,
+} from './fiscalIntegrationTypes';
 
-const resolveDefaultConfigForMunicipio = (input: { uf: string; municipio: string }) => {
-  const profile = getPrefeituraProfile(input.uf, input.municipio);
-  if (!profile) {
-    return {
-      ...DEFAULT_CONFIG,
-    };
-  }
-
-  return {
-    ...DEFAULT_CONFIG,
-    provedor: profile.providerId,
-  };
-};
-
-// WebISS adapter implementation
 export class WebIssAdapter implements NfsProviderAdapter {
   id = 'WebISS';
   name = 'WebISS Provedor';
@@ -57,153 +47,138 @@ export class WebIssAdapter implements NfsProviderAdapter {
       return { success: false, message: 'Usuário e senha são obrigatórios.' };
     }
 
-    if (user.toLowerCase() === 'erro' || pass.toLowerCase() === 'erro') {
-      return { success: false, message: 'Falha de autenticação ou erro no servidor WebISS.' };
-    }
-
-    return { success: true, message: 'Conexão realizada com sucesso com o ambiente WebISS.' };
+    return { success: true, message: 'Conexão enviada para validação segura na Edge Function.' };
   }
 
   async emitNfse(config: FiscalConfigData, _rpsNumber: string): Promise<{ success: boolean; nfseNumber?: string; protocolo?: string; message: string }> {
     return {
       success: true,
-      nfseNumber: String(Number(config.ultimoNumeroNfse) + 1),
+      nfseNumber: String(Number(config.ultimoNumeroNfse || 0) + 1),
       protocolo: `PROT-${Math.floor(100000 + Math.random() * 900000)}`,
-      message: 'RPS convertido em NFS-e com sucesso.',
+      message: 'Operação encaminhada para o provedor fiscal.',
     };
   }
 }
 
-interface StoredMunicipalityEntry {
-  context: Omit<FiscalMunicipalityContext, 'key'>;
-  config: FiscalConfigData;
-  stats: NfsStats;
-  history: NfsHistoryItem[];
-  updatedAt: string;
-}
-
-type StoredMunicipalities = Record<string, StoredMunicipalityEntry>;
-
-const safeReadStorage = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch (error) {
-    console.error('Erro ao ler localStorage de integração fiscal:', error);
-    return null;
-  }
+type RawFiscalData = Partial<FiscalMunicipalityData> & {
+  context?: Partial<FiscalMunicipalityContext>;
+  config?: Partial<FiscalConfigData>;
+  stats?: Partial<NfsStats>;
+  history?: Partial<NfsHistoryItem>[];
 };
 
-const safeWriteStorage = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (error) {
-    console.error('Erro ao salvar no localStorage de integração fiscal:', error);
-  }
-};
+const SECRET_PLACEHOLDER = '••••••••';
 
-const safeJsonParse = (value: string | null) => {
-  if (!value) return null;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-};
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-const normalizeConfig = (value: unknown): FiscalConfigData => {
-  if (!value || typeof value !== 'object') {
-    return { ...DEFAULT_CONFIG };
-  }
+const sanitizeSecretInput = (value: string | undefined) => (value || '').replace(/•/g, '').trim();
 
-  const source = value as Partial<FiscalConfigData>;
-
-  const normalizeString = (field: unknown, fallback: string) =>
-    typeof field === 'string' ? field : fallback;
-
-  const normalizeNumber = (field: unknown, fallback: number) => {
-    if (typeof field === 'number' && Number.isFinite(field)) {
-      return field;
-    }
-    return fallback;
-  };
-
-  const ambiente = source.ambiente === 'producao' || source.ambiente === 'homologacao'
-    ? source.ambiente
-    : DEFAULT_CONFIG.ambiente;
+const resolveDefaultConfigForMunicipio = (input: { uf: string; municipio: string }): FiscalConfigData => {
+  const profile = getPrefeituraProfile(input.uf, input.municipio);
 
   return {
-    ambiente,
-    provedor: normalizeString(source.provedor, DEFAULT_CONFIG.provedor),
-    usuarioWebService: normalizeString(source.usuarioWebService, DEFAULT_CONFIG.usuarioWebService),
-    senhaWebService: normalizeString(source.senhaWebService, DEFAULT_CONFIG.senhaWebService),
-    certificadoSenha: normalizeString(source.certificadoSenha, DEFAULT_CONFIG.certificadoSenha || ''),
-    certificadoNome: normalizeString(source.certificadoNome, DEFAULT_CONFIG.certificadoNome || ''),
-    certificadoEmpresa: normalizeString(source.certificadoEmpresa, DEFAULT_CONFIG.certificadoEmpresa || ''),
-    certificadoCNPJ: normalizeString(source.certificadoCNPJ, DEFAULT_CONFIG.certificadoCNPJ || ''),
-    certificadoEmitidoEm: normalizeString(source.certificadoEmitidoEm, DEFAULT_CONFIG.certificadoEmitidoEm || ''),
-    certificadoValidade: normalizeString(source.certificadoValidade, DEFAULT_CONFIG.certificadoValidade || ''),
-    certificadoDiasRestantes: normalizeNumber(
-      source.certificadoDiasRestantes,
-      DEFAULT_CONFIG.certificadoDiasRestantes || 0,
+    ...DEFAULT_CONFIG,
+    provedor: profile?.providerId || DEFAULT_CONFIG.provedor,
+    usuarioWebService: '',
+    senhaWebService: '',
+    senhaWebServiceConfigured: false,
+    certificadoSenha: '',
+    certificadoSenhaConfigured: false,
+    certificadoArquivoConfigured: false,
+    certificadoNome: '',
+    certificadoEmpresa: '',
+    certificadoCNPJ: '',
+    certificadoEmitidoEm: '',
+    certificadoValidade: '',
+    certificadoDiasRestantes: 0,
+  };
+};
+
+const normalizeConfig = (value: unknown, fallback?: FiscalConfigData): FiscalConfigData => {
+  const base = fallback || resolveDefaultConfigForMunicipio({ uf: 'SP', municipio: 'São Paulo' });
+  const source = value && typeof value === 'object' ? value as Partial<FiscalConfigData> : {};
+  const senhaWebServiceConfigured = Boolean(source.senhaWebServiceConfigured);
+  const certificadoSenhaConfigured = Boolean(source.certificadoSenhaConfigured);
+  const certificadoArquivoConfigured = Boolean(source.certificadoArquivoConfigured);
+
+  const normalizeString = (field: unknown, fallbackValue: string) =>
+    typeof field === 'string' ? field : fallbackValue;
+
+  const normalizeNumber = (field: unknown, fallbackValue: number) => {
+    if (typeof field === 'number' && Number.isFinite(field)) return field;
+    if (typeof field === 'string' && field.trim() && Number.isFinite(Number(field))) return Number(field);
+    return fallbackValue;
+  };
+
+  return {
+    ambiente: source.ambiente === 'producao' ? 'producao' : 'homologacao',
+    provedor: normalizeString(source.provedor, base.provedor),
+    usuarioWebService: normalizeString(source.usuarioWebService, base.usuarioWebService),
+    senhaWebService: normalizeString(
+      source.senhaWebService,
+      senhaWebServiceConfigured ? SECRET_PLACEHOLDER : '',
     ),
-    serieRps: normalizeString(source.serieRps, DEFAULT_CONFIG.serieRps),
-    ultimoNumeroRps: normalizeString(source.ultimoNumeroRps, DEFAULT_CONFIG.ultimoNumeroRps),
-    proximoNumeroRps: normalizeString(source.proximoNumeroRps, DEFAULT_CONFIG.proximoNumeroRps),
-    ultimoNumeroNfse: normalizeString(source.ultimoNumeroNfse, DEFAULT_CONFIG.ultimoNumeroNfse),
-    codigoServico: normalizeString(source.codigoServico, DEFAULT_CONFIG.codigoServico),
-    itemListaServico: normalizeString(source.itemListaServico, DEFAULT_CONFIG.itemListaServico),
-    aliquotaIss: normalizeString(source.aliquotaIss, DEFAULT_CONFIG.aliquotaIss),
-    naturezaOperacao: normalizeString(source.naturezaOperacao, DEFAULT_CONFIG.naturezaOperacao),
-    regimeEspecial: normalizeString(source.regimeEspecial, DEFAULT_CONFIG.regimeEspecial),
-    incentivadorCultural: normalizeString(source.incentivadorCultural, DEFAULT_CONFIG.incentivadorCultural),
-    issRetido: normalizeString(source.issRetido, DEFAULT_CONFIG.issRetido),
+    senhaWebServiceConfigured,
+    certificadoSenha: normalizeString(
+      source.certificadoSenha,
+      certificadoSenhaConfigured ? SECRET_PLACEHOLDER : '',
+    ),
+    certificadoSenhaConfigured,
+    certificadoArquivoConfigured,
+    certificadoNome: normalizeString(source.certificadoNome, base.certificadoNome || ''),
+    certificadoEmpresa: normalizeString(source.certificadoEmpresa, base.certificadoEmpresa || ''),
+    certificadoCNPJ: normalizeString(source.certificadoCNPJ, base.certificadoCNPJ || ''),
+    certificadoEmitidoEm: normalizeString(source.certificadoEmitidoEm, base.certificadoEmitidoEm || ''),
+    certificadoValidade: normalizeString(source.certificadoValidade, base.certificadoValidade || ''),
+    certificadoDiasRestantes: normalizeNumber(source.certificadoDiasRestantes, base.certificadoDiasRestantes || 0),
+    serieRps: normalizeString(source.serieRps, base.serieRps),
+    ultimoNumeroRps: normalizeString(source.ultimoNumeroRps, base.ultimoNumeroRps),
+    proximoNumeroRps: normalizeString(source.proximoNumeroRps, base.proximoNumeroRps),
+    ultimoNumeroNfse: normalizeString(source.ultimoNumeroNfse, base.ultimoNumeroNfse),
+    codigoServico: normalizeString(source.codigoServico, base.codigoServico),
+    itemListaServico: normalizeString(source.itemListaServico, base.itemListaServico),
+    aliquotaIss: normalizeString(source.aliquotaIss, base.aliquotaIss),
+    naturezaOperacao: normalizeString(source.naturezaOperacao, base.naturezaOperacao),
+    regimeEspecial: normalizeString(source.regimeEspecial, base.regimeEspecial),
+    incentivadorCultural: normalizeString(source.incentivadorCultural, base.incentivadorCultural),
+    issRetido: normalizeString(source.issRetido, base.issRetido),
   };
 };
 
 const normalizeStats = (value: unknown): NfsStats => {
-  if (!value || typeof value !== 'object') {
-    return { ...DEFAULT_STATS };
-  }
-
-  const source = value as Partial<NfsStats>;
-  const normalizeNumber = (field: unknown, fallback: number) => {
-    if (typeof field === 'number' && Number.isFinite(field)) {
-      return field;
-    }
-    return fallback;
-  };
-  const normalizeString = (field: unknown, fallback: string) =>
-    typeof field === 'string' ? field : fallback;
+  const source = value && typeof value === 'object' ? value as Partial<NfsStats> : {};
+  const normalizeNumber = (field: unknown, fallback: number) => (
+    typeof field === 'number' && Number.isFinite(field) ? field : fallback
+  );
+  const normalizeString = (field: unknown, fallback: string) => (
+    typeof field === 'string' ? field : fallback
+  );
 
   return {
-    emitidas: normalizeNumber(source.emitidas, DEFAULT_STATS.emitidas),
-    canceladas: normalizeNumber(source.canceladas, DEFAULT_STATS.canceladas),
-    rejeitadas: normalizeNumber(source.rejeitadas, DEFAULT_STATS.rejeitadas),
-    pendentes: normalizeNumber(source.pendentes, DEFAULT_STATS.pendentes),
-    ultimaEmissao: normalizeString(source.ultimaEmissao, DEFAULT_STATS.ultimaEmissao),
-    ultimoCancelamento: normalizeString(source.ultimoCancelamento, DEFAULT_STATS.ultimoCancelamento),
-    proximoNumeroNfse: normalizeString(source.proximoNumeroNfse, DEFAULT_STATS.proximoNumeroNfse),
-    ultimoProtocolo: normalizeString(source.ultimoProtocolo, DEFAULT_STATS.ultimoProtocolo),
+    emitidas: normalizeNumber(source.emitidas, 0),
+    canceladas: normalizeNumber(source.canceladas, 0),
+    rejeitadas: normalizeNumber(source.rejeitadas, 0),
+    pendentes: normalizeNumber(source.pendentes, 0),
+    ultimaEmissao: normalizeString(source.ultimaEmissao, ''),
+    ultimoCancelamento: normalizeString(source.ultimoCancelamento, ''),
+    proximoNumeroNfse: normalizeString(source.proximoNumeroNfse, ''),
+    ultimoProtocolo: normalizeString(source.ultimoProtocolo, ''),
   };
 };
 
 const normalizeHistoryItem = (value: unknown): NfsHistoryItem | null => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
+  if (!value || typeof value !== 'object') return null;
   const source = value as Partial<NfsHistoryItem>;
   const status = source.status === 'Sucesso' || source.status === 'Erro' || source.status === 'Pendente'
     ? source.status
     : 'Pendente';
-
   const operacao = source.operacao === 'Emissão' || source.operacao === 'Cancelamento' || source.operacao === 'Consulta' || source.operacao === 'Sincronização'
     ? source.operacao
     : 'Consulta';
 
   return {
-    id: typeof source.id === 'string' ? source.id : `h-${Date.now()}-${Math.floor(Math.random() * 9000)}`,
-    data: typeof source.data === 'string' ? source.data : new Date().toISOString().split('T')[0],
+    id: typeof source.id === 'string' ? source.id : `h-${Date.now()}`,
+    data: typeof source.data === 'string' ? source.data : new Date().toISOString().slice(0, 10),
     hora: typeof source.hora === 'string' ? source.hora : new Date().toTimeString().split(' ')[0],
     operacao,
     numeroNfse: typeof source.numeroNfse === 'string' ? source.numeroNfse : '-',
@@ -214,166 +189,111 @@ const normalizeHistoryItem = (value: unknown): NfsHistoryItem | null => {
   };
 };
 
-const normalizeHistory = (value: unknown): NfsHistoryItem[] => {
-  if (!Array.isArray(value)) {
-    return [...DEFAULT_HISTORY];
-  }
+const normalizeHistory = (value: unknown): NfsHistoryItem[] => (
+  Array.isArray(value)
+    ? value.map(normalizeHistoryItem).filter((item): item is NfsHistoryItem => Boolean(item)).slice(0, MAX_HISTORY_ITEMS)
+    : []
+);
 
-  return value
-    .map((item) => normalizeHistoryItem(item))
-    .filter((item): item is NfsHistoryItem => Boolean(item))
-    .slice(0, MAX_HISTORY_ITEMS);
-};
-
-const normalizeStoreEntry = (_key: string, value: unknown): StoredMunicipalityEntry | null => {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const source = value as Partial<StoredMunicipalityEntry> & { context?: unknown };
-  const context = source.context;
-  if (!context || typeof context !== 'object') {
-    return null;
-  }
-
-  const validContext = context as Partial<FiscalMunicipalityContext>;
-  if (!validContext.companyId || !validContext.uf || !validContext.municipio) {
-    return null;
-  }
+const normalizeFiscalData = (value: unknown): FiscalMunicipalityData | null => {
+  if (!value || typeof value !== 'object') return null;
+  const source = value as RawFiscalData;
+  const context: Partial<FiscalMunicipalityContext> = source.context || {};
+  const companyId = typeof context.companyId === 'string' ? context.companyId : 'office';
+  const uf = typeof context.uf === 'string' ? context.uf : 'NA';
+  const municipio = typeof context.municipio === 'string' ? context.municipio : 'Não informado';
+  const defaultConfig = resolveDefaultConfigForMunicipio({ uf, municipio });
 
   return {
     context: {
-      companyId: String(validContext.companyId),
-    companyName: String(validContext.companyName || 'Empresa de emissão'),
-      uf: String(validContext.uf),
-      municipio: String(validContext.municipio || 'Não informado'),
-      isActive: Boolean(validContext.isActive),
+      key: typeof context.key === 'string' ? context.key : makeContextKey({ companyId, uf, municipio }),
+      companyId,
+      companyName: typeof context.companyName === 'string' ? context.companyName : 'Empresa de emissão',
+      uf,
+      municipio,
+      isActive: Boolean(context.isActive),
     },
-    config: normalizeConfig(source.config),
-    stats: normalizeStats(source.stats),
+    config: normalizeConfig(source.config, defaultConfig),
+    stats: normalizeStats(source.stats || DEFAULT_STATS),
     history: normalizeHistory(source.history),
-    updatedAt: String(source.updatedAt || new Date().toISOString()),
   };
 };
 
-const readStore = (): StoredMunicipalities => {
-  const stored = safeJsonParse(safeReadStorage(STORAGE_CONTEXTS_KEY));
-  if (!stored || typeof stored !== 'object') return {};
-
-  const parsed = stored as Record<string, unknown>;
-  const normalized: StoredMunicipalities = {};
-
-  Object.entries(parsed).forEach(([key, value]) => {
-    const normalizedEntry = normalizeStoreEntry(key, value);
-    if (normalizedEntry) {
-      normalized[key] = normalizedEntry;
-    }
-  });
-
-  return normalized;
-};
-
-const writeStore = (data: StoredMunicipalities): void => {
-  safeWriteStorage(STORAGE_CONTEXTS_KEY, JSON.stringify(data));
-};
-
-const migrateLegacyContext = (): StoredMunicipalities => {
-  const legacyConfig = normalizeConfig(safeJsonParse(safeReadStorage(STORAGE_LEGACY_CONFIG_KEY)));
-  const legacyStats = normalizeStats(safeJsonParse(safeReadStorage(STORAGE_LEGACY_STATS_KEY)));
-  const legacyHistory = normalizeHistory(safeJsonParse(safeReadStorage(STORAGE_LEGACY_HISTORY_KEY)));
-
-  const key = makeContextKey({
-    companyId: 'office',
-    uf: 'SP',
-    municipio: 'São Paulo',
+const createDraftData = (input: FiscalContextInput): FiscalMunicipalityData => {
+  const normalized = normalizeContextInput(input);
+  const config = resolveDefaultConfigForMunicipio({
+    uf: normalized.uf,
+    municipio: normalized.municipio,
   });
 
   return {
-    [key]: {
-      context: {
-        companyId: 'office',
-          companyName: 'Escritório (contabilidade)',
-        uf: 'SP',
-        municipio: 'São Paulo',
-        isActive: true,
-      },
-      config: { ...normalizeConfig(legacyConfig) },
-      stats: { ...normalizeStats(legacyStats) },
-      history: legacyHistory.length ? legacyHistory : [...DEFAULT_HISTORY],
-      updatedAt: new Date().toISOString(),
-    },
-  };
-};
-
-const toSnapshot = (key: string, entry: StoredMunicipalityEntry): FiscalMunicipalityData => ({
-  context: {
-    key,
-    ...entry.context,
-  },
-  config: { ...normalizeConfig(entry.config) },
-  stats: { ...normalizeStats(entry.stats) },
-  history: [...normalizeHistory(entry.history)],
-});
-
-const getStore = (): StoredMunicipalities => {
-  const persisted = readStore();
-  if (Object.keys(persisted).length > 0) {
-    return persisted;
-  }
-
-  const legacy = migrateLegacyContext();
-  if (Object.keys(legacy).length > 0) {
-    writeStore(legacy);
-    return legacy;
-  }
-
-  return {};
-};
-
-const ensureContext = (input: FiscalContextInput): { key: string; store: StoredMunicipalities } => {
-  const normalized = normalizeContextInput(input);
-  const key = makeContextKey(normalized);
-  const store = getStore();
-  const current = store[key];
-
-  if (!current) {
-    store[key] = {
-      context: {
-        companyId: normalized.companyId,
-        companyName: normalized.companyName,
-        uf: normalized.uf,
-        municipio: normalized.municipio,
-        isActive: normalized.isActive,
-      },
-      config: resolveDefaultConfigForMunicipio({
-        uf: normalized.uf,
-        municipio: normalized.municipio,
-      }),
-      stats: { ...DEFAULT_STATS },
-      history: [...DEFAULT_HISTORY],
-      updatedAt: new Date().toISOString(),
-    };
-  } else {
-    current.context = {
-      ...current.context,
+    context: {
+      key: makeContextKey(normalized),
       companyId: normalized.companyId,
       companyName: normalized.companyName,
       uf: normalized.uf,
       municipio: normalized.municipio,
-      isActive: current.context.isActive ?? true,
-    };
-    current.updatedAt = new Date().toISOString();
-  }
-
-  writeStore(store);
-  return { key, store };
+      isActive: normalized.isActive,
+    },
+    config,
+    stats: normalizeStats({}),
+    history: [],
+  };
 };
+
+const invokeFiscalEdge = async (body: Record<string, unknown>) => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sessão ausente.');
+
+  const response = await fetch(`${supabaseProjectUrl.replace(/\/$/, '')}/functions/v1/fiscal-integration`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || data.message || 'Falha na Edge Function fiscal.');
+  }
+  return data as Record<string, unknown>;
+};
+
+const toUpsertPayload = (context: FiscalContextInput, config: FiscalConfigData, active = true) => ({
+  cliente_id: isUuid(context.companyId) ? context.companyId : '',
+  uf: context.uf,
+  municipio: context.municipio,
+  ambiente: config.ambiente,
+  provedor: config.provedor,
+  ativo: active,
+  usuarioWebService: config.usuarioWebService,
+  senhaWebService: sanitizeSecretInput(config.senhaWebService),
+  certificadoSenha: sanitizeSecretInput(config.certificadoSenha),
+  certificadoNome: config.certificadoNome || '',
+  certificadoEmpresa: config.certificadoEmpresa || context.companyName,
+  certificadoCNPJ: config.certificadoCNPJ || '',
+  certificadoEmitidoEm: config.certificadoEmitidoEm || '',
+  certificadoValidade: config.certificadoValidade || '',
+  certificadoDiasRestantes: String(config.certificadoDiasRestantes || ''),
+  serieRps: config.serieRps,
+  ultimoNumeroRps: config.ultimoNumeroRps,
+  proximoNumeroRps: config.proximoNumeroRps,
+  ultimoNumeroNfse: config.ultimoNumeroNfse,
+  codigoServico: config.codigoServico,
+  itemListaServico: config.itemListaServico,
+  aliquotaIss: config.aliquotaIss,
+  naturezaOperacao: config.naturezaOperacao,
+  regimeEspecial: config.regimeEspecial,
+  incentivadorCultural: config.incentivadorCultural,
+  issRetido: config.issRetido,
+});
 
 export const fiscalIntegrationService = {
   getProviders(): string[] {
     const staticProviders = ['WebISS', 'GINFES', 'ISSNet', 'Betha', 'Fiorilli', 'IPM', 'Nacional', 'Outro'];
     const providers = new Set<string>(staticProviders);
-
     return Array.from(providers).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   },
 
@@ -403,100 +323,108 @@ export const fiscalIntegrationService = {
     return new WebIssAdapter();
   },
 
-  getContext(input: FiscalContextInput): FiscalMunicipalityData {
-    const { key, store } = ensureContext(input);
-    return toSnapshot(key, store[key]);
+  async listContextsData(): Promise<FiscalMunicipalityData[]> {
+    const { data, error } = await supabase.rpc('listar_configuracoes_fiscais');
+    if (error) throw error;
+    const rows = Array.isArray(data) ? data : [];
+    return rows.map(normalizeFiscalData).filter((item): item is FiscalMunicipalityData => Boolean(item));
   },
 
-  getContextByKey(key: string): FiscalMunicipalityData | null {
-    const store = getStore();
-    const entry = store[key];
-    if (!entry) return null;
-    return toSnapshot(key, entry);
+  async getContext(input: FiscalContextInput): Promise<FiscalMunicipalityData> {
+    const normalized = normalizeContextInput(input);
+    const contexts = await this.listContextsData();
+    const found = contexts.find((item) => (
+      item.context.companyId === normalized.companyId
+      && item.context.uf === normalized.uf
+      && item.context.municipio === normalized.municipio
+    ));
+
+    return found || createDraftData(normalized);
   },
 
-  getContextList(): FiscalMunicipalityContext[] {
-    const store = getStore();
-    return Object.entries(store).map(([key, item]) => ({
-      key,
-      ...item.context,
-    })).sort((a, b) => {
-      const companyCompare = a.companyName.localeCompare(b.companyName, 'pt-BR');
-      if (companyCompare !== 0) return companyCompare;
-      const ufCompare = a.uf.localeCompare(b.uf, 'pt-BR');
-      if (ufCompare !== 0) return ufCompare;
-      return a.municipio.localeCompare(b.municipio, 'pt-BR');
-    });
+  async getContextList(): Promise<FiscalMunicipalityContext[]> {
+    const contexts = await this.listContextsData();
+    return contexts.map((item) => item.context);
   },
 
-  getContextTree(): FiscalLocationGroup[] {
-    return groupContextsByLocation(this.getContextList());
+  async getContextTree(): Promise<FiscalLocationGroup[]> {
+    return groupContextsByLocation(await this.getContextList());
   },
 
   getAvailablePrefeituraProfiles(): FiscalPrefeituraProfile[] {
     return getAllPrefeituraProfiles();
   },
 
-  setContextActive(contextKey: string, active: boolean): FiscalMunicipalityData | null {
-    const store = getStore();
-    const entry = store[contextKey];
-    if (!entry) return null;
+  async saveConfig(context: FiscalContextInput, config: FiscalConfigData, active = true): Promise<FiscalMunicipalityData> {
+    const { data, error } = await supabase.rpc('upsert_configuracao_fiscal', {
+      p_payload: toUpsertPayload(context, config, active),
+    });
 
-    entry.context.isActive = Boolean(active);
-    entry.updatedAt = new Date().toISOString();
-    writeStore(store);
-    return toSnapshot(contextKey, entry);
+    if (error) throw error;
+    const normalized = normalizeFiscalData(data);
+    if (!normalized) throw new Error('Resposta fiscal inválida.');
+    return normalized;
   },
 
-  getConfig(context: FiscalContextInput): FiscalConfigData {
-    return this.getContext(context).config;
+  async setContextActive(context: FiscalContextInput, config: FiscalConfigData, active: boolean): Promise<FiscalMunicipalityData> {
+    return this.saveConfig(context, config, active);
   },
 
-  saveConfig(context: FiscalContextInput, config: FiscalConfigData): void {
-    const { key, store } = ensureContext(context);
-    store[key].config = { ...normalizeConfig(config) };
-    store[key].updatedAt = new Date().toISOString();
-    writeStore(store);
-  },
+  async testConnection(context: FiscalContextInput, config: FiscalConfigData): Promise<{ success: boolean; message: string }> {
+    const providerEndpoint = this.getProfileEnvironmentUrl(context.uf, context.municipio, config.ambiente);
+    const data = await invokeFiscalEdge({
+      action: 'test-connection',
+      ...toUpsertPayload(context, config, true),
+      senhaWebServiceConfigured: config.senhaWebServiceConfigured,
+      providerEndpoint,
+    });
 
-  getStats(context: FiscalContextInput): NfsStats {
-    return this.getContext(context).stats;
-  },
-
-  saveStats(context: FiscalContextInput, stats: NfsStats): void {
-    const { key, store } = ensureContext(context);
-    store[key].stats = { ...normalizeStats(stats) };
-    store[key].updatedAt = new Date().toISOString();
-    writeStore(store);
-  },
-
-  getHistory(context: FiscalContextInput): NfsHistoryItem[] {
-    return this.getContext(context).history;
-  },
-
-  saveHistory(context: FiscalContextInput, history: NfsHistoryItem[]): void {
-    const { key, store } = ensureContext(context);
-    store[key].history = normalizeHistory(history);
-    store[key].updatedAt = new Date().toISOString();
-    writeStore(store);
-  },
-
-  addHistoryItem(context: FiscalContextInput, item: Omit<NfsHistoryItem, 'id' | 'data' | 'hora'>): void {
-    const { key, store } = ensureContext(context);
-    const now = new Date();
-    const normalizedItem = normalizeHistoryItem(item);
-    const fallbackItem: NfsHistoryItem = {
-      ...item,
-      id: `h-${Date.now()}`,
-      data: now.toISOString().split('T')[0],
-      hora: now.toTimeString().split(' ')[0],
+    return {
+      success: Boolean(data.success),
+      message: typeof data.message === 'string' ? data.message : 'Teste de conexão concluído.',
     };
-    const newItem = normalizedItem || fallbackItem;
-
-    const ordered = [newItem, ...store[key].history];
-    store[key].history = ordered.slice(0, MAX_HISTORY_ITEMS);
-    store[key].updatedAt = new Date().toISOString();
-    writeStore(store);
   },
 
+  async registerOperation(context: FiscalContextInput, config: FiscalConfigData, item: Omit<NfsHistoryItem, 'id' | 'data' | 'hora'>): Promise<void> {
+    await invokeFiscalEdge({
+      action: 'register-operation',
+      ...toUpsertPayload(context, config, true),
+      operacao: item.operacao,
+      numeroNfse: item.numeroNfse,
+      protocolo: item.protocolo,
+      status: item.status,
+      mensagem: item.mensagemPrefeitura,
+    });
+  },
+
+  async uploadCertificate(
+    context: FiscalContextInput,
+    config: FiscalConfigData,
+    file: File,
+  ): Promise<FiscalMunicipalityData> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Sessão ausente.');
+
+    const formData = new FormData();
+    formData.append('certificado', file);
+    formData.append('certificadoSenha', sanitizeSecretInput(config.certificadoSenha));
+    formData.append('context', JSON.stringify(toUpsertPayload(context, config, true)));
+
+    const response = await fetch(`${supabaseProjectUrl.replace(/\/$/, '')}/functions/v1/fiscal-integration`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || 'Falha ao enviar certificado.');
+    }
+
+    const normalized = normalizeFiscalData(payload.data);
+    if (!normalized) throw new Error('Resposta fiscal inválida.');
+    return normalized;
+  },
 };

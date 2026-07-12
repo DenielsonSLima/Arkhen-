@@ -15,6 +15,7 @@ export interface ContratoFinanceiro {
 
 export interface CobrancaFinanceira {
   id: string;
+  publicToken?: string;
   empresaId: string;
   contratoId?: string;
   clienteEmpresaId: string;
@@ -32,6 +33,7 @@ export interface CobrancaFinanceira {
   asaasBillingType?: string;
   asaasStatus?: string;
   asaasAmbiente?: string;
+  asaasPayload?: Record<string, unknown>;
   dataPagamento?: string;
   dataCancelamento?: string;
   createdAt: string;
@@ -112,6 +114,7 @@ interface ContratoRow {
 
 interface CobrancaRow {
   id: string;
+  public_token: string | null;
   empresa_id: string;
   contrato_id: string | null;
   cliente_empresa_id: string | null;
@@ -129,6 +132,7 @@ interface CobrancaRow {
   asaas_billing_type: string | null;
   asaas_status: string | null;
   asaas_ambiente: string | null;
+  asaas_payload: Record<string, unknown> | null;
   data_pagamento: string | null;
   data_cancelamento: string | null;
   created_at: string;
@@ -193,6 +197,7 @@ const fromContratoRow = (row: ContratoRow): ContratoFinanceiro => ({
 
 const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
   id: row.id,
+  publicToken: row.public_token || undefined,
   empresaId: row.empresa_id,
   contratoId: row.contrato_id || undefined,
   clienteEmpresaId: row.cliente_empresa_id || '',
@@ -210,6 +215,7 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
   asaasBillingType: row.asaas_billing_type || undefined,
   asaasStatus: row.asaas_status || undefined,
   asaasAmbiente: row.asaas_ambiente || undefined,
+  asaasPayload: row.asaas_payload || undefined,
   dataPagamento: row.data_pagamento || undefined,
   dataCancelamento: row.data_cancelamento || undefined,
   createdAt: row.created_at,
@@ -313,7 +319,7 @@ export const financeiroService = {
   async getCobranças(): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,data_pagamento,data_cancelamento,created_at,updated_at')
+      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at')
       .order('data_vencimento', { ascending: false });
 
     if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
@@ -367,12 +373,50 @@ export const financeiroService = {
   },
 
   async simularRecebimento(cobrancaId: string): Promise<void> {
-    const { data, error } = await supabase.rpc('confirmar_recebimento_financeiro', {
-      p_cobranca_id: cobrancaId,
+    const { data, error } = await supabase.functions.invoke('asaas-manual-settlement', {
+      body: {
+        cobranca_id: cobrancaId,
+      },
     });
 
-    if (error) throw new Error(`Erro ao confirmar recebimento: ${error.message}`);
-    if (!data) throw new Error('Cobrança não encontrada ou cancelada.');
+    if (error) throw new Error(`Erro ao registrar baixa manual: ${error.message}`);
+    if (!data?.ok) throw new Error(data?.error || 'Erro ao registrar baixa manual.');
+  },
+
+  async baixarManualCobrancaCustom(dados: {
+    cobrancaId: string;
+    dataPagamento: string;
+    formaPagamento: string;
+    valorRecebido: number;
+    desconto: number;
+    juros: number;
+    observacao: string;
+    baixarParcial: boolean;
+    contaBancariaId?: string;
+  }): Promise<void> {
+    const { error } = await supabase.rpc('baixar_manual_cobranca_custom', {
+      p_cobranca_id: dados.cobrancaId,
+      p_data_pagamento: dados.dataPagamento,
+      p_forma_pagamento: dados.formaPagamento,
+      p_valor_recebido: dados.valorRecebido,
+      p_desconto: dados.desconto,
+      p_juros: dados.juros,
+      p_observacao: dados.observacao,
+      p_baixar_parcial: dados.baixarParcial,
+      p_conta_bancaria_id: dados.contaBancariaId || null,
+    });
+
+    if (error) throw new Error(`Erro ao registrar baixa manual: ${error.message}`);
+
+    // After local baixa succeeds, cancel the open payment in Asaas (best-effort)
+    try {
+      await supabase.functions.invoke('asaas-manual-settlement', {
+        body: { cobranca_id: dados.cobrancaId },
+      });
+    } catch (asaasErr) {
+      // Log but don't block — the local settlement is already done
+      console.warn('[Asaas] Falha ao cancelar cobrança no Asaas após baixa manual:', asaasErr);
+    }
   },
 
   async getStats(meses = 6): Promise<DashboardStats> {
@@ -392,6 +436,10 @@ export const financeiroService = {
     descricao: string;
     categoria?: string;
     meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
+    descontoPercentual?: number;
+    jurosPercentual?: number;
+    multaPercentual?: number;
+    mensagemBoleto?: string;
   }): Promise<CobrancaFinanceira> {
     const { data, error } = await supabase.functions.invoke('asaas-create-payment', {
       body: {
@@ -402,6 +450,10 @@ export const financeiroService = {
         descricao: dados.descricao,
         categoria: dados.categoria || 'Faturamento',
         meio_pagamento: dados.meioPagamento,
+        desconto_percentual: dados.descontoPercentual || 0,
+        juros_percentual: dados.jurosPercentual || 0,
+        multa_percentual: dados.multaPercentual || 0,
+        mensagem_boleto: dados.mensagemBoleto || '',
         external_reference: dados.contratoId || '',
       },
     });

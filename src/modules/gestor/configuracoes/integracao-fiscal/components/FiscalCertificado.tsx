@@ -84,7 +84,7 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
               onChange={(e) => setConfig(prev => ({ ...prev, certificadoSenha: e.target.value }))}
               placeholder="Senha do arquivo .pfx / .p12"
             />
-            <p className="input-helper-text">Armazenamento local criptografado em AES-256 para máxima proteção das chaves.</p>
+            <p className="input-helper-text">O arquivo e a senha são enviados pela Edge Function e ficam protegidos no Supabase Vault.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
@@ -130,7 +130,7 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
 
       {/* Success of Cert signature */}
       {certResult && (
-        <div className="success-banner animate-fade-in" style={{ marginTop: '16px' }}>
+        <div className={`${certResult.success ? 'success-banner' : 'error-banner'} animate-fade-in`} style={{ marginTop: '16px' }}>
           {certResult.message}
         </div>
       )}

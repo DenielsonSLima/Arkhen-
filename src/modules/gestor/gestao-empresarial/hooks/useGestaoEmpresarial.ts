@@ -112,7 +112,24 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
   const handleSaveCompany = async (company: Company) => {
     setIsSaving(true);
     try {
-      const savedCompany = await saveMutation.mutateAsync(company);
+      const hasCnpj = company.tipo !== 'PF' && company.cnpj.replace(/\D/g, '').length === 14;
+      const shouldFillCnae = hasCnpj && !company.cnae;
+      let payload = company;
+
+      if (shouldFillCnae) {
+        try {
+          const lookup = await handleSearchCNPJ(company.cnpj);
+          payload = {
+            ...company,
+            cnae: company.cnae || lookup.cnae,
+            cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
+          };
+        } catch (error) {
+          // Mantém o fluxo de salvamento sem bloquear caso a consulta CNPJ esteja indisponível.
+        }
+      }
+
+      const savedCompany = await saveMutation.mutateAsync(payload);
       setShowFormModal(false);
       setEditingCompany(null);
       setSuccessMsg(company.id ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
@@ -121,6 +138,30 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const syncCompanyCnae = async (company: Company) => {
+    if (company.tipo === 'PF') {
+      throw new Error('Cliente PF não possui CNAE.');
+    }
+
+    const cnpj = company.cnpj.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+      throw new Error('CNPJ inválido para sincronização de CNAE.');
+    }
+
+    const lookup = await handleSearchCNPJ(company.cnpj);
+    if (!lookup.cnae && !lookup.cnaeDescricao) {
+      throw new Error('Não foi possível localizar o CNAE para este CNPJ.');
+    }
+
+    const updatedCompany: Company = {
+      ...company,
+      cnae: company.cnae || lookup.cnae,
+      cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
+    };
+
+    await handleUpdateCompany(updatedCompany);
   };
 
   const handleInativarCompany = async (id: string) => {
@@ -166,6 +207,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     deleteCompany: handleDeleteCompany,
     getCompanyDocumentCount,
     searchCNPJ: handleSearchCNPJ,
+    syncCompanyCnae,
     activeDetailTab,
     setActiveDetailTab,
     isLoading,

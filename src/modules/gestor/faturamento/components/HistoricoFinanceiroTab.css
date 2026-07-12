@@ -1,0 +1,462 @@
+/* HistoricoFinanceiroTab — Premium design matching ContasAReceberTab */
+
+/* KPI Cards Grid */
+.fat-fin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .fat-fin-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .fat-fin-kpi-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+.fat-fin-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.fat-fin-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+}
+
+.fat-fin-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fat-fin-kpi-icon.green  { background: #ecfdf5; color: #10b981; }
+.fat-fin-kpi-icon.red    { background: #fef2f2; color: #ef4444; }
+.fat-fin-kpi-icon.blue   { background: #eff6ff; color: #3b82f6; }
+.fat-fin-kpi-icon.purple { background: #faf5ff; color: #a855f7; }
+.fat-fin-kpi-icon.black  { background: #f8fafc; color: #1e293b; }
+
+.fat-fin-kpi-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.fat-fin-kpi-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8a97aa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fat-fin-kpi-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fat-fin-kpi-value.green  { color: #10b981 !important; }
+.fat-fin-kpi-value.red    { color: #ef4444 !important; }
+.fat-fin-kpi-value.blue   { color: #3b82f6 !important; }
+.fat-fin-kpi-value.purple { color: #9333ea !important; }
+
+.fat-fin-kpi-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* Pill filter buttons */
+.fat-fin-pills-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fat-fin-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fat-fin-pill-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.fat-fin-pill-btn.active {
+  background-color: var(--color-gold-primary);
+  border-color: var(--color-gold-primary);
+  color: #ffffff;
+}
+
+.fat-fin-pill-count {
+  font-size: 0.72rem;
+  background-color: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+
+.fat-fin-pill-btn.active .fat-fin-pill-count {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.fat-fin-pill-count.red-bg  { background-color: #fee2e2; color: #ef4444; }
+.fat-fin-pill-count.green-bg { background-color: #d1fae5; color: #10b981; }
+
+.fat-fin-pill-btn.active .fat-fin-pill-count.red-bg,
+.fat-fin-pill-btn.active .fat-fin-pill-count.green-bg {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Controls bar */
+.fat-fin-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+  margin-top: 8px;
+}
+
+.fat-fin-filters-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.fat-fin-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fat-fin-search-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+}
+
+.fat-fin-search-wrapper input {
+  padding: 10px 14px 10px 40px;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  color: #111827;
+  outline: none;
+  width: 100%;
+  transition: var(--transition-normal);
+}
+
+.fat-fin-search-wrapper input:focus {
+  border-color: var(--color-gold-primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--color-gold-glow);
+}
+
+.fat-fin-date-range-group {
+  display: flex;
+  align-items: center;
+}
+
+.fat-fin-date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  padding: 10px 14px;
+  min-width: 280px;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.fat-fin-date-inputs input[type="date"] {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: #111827;
+  width: 100%;
+}
+
+.fat-fin-date-separator {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding: 0 2px;
+}
+
+.fat-fin-select-filter {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background-color: #f8fafc;
+  color: #111827;
+  outline: none;
+  height: 40px;
+  box-sizing: border-box;
+  transition: var(--transition-normal);
+}
+
+.fat-fin-select-filter:focus {
+  border-color: var(--color-gold-primary);
+  background-color: #ffffff;
+}
+
+/* Table */
+.fat-fin-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid #e6edf5;
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.fat-fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.fat-fin-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e6edf5;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.fat-fin-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #111827;
+  vertical-align: middle;
+}
+
+.fat-fin-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.fat-fin-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.fat-fin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.fat-fin-table tbody tr.row-paid {
+  background-color: rgba(16, 185, 129, 0.02);
+}
+
+.fat-fin-table tbody tr.row-paid:hover {
+  background-color: rgba(16, 185, 129, 0.04);
+}
+
+/* Status badges */
+.fat-fin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fat-fin-status-badge.paid      { background-color: #ecfdf5; color: #065f46; }
+.fat-fin-status-badge.overdue   { background-color: #fef2f2; color: #991b1b; }
+.fat-fin-status-badge.today     { background-color: #fffbeb; color: #92400e; }
+.fat-fin-status-badge.open      { background-color: #eff6ff; color: #1e40af; }
+.fat-fin-status-badge.cancelled { background-color: #f1f5f9; color: #475569; }
+
+/* Cell helpers */
+.fat-fin-cell-client {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fat-fin-cell-client strong {
+  font-size: 0.85rem;
+  color: #1e293b !important;
+}
+
+.fat-fin-cell-client small {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.fat-fin-cell-desc {
+  display: block;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.fat-fin-cell-value {
+  font-size: 0.95rem;
+  font-weight: 700 !important;
+}
+
+.fat-fin-cell-value.overdue { color: #ef4444 !important; }
+.fat-fin-cell-value.paid    { color: #10b981 !important; }
+
+.fat-fin-cell-date {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Actions */
+.fat-fin-cell-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fat-fin-action-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fat-fin-action-icon-btn:hover:not(:disabled) {
+  background-color: #f8fafc;
+  color: var(--color-gold-primary);
+  border-color: var(--color-gold-primary);
+}
+
+.fat-fin-action-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Empty state */
+.fat-fin-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.fat-fin-empty-state strong {
+  font-size: 1rem;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.fat-fin-empty-state span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+/* Pagination */
+.fat-fin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: #475569;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.fat-fin-pagination button {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fat-fin-pagination button:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.fat-fin-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

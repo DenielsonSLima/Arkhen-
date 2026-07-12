@@ -7,6 +7,7 @@ import type { Company, CompanyDocument } from '../../gestao-empresarial/services
 import { DocumentQuickPreview } from '../../gestao-empresarial/components/DocumentQuickPreview';
 import { OrganizedDocumentList } from './OrganizedDocumentList';
 import type { DocumentGroupBy, DocumentSortBy } from '../utils/documentOrganization';
+import { matchesDocumentFileType } from '../utils/fileTypeFilters';
 
 interface TodosDocumentosTabProps {
   meusDocs: MeusDocumentosData;
@@ -69,21 +70,7 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
     }
 
     if (fileTypeFilter !== 'Todos') {
-      list = list.filter(d => {
-        const ext = d.nome.split('.').pop()?.toLowerCase();
-        if (fileTypeFilter === 'image') return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
-        if (fileTypeFilter === 'pdf') return ext === 'pdf';
-        if (fileTypeFilter === 'docx') return ext === 'docx' || ext === 'doc';
-        if (fileTypeFilter === 'xlsx') return ext === 'xlsx' || ext === 'xls';
-        if (fileTypeFilter === 'xml') return ext === 'xml';
-        if (fileTypeFilter === 'text') return ['txt', 'efd', 'ecd', 'ecf'].includes(ext || '');
-        if (fileTypeFilter === 'csv') return ext === 'csv';
-        if (fileTypeFilter === 'bank') return ['ofx', 'qif', 'rem', 'ret', 'cnab'].includes(ext || '');
-        if (fileTypeFilter === 'certificate') return ['pfx', 'p12', 'cer', 'crt', 'pem', 'p7s'].includes(ext || '');
-        if (fileTypeFilter === 'archive') return ['zip', 'rar', '7z'].includes(ext || '');
-        if (fileTypeFilter === 'email') return ['eml', 'msg'].includes(ext || '');
-        return true;
-      });
+      list = list.filter(d => matchesDocumentFileType(d, fileTypeFilter));
     }
 
     if (searchTerm.trim()) {

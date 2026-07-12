@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import { X, Check } from 'lucide-react';
+import { Banknote, CalendarDays, Check, FileText, Percent, Repeat, X } from 'lucide-react';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { useCreateCobrancaFinanceiraMutation, useSaveContratoFinanceiroMutation } from '../../financeiro/queries/useFinanceiroQueries';
+import {
+  BillingClientSelect,
+  BillingInputFrame,
+  BillingSectionTitle,
+  formatCurrencyInput,
+  formatPercentInput,
+  parseCurrencyInput,
+  parsePercentInput,
+} from './billingFormUtils';
 
 interface ModalNovaRecorrenciaProps {
   isOpen: boolean;
@@ -24,11 +33,14 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
   const [diaVencimento, setDiaVencimento] = useState(1);
   const [descricaoServico, setDescricaoServico] = useState('Honorários contábeis');
   const [meioPagamento, setMeioPagamento] = useState<'Pix' | 'Boleto' | 'Ambos'>('Ambos');
+  const [descontoPercentual, setDescontoPercentual] = useState('');
+  const [jurosPercentual, setJurosPercentual] = useState('');
+  const [multaPercentual, setMultaPercentual] = useState('');
+  const [mensagemBoleto, setMensagemBoleto] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const parseCurrency = (value: string) => Number(value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
   const getNextDueDate = (day: number) => {
     const today = new Date();
     const due = new Date(today.getFullYear(), today.getMonth(), Math.min(Math.max(day, 1), 28));
@@ -36,8 +48,27 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
     return due.toISOString().slice(0, 10);
   };
 
+  const resetForm = () => {
+    setEmitCobranca(true);
+    setClienteEmpresaId('');
+    setValorMensal('');
+    setDiaVencimento(1);
+    setDescricaoServico('Honorários contábeis');
+    setMeioPagamento('Ambos');
+    setDescontoPercentual('');
+    setJurosPercentual('');
+    setMultaPercentual('');
+    setMensagemBoleto('');
+    setErrorMsg(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleSubmit = async () => {
-    const valor = parseCurrency(valorMensal);
+    const valor = parseCurrencyInput(valorMensal);
     if (!clienteEmpresaId || valor <= 0) {
       setErrorMsg('Selecione o parceiro e informe um valor mensal válido.');
       return;
@@ -64,6 +95,10 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
           descricao: descricaoServico,
           categoria: 'Faturamento recorrente',
           meioPagamento,
+          descontoPercentual: parsePercentInput(descontoPercentual),
+          jurosPercentual: parsePercentInput(jurosPercentual),
+          multaPercentual: parsePercentInput(multaPercentual),
+          mensagemBoleto: mensagemBoleto.trim(),
         });
       }
     } catch (error) {
@@ -71,91 +106,137 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
       return;
     }
 
-    setClienteEmpresaId('');
-    setValorMensal('');
-    setDiaVencimento(1);
-    setDescricaoServico('Honorários contábeis');
-    setMeioPagamento('Ambos');
-    onClose();
+    handleClose();
   };
 
   const modalContent = (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999
-    }}>
-      <div className="faturamento-card" style={{ width: '100%', maxWidth: '600px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-            Nova Recorrência
-          </h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+    <div className="faturamento-modal-backdrop">
+      <div className="faturamento-card faturamento-charge-modal">
+        <div className="faturamento-modal-header">
+          <div className="faturamento-modal-title-wrap">
+            <span className="faturamento-modal-title-icon">
+              <Repeat size={20} />
+            </span>
+            <div>
+              <h2>Nova recorrência</h2>
+              <p>Contrato mensal com padrão de cobrança e regras Asaas.</p>
+            </div>
+          </div>
+          <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="faturamento-charge-form">
+          <BillingSectionTitle title="Cliente e mensalidade" description="Dados fixos que orientam a emissão recorrente." />
+
           <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
             <label>Parceiro / Cliente</label>
-            <select value={clienteEmpresaId} onChange={(event) => setClienteEmpresaId(event.target.value)}>
-              <option value="">Selecione o parceiro...</option>
-              {(clientesQuery.data || []).map((cliente) => (
-                <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
-              ))}
-            </select>
+            <BillingClientSelect
+              clientes={clientesQuery.data || []}
+              value={clienteEmpresaId}
+              onChange={setClienteEmpresaId}
+              isLoading={clientesQuery.isLoading}
+            />
           </div>
-          
+
           <div className="faturamento-form-group">
             <label>Valor Mensal (R$)</label>
-            <input type="text" placeholder="0,00" value={valorMensal} onChange={(event) => setValorMensal(event.target.value)} />
+            <BillingInputFrame icon={
+              <Banknote size={16} />
+            }>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="R$ 0,00"
+                value={valorMensal}
+                onChange={(event) => setValorMensal(formatCurrencyInput(event.target.value))}
+              />
+            </BillingInputFrame>
           </div>
 
           <div className="faturamento-form-group">
             <label>Dia de Vencimento/Emissão</label>
-            <select value={diaVencimento} onChange={(event) => setDiaVencimento(Number(event.target.value))}>
-              {[...Array(28)].map((_, i) => (
-                <option key={i+1} value={i+1}>Dia {i+1}</option>
-              ))}
-            </select>
+            <BillingInputFrame icon={
+              <CalendarDays size={16} />
+            }>
+              <select value={diaVencimento} onChange={(event) => setDiaVencimento(Number(event.target.value))}>
+                {[...Array(28)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>Dia {i + 1}</option>
+                ))}
+              </select>
+            </BillingInputFrame>
           </div>
 
-          <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', margin: 0 }}>Automações Ativas</h3>
-            
-            <div className="faturamento-form-group">
-              <label>Descrição da cobrança</label>
-              <textarea rows={2} placeholder="Honorários referentes a [MES]/[ANO]..." value={descricaoServico} onChange={(event) => setDescricaoServico(event.target.value)}></textarea>
-            </div>
+          <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
+            <label>Descrição da cobrança</label>
+            <BillingInputFrame icon={
+              <FileText size={16} />
+            }>
+              <input
+                type="text"
+                placeholder="Honorários referentes a [MES]/[ANO]..."
+                value={descricaoServico}
+                onChange={(event) => setDescricaoServico(event.target.value)}
+              />
+            </BillingInputFrame>
+          </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
-              <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
-              <span style={{ fontSize: '0.9rem', color: '#475569' }}>Gerar cobrança automaticamente (Asaas)</span>
-            </label>
+          <BillingSectionTitle title="Automação Asaas" description="Primeira cobrança e padrão financeiro da recorrência." />
 
-            {emitCobranca && (
-              <div style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                <div className="faturamento-form-group">
-                  <label>Forma de Pagamento Padrão</label>
-                  <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
-                    <option value="Ambos">Boleto + Pix</option>
-                    <option value="Pix">Apenas Pix</option>
-                    <option value="Boleto">Boleto</option>
-                  </select>
-                </div>
+          <label className="faturamento-switch-row" style={{ gridColumn: '1 / -1' }}>
+            <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
+            <span>
+              <strong>Gerar primeira cobrança automaticamente</strong>
+              <small>Cria uma cobrança no Asaas com o próximo vencimento calculado.</small>
+            </span>
+          </label>
+
+          {emitCobranca && (
+            <>
+              <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Forma de Pagamento Padrão</label>
+                <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
+                  <option value="Ambos">Boleto + Pix</option>
+                  <option value="Pix">Apenas Pix</option>
+                  <option value="Boleto">Boleto</option>
+                </select>
               </div>
-            )}
-          </div>
+
+              <div className="faturamento-form-group">
+                <label>Desconto até o vencimento (%)</label>
+                <BillingInputFrame icon={<Percent size={16} />}>
+                  <input type="text" inputMode="numeric" placeholder="0,00" value={descontoPercentual} onChange={(event) => setDescontoPercentual(formatPercentInput(event.target.value))} />
+                </BillingInputFrame>
+              </div>
+
+              <div className="faturamento-form-group">
+                <label>Juros ao mês (%)</label>
+                <BillingInputFrame icon={<Percent size={16} />}>
+                  <input type="text" inputMode="numeric" placeholder="0,00" value={jurosPercentual} onChange={(event) => setJurosPercentual(formatPercentInput(event.target.value))} />
+                </BillingInputFrame>
+              </div>
+
+              <div className="faturamento-form-group">
+                <label>Multa após vencimento (%)</label>
+                <BillingInputFrame icon={<Percent size={16} />}>
+                  <input type="text" inputMode="numeric" placeholder="0,00" value={multaPercentual} onChange={(event) => setMultaPercentual(formatPercentInput(event.target.value))} />
+                </BillingInputFrame>
+              </div>
+
+              <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Mensagem no boleto</label>
+                <textarea rows={2} maxLength={220} placeholder="Ex: Após o vencimento, cobrar juros e multa conforme contrato." value={mensagemBoleto} onChange={(event) => setMensagemBoleto(event.target.value)} />
+              </div>
+            </>
+          )}
         </div>
 
-        {errorMsg && <div style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>{errorMsg}</div>}
+        {errorMsg && <div className="faturamento-error-message">{errorMsg}</div>}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-          <button 
+        <div className="faturamento-modal-actions">
+          <div />
+          <button
             onClick={() => void handleSubmit()}
             disabled={saveContratoMutation.isPending || createCobrancaMutation.isPending}
             className="faturamento-btn-primary"

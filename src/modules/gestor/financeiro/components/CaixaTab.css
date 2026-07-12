@@ -1,0 +1,35 @@
+/* Styles for CaixaTab */
+
+.financeiro-empty-state {
+  text-align: center;
+  padding: 64px 40px;
+  color: #667085;
+  background-color: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid #e6edf5;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.financeiro-empty-state svg {
+  color: #667085;
+  opacity: 0.5;
+  width: 48px;
+  height: 48px;
+}
+
+.financeiro-empty-state h3 {
+  font-size: 1.25rem;
+  color: #111827;
+  font-weight: 600;
+  margin: 0;
+}
+
+.financeiro-empty-state p {
+  font-size: 0.95rem;
+  margin: 0;
+  max-width: 400px;
+}

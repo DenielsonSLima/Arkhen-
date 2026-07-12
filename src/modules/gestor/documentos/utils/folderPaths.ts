@@ -9,6 +9,24 @@ export const getDirectChildren = (allFolders: string[], parentPath: string | nul
     .filter(rest => !rest.includes('/'));
 };
 
+export const normalizeFolderPath = (path: string): string => (
+  path
+    .split('/')
+    .map((part) => part.trim().replace(/_+/g, ' ').replace(/\s+/g, ' '))
+    .filter(Boolean)
+    .join('/')
+);
+
+export const normalizeFolderPaths = (paths: string[] | null | undefined): string[] => {
+  const byKey = new Map<string, string>();
+  (paths || []).forEach((path) => {
+    const normalized = normalizeFolderPath(path);
+    if (!normalized) return;
+    byKey.set(normalized.toLowerCase(), normalized);
+  });
+  return Array.from(byKey.values());
+};
+
 export const folderLabel = (path: string): string => {
   const parts = path.split('/');
   return parts[parts.length - 1];

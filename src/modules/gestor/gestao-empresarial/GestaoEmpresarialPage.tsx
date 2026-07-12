@@ -58,6 +58,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     deleteCompany,
     getCompanyDocumentCount,
     searchCNPJ,
+    syncCompanyCnae,
     activeDetailTab,
     isLoading,
   } = useGestaoEmpresarial({ initialCompanyId, initialDetailTab });
@@ -126,6 +127,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
         onBack={() => setSelectedCompanyId(null)}
         onUpdateCompany={updateCompany}
         onToggleStatus={toggleCompanyStatus}
+        onSyncCnae={syncCompanyCnae}
       />
     );
   }

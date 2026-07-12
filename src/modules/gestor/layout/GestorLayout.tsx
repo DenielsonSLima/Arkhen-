@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -33,6 +33,7 @@ import { PrazosEntregaPage } from '../parametrizacao/prazos-entrega/PrazosEntreg
 import { ProtocolosTiposPage } from '../parametrizacao/protocolos/ProtocolosTiposPage';
 import { ParametrizacaoPlaceholderPage } from '../parametrizacao/catalogos/ParametrizacaoPlaceholderPage';
 import { CategoriaClientePage } from '../parametrizacao/catalogos/CategoriaClientePage';
+import { CategoriaFinanceiraPage } from '../parametrizacao/catalogos/CategoriaFinanceiraPage';
 import { TiposDocumentosPage } from '../parametrizacao/catalogos/tipos-documentos/TiposDocumentosPage';
 import { PastasPadraoPage } from '../parametrizacao/pastas-padrao/PastasPadraoPage';
 import { GestaoEmpresarialPage } from '../gestao-empresarial/GestaoEmpresarialPage';
@@ -209,6 +210,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     [activeTabId, tabs],
   );
   const activeModuleId = activeOpenedTab?.moduleId || activeTabId;
+  const activeWorkspaceId = activeOpenedTab?.id || activeTabId;
+  const contentViewportRef = useRef<HTMLDivElement>(null);
 
   const globalSearchResults = useMemo<GlobalSearchResult[]>(() => {
     if (normalizedGlobalSearch.length < 2) return [];
@@ -435,6 +438,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },
     { id: 'parametrizacao-pastas-padrao', label: 'Pastas Padrão' },
     { id: 'parametrizacao-checklists', label: 'Modelos de Checklists' },
+    { id: 'parametrizacao-categoria-financeira', label: 'Categorias Financeiras' },
   ];
   const atividadesItems = [
     { id: 'atividades-diarias', label: 'Atividades diárias' },
@@ -446,6 +450,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     { id: 'atividades-rotinas', label: 'Checklists' },
     { id: 'atividades-controle', label: 'Controle de andamento' },
   ];
+
 
 
   const handleNavigate = (id: string) => {
@@ -483,6 +488,12 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       setIsGlobalSearchFocused(false);
     }
   };
+
+  useLayoutEffect(() => {
+    if (contentViewportRef.current) {
+      contentViewportRef.current.scrollTop = 0;
+    }
+  }, [activeWorkspaceId]);
 
   const handleOpenModuleTab = (event: React.MouseEvent | React.KeyboardEvent, id: string) => {
     event.stopPropagation();
@@ -550,6 +561,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         return <ParametrizacaoPlaceholderPage kind="tipos-parceiros" />;
       case 'parametrizacao-categorias-clientes':
         return <CategoriaClientePage />;
+      case 'parametrizacao-categoria-financeira':
+        return <CategoriaFinanceiraPage />;
       case 'parametrizacao-cnae':
         return <CnaePage />;
       case 'parametrizacao-regras':
@@ -636,7 +649,16 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           />
         );
       case 'financeiro':
-        return <FinanceiroPage />;
+      case 'financeiro-caixa':
+      case 'financeiro-receber':
+      case 'financeiro-pagar':
+      case 'financeiro-transferencias':
+      case 'financeiro-creditos':
+      case 'financeiro-debitos':
+        const subTab = activeModuleId.startsWith('financeiro-')
+          ? activeModuleId.replace('financeiro-', '')
+          : undefined;
+        return <FinanceiroPage initialTab={subTab} />;
       case 'relatorios':
         return <RelatoriosPage />;
       case 'configuracoes':
@@ -831,6 +853,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
               );
             }
 
+
             return (
               <div
                 key={item.id}
@@ -1001,7 +1024,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           </div>
         </header>
         <InternalTabBar />
-        <main className="gestor-content-viewport" style={{ position: 'relative' }}>
+        <main ref={contentViewportRef} className="gestor-content-viewport" style={{ position: 'relative' }}>
           <div style={{ display: activeOpenedTab ? 'none' : 'block', height: '100%' }}>
             <ModuleRenderErrorBoundary
               key={activeModuleId}

@@ -77,6 +77,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [cpf, setCpf] = useState('');
   const [razaoSocial, setRazaoSocial] = useState('');
   const [nomeFantasia, setNomeFantasia] = useState('');
+  const [cnae, setCnae] = useState('');
   const [tipo, setTipo] = useState<RegimeCliente>('Simples Nacional');
   const [categoria, setCategoria] = useState<CategoriaCliente>('Cliente Contábil');
   const [logo, setLogo] = useState('');
@@ -125,6 +126,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (type === 'CPF') {
       setTipo('PF');
       setCategoria('Pessoa Física');
+      setCnae('');
     } else {
       setTipo('Simples Nacional');
       setCategoria('Cliente Contábil');
@@ -140,6 +142,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       const data = await onSearchCNPJ(cnpj);
       setRazaoSocial(data.razaoSocial);
       setNomeFantasia(data.nome);
+      setCnae(data.cnae);
       setEmail(data.email);
       setTelefone(data.telefone);
       setEndereco(data.endereco);
@@ -164,6 +167,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       nome: nomeFantasia,
       razaoSocial,
       cnpj: activeDoc,
+      cnae,
       tipo,
       categoriaCliente: categoria,
       tipoEstabelecimento: 'Matriz',
@@ -384,6 +388,19 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
                   onChange={(e) => setNomeFantasia(e.target.value)}
                 />
               </div>
+
+              {docType === 'CNPJ' && (
+                <div className="input-container field-col-6">
+                  <label>CNAE</label>
+                  <input
+                    type="text"
+                    className="input-style"
+                    placeholder="Ex: 62.01-5-01"
+                    value={cnae}
+                    onChange={(e) => setCnae(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div className="input-container field-col-6">
                 <label>Categoria do Cliente</label>

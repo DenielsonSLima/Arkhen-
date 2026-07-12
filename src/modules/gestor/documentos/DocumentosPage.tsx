@@ -8,7 +8,14 @@ import type { Company, CompanyDocument } from '../gestao-empresarial/services/ge
 import type { DocumentCategory } from './services/documentosService';
 import type { ShareableDocument } from './services/documentShareService';
 import type { DocumentGroupBy, DocumentSortBy } from './utils/documentOrganization';
-import { documentosService } from './services/documentosService';
+import { normalizeFolderPath } from './utils/folderPaths';
+import {
+  createDocumentCategory,
+  documentosService,
+  isDefaultDocumentCategoryName,
+  normalizeDocumentCategoryNames,
+} from './services/documentosService';
+import './Documentos.css';
 
 const MeusDocumentosTab = React.lazy(() => import('./components/MeusDocumentosTab').then((module) => ({ default: module.MeusDocumentosTab })));
 const DocumentosEmpresasTab = React.lazy(() => import('./components/DocumentosEmpresasTab').then((module) => ({ default: module.DocumentosEmpresasTab })));
@@ -172,9 +179,11 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   }, []);
 
   const handleCreatePersonalFolder = useCallback((folderName: string) => {
-    const fullPath = personalFolder ? `${personalFolder}/${folderName}` : folderName;
+    const normalizedName = normalizeFolderPath(folderName);
+    if (!normalizedName) return;
+    const fullPath = personalFolder ? `${personalFolder}/${normalizedName}` : normalizedName;
 
-    if (personalFoldersList.includes(fullPath)) {
+    if (personalFoldersList.some((folder) => normalizeFolderPath(folder).toLowerCase() === fullPath.toLowerCase())) {
       setQuickModal({ title: 'Pasta já Existe', message: 'Uma pasta com este nome já existe aqui.' });
       return;
     }
@@ -282,14 +291,20 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   }, [selectedCompany]);
 
   const companyCategoriesList = useMemo(() => {
-    return selectedCompany?.categoriasDocumentos || ['Outros'];
+    return normalizeDocumentCategoryNames(selectedCompany?.categoriasDocumentos);
   }, [selectedCompany]);
+
+  const companyCategoriesForModal = useMemo<DocumentCategory[]>(() => (
+    companyCategoriesList.map((name) => createDocumentCategory(name, isDefaultDocumentCategoryName(name)))
+  ), [companyCategoriesList]);
 
   const handleCreateCompanyFolder = useCallback((folderName: string) => {
     if (!selectedCompany) return;
-    const fullPath = companyFolder ? `${companyFolder}/${folderName}` : folderName;
+    const normalizedName = normalizeFolderPath(folderName);
+    if (!normalizedName) return;
+    const fullPath = companyFolder ? `${companyFolder}/${normalizedName}` : normalizedName;
 
-    if (companyFoldersList.includes(fullPath)) {
+    if (companyFoldersList.some((folder) => normalizeFolderPath(folder).toLowerCase() === fullPath.toLowerCase())) {
       setQuickModal({ title: 'Pasta já Existe', message: 'Uma pasta com este nome já existe aqui.' });
       return;
     }
@@ -323,15 +338,29 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
     }
 
     if (!selectedCompany) return '';
-    const existing = (selectedCompany.categoriasDocumentos || []).find((item) => item.toLowerCase() === name.toLowerCase());
+    const currentCategories = normalizeDocumentCategoryNames(selectedCompany.categoriasDocumentos);
+    const existing = currentCategories.find((item) => item.toLowerCase() === name.toLowerCase());
     if (existing) return existing;
 
     await saveCompanyDocs({
       ...selectedCompany,
-      categoriasDocumentos: [...(selectedCompany.categoriasDocumentos || []), name],
+      categoriasDocumentos: [...currentCategories, name],
     });
     return name;
   }, [activeTab, meusDocs.categorias, saveCategories, saveCompanyDocs, selectedCompany]);
+
+  const handleSaveModalCategories = useCallback(async (categories: DocumentCategory[]) => {
+    if (activeTab === 'meus') {
+      await saveCategories(categories);
+      return;
+    }
+
+    if (!selectedCompany) return;
+    await saveCompanyDocs({
+      ...selectedCompany,
+      categoriasDocumentos: categories.filter((item) => item.ativo).map((item) => item.nome),
+    });
+  }, [activeTab, saveCategories, saveCompanyDocs, selectedCompany]);
 
   const handleDownloadFolderZip = useCallback(async (scope: 'meus' | 'empresas', folderPath: string | null) => {
     if (scope === 'meus') {
@@ -687,9 +716,12 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
         {showCategoriesModal && (
           <DocumentCategoriesModal
             isOpen={showCategoriesModal}
-            categories={meusDocs.categorias}
+            categories={activeTab === 'meus' ? meusDocs.categorias : companyCategoriesForModal}
+            description={activeTab === 'meus'
+              ? 'Categorias padrão ficam sempre ativas; suas categorias extras ficam salvas no Supabase.'
+              : 'Categorias padrão ficam sempre ativas; categorias criadas aqui ficam só nesta empresa.'}
             onClose={() => setShowCategoriesModal(false)}
-            onSave={saveCategories}
+            onSave={handleSaveModalCategories}
           />
         )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ArrowUpCircle, ArrowDownCircle, Receipt, Building2, FileText, Wallet, TrendingUp, CreditCard, Filter } from 'lucide-react';
 import type { DashboardStats } from '../services/financeiroService';
+import './CaixaTab.css';
 import {
   BarChart,
   Bar,

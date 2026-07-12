@@ -63,39 +63,45 @@ export const ContasAPagarCard: React.FC<ContasAPagarCardProps> = ({
 
   return (
     <div className={`cobranca-card financeiro-card ${baseStatusClass}`}>
-      <div className={`cobranca-card-status-ribbon ${baseStatusClass}`}>
-        <span>Conta a pagar</span>
-      </div>
       <div className="cobranca-card-header">
-        <div className="cobranca-card-client">
-          <h4>{item.descricao}</h4>
-          <span>{category} • ID {item.id.toUpperCase()}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', minWidth: 0 }}>
+          <div className={`cobranca-card-status-ribbon ${baseStatusClass}`}>
+            Conta a pagar
+          </div>
+          <div className="cobranca-card-client">
+            <h4 title={item.descricao}>{item.descricao}</h4>
+            <span title={`${category} • ID ${item.id.toUpperCase()}`}>{category} • ID {item.id.toUpperCase()}</span>
+          </div>
         </div>
-        <span className={`cobranca-badge ${badgeStatusClass}`}>
-          {statusLabel}
-        </span>
       </div>
       <div className="cobranca-card-body">
+        <span className={`cobranca-badge ${badgeStatusClass}`} style={{ alignSelf: 'flex-start' }}>
+          {statusLabel}
+        </span>
         <div className="financeiro-card-highlight">
           <span>{onFormatCurrency(item.valor)}</span>
         </div>
         <div className="financeiro-card-grid">
           <div className="financeiro-card-grid-row">
-            <span>Situação:</span>
-            <strong>{overdue ? 'Em aberto (atrasada)' : statusLabel}</strong>
+            <span>Situação</span>
+            <strong>{overdue ? 'Atrasada' : statusLabel}</strong>
           </div>
           <div className="financeiro-card-grid-row">
-            <span>Vencimento:</span>
+            <span>Vencimento</span>
             <strong>{onFormatDate(item.dataVencimento)}</strong>
           </div>
           <div className="financeiro-card-grid-row">
-            <span>Lançamento:</span>
+            <span>Lançamento</span>
             <strong>{onFormatDate(item.dataLancamento)}</strong>
+          </div>
+          <div className="financeiro-card-grid-row">
+            <span>Identificador</span>
+            <strong title={item.id}>#{item.id.slice(0, 8).toUpperCase()}</strong>
           </div>
         </div>
       </div>
       <div className="financeiro-card-footer">
-        <span>Identificador: {item.id}</span>
+        <span title={item.id}>ID {item.id.slice(0, 8).toUpperCase()}</span>
       </div>
     </div>
   );

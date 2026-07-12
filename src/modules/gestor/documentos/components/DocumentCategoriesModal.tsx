@@ -5,6 +5,7 @@ import type { DocumentCategory } from '../services/documentosService';
 interface DocumentCategoriesModalProps {
   isOpen: boolean;
   categories: DocumentCategory[];
+  description?: string;
   onClose: () => void;
   onSave: (categories: DocumentCategory[]) => void;
 }
@@ -14,6 +15,7 @@ const makeId = (name: string) => `${name.toLowerCase().normalize('NFD').replace(
 export const DocumentCategoriesModal: React.FC<DocumentCategoriesModalProps> = ({
   isOpen,
   categories,
+  description = 'Contratos, Procurações e Certidões ficam sempre ativos.',
   onClose,
   onSave,
 }) => {
@@ -31,8 +33,11 @@ export const DocumentCategoriesModal: React.FC<DocumentCategoriesModalProps> = (
   };
 
   const saveEdit = (categoryId: string) => {
+    const currentCategory = categories.find((item) => item.id === categoryId);
+    if (currentCategory?.sistema) return;
     const name = editingName.trim();
     if (!name) return;
+    if (categories.some((item) => item.id !== categoryId && item.nome.toLowerCase() === name.toLowerCase())) return;
     onSave(categories.map((item) => (item.id === categoryId ? { ...item, nome: name } : item)));
     setEditingId(null);
     setEditingName('');
@@ -54,7 +59,7 @@ export const DocumentCategoriesModal: React.FC<DocumentCategoriesModalProps> = (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Categorias de Documentos</h3>
-            <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0' }}>Contratos, Procurações e Certidões ficam sempre ativos.</p>
+            <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0' }}>{description}</p>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>
             <X size={18} />
@@ -95,7 +100,7 @@ export const DocumentCategoriesModal: React.FC<DocumentCategoriesModalProps> = (
               )}
 
               <div style={{ display: 'inline-flex', gap: '4px' }}>
-                <button type="button" className="btn-icon-table" onClick={() => { setEditingId(category.id); setEditingName(category.nome); }} title="Editar categoria">
+                <button type="button" className="btn-icon-table" onClick={() => { setEditingId(category.id); setEditingName(category.nome); }} disabled={category.sistema} title="Editar categoria">
                   <Edit3 size={14} />
                 </button>
                 <button type="button" className="btn-icon-table" onClick={() => toggleActive(category.id)} disabled={category.sistema} title="Ativar ou inativar">

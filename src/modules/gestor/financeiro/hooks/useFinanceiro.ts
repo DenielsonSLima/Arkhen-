@@ -8,6 +8,7 @@ import {
   useCancelCobrancaFinanceiraMutation,
   useCobrancasFinanceirasQuery,
   useConfirmarRecebimentoFinanceiroMutation,
+  useBaixarManualCobrancaCustomMutation,
   useContratosFinanceirosQuery,
   useCreateCobrancaFinanceiraMutation,
   useDeleteContratoFinanceiroMutation,
@@ -56,6 +57,7 @@ export const useFinanceiro = () => {
   const cancelBoletoMutation = useCancelBoletoFinanceiroMutation();
   const emitirNfseMutation = useEmitirNfseFinanceiraMutation();
   const confirmarRecebimentoMutation = useConfirmarRecebimentoFinanceiroMutation();
+  const baixarManualCobrancaCustomMutation = useBaixarManualCobrancaCustomMutation();
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const saveLancamentoMutation = useSaveLancamentoFinanceiroMutation();
 
@@ -80,6 +82,8 @@ export const useFinanceiro = () => {
   const [cobrancaToCancel, setCobrancaToCancel] = useState<CobrancaFinanceira | null>(null);
   const [boletoToCancel, setBoletoToCancel] = useState<CobrancaFinanceira | null>(null);
   const [contractToDelete, setContractToDelete] = useState<ContratoFinanceiro | null>(null);
+  const [showManualSettlementModal, setShowManualSettlementModal] = useState(false);
+  const [settlementCobranca, setSettlementCobranca] = useState<CobrancaFinanceira | null>(null);
 
   const setTransientSuccess = (message: string, timeout = 3000) => {
     setSuccessMsg(message);
@@ -210,9 +214,30 @@ export const useFinanceiro = () => {
   const handleSimularRecebimento = async (id: string) => {
     try {
       await confirmarRecebimentoMutation.mutateAsync(id);
-      setTransientSuccess('Pagamento confirmado via webhook.');
+      setTransientSuccess('Baixa manual registrada e cobrança aberta cancelada no Asaas.');
     } catch (err) {
-      setTransientError(err instanceof Error ? err.message : 'Falha ao liquidar cobrança.');
+      setTransientError(err instanceof Error ? err.message : 'Falha ao registrar baixa manual.');
+    }
+  };
+
+  const handleBaixarManualCobrancaCustom = async (dados: {
+    cobrancaId: string;
+    dataPagamento: string;
+    formaPagamento: string;
+    valorRecebido: number;
+    desconto: number;
+    juros: number;
+    observacao: string;
+    baixarParcial: boolean;
+    contaBancariaId?: string;
+  }) => {
+    try {
+      await baixarManualCobrancaCustomMutation.mutateAsync(dados);
+      setTransientSuccess('Baixa manual registrada com sucesso!');
+      setShowManualSettlementModal(false);
+      setSettlementCobranca(null);
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao registrar baixa manual.');
     }
   };
 
@@ -222,6 +247,10 @@ export const useFinanceiro = () => {
     dataVencimento: string;
     descricao: string;
     meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
+    descontoPercentual?: number;
+    jurosPercentual?: number;
+    multaPercentual?: number;
+    mensagemBoleto?: string;
   }) => {
     try {
       await createCobrancaMutation.mutateAsync(dados);
@@ -286,12 +315,19 @@ export const useFinanceiro = () => {
     setBoletoToCancel,
     contractToDelete,
     setContractToDelete,
+    showManualSettlementModal,
+    setShowManualSettlementModal,
+    settlementCobranca,
+    setSettlementCobranca,
     handleSaveContract,
     handleDeleteContract,
     handleCancelCobranca,
     handleCancelBoleto,
     handleEmitirNfseManual,
     handleSimularRecebimento,
+    isManualSettlementLoading: confirmarRecebimentoMutation.isPending,
+    handleBaixarManualCobrancaCustom,
+    isCustomSettlementLoading: baixarManualCobrancaCustomMutation.isPending,
     handleCreateCobranca,
     handleCreateLancamento,
   };

@@ -6,7 +6,8 @@ export type CatalogoTipo =
   | 'naturezas_juridicas'
   | 'tipos_parceiros'
   | 'categorias_clientes'
-  | 'tipos_documentos';
+  | 'tipos_documentos'
+  | 'categorias_financeiras';
 
 export interface CatalogoItem {
   id: string;

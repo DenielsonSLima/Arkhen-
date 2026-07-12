@@ -61,6 +61,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
   const [cpf, setCpf] = useState(company.tipo === 'PF' ? company.cnpj : '');
   const [razaoSocial, setRazaoSocial] = useState(company.razaoSocial || '');
   const [nomeFantasia, setNomeFantasia] = useState(company.nome || '');
+  const [cnae, setCnae] = useState(company.cnae || '');
   const [tipo, setTipo] = useState<RegimeCliente>(company.tipo || 'Simples Nacional');
   const [categoria, setCategoria] = useState<CategoriaCliente>(company.categoriaCliente || 'Cliente Contábil');
   const [logo, setLogo] = useState(company.logo || '');
@@ -94,6 +95,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     setCpf(company.tipo === 'PF' ? company.cnpj : '');
     setRazaoSocial(company.razaoSocial || '');
     setNomeFantasia(company.nome || '');
+    setCnae(company.cnae || '');
     setTipo(company.tipo || 'Simples Nacional');
     setCategoria(company.categoriaCliente || 'Cliente Contábil');
     setLogo(company.logo || '');
@@ -114,6 +116,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     if (type === 'CPF') {
       setTipo('PF');
       setCategoria('Pessoa Física');
+      setCnae('');
     } else {
       setTipo('Simples Nacional');
       setCategoria('Cliente Contábil');
@@ -129,6 +132,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
       const data = await onSearchCNPJ(cnpj);
       setRazaoSocial(data.razaoSocial);
       setNomeFantasia(data.nome);
+      setCnae(data.cnae);
       setEmail(data.email);
       setTelefone(data.telefone);
       setEndereco(data.endereco);
@@ -179,6 +183,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
         nome: nomeFantasia,
         razaoSocial,
         cnpj: activeDoc,
+        cnae,
         tipo,
         categoriaCliente: categoria,
         logo,
@@ -320,6 +325,19 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
                   onChange={(e) => setNomeFantasia(e.target.value)}
                 />
               </div>
+
+              {docType === 'CNPJ' && (
+                <div className="input-container field-col-6">
+                  <label>CNAE</label>
+                  <input
+                    type="text"
+                    className="input-style"
+                    placeholder="Ex: 62.01-5-01"
+                    value={cnae}
+                    onChange={(e) => setCnae(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div className="input-container field-col-6">
                 <label>Categoria do Cliente</label>

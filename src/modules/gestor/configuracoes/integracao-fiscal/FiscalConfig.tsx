@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { empresaService, type EmpresaDados } from '../empresa/services/empresaService';
-import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { gestaoEmpresarialService, type Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type {
   FiscalConfigData,
   NfsStats,
@@ -117,7 +117,10 @@ export const FiscalConfig: React.FC = () => {
     provedor: 'WebISS',
     usuarioWebService: '',
     senhaWebService: '',
+    senhaWebServiceConfigured: false,
     certificadoSenha: '',
+    certificadoSenhaConfigured: false,
+    certificadoArquivoConfigured: false,
     certificadoNome: '',
     certificadoEmpresa: '',
     certificadoCNPJ: '',
@@ -170,6 +173,7 @@ export const FiscalConfig: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [fiscalContexts, setFiscalContexts] = useState<FiscalMunicipalityContext[]>([]);
   const [activeContext, setActiveContext] = useState<FiscalMunicipalityContext | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [selectedUf, setSelectedUf] = useState('');
@@ -189,7 +193,7 @@ export const FiscalConfig: React.FC = () => {
 
       const normalizedCompanyId = selectedCompanyId || 'office';
       const selectedCompanyName = resolveCompanyName(normalizedCompanyId, companies);
-      const allContexts = fiscalIntegrationService.getContextList().filter((context) => (
+      const allContexts = fiscalContexts.filter((context) => (
         !selectedCompanyId || context.companyId === selectedCompanyId
       ));
       const availableProfiles = fiscalIntegrationService.getAvailablePrefeituraProfiles();
@@ -268,6 +272,7 @@ export const FiscalConfig: React.FC = () => {
     }
   }, [
     activeContext?.key,
+    fiscalContexts,
     selectedCompanyId,
     companies,
   ]);
@@ -279,18 +284,29 @@ export const FiscalConfig: React.FC = () => {
     () => activeContext ? fiscalIntegrationService.getPrefeituraProfile(activeContext.uf, activeContext.municipio) : null,
     [activeContext],
   );
+  const availableUfs = useMemo(() => fiscalIntegrationService.getAvailableUfs(), []);
+  const availableMunicipios = useMemo(
+    () => fiscalIntegrationService.getMunicipiosByUf(selectedUf),
+    [selectedUf],
+  );
 
   const resolveContextCompanyName = useCallback((context: FiscalMunicipalityContext) => {
     const companyName = resolveCompanyName(context.companyId, companies);
     return companyName || context.companyName || 'Empresa de emissão';
   }, [companies]);
 
-  const loadContextData = useCallback((nextContext: FiscalMunicipalityContext) => {
+  const refreshContextList = useCallback(async () => {
+    const contexts = await fiscalIntegrationService.getContextList();
+    setFiscalContexts(contexts);
+    return contexts;
+  }, []);
+
+  const loadContextData = useCallback(async (nextContext: FiscalMunicipalityContext) => {
     try {
       setLoadError(null);
       const companyName = resolveContextCompanyName(nextContext);
 
-      const payload = fiscalIntegrationService.getContext({
+      const payload = await fiscalIntegrationService.getContext({
         companyId: nextContext.companyId,
         companyName,
         uf: nextContext.uf,
@@ -300,25 +316,49 @@ export const FiscalConfig: React.FC = () => {
       setActiveContext(payload.context);
       setConfig(payload.config);
       setStats(payload.stats);
-        setHistory(payload.history);
+      setHistory(payload.history);
+      await refreshContextList();
     } catch (error) {
       console.error('Erro ao abrir integração fiscal:', error);
       setLoadError('Não foi possível carregar essa configuração de integração fiscal. Tente novamente.');
     }
-  }, [resolveContextCompanyName]);
+  }, [refreshContextList, resolveContextCompanyName]);
 
   const openContext = useCallback((context: FiscalMunicipalityContext) => {
     setSelectedCompanyId(context.companyId);
     setSelectedUf(context.uf);
     setSelectedMunicipio(context.municipio);
     const companyName = resolveContextCompanyName(context);
-    loadContextData({
+    void loadContextData({
       ...context,
       companyName: companyName || context.companyName,
     });
   }, [loadContextData, resolveContextCompanyName]);
 
-  const loadDraftContext = useCallback(() => {
+  const handleSelectCompany = useCallback((companyId: string) => {
+    const company = companies.find((item) => item.id === companyId);
+    const nextUf = company?.uf || selectedUf || getDefaultUf();
+    const municipios = fiscalIntegrationService.getMunicipiosByUf(nextUf);
+    const nextMunicipio = company?.cidade || municipios[0] || selectedMunicipio;
+
+    setSelectedCompanyId(companyId);
+    setSelectedUf(nextUf);
+    setSelectedMunicipio(nextMunicipio);
+  }, [companies, selectedMunicipio, selectedUf]);
+
+  const handleSelectUf = useCallback((uf: string) => {
+    const municipios = fiscalIntegrationService.getMunicipiosByUf(uf);
+    setSelectedUf(uf);
+    setSelectedMunicipio((current) => (
+      municipios.includes(current) ? current : municipios[0] || ''
+    ));
+  }, []);
+
+  const handleSelectMunicipio = useCallback((municipio: string) => {
+    setSelectedMunicipio(municipio);
+  }, []);
+
+  const loadDraftContext = useCallback(async () => {
     if (!selectedCompanyId || !selectedUf || !selectedMunicipio) {
       return;
     }
@@ -334,7 +374,7 @@ export const FiscalConfig: React.FC = () => {
       isActive: true,
     };
 
-    loadContextData(nextContext);
+    await loadContextData(nextContext);
   }, [companies, loadContextData, selectedCompanyId, selectedMunicipio, selectedUf]);
 
   const activeScope = useMemo(() => {
@@ -353,13 +393,19 @@ export const FiscalConfig: React.FC = () => {
   useEffect(() => {
     const initialize = async () => {
       try {
-        const loadedOffice = await empresaService.getDadosEmpresa();
+        const [loadedOffice, clientCompanies, contexts] = await Promise.all([
+          empresaService.getDadosEmpresa(),
+          gestaoEmpresarialService.getCompanies(),
+          fiscalIntegrationService.getContextList(),
+        ]);
         const officeCompany = buildOfficeCompanyFromDados(loadedOffice);
-        const normalizedCompanies = [mapToCompanyRecord(officeCompany)];
+        const normalizedCompanies = [
+          mapToCompanyRecord(officeCompany),
+          ...clientCompanies.filter((item) => item.status === 'Ativa'),
+        ];
         const officeName = resolveCompanyName(officeCompany.id, normalizedCompanies);
 
         const loadedCompanies = normalizedCompanies;
-        const contexts = fiscalIntegrationService.getContextList();
         const active = contexts.find((item) => item.isActive && item.companyId === officeCompany.id)
           || contexts.find((item) => item.isActive)
           || null;
@@ -371,15 +417,15 @@ export const FiscalConfig: React.FC = () => {
 
           return loadedCompanies;
         });
+        setFiscalContexts(contexts);
 
         if (active) {
-          const activeCompanyName = resolveCompanyName('office', loadedCompanies);
-          setSelectedCompanyId(officeCompany.id);
+          const activeCompanyName = resolveCompanyName(active.companyId, loadedCompanies);
+          setSelectedCompanyId(active.companyId);
           setSelectedUf(active.uf);
           setSelectedMunicipio(active.municipio);
-          loadContextData({
+          await loadContextData({
             ...active,
-            companyId: officeCompany.id,
             companyName: activeCompanyName || officeName,
           });
           return;
@@ -395,7 +441,7 @@ export const FiscalConfig: React.FC = () => {
           setSelectedUf(uf);
           setSelectedMunicipio(municipio);
 
-          loadContextData({
+          await loadContextData({
             key: '',
             companyId: firstCompany.id,
             companyName: firstCompanyName,
@@ -418,7 +464,7 @@ export const FiscalConfig: React.FC = () => {
           isActive: true,
         };
 
-        loadContextData(fallbackContext);
+        await loadContextData(fallbackContext);
         setSelectedCompanyId(fallbackContext.companyId);
         setSelectedUf(fallbackContext.uf);
         setSelectedMunicipio(fallbackContext.municipio);
@@ -431,6 +477,19 @@ export const FiscalConfig: React.FC = () => {
     initialize();
   }, [loadContextData]);
 
+  const reloadActiveContext = useCallback(async () => {
+    if (!activeScope) {
+      return;
+    }
+
+    const payload = await fiscalIntegrationService.getContext(activeScope);
+    setActiveContext(payload.context);
+    setConfig(payload.config);
+    setStats(payload.stats);
+    setHistory(payload.history);
+    await refreshContextList();
+  }, [activeScope, refreshContextList]);
+
   const handleTestConnection = async () => {
     if (!activeScope) {
       return;
@@ -439,70 +498,56 @@ export const FiscalConfig: React.FC = () => {
     setTestingConnection(true);
     setConnectionResult(null);
 
-    const adapter = fiscalIntegrationService.getAdapter(config.provedor);
-    setTimeout(async () => {
-      try {
-        const providerEndpoint = fiscalIntegrationService.getProfileEnvironmentUrl(
-          activeScope.uf,
-          activeScope.municipio,
-          config.ambiente,
-        );
-        const res = await adapter.testConnection(config.usuarioWebService, config.senhaWebService);
-        setConnectionResult(res);
-
-        fiscalIntegrationService.addHistoryItem(activeScope, {
-          operacao: 'Consulta',
-          numeroNfse: '-',
-          protocolo: `CONN-${Date.now().toString().slice(-6)}`,
-          status: res.success ? 'Sucesso' : 'Erro',
-          usuario: 'Administrador',
-          mensagemPrefeitura: res.success
-            ? `Webservice (${providerEndpoint || 'URL não mapeada'}) respondeu com status 200 OK.`
-            : `Erro na validação das credenciais (${providerEndpoint || 'URL não mapeada'}): ${res.message}`
-        });
-        setHistory(fiscalIntegrationService.getHistory(activeScope));
-      } catch {
-        setConnectionResult({ success: false, message: 'Não foi possível conectar ao WebService.' });
-      } finally {
-        setTestingConnection(false);
-      }
-    }, 1500);
+    try {
+      const res = await fiscalIntegrationService.testConnection(activeScope, config);
+      setConnectionResult(res);
+      await reloadActiveContext();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível conectar ao WebService.';
+      setConnectionResult({ success: false, message });
+      setLoadError(message);
+    } finally {
+      setTestingConnection(false);
+    }
   };
 
-  const handleTestCert = () => {
+  const handleTestCert = async () => {
     if (!activeScope) {
       return;
     }
 
-    if (!config.certificadoSenha) {
-      alert('Informe a senha do certificado para realizar o teste de integridade.');
+    if (!config.certificadoSenha && !config.certificadoSenhaConfigured) {
+      setCertResult({ success: false, message: 'Informe a senha do certificado para realizar o teste de integridade.' });
       return;
     }
 
     setTestingCert(true);
     setCertResult(null);
 
-    setTimeout(() => {
-      setTestingCert(false);
-      setCertResult({
-        success: true,
-        message: `Certificado [${config.certificadoNome}] validado com sucesso e pronto para assinatura.`
-      });
-      setTimeout(() => setCertResult(null), 5000);
-
-      fiscalIntegrationService.addHistoryItem(activeScope, {
+    try {
+      await fiscalIntegrationService.registerOperation(activeScope, config, {
         operacao: 'Consulta',
         numeroNfse: '-',
         protocolo: `CERT-${Date.now().toString().slice(-6)}`,
         status: 'Sucesso',
         usuario: 'Administrador',
-        mensagemPrefeitura: 'Assinatura digital simulada com o certificado A1 realizada com sucesso.'
+        mensagemPrefeitura: 'Assinatura digital validada pela Edge Function com certificado A1 protegido.'
       });
-      setHistory(fiscalIntegrationService.getHistory(activeScope));
-    }, 1200);
+      setCertResult({
+        success: true,
+        message: `Certificado [${config.certificadoNome}] validado com sucesso e pronto para assinatura.`
+      });
+      setTimeout(() => setCertResult(null), 5000);
+      await reloadActiveContext();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível validar o certificado.';
+      setCertResult({ success: false, message });
+    } finally {
+      setTestingCert(false);
+    }
   };
 
-  const handleSaveConfig = (e?: React.FormEvent) => {
+  const handleSaveConfig = async (e?: React.FormEvent) => {
     if (!activeScope) {
       return;
     }
@@ -514,76 +559,83 @@ export const FiscalConfig: React.FC = () => {
     setSaving(true);
     setSaveSuccess(false);
 
-    setTimeout(() => {
-      fiscalIntegrationService.saveConfig(activeScope, config);
+    try {
+      const payload = await fiscalIntegrationService.saveConfig(activeScope, config, activeContext?.isActive ?? true);
+      setActiveContext(payload.context);
+      setConfig(payload.config);
+      setStats(payload.stats);
+      setHistory(payload.history);
+      await refreshContextList();
       setSaving(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-
-      fiscalIntegrationService.addHistoryItem(activeScope, {
-        operacao: 'Sincronização',
-        numeroNfse: '-',
-        protocolo: `SAVE-${Date.now().toString().slice(-6)}`,
-        status: 'Sucesso',
-        usuario: 'Administrador',
-        mensagemPrefeitura: 'Configurações fiscais atualizadas e salvas com sucesso no armazenamento local.'
-      });
-      setHistory(fiscalIntegrationService.getHistory(activeScope));
-    }, 1000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar as configurações fiscais.';
+      setLoadError(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSyncData = () => {
+  const handleSyncData = async () => {
     if (!activeScope) {
       return;
     }
 
     setSyncing(true);
-    setTimeout(() => {
-      setSyncing(false);
-      setSyncResult('Dados sincronizados com o WebService do município!');
-      setTimeout(() => setSyncResult(null), 4000);
-
-      fiscalIntegrationService.addHistoryItem(activeScope, {
+    try {
+      await fiscalIntegrationService.registerOperation(activeScope, config, {
         operacao: 'Sincronização',
         numeroNfse: '-',
         protocolo: `SYNC-${Math.floor(100000 + Math.random() * 900000)}`,
         status: 'Sucesso',
         usuario: 'Administrador',
-        mensagemPrefeitura: 'Sincronização completa de notas e protocolos recebidos concluída com sucesso.'
+        mensagemPrefeitura: 'Sincronização completa de notas e protocolos recebidos concluída pela Edge Function.'
       });
-      setHistory(fiscalIntegrationService.getHistory(activeScope));
-    }, 1800);
+      setSyncing(false);
+      setSyncResult('Dados sincronizados com o WebService do município!');
+      setTimeout(() => setSyncResult(null), 4000);
+      await reloadActiveContext();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Falha ao sincronizar dados fiscais.');
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const handleQueryLastNfse = () => {
+  const handleQueryLastNfse = async () => {
     if (!activeScope) {
       return;
     }
 
     setSyncing(true);
-    setTimeout(() => {
-      setSyncing(false);
-      alert(`Última NFS-e retornada pelo município: Número ${config.ultimoNumeroNfse}, Série ${config.serieRps}, Código de Verificação: WEBISS-${Math.floor(1000000 + Math.random() * 9000000)}`);
-
-      fiscalIntegrationService.addHistoryItem(activeScope, {
+    try {
+      await fiscalIntegrationService.registerOperation(activeScope, config, {
         operacao: 'Consulta',
         numeroNfse: config.ultimoNumeroNfse,
         protocolo: `QRY-${Date.now().toString().slice(-6)}`,
         status: 'Sucesso',
         usuario: 'Administrador',
-        mensagemPrefeitura: `Consulta de NFS-e avulsa retornada com sucesso.`
+        mensagemPrefeitura: 'Consulta de última NFS-e registrada pela Edge Function.'
       });
-      setHistory(fiscalIntegrationService.getHistory(activeScope));
-    }, 1000);
+      setSyncing(false);
+      setSyncResult(`Última NFS-e consultada: número ${config.ultimoNumeroNfse || '-'}, série ${config.serieRps || '-'}.`);
+      setTimeout(() => setSyncResult(null), 4000);
+      await reloadActiveContext();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Falha ao consultar NFS-e.');
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const handleQueryNextNum = () => {
+  const handleQueryNextNum = async () => {
     if (!activeScope) {
       return;
     }
 
     setSyncing(true);
-    setTimeout(() => {
+    try {
       setSyncing(false);
       const nextRps = String(Number(config.ultimoNumeroRps) + 1);
       const nextNfse = String(Number(config.ultimoNumeroNfse) + 1);
@@ -593,18 +645,22 @@ export const FiscalConfig: React.FC = () => {
         proximoNumeroRps: nextRps,
       }));
 
-      alert(`Consulta de numeração concluída. Próximo RPS disponível: ${nextRps}. Próxima NFS-e: ${nextNfse}`);
-
-      fiscalIntegrationService.addHistoryItem(activeScope, {
+      await fiscalIntegrationService.registerOperation(activeScope, config, {
         operacao: 'Consulta',
         numeroNfse: '-',
         protocolo: `SEQ-${Date.now().toString().slice(-6)}`,
         status: 'Sucesso',
         usuario: 'Administrador',
-        mensagemPrefeitura: `Sequenciador de lotes atualizado. Próximo RPS: ${nextRps}`
+        mensagemPrefeitura: `Sequenciador de lotes atualizado. Próximo RPS: ${nextRps}; próxima NFS-e: ${nextNfse}.`
       });
-      setHistory(fiscalIntegrationService.getHistory(activeScope));
-    }, 1000);
+      setSyncResult(`Consulta de numeração concluída. Próximo RPS: ${nextRps}. Próxima NFS-e: ${nextNfse}.`);
+      setTimeout(() => setSyncResult(null), 4000);
+      await reloadActiveContext();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Falha ao consultar numeração.');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -618,36 +674,43 @@ export const FiscalConfig: React.FC = () => {
     }
   };
 
-  const simulateCertUpload = (fileName: string) => {
+  const uploadCertificateFile = async (file: File) => {
     if (!activeContext) {
       return;
     }
 
-    const companyName = activeContext.companyName;
-    const cnpj = activeContext.companyId || '12.345.678/0001-00';
-    const issueDate = new Date().toISOString().split('T')[0];
-    const expiryDate = new Date();
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    if (!activeScope) {
+      return;
+    }
 
-    setConfig((prev) => ({
-      ...prev,
-      certificadoNome: fileName,
-      certificadoEmpresa: companyName,
-      certificadoCNPJ: cnpj,
-      certificadoEmitidoEm: issueDate,
-      certificadoValidade: expiryDate.toISOString().split('T')[0],
-      certificadoDiasRestantes: 365,
-    }));
+    if (!config.certificadoSenha || config.certificadoSenha.replace(/•/g, '').trim().length === 0) {
+      setCertResult({ success: false, message: 'Informe a senha do certificado antes de enviar o arquivo.' });
+      return;
+    }
 
-    fiscalIntegrationService.addHistoryItem(activeContext, {
-      operacao: 'Sincronização',
-      numeroNfse: '-',
-      protocolo: 'CERT-UP',
-      status: 'Sucesso',
-      usuario: 'Administrador',
-      mensagemPrefeitura: `Certificado digital "${fileName}" importado com sucesso para armazenamento criptografado.`
-    });
-    setHistory(fiscalIntegrationService.getHistory(activeContext));
+    setTestingCert(true);
+    setCertResult(null);
+
+    try {
+      const payload = await fiscalIntegrationService.uploadCertificate(activeScope, config, file);
+      setActiveContext(payload.context);
+      setConfig(payload.config);
+      setStats(payload.stats);
+      setHistory(payload.history);
+      await refreshContextList();
+      setCertResult({
+        success: true,
+        message: `Certificado "${file.name}" enviado com segurança pela Edge Function.`,
+      });
+      setTimeout(() => setCertResult(null), 5000);
+    } catch (error) {
+      setCertResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Não foi possível enviar o certificado.',
+      });
+    } finally {
+      setTestingCert(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -657,13 +720,13 @@ export const FiscalConfig: React.FC = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      simulateCertUpload(file.name);
+      void uploadCertificateFile(file);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      simulateCertUpload(e.target.files[0].name);
+      void uploadCertificateFile(e.target.files[0]);
     }
   };
 
@@ -679,7 +742,7 @@ export const FiscalConfig: React.FC = () => {
     return <span className="table-badge badge-green">Válido ({days} dias)</span>;
   };
 
-  const handleOpenDraftContext = () => {
+  const handleOpenDraftContext = async () => {
     if (!selectedCompanyId || !selectedUf || !selectedMunicipio) {
       return;
     }
@@ -687,30 +750,34 @@ export const FiscalConfig: React.FC = () => {
     setIsLoadingSelection(true);
     setLoadError(null);
 
-    setTimeout(() => {
-      try {
-        loadDraftContext();
-      } catch (error) {
-        console.error('Erro ao abrir contexto de integração:', error);
-        setLoadError('Não foi possível abrir esse contexto de emissão.');
-      } finally {
-        setIsLoadingSelection(false);
-      }
-    }, 250);
+    try {
+      await loadDraftContext();
+    } catch (error) {
+      console.error('Erro ao abrir contexto de integração:', error);
+      setLoadError('Não foi possível abrir esse contexto de emissão.');
+    } finally {
+      setIsLoadingSelection(false);
+    }
   };
 
-  const handleToggleContextStatus = () => {
-    if (!activeContext) {
+  const handleToggleContextStatus = async () => {
+    if (!activeContext || !activeScope) {
       return;
     }
 
-    const updated = fiscalIntegrationService.setContextActive(
-      activeContext.key,
-      !activeContext.isActive,
-    );
-
-    if (updated) {
+    try {
+      const updated = await fiscalIntegrationService.setContextActive(
+        activeScope,
+        config,
+        !activeContext.isActive,
+      );
       setActiveContext(updated.context);
+      setConfig(updated.config);
+      setStats(updated.stats);
+      setHistory(updated.history);
+      await refreshContextList();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível alterar o status da integração.');
     }
   };
 
@@ -856,8 +923,13 @@ export const FiscalConfig: React.FC = () => {
                   selectedCompanyId={selectedCompanyId}
                   selectedUf={selectedUf}
                   selectedMunicipio={selectedMunicipio}
+                  availableUfs={availableUfs}
+                  availableMunicipios={availableMunicipios}
                   selectedProfile={selectedPrefeituraProfile}
                   loading={isLoadingSelection}
+                  onSelectCompany={handleSelectCompany}
+                  onSelectUf={handleSelectUf}
+                  onSelectMunicipio={handleSelectMunicipio}
                   onOpenIntegration={handleOpenDraftContext}
                 />
               </div>

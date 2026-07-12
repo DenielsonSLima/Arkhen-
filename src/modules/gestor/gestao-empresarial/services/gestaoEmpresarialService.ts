@@ -94,6 +94,8 @@ export interface Company {
   nome: string;
   razaoSocial: string;
   cnpj: string;
+  cnae?: string;
+  cnaeDescricao?: string;
   tipo: 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
   categoriaCliente?: string;
   tipoEstabelecimento: 'Matriz' | 'Filial';
@@ -119,6 +121,7 @@ export interface Company {
   historicoCorporativo?: CorporateEvent[];
   certificados?: CertificadoDigital[];
   polos?: ClientBranch[];
+  createdAt?: string;
 }
 
 export interface Vacation {
@@ -147,6 +150,8 @@ interface ClienteRow {
   funcionarios_count: number | null;
   status: CompanyStatus | null;
   email: string | null;
+  cnae: string | null;
+  cnae_descricao: string | null;
   telefone: string | null;
   endereco: string | null;
   cidade: string | null;
@@ -165,6 +170,7 @@ interface ClienteRow {
   historico_corporativo: CorporateEvent[] | null;
   certificados: CertificadoDigital[] | null;
   polos: ClientBranch[] | null;
+  created_at: string | null;
 }
 
 const extractLocationFromAddress = (endereco = '') => {
@@ -198,6 +204,8 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   nome: row.nome || '',
   razaoSocial: row.razao_social || row.nome || '',
   cnpj: row.cnpj || '',
+  cnae: row.cnae || undefined,
+  cnaeDescricao: row.cnae_descricao || undefined,
   tipo: row.tipo || 'Simples Nacional',
   categoriaCliente: row.categoria_cliente || undefined,
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
@@ -223,11 +231,14 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   historicoCorporativo: row.historico_corporativo || [],
   certificados: row.certificados || [],
   polos: row.polos || [],
+  createdAt: row.created_at || undefined,
 });
 
 const mapCompanyToPayload = (company: Company) => ({
   nome: company.nome || '',
   razao_social: company.razaoSocial || company.nome || '',
+  cnae: company.cnae || null,
+  cnae_descricao: company.cnaeDescricao || null,
   cnpj: company.cnpj || '',
   tipo: company.tipo || 'Simples Nacional',
   categoria_cliente: company.categoriaCliente || null,
@@ -256,6 +267,79 @@ const mapCompanyToPayload = (company: Company) => ({
   polos: company.polos || [],
 });
 
+const mapCompanyToPayloadWithoutCnae = (company: Company) => {
+  const { cnae, cnaeDescricao, ...payload } = mapCompanyToPayload(company) as Record<string, unknown>;
+  void cnae;
+  void cnaeDescricao;
+  return payload;
+};
+
+const isCnaeSchemaError = (message?: string | null) => {
+  if (!message) return false;
+  return (
+    message.includes('Could not find the \'cnae\' column') ||
+    message.includes('Could not find the "cnae" column') ||
+    message.includes('column "cnae"') ||
+    message.includes('column \'cnae\'') ||
+    message.includes('Could not find the \'cnae_descricao\' column') ||
+    message.includes('Could not find the "cnae_descricao" column') ||
+    message.includes('column "cnae_descricao"') ||
+    message.includes('column \'cnae_descricao\'')
+  );
+};
+
+const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
+  const payload = mapCompanyToPayload(updatedCompany);
+  const payloadWithoutCnae = mapCompanyToPayloadWithoutCnae(updatedCompany);
+  try {
+    if (isUpdate) {
+      const { data, error } = await supabase
+        .from('clientes')
+        .update(payload)
+        .eq('id', updatedCompany.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return mapRowToCompany(data as ClienteRow);
+    }
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return mapRowToCompany(data as ClienteRow);
+  } catch (error) {
+    if (error instanceof Error && isCnaeSchemaError(error.message)) {
+      if (isUpdate) {
+        const { data, error: fallbackError } = await supabase
+          .from('clientes')
+          .update(payloadWithoutCnae)
+          .eq('id', updatedCompany.id)
+          .select('*')
+          .single();
+
+        if (fallbackError) throw new Error(`Erro ao atualizar cliente: ${fallbackError.message}`);
+        return mapRowToCompany(data as ClienteRow);
+      }
+
+      const { data, error: fallbackError } = await supabase
+        .from('clientes')
+        .insert(payloadWithoutCnae)
+        .select('*')
+        .single();
+
+      if (fallbackError) throw new Error(`Erro ao cadastrar cliente: ${fallbackError.message}`);
+      return mapRowToCompany(data as ClienteRow);
+    }
+
+    throw error;
+  }
+};
+
 export const gestaoEmpresarialService = {
   async getCompanies(): Promise<Company[]> {
     const { data, error } = await supabase
@@ -279,30 +363,12 @@ export const gestaoEmpresarialService = {
   },
 
   async saveCompany(updatedCompany: Company): Promise<Company> {
-    const payload = mapCompanyToPayload(updatedCompany);
-
     if (updatedCompany.id) {
-      const { data, error } = await supabase
-        .from('clientes')
-        .update(payload)
-        .eq('id', updatedCompany.id)
-        .select('*')
-        .single();
-
-      if (error) throw new Error(`Erro ao atualizar cliente: ${error.message}`);
-      return mapRowToCompany(data as ClienteRow);
+      return saveWithFallback(updatedCompany, true);
     }
 
     await planosContratacaoService.assertCanCreateCompany();
-
-    const { data, error } = await supabase
-      .from('clientes')
-      .insert(payload)
-      .select('*')
-      .single();
-
-    if (error) throw new Error(`Erro ao cadastrar cliente: ${error.message}`);
-    return mapRowToCompany(data as ClienteRow);
+    return saveWithFallback(updatedCompany, false);
   },
 
   async getCompanyDocumentCount(id: string): Promise<number> {

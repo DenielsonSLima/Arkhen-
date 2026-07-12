@@ -16,14 +16,19 @@ const jsonResponse = (body: Record<string, unknown>, status = 200) =>
   });
 
 const asString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const asNumber = (value: unknown) => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 const asRecord = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 );
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const toBillingType = (meioPagamento: string) => {
   const normalized = meioPagamento.toLowerCase();
   if (normalized === 'pix') return 'PIX';
-  if (normalized === 'ambos') return 'UNDEFINED';
+  if (normalized === 'ambos') return 'BOLETO';
   return 'BOLETO';
 };
 
@@ -31,15 +36,16 @@ const callAsaas = async (
   baseUrl: string,
   apiKey: string,
   path: string,
-  payload: Record<string, unknown>,
+  payload?: Record<string, unknown>,
+  method = 'POST',
 ) => {
   const response = await fetch(`${baseUrl}${path}`, {
-    method: 'POST',
+    method,
     headers: {
       'Content-Type': 'application/json',
       access_token: apiKey,
     },
-    body: JSON.stringify(payload),
+    body: method === 'GET' ? undefined : JSON.stringify(payload || {}),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -52,6 +58,24 @@ const callAsaas = async (
   }
 
   return data as Record<string, unknown>;
+};
+
+const getPixQrCodeWithRetry = async (baseUrl: string, apiKey: string, paymentId: string) => {
+  const delays = [0, 400, 900, 1600];
+  let lastError = '';
+
+  for (const delay of delays) {
+    if (delay > 0) await wait(delay);
+    try {
+      const pixQrCode = await callAsaas(baseUrl, apiKey, `/payments/${paymentId}/pixQrCode`, undefined, 'GET');
+      if (asString(pixQrCode.payload)) return pixQrCode;
+      lastError = 'Asaas retornou Pix sem copia e cola.';
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'Falha ao recuperar Pix.';
+    }
+  }
+
+  return lastError ? { error: lastError } : {};
 };
 
 Deno.serve(async (req) => {
@@ -139,16 +163,46 @@ Deno.serve(async (req) => {
     }
 
     const billingType = toBillingType(asString(cobranca.meioPagamento));
-    const paymentPayload = {
+    const descricao = asString(cobranca.descricao);
+    const mensagemBoleto = asString(cobranca.mensagemBoleto);
+    const descricaoAsaas = mensagemBoleto ? `${descricao}\n${mensagemBoleto}`.slice(0, 500) : descricao;
+    const descontoPercentual = asNumber(cobranca.descontoPercentual);
+    const jurosPercentual = asNumber(cobranca.jurosPercentual);
+    const multaPercentual = asNumber(cobranca.multaPercentual);
+    const paymentPayload: Record<string, unknown> = {
       customer: asaasCustomerId,
       billingType,
       value: Number(cobranca.valor || 0),
       dueDate: asString(cobranca.dataVencimento),
-      description: asString(cobranca.descricao),
+      description: descricaoAsaas,
       externalReference: asString(payload.external_reference) || crypto.randomUUID(),
     };
 
+    if (descontoPercentual > 0) {
+      paymentPayload.discount = {
+        value: descontoPercentual,
+        dueDateLimitDays: 0,
+        type: 'PERCENTAGE',
+      };
+    }
+
+    if (jurosPercentual > 0) {
+      paymentPayload.interest = { value: jurosPercentual };
+    }
+
+    if (multaPercentual > 0) {
+      paymentPayload.fine = {
+        value: multaPercentual,
+        type: 'PERCENTAGE',
+      };
+    }
+
     const payment = await callAsaas(baseUrl, apiKey, '/payments', paymentPayload);
+    const paymentId = asString(payment.id);
+    const pixQrCode = paymentId
+      ? await getPixQrCodeWithRetry(baseUrl, apiKey, paymentId)
+      : {};
+    const paymentWithPix = Object.keys(pixQrCode).length > 0 ? { ...payment, pixQrCode } : payment;
 
     const { data: saved, error: saveError } = await supabase.rpc('registrar_cobranca_asaas', {
       p_user_id: userId,
@@ -162,7 +216,13 @@ Deno.serve(async (req) => {
         meio_pagamento: asString(cobranca.meioPagamento),
         ambiente: environment,
         asaas_customer_id: asaasCustomerId,
-        payment,
+        regras: {
+          desconto_percentual: descontoPercentual,
+          juros_percentual: jurosPercentual,
+          multa_percentual: multaPercentual,
+          mensagem_boleto: mensagemBoleto,
+        },
+        payment: paymentWithPix,
       },
     });
 

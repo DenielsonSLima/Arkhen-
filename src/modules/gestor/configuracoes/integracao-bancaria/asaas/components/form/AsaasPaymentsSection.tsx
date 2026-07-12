@@ -13,7 +13,6 @@ const checkboxItems: Array<[keyof AsaasEnvironmentConfig, string]> = [
   ['aceitaBoleto', 'Boleto Bancário'],
   ['aceitaPix', 'Pix'],
   ['aceitaCartao', 'Cartão de Crédito'],
-  ['checkoutAtivo', 'Checkout Asaas'],
 ];
 
 export const AsaasPaymentsSection: React.FC<AsaasPaymentsSectionProps> = ({
@@ -28,7 +27,7 @@ export const AsaasPaymentsSection: React.FC<AsaasPaymentsSectionProps> = ({
           <CreditCard size={18} />
         </span>
         <div>
-          <strong style={{ display: 'block', color: '#0f172a' }}>Meios e checkout</strong>
+          <strong style={{ display: 'block', color: '#0f172a' }}>Meios de pagamento</strong>
           <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Meios liberados para emissão de cobranças.</span>
         </div>
       </div>
@@ -47,19 +46,6 @@ export const AsaasPaymentsSection: React.FC<AsaasPaymentsSectionProps> = ({
           {label}
         </label>
       ))}
-    </div>
-
-    <div className="form-item-group" style={{ maxWidth: '340px', margin: 0 }}>
-      <label>Parcelamento Máximo</label>
-      <select
-        value={config.maxParcelas}
-        onChange={(event) => onChange('maxParcelas', parseInt(event.target.value, 10) || 1)}
-        disabled={isSaving || !config.aceitaCartao}
-      >
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((item) => (
-          <option key={item} value={item}>Até {item}x sem juros</option>
-        ))}
-      </select>
     </div>
   </div>
 );

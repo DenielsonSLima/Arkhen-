@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  Search,
   Plus,
   ToggleLeft,
   ToggleRight,
@@ -29,6 +30,7 @@ interface ClienteDetailProps {
   onBack: () => void;
   onUpdateCompany: (company: Company) => Promise<void>;
   onToggleStatus: (company: Company) => void;
+  onSyncCnae: (company: Company) => Promise<void>;
 }
 
 type DetailTab = 'dados' | 'filiais' | 'protocolos';
@@ -45,6 +47,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   onBack,
   onUpdateCompany,
   onToggleStatus,
+  onSyncCnae,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('dados');
   const [isEditing, setIsEditing] = useState(false);
@@ -53,6 +56,8 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   const [branchToRemove, setBranchToRemove] = useState<ClientBranch | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [cnaeSyncMsg, setCnaeSyncMsg] = useState<string | null>(null);
+  const [isSyncingCnae, setIsSyncingCnae] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAtiva = company.status === 'Ativa';
@@ -108,6 +113,21 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
     setShowBranchForm(true);
   };
 
+  const handleSyncCnae = async () => {
+    setIsSyncingCnae(true);
+    setCnaeSyncMsg(null);
+    try {
+      await onSyncCnae(company);
+      setCnaeSyncMsg('CNAE atualizado com sucesso.');
+      setTimeout(() => setCnaeSyncMsg(null), 3000);
+    } catch (error: any) {
+      setCnaeSyncMsg(error?.message || 'Não foi possível atualizar o CNAE.');
+      setTimeout(() => setCnaeSyncMsg(null), 3000);
+    } finally {
+      setIsSyncingCnae(false);
+    }
+  };
+
   return (
     <div className="cliente-detail-container">
       {/* Barra superior com Breadcrumb e Ações Rápidas */}
@@ -124,6 +144,12 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
         </div>
 
         <div className="topbar-actions">
+          {displayDocumentLabel === 'CNPJ' && !company.cnae && (
+            <button className="btn-edit-action" onClick={handleSyncCnae} disabled={isSyncingCnae}>
+              <Search size={14} />
+              {isSyncingCnae ? 'Sincronizando CNAE...' : 'Sincronizar CNAE'}
+            </button>
+          )}
           {activeTab === 'dados' && !isEditing && (
             <button className="btn-edit-action" onClick={() => setIsEditing(true)}>
               <Edit3 size={14} /> Editar Cadastro
@@ -195,6 +221,11 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
           </div>
         </div>
       </header>
+      {cnaeSyncMsg && (
+        <div className="form-alert-banner" style={{ marginTop: 10, marginBottom: 10 }}>
+          <span>{cnaeSyncMsg}</span>
+        </div>
+      )}
       {logoError && <div className="error-banner" style={{ marginTop: 10 }}>{logoError}</div>}
 
       {/* Tabs */}
@@ -259,6 +290,10 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
                   <div className="detail-field-box">
                     <label>Nome Fantasia / Apelido</label>
                     <p>{company.nome || '-'}</p>
+                  </div>
+                  <div className="detail-field-box">
+                    <label>CNAE</label>
+                    <p>{company.cnae || '-'}</p>
                   </div>
                   <div className="detail-field-box">
                     <label>Regime de Tributação</label>

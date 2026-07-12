@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { 
-  FolderOpen, AlertCircle, Download, FolderInput,
+  FolderOpen, AlertCircle, Download,
   Trash2, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import type { MeusDocumentosData } from '../services/documentosService';
@@ -12,7 +12,9 @@ import type { DocumentGroupBy, DocumentSortBy } from '../utils/documentOrganizat
 
 // Imported modular modals
 import { RenameFileModal } from './RenameFileModal';
+import { DocumentMoveDrawer, type DocumentMoveTarget } from './DocumentMoveDrawer';
 import { buildBreadcrumb, getDirectChildren, moveFolderTree } from '../utils/folderPaths';
+import { matchesDocumentFileType } from '../utils/fileTypeFilters';
 
 interface MeusDocumentosTabProps {
   meusDocs: MeusDocumentosData;
@@ -89,17 +91,59 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
     const currentName = selectedFolder.split('/').at(-1);
     return getDirectChildren(foldersList, parentFolder).filter((folder) => folder !== currentName);
   }, [foldersList, parentFolder, selectedFolder]);
+  const moveTargets = useMemo<DocumentMoveTarget[]>(() => {
+    const targets: DocumentMoveTarget[] = [];
+    if (selectedFolder) {
+      targets.push({
+        key: parentFolder ?? '__root__',
+        label: parentFolder ? `Voltar para ${parentFolder.split('/').at(-1)}` : 'Mover para a raiz',
+        targetFolder: parentFolder,
+        description: parentFolder ? 'Soltar na pasta acima' : 'Soltar fora das pastas',
+      });
+      siblingFolders.forEach((shortName) => {
+        const fullPath = parentFolder ? `${parentFolder}/${shortName}` : shortName;
+        targets.push({
+          key: fullPath,
+          label: shortName,
+          targetFolder: fullPath,
+          description: 'Outra pasta no mesmo nível',
+        });
+      });
+    }
+    currentSubFolders.forEach((shortName) => {
+      const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
+      const filesInFolder = documents.filter(d => {
+        if (!d.pasta) return false;
+        return d.pasta === fullPath || d.pasta.startsWith(fullPath + '/');
+      }).length;
+      targets.push({
+        key: fullPath,
+        label: shortName,
+        targetFolder: fullPath,
+        description: `${filesInFolder} ${filesInFolder === 1 ? 'arquivo' : 'arquivos'}`,
+      });
+    });
+    return targets;
+  }, [currentSubFolders, documents, parentFolder, selectedFolder, siblingFolders]);
 
   // Breadcrumb
   const breadcrumb = useMemo(() => buildBreadcrumb(selectedFolder), [selectedFolder]);
-  const hasFolderContent = !searchTerm.trim() && currentSubFolders.length > 0;
+  const isFolderNavigationVisible = !searchTerm.trim()
+    && selectedCategoryFilter === 'Todos'
+    && fileTypeFilter === 'Todos';
+  const hasFolderContent = isFolderNavigationVisible && currentSubFolders.length > 0;
 
   const filteredDocs = useMemo(() => {
     let list = documents;
 
     if (!searchTerm.trim()) {
-      // sem busca: mostra só arquivos cuja pasta === path atual
-      list = list.filter(d => (d.pasta ?? null) === selectedFolder);
+      const isFileFilterActive = selectedCategoryFilter !== 'Todos' || fileTypeFilter !== 'Todos';
+      list = list.filter(d => {
+        const folder = d.pasta ?? null;
+        if (isFileFilterActive && !selectedFolder) return true;
+        if (!isFileFilterActive || !selectedFolder) return folder === selectedFolder;
+        return folder === selectedFolder || Boolean(folder?.startsWith(`${selectedFolder}/`));
+      });
     }
 
     if (selectedCategoryFilter !== 'Todos') {
@@ -107,21 +151,7 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
     }
 
     if (fileTypeFilter !== 'Todos') {
-      list = list.filter(d => {
-        const ext = d.nome.split('.').pop()?.toLowerCase();
-        if (fileTypeFilter === 'image') return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
-        if (fileTypeFilter === 'pdf') return ext === 'pdf';
-        if (fileTypeFilter === 'docx') return ext === 'docx' || ext === 'doc';
-        if (fileTypeFilter === 'xlsx') return ext === 'xlsx' || ext === 'xls';
-        if (fileTypeFilter === 'xml') return ext === 'xml';
-        if (fileTypeFilter === 'text') return ['txt', 'efd', 'ecd', 'ecf'].includes(ext || '');
-        if (fileTypeFilter === 'csv') return ext === 'csv';
-        if (fileTypeFilter === 'bank') return ['ofx', 'qif', 'rem', 'ret', 'cnab'].includes(ext || '');
-        if (fileTypeFilter === 'certificate') return ['pfx', 'p12', 'cer', 'crt', 'pem', 'p7s'].includes(ext || '');
-        if (fileTypeFilter === 'archive') return ['zip', 'rar', '7z'].includes(ext || '');
-        if (fileTypeFilter === 'email') return ['eml', 'msg'].includes(ext || '');
-        return true;
-      });
+      list = list.filter(d => matchesDocumentFileType(d, fileTypeFilter));
     }
 
     if (searchTerm.trim()) {
@@ -221,36 +251,6 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
     return draggedFolder !== targetFolder && !(targetFolder || '').startsWith(draggedFolder + '/');
   };
 
-  const renderDropTargetCard = (label: string, targetFolder: string | null, description: string) => {
-    const targetKey = targetFolder ?? '__root__';
-    const isActive = dropTargetFolder === targetKey;
-
-    return (
-      <div
-        key={targetKey}
-        className={`doc-folder-card doc-folder-card--drop-target ${isActive ? 'is-drop-target' : ''}`}
-        onDragOver={(event) => {
-          if (!canDropOnFolder(event, targetFolder)) return;
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-          setDropTargetFolder(targetKey);
-        }}
-        onDragLeave={() => setDropTargetFolder((current) => current === targetKey ? null : current)}
-        onDrop={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          handleDropItem(event, targetFolder);
-        }}
-      >
-        <FolderInput className="doc-folder-icon" size={22} />
-        <div className="doc-folder-info" style={{ flexGrow: 1 }}>
-          <h4>{label}</h4>
-          <span>{description}</span>
-        </div>
-      </div>
-    );
-  };
-
   const handleRenameFileSubmit = async (newName: string) => {
     if (!renameDocId) return;
     const updatedDocs = documents.map(d => d.id === renameDocId ? { ...d, nome: newName } : d);
@@ -294,6 +294,8 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
       onDrop={(event) => handleDropItem(event, selectedFolder)}
       style={{ padding: '4px 0' }}
     >
+      <div className="documents-move-layout">
+        <div className="documents-move-main">
       
       {/* Breadcrumb */}
       {selectedFolder !== null && (
@@ -333,23 +335,12 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
       )}
 
       {/* Subpastas da pasta atual */}
-      {!searchTerm.trim() && (selectedFolder || currentSubFolders.length > 0) && (
+      {isFolderNavigationVisible && (selectedFolder || currentSubFolders.length > 0) && (
         <div style={{ marginBottom: '24px' }}>
-          {selectedFolder && (
-            <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-              Mover para fora ou subpastas
-            </div>
-          )}
+          <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+            {selectedFolder ? 'Subpastas' : 'Pastas'}
+          </div>
           <div className="docs-folders-grid">
-            {selectedFolder && renderDropTargetCard(
-              parentFolder ? `Voltar para ${parentFolder.split('/').at(-1)}` : 'Mover para a raiz',
-              parentFolder,
-              parentFolder ? 'Soltar na pasta acima' : 'Soltar fora das pastas'
-            )}
-            {selectedFolder && siblingFolders.map((shortName) => {
-              const fullPath = parentFolder ? `${parentFolder}/${shortName}` : shortName;
-              return renderDropTargetCard(shortName, fullPath, 'Outra pasta no mesmo nível');
-            })}
             {currentSubFolders.map((shortName, index) => {
               const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
               const filesInFolder = documents.filter(d => {
@@ -447,6 +438,20 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
           onToggleSelect={toggleSelectDoc}
         />
       ) : null}
+        </div>
+
+        {isFolderNavigationVisible && (
+          <DocumentMoveDrawer
+            key="documentos_move_drawer_personal"
+            targets={moveTargets}
+            dropTargetKey={dropTargetFolder}
+            storageKey="documentos_move_drawer_personal"
+            canDropOnFolder={canDropOnFolder}
+            onDropItem={handleDropItem}
+            onDropTargetChange={setDropTargetFolder}
+          />
+        )}
+      </div>
 
       {/* MODAL - RENAME FILE */}
       <RenameFileModal

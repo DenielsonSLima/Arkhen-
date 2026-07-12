@@ -132,10 +132,10 @@ export const useDocumentosMutations = (
 
   const saveSettingsMutation = useMutation({
     mutationFn: async (updatedData: MeusDocumentosData) => {
-      documentosService.saveMeusDocumentos(updatedData);
+      await documentosService.saveMeusDocumentos(updatedData);
       const reconciliation = await reconcileDocumentChanges(currentSettings.documentos || [], updatedData.documentos || []);
       return {
-        settings: documentosService.getMeusDocumentos(),
+        settings: await documentosService.getMeusDocumentos(),
         changedDocuments: reconciliation.changed,
       };
     },
@@ -150,7 +150,7 @@ export const useDocumentosMutations = (
   const saveCategoriesMutation = useMutation({
     mutationFn: async (categories: DocumentCategory[]) => {
       const updatedData = { ...currentSettings, categorias: categories };
-      documentosService.saveMeusDocumentos(updatedData);
+      await documentosService.saveMeusDocumentos(updatedData);
       return documentosService.getMeusDocumentos();
     },
     onSuccess: (data) => {

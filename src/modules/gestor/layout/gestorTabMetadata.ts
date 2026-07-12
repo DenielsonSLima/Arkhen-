@@ -14,6 +14,7 @@ export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   'parametrizacao-prazos-entrega': { title: 'Obrigações', iconName: 'Database' },
   'parametrizacao-protocolos': { title: 'Catálogo de Obrigações', iconName: 'Database' },
   'parametrizacao-checklists': { title: 'Modelos de Checklists', iconName: 'ClipboardList' },
+  'parametrizacao-categoria-financeira': { title: 'Categorias Financeiras', iconName: 'Database' },
   atividades: { title: 'Atividades', iconName: 'ClipboardList' },
   'atividades-diarias': { title: 'Atividades diárias', iconName: 'Clock' },
   'atividades-semanais': { title: 'Atividades semanais', iconName: 'CalendarDays' },
