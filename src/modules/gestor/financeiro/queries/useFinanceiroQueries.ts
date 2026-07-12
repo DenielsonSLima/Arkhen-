@@ -109,9 +109,11 @@ export const useCreateCobrancaFinanceiraMutation = () => {
   return useMutation({
     mutationFn: (dados: {
       clienteEmpresaId: string;
+      contratoId?: string;
       valor: number;
       dataVencimento: string;
       descricao: string;
+      categoria?: string;
       meioPagamento: CobrancaFinanceira['meioPagamento'];
     }) => financeiroService.gerarCobrançaManual(dados),
     onSuccess: () => invalidateFinanceiro(queryClient),

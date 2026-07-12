@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { X, Check } from 'lucide-react';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import { useSaveContratoFinanceiroMutation } from '../../financeiro/queries/useFinanceiroQueries';
+import { useCreateCobrancaFinanceiraMutation, useSaveContratoFinanceiroMutation } from '../../financeiro/queries/useFinanceiroQueries';
 
 interface ModalNovaRecorrenciaProps {
   isOpen: boolean;
@@ -17,17 +17,24 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
     enabled: isOpen,
   });
   const saveContratoMutation = useSaveContratoFinanceiroMutation();
-  const [emitNfse, setEmitNfse] = useState(true);
+  const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const [emitCobranca, setEmitCobranca] = useState(true);
   const [clienteEmpresaId, setClienteEmpresaId] = useState('');
   const [valorMensal, setValorMensal] = useState('');
   const [diaVencimento, setDiaVencimento] = useState(1);
   const [descricaoServico, setDescricaoServico] = useState('Honorários contábeis');
+  const [meioPagamento, setMeioPagamento] = useState<'Pix' | 'Boleto' | 'Ambos'>('Ambos');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const parseCurrency = (value: string) => Number(value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+  const getNextDueDate = (day: number) => {
+    const today = new Date();
+    const due = new Date(today.getFullYear(), today.getMonth(), Math.min(Math.max(day, 1), 28));
+    if (due < today) due.setMonth(due.getMonth() + 1);
+    return due.toISOString().slice(0, 10);
+  };
 
   const handleSubmit = async () => {
     const valor = parseCurrency(valorMensal);
@@ -36,20 +43,39 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
       return;
     }
 
-    setErrorMsg(null);
-    await saveContratoMutation.mutateAsync({
-      clienteEmpresaId,
-      descricaoServico,
-      valorMensal: valor,
-      diaVencimento,
-      emissaoAutomaticaNfse: emitNfse,
-      ativo: true,
-      gerarCobranca: emitCobranca,
-    });
+    try {
+      setErrorMsg(null);
+      const contrato = await saveContratoMutation.mutateAsync({
+        clienteEmpresaId,
+        descricaoServico,
+        valorMensal: valor,
+        diaVencimento,
+        emissaoAutomaticaNfse: false,
+        ativo: true,
+        gerarCobranca: false,
+      });
+
+      if (emitCobranca) {
+        await createCobrancaMutation.mutateAsync({
+          clienteEmpresaId,
+          contratoId: contrato.id,
+          valor,
+          dataVencimento: getNextDueDate(diaVencimento),
+          descricao: descricaoServico,
+          categoria: 'Faturamento recorrente',
+          meioPagamento,
+        });
+      }
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Falha ao salvar recorrência.');
+      return;
+    }
+
     setClienteEmpresaId('');
     setValorMensal('');
     setDiaVencimento(1);
     setDescricaoServico('Honorários contábeis');
+    setMeioPagamento('Ambos');
     onClose();
   };
 
@@ -101,25 +127,10 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
           <div style={{ gridColumn: '1 / -1', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155', margin: 0 }}>Automações Ativas</h3>
             
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input type="checkbox" checked={emitNfse} onChange={(e) => setEmitNfse(e.target.checked)} />
-              <span style={{ fontSize: '0.9rem', color: '#475569' }}>Emitir NFS-e automaticamente</span>
-            </label>
-
-            {emitNfse && (
-              <div style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                <div className="faturamento-form-group">
-                  <label>Tipo de Serviço</label>
-                  <select>
-                    <option>17.19 - Contabilidade, inclusive serviços técnicos...</option>
-                  </select>
-                </div>
-                <div className="faturamento-form-group">
-                  <label>Anotações (Variáveis aceitas: [MES], [ANO])</label>
-                  <textarea rows={2} placeholder="Honorários referentes a [MES]/[ANO]..." value={descricaoServico} onChange={(event) => setDescricaoServico(event.target.value)}></textarea>
-                </div>
-              </div>
-            )}
+            <div className="faturamento-form-group">
+              <label>Descrição da cobrança</label>
+              <textarea rows={2} placeholder="Honorários referentes a [MES]/[ANO]..." value={descricaoServico} onChange={(event) => setDescricaoServico(event.target.value)}></textarea>
+            </div>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
               <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
@@ -130,10 +141,10 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
               <div style={{ paddingLeft: '24px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
                 <div className="faturamento-form-group">
                   <label>Forma de Pagamento Padrão</label>
-                  <select>
-                    <option>Boleto + Pix</option>
-                    <option>Apenas Pix</option>
-                    <option>Cartão de Crédito</option>
+                  <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
+                    <option value="Ambos">Boleto + Pix</option>
+                    <option value="Pix">Apenas Pix</option>
+                    <option value="Boleto">Boleto</option>
                   </select>
                 </div>
               </div>
@@ -146,10 +157,10 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
           <button 
             onClick={() => void handleSubmit()}
-            disabled={saveContratoMutation.isPending}
+            disabled={saveContratoMutation.isPending || createCobrancaMutation.isPending}
             className="faturamento-btn-primary"
           >
-            <Check size={16} /> {saveContratoMutation.isPending ? 'Salvando...' : 'Salvar Recorrência'}
+            <Check size={16} /> {saveContratoMutation.isPending || createCobrancaMutation.isPending ? 'Salvando...' : 'Salvar Recorrência'}
           </button>
         </div>
       </div>

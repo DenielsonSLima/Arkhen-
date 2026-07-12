@@ -27,6 +27,11 @@ export interface CobrancaFinanceira {
   asaasCobrancaId?: string;
   asaasNfseId?: string;
   asaasBoletoUrl?: string;
+  asaasInvoiceUrl?: string;
+  asaasBankSlipUrl?: string;
+  asaasBillingType?: string;
+  asaasStatus?: string;
+  asaasAmbiente?: string;
   dataPagamento?: string;
   dataCancelamento?: string;
   createdAt: string;
@@ -119,6 +124,11 @@ interface CobrancaRow {
   asaas_cobranca_id: string | null;
   asaas_nfse_id: string | null;
   asaas_boleto_url: string | null;
+  asaas_invoice_url: string | null;
+  asaas_bank_slip_url: string | null;
+  asaas_billing_type: string | null;
+  asaas_status: string | null;
+  asaas_ambiente: string | null;
   data_pagamento: string | null;
   data_cancelamento: string | null;
   created_at: string;
@@ -195,6 +205,11 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
   asaasCobrancaId: row.asaas_cobranca_id || undefined,
   asaasNfseId: row.asaas_nfse_id || undefined,
   asaasBoletoUrl: row.asaas_boleto_url || undefined,
+  asaasInvoiceUrl: row.asaas_invoice_url || undefined,
+  asaasBankSlipUrl: row.asaas_bank_slip_url || undefined,
+  asaasBillingType: row.asaas_billing_type || undefined,
+  asaasStatus: row.asaas_status || undefined,
+  asaasAmbiente: row.asaas_ambiente || undefined,
   dataPagamento: row.data_pagamento || undefined,
   dataCancelamento: row.data_cancelamento || undefined,
   createdAt: row.created_at,
@@ -228,7 +243,7 @@ const toContratoPayload = (contrato: ContratoSaveInput) => ({
   dia_vencimento: contrato.diaVencimento,
   emissao_automatica_nfse: contrato.emissaoAutomaticaNfse,
   ativo: contrato.ativo,
-  gerar_cobranca: contrato.gerarCobranca ?? true,
+  gerar_cobranca: contrato.gerarCobranca ?? false,
 });
 
 const toLancamentoPayload = (lancamento: LancamentoSaveInput) => ({
@@ -298,7 +313,7 @@ export const financeiroService = {
   async getCobranças(): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,data_pagamento,data_cancelamento,created_at,updated_at')
+      .select('id,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,data_pagamento,data_cancelamento,created_at,updated_at')
       .order('data_vencimento', { ascending: false });
 
     if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
@@ -371,21 +386,29 @@ export const financeiroService = {
 
   async gerarCobrançaManual(dados: {
     clienteEmpresaId: string;
+    contratoId?: string;
     valor: number;
     dataVencimento: string;
     descricao: string;
+    categoria?: string;
     meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
-  }): Promise<void> {
-    const { error } = await supabase.rpc('gerar_cobranca_manual_financeira', {
-      p_payload: {
+  }): Promise<CobrancaFinanceira> {
+    const { data, error } = await supabase.functions.invoke('asaas-create-payment', {
+      body: {
         cliente_empresa_id: dados.clienteEmpresaId,
+        contrato_id: dados.contratoId || '',
         valor: dados.valor,
         data_vencimento: dados.dataVencimento,
         descricao: dados.descricao,
+        categoria: dados.categoria || 'Faturamento',
         meio_pagamento: dados.meioPagamento,
+        external_reference: dados.contratoId || '',
       },
     });
 
-    if (error) throw new Error(`Erro ao gerar cobrança avulsa: ${error.message}`);
+    if (error) throw new Error(`Erro ao gerar cobrança Asaas: ${error.message}`);
+    if (!data?.ok) throw new Error(data?.error || 'Erro ao gerar cobrança Asaas.');
+
+    return fromCobrancaRow(data.cobranca as CobrancaRow);
   },
 };
