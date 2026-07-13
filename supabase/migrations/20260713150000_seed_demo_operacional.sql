@@ -334,7 +334,7 @@ BEGIN
   SELECT id INTO v_cliente_agro
   FROM public.clientes
   WHERE empresa_id = v_empresa_id
-    AND cnpj = '33.746.980/0001-05'
+    AND cnpj = '35.898.750/0001-07'
   LIMIT 1;
 
   IF v_cliente_agro IS NULL THEN
@@ -348,7 +348,7 @@ BEGIN
       v_empresa_id,
       'AgroVale Insumos',
       'AgroVale Insumos Agrícolas Ltda',
-      '33.746.980/0001-05',
+      '35.898.750/0001-07',
       'Lucro Real',
       'Agronegócio',
       'Matriz',
@@ -382,7 +382,7 @@ BEGIN
     UPDATE public.clientes
     SET nome = 'AgroVale Insumos',
         razao_social = 'AgroVale Insumos Agrícolas Ltda',
-        cnpj = '33.746.980/0001-05',
+        cnpj = '35.898.750/0001-07',
         tipo = 'Lucro Real',
         categoria_cliente = 'Agronegócio',
         tipo_estabelecimento = 'Matriz',
