@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -212,6 +212,29 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const activeModuleId = activeOpenedTab?.moduleId || activeTabId;
   const activeWorkspaceId = activeOpenedTab?.id || activeTabId;
   const contentViewportRef = useRef<HTMLDivElement>(null);
+  const resetContentScroll = useCallback(() => {
+    const viewport = contentViewportRef.current;
+    if (!viewport) return;
+
+    viewport.scrollTop = 0;
+    viewport.scrollLeft = 0;
+    viewport.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+    const activePanel = viewport.querySelector<HTMLElement>('[data-active-module-panel="true"]');
+    const scrollRoot = activePanel || viewport;
+    scrollRoot.scrollTop = 0;
+    scrollRoot.scrollLeft = 0;
+
+    scrollRoot.querySelectorAll<HTMLElement>('*').forEach((element) => {
+      const style = window.getComputedStyle(element);
+      const canScrollY = element.scrollHeight > element.clientHeight && ['auto', 'scroll'].includes(style.overflowY);
+      const canScrollX = element.scrollWidth > element.clientWidth && ['auto', 'scroll'].includes(style.overflowX);
+
+      if (canScrollY) element.scrollTop = 0;
+      if (canScrollX) element.scrollLeft = 0;
+    });
+  }, []);
 
   const globalSearchResults = useMemo<GlobalSearchResult[]>(() => {
     if (normalizedGlobalSearch.length < 2) return [];
@@ -452,12 +475,16 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
 
   const handleNavigate = (id: string) => {
     activateModule(id);
+    resetContentScroll();
+    window.setTimeout(resetContentScroll, 0);
   };
 
   const handleOpenMyProfile = () => {
     sessionStorage.setItem('contabil_config_initial_subtab', 'meu-perfil');
     window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: 'meu-perfil' } }));
     activateModule('configuracoes');
+    resetContentScroll();
+    window.setTimeout(resetContentScroll, 0);
   };
 
   const handleGlobalSearchSelect = (result: GlobalSearchResult) => {
@@ -471,6 +498,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     }
 
     activateModule(result.moduleId);
+    resetContentScroll();
+    window.setTimeout(resetContentScroll, 0);
     setGlobalSearchTerm('');
     setIsGlobalSearchFocused(false);
   };
@@ -487,10 +516,15 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   };
 
   useLayoutEffect(() => {
-    if (contentViewportRef.current) {
-      contentViewportRef.current.scrollTop = 0;
-    }
-  }, [activeWorkspaceId]);
+    resetContentScroll();
+    const frame = window.requestAnimationFrame(resetContentScroll);
+    const timer = window.setTimeout(resetContentScroll, 60);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [activeModuleId, activeWorkspaceId, resetContentScroll]);
 
   const handleOpenModuleTab = (event: React.MouseEvent | React.KeyboardEvent, id: string) => {
     event.stopPropagation();
@@ -503,6 +537,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     } else {
       openTab(id, id, 'Layers');
     }
+    resetContentScroll();
+    window.setTimeout(resetContentScroll, 0);
   };
 
   const handleModuleDragStart = (event: React.DragEvent<HTMLButtonElement>, id: string) => {
@@ -1033,7 +1069,10 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         </header>
         <InternalTabBar />
         <main ref={contentViewportRef} className="gestor-content-viewport" style={{ position: 'relative' }}>
-          <div style={{ display: activeOpenedTab ? 'none' : 'block', height: '100%' }}>
+          <div
+            data-active-module-panel={!activeOpenedTab ? 'true' : undefined}
+            style={{ display: activeOpenedTab ? 'none' : 'block', height: '100%' }}
+          >
             <ModuleRenderErrorBoundary
               key={activeModuleId}
               moduleName={activeModuleId}
@@ -1045,6 +1084,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           {tabs.map((tab) => (
             <div
               key={tab.id}
+              data-active-module-panel={activeTabId === tab.id ? 'true' : undefined}
               style={{ display: activeTabId === tab.id ? 'block' : 'none', height: '100%' }}
             >
               <ModuleRenderErrorBoundary
