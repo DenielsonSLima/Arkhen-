@@ -21,9 +21,9 @@ interface ProtocoloArquivosListProps {
 }
 
 const ABA_CONFIG: { key: AbaProtocolo; label: string; icon: React.ElementType }[] = [
+  { key: 'pendencias', label: 'Pendências', icon: Clock },
   { key: 'recebidos', label: 'Documentos recebidos', icon: Inbox },
   { key: 'enviados', label: 'Documentos enviados', icon: Send },
-  { key: 'pendencias', label: 'Pendências', icon: Clock },
   { key: 'historico', label: 'Histórico', icon: History },
 ];
 
@@ -38,6 +38,17 @@ const getFlowLabel = (origem: ProtocoloEntrega['origemPadrao']) => {
   if (origem === 'Ambos') return 'Cliente e Escritório';
   if (origem === 'Escritório envia') return 'Enviado';
   return 'Recebido';
+};
+
+const getCurrentUserName = () => {
+  try {
+    const savedProfile = localStorage.getItem('gestor_user_profile');
+    if (!savedProfile) return 'Administrador';
+    const profile = JSON.parse(savedProfile) as { nome?: unknown };
+    return typeof profile.nome === 'string' && profile.nome.trim() ? profile.nome.trim() : 'Administrador';
+  } catch {
+    return 'Administrador';
+  }
 };
 
 export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
@@ -73,9 +84,12 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
   const handleStatusToggle = (item: ProtocoloEntrega) => {
     const newStatus = item.status === 'Concluído' ? 'Pendente' : 'Concluído';
-    onUpdateProtocolo(item.id, { status: newStatus });
+    const updates: ProtocoloUpdate = newStatus === 'Concluído'
+      ? { status: newStatus, recebidoEm: item.recebidoEm || new Date().toISOString(), concluidoPor: item.concluidoPor || getCurrentUserName() }
+      : { status: newStatus, recebidoEm: '', concluidoPor: '' };
+    onUpdateProtocolo(item.id, updates);
     if (previewFile?.id === item.id) {
-      setPreviewFile({ ...previewFile, status: newStatus });
+      setPreviewFile({ ...previewFile, ...updates });
     }
   };
 
@@ -98,6 +112,13 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const getShortDate = (dateStr?: string) => {
     if (!dateStr) return '-';
     return formatDate(dateStr.split('T')[0]);
+  };
+
+  const getShortTime = (dateStr?: string) => {
+    if (!dateStr || !dateStr.includes('T')) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(date);
   };
 
   return (
@@ -132,6 +153,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                 <span>Origem</span>
                 <span>Prazo</span>
                 <span>Recebido em</span>
+                <span>Concluído por</span>
                 <span>Status</span>
                 <span>Categoria</span>
                 <span>Ações</span>
@@ -180,6 +202,10 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                         </span>
                         <span className="protocolo-date-cell">
                           <small>{getShortDate(item.recebidoEm)}</small>
+                          {getShortTime(item.recebidoEm) ? <em>{getShortTime(item.recebidoEm)}</em> : null}
+                        </span>
+                        <span className="protocolo-file-cell protocolo-completed-by">
+                          {item.status === 'Concluído' ? item.concluidoPor || 'Administrador' : '-'}
                         </span>
                         <span className="protocolo-date-cell">
                           <span className={`protocolo-file-status ${statusClasses}`}>
@@ -245,7 +271,14 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
               <dl>
                 <div><dt>Status</dt><dd>{previewFile.status}</dd></div>
-                <div><dt>Recebido em</dt><dd>{getShortDate(previewFile.recebidoEm)}</dd></div>
+                <div>
+                  <dt>Recebido em</dt>
+                  <dd>
+                    {getShortDate(previewFile.recebidoEm)}
+                    {getShortTime(previewFile.recebidoEm) ? <small>{getShortTime(previewFile.recebidoEm)}</small> : null}
+                  </dd>
+                </div>
+                <div><dt>Concluído por</dt><dd>{previewFile.status === 'Concluído' ? previewFile.concluidoPor || 'Administrador' : '-'}</dd></div>
                 <div><dt>Total Anotações</dt><dd>{previewFile.anotacoesList?.length || 0}</dd></div>
               </dl>
 

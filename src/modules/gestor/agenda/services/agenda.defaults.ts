@@ -47,11 +47,4 @@ export const DEFAULT_USUARIOS_AGENDA: UsuarioAgenda[] = [];
 
 export const DEFAULT_EMPRESAS_AGENDA: Array<{ id: string; nome: string }> = [];
 
-// Gera prazos fiscais automáticos para um mês/ano
-export function gerarPrazosFiscaisDoMes(ano: number, mes: number): Evento[] {
-  void ano;
-  void mes;
-  return [];
-}
-
 export const DEFAULT_EVENTOS_EXTRAS: Evento[] = [];

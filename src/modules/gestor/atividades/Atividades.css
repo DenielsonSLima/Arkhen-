@@ -172,40 +172,42 @@
 .progress-track-bg {
   flex: 1;
   height: 6px;
-  background-color: #f1f5f9;
+  background: #f1f5f9;
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-track-bg.tone-danger {
-  background-color: rgba(239, 68, 68, 0.14);
+  background: #f1f5f9;
 }
 
 .progress-track-bg.tone-warning {
-  background-color: rgba(245, 158, 11, 0.16);
+  background: #f1f5f9;
 }
 
 .progress-track-bg.tone-success {
-  background-color: rgba(16, 185, 129, 0.14);
+  background: #f1f5f9;
 }
 
 .progress-bar-fill {
+  width: 100%;
   height: 100%;
-  background: var(--color-gold-gradient);
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 52%, #10b981 100%);
   border-radius: 4px;
-  transition: width 0.4s ease-out;
+  transform-origin: left center;
+  transition: transform 0.4s ease-out;
 }
 
 .progress-bar-fill.tone-danger {
-  background: linear-gradient(90deg, #fb7185, #ef4444, #b91c1c);
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 52%, #10b981 100%);
 }
 
 .progress-bar-fill.tone-warning {
-  background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706);
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 52%, #10b981 100%);
 }
 
 .progress-bar-fill.tone-success {
-  background: linear-gradient(90deg, #34d399, #10b981, #059669);
+  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 52%, #10b981 100%);
 }
 
 /* Badges for Activities */

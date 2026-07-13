@@ -6,6 +6,8 @@ export interface ClienteEmpresa {
   nome: string;
   cnpj: string;
   regime: 'PF' | 'MEI' | 'Isento' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | string;
+  tipoEstabelecimento: 'Matriz' | 'Filial' | string;
+  logo?: string;
   modelosAtivos: string[];
 }
 
@@ -52,6 +54,8 @@ interface ClienteRow {
   nome: string | null;
   cnpj: string | null;
   tipo: string | null;
+  tipo_estabelecimento: string | null;
+  logo: string | null;
   modelos_ativos: string[] | null;
 }
 
@@ -100,6 +104,8 @@ const toCliente = (row: ClienteRow): ClienteEmpresa => ({
   nome: row.nome || 'Cliente sem nome',
   cnpj: row.cnpj || '',
   regime: row.tipo || 'Simples Nacional',
+  tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
+  logo: row.logo || '',
   modelosAtivos: Array.isArray(row.modelos_ativos) ? row.modelos_ativos : [],
 });
 
@@ -139,7 +145,7 @@ export const atividadesService = {
   async getClientes(): Promise<ClienteEmpresa[]> {
     const { data, error } = await supabase
       .from('clientes')
-      .select('id,nome,cnpj,tipo,modelos_ativos')
+      .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
       .eq('status', 'Ativa')
       .order('nome', { ascending: true });
 
@@ -160,13 +166,15 @@ export const atividadesService = {
       nome: cliente.nome,
       cnpj: cliente.cnpj,
       tipo: cliente.regime || 'Simples Nacional',
+      tipo_estabelecimento: cliente.tipoEstabelecimento || 'Matriz',
+      logo: cliente.logo || '',
       modelos_ativos: cliente.modelosAtivos || [],
       status: 'Ativa',
     };
 
     const request = isUpdating
-      ? supabase.from('clientes').update(payload).eq('id', cliente.id).select('id,nome,cnpj,tipo,modelos_ativos').single()
-      : supabase.from('clientes').insert(payload).select('id,nome,cnpj,tipo,modelos_ativos').single();
+      ? supabase.from('clientes').update(payload).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
+      : supabase.from('clientes').insert(payload).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single();
 
     const { data, error } = await request;
     if (error) throw error;

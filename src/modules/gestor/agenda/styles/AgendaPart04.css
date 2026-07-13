@@ -1,0 +1,299 @@
+.agenda-padroes-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.agenda-padroes-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.agenda-padroes-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.12rem;
+}
+
+.agenda-padroes-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.agenda-padroes-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.agenda-secondary-btn {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.agenda-secondary-btn:hover {
+  border-color: #c59235;
+  color: #9a6f22;
+}
+
+.agenda-padroes-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-padroes-tabs button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.agenda-padroes-tabs button.active {
+  background: #fff8eb;
+  border-color: #d9a441;
+  color: #9a6f22;
+}
+
+.agenda-padroes-tabs span {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.agenda-padroes-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.agenda-padroes-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.agenda-padroes-table th,
+.agenda-padroes-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  vertical-align: top;
+}
+
+.agenda-padroes-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.agenda-padroes-table input,
+.agenda-padroes-table select,
+.agenda-padroes-table textarea {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #dbe3ef;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 650;
+  padding: 7px 9px;
+}
+
+.agenda-padroes-table textarea {
+  min-height: 52px;
+  margin-top: 6px;
+  resize: vertical;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.agenda-padroes-table input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  accent-color: #c59235;
+}
+
+.agenda-date-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(70px, 1fr));
+  gap: 6px;
+}
+
+.agenda-month-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.agenda-month-pills button {
+  border: 1px solid #dbe3ef;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 4px 7px;
+  cursor: pointer;
+}
+
+.agenda-month-pills button.active {
+  background: #eaf2ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+.agenda-padroes-locked {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  border: 1px dashed #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+}
+
+.agenda-padroes-locked strong {
+  color: #0f172a;
+}
+
+.agenda-vencimentos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agenda-vencimento-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+}
+
+.agenda-vencimento-item.vencido {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.agenda-vencimento-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agenda-vencimento-item span {
+  color: #0f172a;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.agenda-vencimento-item strong {
+  color: #f97316;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.agenda-vencimento-item.vencido strong {
+  color: #ef4444;
+}
+
+.agenda-vencimento-item small {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+
+.agenda-toast {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10000;
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(197, 146, 53, 0.5);
+  border-radius: 10px;
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.28);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.agenda-toast span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-toast-icon {
+  flex-shrink: 0;
+}
+
+.agenda-toast-icon.success {
+  color: #d9a441;
+}
+
+.agenda-toast-icon.error {
+  color: #ef4444;
+}
+
+@media (max-width: 760px) {
+  .agenda-module-tabs,
+  .agenda-padroes-header {
+    width: 100%;
+  }
+
+  .agenda-module-tabs,
+  .agenda-padroes-actions,
+  .agenda-padroes-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agenda-module-tabs button,
+  .agenda-padroes-actions button {
+    justify-content: center;
+  }
+}

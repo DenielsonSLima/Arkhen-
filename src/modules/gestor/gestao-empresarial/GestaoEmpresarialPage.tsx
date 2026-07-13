@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Building2, CheckCircle2, Edit3, LayoutGrid, Loader2, Plus, Search, ShieldAlert, Table } from 'lucide-react';
 import { useGestaoEmpresarial } from './hooks/useGestaoEmpresarial';
 import type { EmpresaDetailTab } from './hooks/useGestaoEmpresarial';
@@ -26,6 +26,13 @@ const getRegimeClass = (regime: string) => {
   if (regime === 'PF') return 'pf';
   if (regime === 'Isenta') return 'isenta';
   return '';
+};
+
+const requestGestorScrollReset = () => {
+  window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
+  window.setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
+  }, 0);
 };
 
 export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
@@ -63,6 +70,21 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     isLoading,
   } = useGestaoEmpresarial({ initialCompanyId, initialDetailTab });
 
+  useLayoutEffect(() => {
+    window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
+    const frame = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
+    });
+    const timer = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
+    }, 60);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [selectedCompany?.id]);
+
   useEffect(() => {
     if (isLoading) return; // Evita sobrescrever o contexto da aba com undefined durante o carregamento inicial
     onViewContextChange?.({
@@ -87,6 +109,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
   const openEdit = (event: React.MouseEvent, company: Company) => {
     event.stopPropagation();
     setSelectedCompanyId(company.id);
+    requestGestorScrollReset();
   };
 
   const toggleCompanyStatus = (company: Company) => {
@@ -124,7 +147,10 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     return (
       <ClienteDetail
         company={selectedCompany}
-        onBack={() => setSelectedCompanyId(null)}
+        onBack={() => {
+          setSelectedCompanyId(null);
+          requestGestorScrollReset();
+        }}
         onUpdateCompany={updateCompany}
         onToggleStatus={toggleCompanyStatus}
         onSyncCnae={syncCompanyCnae}
@@ -187,7 +213,10 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
           <table className="config-table">
             <thead><tr><th>Cliente</th><th>CNPJ</th><th>Tipo</th><th>Cidade/UF</th><th>Contato</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>{filteredCompanies.map((company) => (
-              <tr key={company.id} onClick={() => setSelectedCompanyId(company.id)} style={{ cursor: 'pointer' }}>
+              <tr key={company.id} onClick={() => {
+                setSelectedCompanyId(company.id);
+                requestGestorScrollReset();
+              }} style={{ cursor: 'pointer' }}>
                 <td><strong>{company.nome}</strong><br /><small>{company.razaoSocial}</small></td>
                 <td>{company.cnpj}</td>
                 <td><span className={`regime-badge ${getRegimeClass(company.tipo)}`}>{company.tipo}</span></td>
@@ -218,7 +247,10 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
                     <ClienteCard
                       key={company.id}
                       company={company}
-                      onSelect={setSelectedCompanyId}
+                      onSelect={(companyId) => {
+                        setSelectedCompanyId(companyId);
+                        requestGestorScrollReset();
+                      }}
                       onEdit={openEdit}
                       onToggleStatus={(c) => c.status === 'Inativa' ? reativarCompany(c.id) : inativarCompany(c.id)}
                       onDelete={() => requestDeleteCompany(company)}

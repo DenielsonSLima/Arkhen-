@@ -419,6 +419,55 @@ export const documentShareService = {
     return true;
   },
 
+  async renew(targetId: string, input: { tempoLimite: string; exigirSenha: boolean; senha?: string }) {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + parseShareDurationMs(input.tempoLimite));
+    const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
+    const senhaHash = senha ? await hashSharePassword(senha) : null;
+    const updatePayload = {
+      tempo_limite: input.tempoLimite,
+      expires_at: expiresAt.toISOString(),
+      status: 'Ativo' as const,
+      senha_hash: senhaHash,
+      senha_visualizacao: senha || null,
+    };
+
+    let { error } = await supabase
+      .from(SHARE_TABLE)
+      .update(updatePayload)
+      .or(`id.eq.${targetId},share_group_id.eq.${targetId}`);
+
+    if (isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from(SHARE_TABLE)
+        .update(updatePayload)
+        .eq('id', targetId);
+      error = fallback.error;
+    }
+
+    if (error) {
+      console.error('[documentShareService.renew] Erro ao renovar no Supabase:', error);
+    }
+
+    const links = this.listLocal().map((link) => (
+      (link.id === targetId || (link.shareGroupId && link.shareGroupId === targetId))
+        ? {
+            ...link,
+            tempoLimite: input.tempoLimite,
+            dataExpiracao: formatShareDateTime(expiresAt),
+            dataExpiracaoIso: expiresAt.toISOString(),
+            senha,
+            senhaHash: senhaHash || undefined,
+            status: 'Ativo' as const,
+          }
+        : link
+    ));
+    this.save(links);
+
+    if (error) return false;
+    return true;
+  },
+
   async delete(targetId: string) {
     let { error } = await supabase
       .from(SHARE_TABLE)

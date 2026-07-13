@@ -20,6 +20,7 @@ export interface CompanyActivityGroup {
   clienteNome: string;
   cnpj: string;
   regime: string;
+  tipoEstabelecimento: string;
   competencia: string;
   responsavel: string;
   atividades: CompanyActivity[];
@@ -262,12 +263,13 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         clienteNome: cliente.nome,
         cnpj: cliente.cnpj,
         regime: cliente.regime,
+        tipoEstabelecimento: cliente.tipoEstabelecimento,
         competencia: groupCompetencia,
         responsavel: '',
         atividades: mappedAtividades,
         progressoGeral: overallProgress,
         statusGeral: overallStatus,
-        logo: '',
+        logo: cliente.logo,
       };
     });
     }).sort((a, b) => (

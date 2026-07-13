@@ -11,8 +11,12 @@ import {
   salvarCategoriasEventoConfig,
   salvarTiposEventoConfig,
   salvarResponsaveisAgendaConfig,
+  getAgendaPodeGerenciarPadroes,
+  getAgendaPadroesEventos,
+  salvarAgendaPadroesEventos,
   getCategoriaPadraoPorTipo,
   type Evento,
+  type AgendaPadraoEvento,
   type TipoEventoConfig,
   type CategoriaEventoConfig,
 } from '../services/agenda.service';
@@ -43,6 +47,8 @@ export const agendaKeys = {
   tipos: () => [...agendaKeys.all, 'tipos'] as const,
   categorias: () => [...agendaKeys.all, 'categorias'] as const,
   responsaveis: () => [...agendaKeys.all, 'responsaveis'] as const,
+  permissoes: () => [...agendaKeys.all, 'permissoes'] as const,
+  padroes: () => [...agendaKeys.all, 'padroes'] as const,
 };
 
 export function useAgenda() {
@@ -80,6 +86,18 @@ export function useAgenda() {
   const responsaveisQuery = useQuery({
     queryKey: agendaKeys.responsaveis(),
     queryFn: getResponsaveisAgendaConfig,
+    staleTime: 30_000,
+  });
+
+  const permissoesQuery = useQuery({
+    queryKey: agendaKeys.permissoes(),
+    queryFn: getAgendaPodeGerenciarPadroes,
+    staleTime: 60_000,
+  });
+
+  const padroesQuery = useQuery({
+    queryKey: agendaKeys.padroes(),
+    queryFn: getAgendaPadroesEventos,
     staleTime: 30_000,
   });
 
@@ -136,9 +154,19 @@ export function useAgenda() {
     },
   });
 
+  const salvarPadroesMutation = useMutation({
+    mutationFn: (proximos: AgendaPadraoEvento[]) => salvarAgendaPadroesEventos(proximos),
+    onSuccess: (normalizados) => {
+      queryClient.setQueryData(agendaKeys.padroes(), normalizados);
+      invalidateAgenda();
+    },
+  });
+
   const usuariosAgenda = responsaveisQuery.data || [];
   const tiposEvento = tiposQuery.data || [];
   const categoriasEvento = categoriasQuery.data || [];
+  const agendaPadroes = padroesQuery.data || [];
+  const podeGerenciarPadroes = Boolean(permissoesQuery.data);
   const todosEventos = eventosQuery.data || [];
   const eventosTrimestre = eventosTrimestreQuery.data || [];
   const usuarioAtual = usuariosAgenda[0] || usuarioFallback;
@@ -264,6 +292,13 @@ export function useAgenda() {
     salvarResponsaveisMutation.mutate(proximos);
   }, [salvarResponsaveisMutation]);
 
+  const handleSalvarPadroesAgenda = useCallback((
+    proximos: AgendaPadraoEvento[],
+    options?: { onSuccess?: () => void; onError?: (error: unknown) => void },
+  ) => {
+    salvarPadroesMutation.mutate(proximos, options);
+  }, [salvarPadroesMutation]);
+
   return {
     status,
     anoAtual,
@@ -279,6 +314,8 @@ export function useAgenda() {
     tiposEvento,
     categoriasEvento,
     usuariosAgenda,
+    agendaPadroes,
+    podeGerenciarPadroes,
     diaSelecionado,
     setDiaSelecionado,
     todosEventos,
@@ -300,6 +337,7 @@ export function useAgenda() {
     handleSalvarTiposEventoConfig,
     handleSalvarCategoriasEventoConfig,
     handleSalvarResponsaveisAgendaConfig,
+    handleSalvarPadroesAgenda,
     isLoading: eventosQuery.isLoading || eventosTrimestreQuery.isLoading,
   };
 }

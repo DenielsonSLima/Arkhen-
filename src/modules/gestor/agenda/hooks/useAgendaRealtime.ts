@@ -23,6 +23,9 @@ export const useAgendaRealtime = (enabled = true) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_responsaveis' }, () => {
         queryClient.invalidateQueries({ queryKey: agendaKeys.all });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_padroes_eventos' }, () => {
+        queryClient.invalidateQueries({ queryKey: agendaKeys.all });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, () => {
         queryClient.invalidateQueries({ queryKey: agendaKeys.all });
       })

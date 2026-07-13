@@ -104,12 +104,12 @@ export const ProtocoloEmpresaCard: React.FC<ProtocoloEmpresaCardProps> = ({ grou
         </div>
       )}
 
-      <div className="protocolo-company-filebar tone-warning">
+      <div className="protocolo-company-filebar tone-success">
         <div>
-          <span>Pendentes</span>
-          <strong>{stats.pendentes}/{group.items.length}</strong>
+          <span>Progresso</span>
+          <strong>{stats.concluidos}/{group.items.length}</strong>
         </div>
-        <i><b style={{ width: `${group.items.length ? (stats.pendentes / group.items.length) * 100 : 0}%` }} /></i>
+        <i><b style={{ transform: `scaleX(${group.items.length ? stats.concluidos / group.items.length : 0})` }} /></i>
       </div>
 
       <div className="protocolo-company-stat-list">

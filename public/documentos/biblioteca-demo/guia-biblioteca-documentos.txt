@@ -1,0 +1,5 @@
+GUIA DA BIBLIOTECA DE DOCUMENTOS
+
+Use a biblioteca para concentrar modelos, checklists e arquivos de referencia do escritorio.
+Os arquivos por empresa devem ficar separados por etapa: cadastro, fiscal, trabalhista,
+financeiro, entregas e concluidos.

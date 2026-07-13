@@ -48,11 +48,12 @@ export interface ProtocoloEntrega {
   responsavel: string;
   anotacoesList: Anotacao[];
   recebidoEm?: string;
+  concluidoPor?: string;
 }
 
 export type ProtocoloUpdate = Partial<Pick<
   ProtocoloEntrega,
-  'status' | 'anotacoesList' | 'recebidoEm'
+  'status' | 'anotacoesList' | 'recebidoEm' | 'concluidoPor'
 >>;
 
 const CONFIG_KEY = 'contabil_protocolos_config_empresas';
@@ -90,6 +91,17 @@ const notifyProtocolosChanged = () => {
   }
 };
 
+const getCurrentUserName = () => {
+  try {
+    const savedProfile = localStorage.getItem('gestor_user_profile');
+    if (!savedProfile) return 'Administrador';
+    const profile = JSON.parse(savedProfile) as { nome?: unknown };
+    return typeof profile.nome === 'string' && profile.nome.trim() ? profile.nome.trim() : 'Administrador';
+  } catch {
+    return 'Administrador';
+  }
+};
+
 const makePrazo = (competencia: string, diaLimite: number, referenciaMesAnterior: boolean) => {
   const [year, month] = competencia.split('-').map(Number);
   const dueDate = new Date(year, month - 1 + (referenciaMesAnterior ? 1 : 0), 1);
@@ -110,6 +122,7 @@ const enrichCompanyFields = (item: ProtocoloEntrega, company: Company): Protocol
   origemPadrao: item.origemPadrao || 'Ambos',
   periodoReferencia: item.periodoReferencia ?? 'Mensal',
   recebidoEm: item.recebidoEm ?? '',
+  concluidoPor: item.concluidoPor ?? (item.status === 'Concluído' ? item.responsavel || 'Administrador' : ''),
 });
 
 const withAuditDates = (
@@ -120,9 +133,11 @@ const withAuditDates = (
   const next = { ...item, ...updates, atualizadoEm: now };
   if (updates.status === 'Concluído' && item.status !== 'Concluído' && !next.recebidoEm) {
     next.recebidoEm = now;
+    next.concluidoPor = updates.concluidoPor || getCurrentUserName();
   }
   if (updates.status === 'Pendente') {
     next.recebidoEm = '';
+    next.concluidoPor = '';
   }
   return next;
 };
@@ -343,6 +358,7 @@ export const protocolosService = {
               responsavel: 'Administrador',
               anotacoesList: initialAnotacoesList,
               recebidoEm: initialRecebidoEm,
+              concluidoPor: initialStatus === 'Concluído' ? 'Administrador' : '',
             }, company));
           });
         });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, User, ChevronRight, Users, UserCheck, Receipt, Calendar as CalendarIcon, Hammer, ClipboardList } from 'lucide-react';
 import type { CompanyActivityGroup } from '../hooks/useAtividades';
+import { CompanyCardIdentity } from './CompanyCardIdentity';
 
 interface CompanyActivityCardProps {
   group: CompanyActivityGroup;
@@ -52,6 +53,10 @@ export const renderCompanyLogo = (logo: string | undefined, name: string, regime
     gradient = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
   } else if (regime === 'Lucro Real') {
     gradient = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+  } else if (regime === 'Isenta' || regime === 'Isento') {
+    gradient = 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)';
+  } else if (regime === 'PF') {
+    gradient = 'linear-gradient(135deg, #a16207 0%, #854d0e 100%)';
   }
 
   return (
@@ -128,17 +133,13 @@ export const CompanyActivityCard: React.FC<CompanyActivityCardProps> = ({
       onClick={onSelect}
     >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          {renderCompanyLogo(group.logo, group.clienteNome, group.regime, 'small')}
-          <div>
-            <h4 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: '#0f172a', lineHeight: '1.2' }}>
-              {group.clienteNome}
-            </h4>
-            <span className={`partner-badge ${group.regime === 'Simples Nacional' ? 'mei' : group.regime === 'Lucro Presumido' ? 'lucro-presumido' : 'lucro-real'}`} style={{ fontSize: '0.6rem', padding: '1px 5px', display: 'inline-block', marginTop: '2px' }}>
-              {group.regime}
-            </span>
-          </div>
-        </div>
+        <CompanyCardIdentity
+          name={group.clienteNome}
+          cnpj={group.cnpj}
+          regime={group.regime}
+          tipoEstabelecimento={group.tipoEstabelecimento}
+          logo={group.logo}
+        />
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
           <Calendar size={12} />
           <span>Competência: <strong>{competencia}</strong></span>
@@ -154,7 +155,7 @@ export const CompanyActivityCard: React.FC<CompanyActivityCardProps> = ({
         <div className={`progress-track-bg tone-${progressTone}`} style={{ height: '8px', borderRadius: '4px' }}>
           <div
             className={`progress-bar-fill tone-${progressTone}`}
-            style={{ width: `${group.progressoGeral}%` }}
+            style={{ transform: `scaleX(${group.progressoGeral / 100})` }}
           ></div>
         </div>
       </div>

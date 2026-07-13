@@ -1,0 +1,7 @@
+CHECKLIST FISCAL MENSAL
+
+1. Conferir notas fiscais de entrada e saida.
+2. Validar XMLs recebidos no periodo.
+3. Revisar apuracao de impostos.
+4. Registrar pendencias para retorno ao cliente.
+5. Protocolar entrega e arquivar comprovantes.

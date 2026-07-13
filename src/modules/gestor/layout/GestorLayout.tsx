@@ -526,6 +526,13 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     };
   }, [activeModuleId, activeWorkspaceId, resetContentScroll]);
 
+  useEffect(() => {
+    window.addEventListener('gestor:reset-scroll', resetContentScroll);
+    return () => {
+      window.removeEventListener('gestor:reset-scroll', resetContentScroll);
+    };
+  }, [resetContentScroll]);
+
   const handleOpenModuleTab = (event: React.MouseEvent | React.KeyboardEvent, id: string) => {
     event.stopPropagation();
     const info = TAB_INFOS[id];

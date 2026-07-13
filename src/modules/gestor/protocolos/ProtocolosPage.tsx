@@ -361,12 +361,14 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
             <h3>Evidências da competência {formatCompetencia(company.competencia)}</h3>
             <p>Arquivos, recibos, envios, recebimentos e provas vinculadas à operação.</p>
           </div>
-          <button type="button" className="protocolos-open-atividades" onClick={handleOpenAtividades}>
-            <Link size={14} /> Abrir atividades
-          </button>
-          <button type="button" className="protocolos-open-atividades" onClick={handleOpenConformidade}>
-            <ShieldCheck size={14} /> Abrir conformidade
-          </button>
+          <div className="protocolo-section-actions">
+            <button type="button" className="protocolos-open-atividades" onClick={handleOpenAtividades}>
+              <Link size={14} /> Abrir atividades
+            </button>
+            <button type="button" className="protocolos-open-atividades" onClick={handleOpenConformidade}>
+              <ShieldCheck size={14} /> Abrir conformidade
+            </button>
+          </div>
         </div>
 
         {items.length === 0 ? (

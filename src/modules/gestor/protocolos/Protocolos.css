@@ -299,14 +299,23 @@
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
+.protocolo-section-title > div {
+  min-width: min(100%, 360px);
+}
 .protocolo-section-title h3 {
   margin: 0 0 2px;
   color: #0f172a;
   font-size: 0.96rem;
   font-weight: 800;
 }
-.protocolos-open-atividades {
+.protocolo-section-actions {
   margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.protocolos-open-atividades {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
@@ -319,6 +328,7 @@
   gap: 6px;
   cursor: pointer;
   transition: var(--transition-normal);
+  white-space: nowrap;
 }
 .protocolos-open-atividades:hover {
   border-color: var(--color-gold-primary);
@@ -345,5 +355,10 @@
   }
   .protocolo-detail-header {
     flex-direction: column;
+  }
+  .protocolo-section-actions {
+    width: 100%;
+    margin-left: 27px;
+    justify-content: flex-start;
   }
 }

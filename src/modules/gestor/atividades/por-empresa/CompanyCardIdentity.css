@@ -1,0 +1,139 @@
+.company-card-identity {
+  --company-card-accent: var(--color-gold-primary);
+  --company-card-accent-dark: var(--color-gold-dark);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.company-card-identity.regime-mei,
+.company-card-identity.regime-simples {
+  --company-card-accent: #10b981;
+  --company-card-accent-dark: #047857;
+}
+
+.company-card-identity.regime-lucro-presumido {
+  --company-card-accent: #f59e0b;
+  --company-card-accent-dark: #b45309;
+}
+
+.company-card-identity.regime-lucro-real {
+  --company-card-accent: #3b82f6;
+  --company-card-accent-dark: #1d4ed8;
+}
+
+.company-card-identity.regime-isenta {
+  --company-card-accent: #14b8a6;
+  --company-card-accent-dark: #0f766e;
+}
+
+.company-card-identity.regime-pf {
+  --company-card-accent: #a16207;
+  --company-card-accent-dark: #854d0e;
+}
+
+.company-card-identity-logo,
+.company-card-identity-initials {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 8px;
+}
+
+.company-card-identity-logo {
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+.company-card-identity-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--company-card-accent), var(--company-card-accent-dark));
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.company-card-identity-title {
+  min-width: 0;
+}
+
+.company-card-identity-title h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.02rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.company-card-identity-title p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.company-card-identity-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.company-card-regime-badge,
+.company-card-establishment-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.company-card-regime-badge.mei,
+.company-card-regime-badge.simples {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.company-card-regime-badge.lucro-presumido {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.company-card-regime-badge.lucro-real {
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.company-card-regime-badge.isenta {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.1);
+}
+
+.company-card-regime-badge.pf {
+  color: #854d0e;
+  background: rgba(161, 98, 7, 0.1);
+}
+
+.company-card-regime-badge.default {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+.company-card-establishment-badge.matriz {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.company-card-establishment-badge.filial {
+  color: #525252;
+  background: #f5f5f5;
+}

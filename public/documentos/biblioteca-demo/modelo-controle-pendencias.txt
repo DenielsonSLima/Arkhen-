@@ -1,0 +1,14 @@
+MODELO DE CONTROLE DE PENDENCIAS
+
+Cliente:
+Competencia:
+Responsavel:
+
+Pendencias abertas:
+- 
+
+Retorno do cliente:
+- 
+
+Situacao final:
+- Pendente / Em andamento / Concluido

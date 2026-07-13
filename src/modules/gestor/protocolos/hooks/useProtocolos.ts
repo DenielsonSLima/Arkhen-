@@ -45,7 +45,7 @@ export const useProtocolos = () => {
     onSuccess: invalidateProtocolos,
   });
 
-  const filteredProtocolos = useMemo(() => {
+  const protocolosBaseFiltrados = useMemo(() => {
     return protocolos.filter((item) => {
       const term = searchTerm.trim().toLowerCase();
       const matchesSearch = !term ||
@@ -53,11 +53,6 @@ export const useProtocolos = () => {
         item.empresaCnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')) ||
         item.entregaNome.toLowerCase().includes(term) ||
         item.categoria.toLowerCase().includes(term);
-
-      const matchesTab =
-        activeTab === 'todos' ||
-        (activeTab === 'pendentes' && item.status === 'Pendente') ||
-        (activeTab === 'concluidos' && item.status === 'Concluído');
 
       const matchesEmpresaTab =
         activeEmpresaTab === 'todas' ||
@@ -67,14 +62,26 @@ export const useProtocolos = () => {
       const matchesInitial = !dataInicial || item.prazo >= dataInicial;
       const matchesFinal = !dataFinal || item.prazo <= dataFinal;
 
-      return matchesSearch && matchesTab && matchesEmpresaTab && matchesInitial && matchesFinal;
+      return matchesSearch && matchesEmpresaTab && matchesInitial && matchesFinal;
     });
-  }, [activeEmpresaTab, dataFinal, dataInicial, activeTab, protocolos, searchTerm]);
+  }, [activeEmpresaTab, dataFinal, dataInicial, protocolos, searchTerm]);
+
+  const filteredProtocolos = useMemo(() => {
+    return protocolosBaseFiltrados.filter((item) => (
+      activeTab === 'todos' ||
+      (activeTab === 'pendentes' && item.status === 'Pendente') ||
+      (activeTab === 'concluidos' && item.status === 'Concluído')
+    ));
+  }, [activeTab, protocolosBaseFiltrados]);
 
   const companyGroups = useMemo<EmpresaProtocolosGrupo[]>(() => {
     const groups = new Map<string, EmpresaProtocolosGrupo>();
-    filteredProtocolos.forEach((item) => {
+    const visibleGroupIds = new Set(filteredProtocolos.map((item) => `${item.empresaId}::${item.competencia}`));
+
+    protocolosBaseFiltrados.forEach((item) => {
       const groupId = `${item.empresaId}::${item.competencia}`;
+      if (!visibleGroupIds.has(groupId)) return;
+
       const current = groups.get(groupId);
       if (!current) {
         groups.set(groupId, {
@@ -102,7 +109,7 @@ export const useProtocolos = () => {
         items: group.items.sort((a, b) => b.competencia.localeCompare(a.competencia) || a.prazo.localeCompare(b.prazo)),
       }))
       .sort((a, b) => b.competencia.localeCompare(a.competencia) || a.empresaNome.localeCompare(b.empresaNome));
-  }, [filteredProtocolos]);
+  }, [filteredProtocolos, protocolosBaseFiltrados]);
 
   const counters = useMemo(() => {
     const protocolosPorEmpresa = protocolos.filter((item) => (

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PrazosAutomaticos } from './PrazosAutomaticos';
 import {
   getEventoCategoriaConfig,
   getEventoOrigemConfig,
@@ -18,6 +19,7 @@ interface AgendaTrimestreAtividadesProps {
   mesesVisiveis?: number;
   categoriasEvento?: CategoriaEventoConfig[];
   usuariosCores?: UsuarioAgenda[];
+  prazosFixosMes?: Evento[];
 }
 
 const COR_PADRAO_RESPONSAVEL = '#64748b';
@@ -35,7 +37,15 @@ const NOMES_MESES = [
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
 ];
 
-const DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const DIAS_SEMANA = [
+  { label: 'D', className: 'sunday' },
+  { label: 'S', className: '' },
+  { label: 'T', className: '' },
+  { label: 'Q', className: '' },
+  { label: 'Q', className: '' },
+  { label: 'S', className: '' },
+  { label: 'S', className: 'saturday' },
+];
 
 const normalizeMonth = (ano: number, mes: number) => {
   const date = new Date(ano, mes, 1);
@@ -46,7 +56,7 @@ const getMonthCells = (ano: number, mes: number) => {
   const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
   const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
   const totalDiasMesAnterior = new Date(ano, mes, 0).getDate();
-  const cells: { dia: number; dataStr: string; outroMes: boolean }[] = [];
+  const cells: { dia: number; dataStr: string; outroMes: boolean; weekDay: number }[] = [];
 
   for (let i = primeiroDiaSemana - 1; i >= 0; i--) {
     const d = totalDiasMesAnterior - i;
@@ -55,14 +65,17 @@ const getMonthCells = (ano: number, mes: number) => {
       dia: d,
       dataStr: date.toISOString().split('T')[0],
       outroMes: true,
+      weekDay: date.getDay(),
     });
   }
 
   for (let d = 1; d <= totalDiasMes; d++) {
+    const date = new Date(ano, mes, d);
     cells.push({
       dia: d,
-      dataStr: new Date(ano, mes, d).toISOString().split('T')[0],
+      dataStr: date.toISOString().split('T')[0],
       outroMes: false,
+      weekDay: date.getDay(),
     });
   }
 
@@ -73,6 +86,7 @@ const getMonthCells = (ano: number, mes: number) => {
       dia: d,
       dataStr: date.toISOString().split('T')[0],
       outroMes: true,
+      weekDay: date.getDay(),
     });
   }
 
@@ -94,12 +108,14 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
   mesesVisiveis = 3,
   categoriasEvento = [],
   usuariosCores = [],
+  prazosFixosMes = [],
 }) => {
   const hoje = new Date().toISOString().split('T')[0];
   const totalMeses = Math.max(3, Number.isInteger(mesesVisiveis) ? mesesVisiveis : 3);
   const gridColumns = totalMeses > 3 ? 6 : totalMeses;
   const metadeParaTras = Math.floor((totalMeses - 1) / 2);
   const meses = Array.from({ length: totalMeses }, (_, i) => normalizeMonth(ano, mes + (i - metadeParaTras)));
+  const mesesCalendario = meses.slice(0, Math.max(1, totalMeses - 1));
   const eventosMesSelecionado = eventos.filter((evento) => {
     const [eventoAno, eventoMes] = evento.data.split('-').map(Number);
     return eventoAno === ano && eventoMes === mes + 1;
@@ -141,7 +157,7 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
       </div>
 
       <div className="agenda-trimestre-grid" style={{ '--agenda-trimestre-cols': String(gridColumns) } as React.CSSProperties}>
-        {meses.map((item) => {
+        {mesesCalendario.map((item) => {
           const cells = getMonthCells(item.ano, item.mes);
           const isCurrent = item.mes === mes && item.ano === ano;
           return (
@@ -150,7 +166,9 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
                 {NOMES_MESES[item.mes]} <span>{item.ano}</span>
               </div>
               <div className="agenda-trimestre-weekdays">
-                {DIAS_SEMANA.map((dia, index) => <span key={`${dia}-${index}`}>{dia}</span>)}
+                {DIAS_SEMANA.map((dia, index) => (
+                  <span key={`${dia.label}-${index}`} className={dia.className}>{dia.label}</span>
+                ))}
               </div>
               <div className="agenda-trimestre-days">
                 {cells.map((cell) => {
@@ -163,6 +181,8 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
                       className={[
                         'agenda-trimestre-day',
                         cell.outroMes ? 'muted' : '',
+                        cell.weekDay === 0 ? 'sunday' : '',
+                        cell.weekDay === 6 ? 'saturday' : '',
                         cell.dataStr === hoje ? 'today' : '',
                         cell.dataStr === diaSelecionado ? 'selected' : '',
                       ].join(' ')}
@@ -184,6 +204,13 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
             </div>
           );
         })}
+        <aside className="agenda-trimestre-routine-panel">
+          <div className="agenda-trimestre-routine-header">
+            <span>Rotina fixa</span>
+            <strong>{NOMES_MESES[mes]} {ano}</strong>
+          </div>
+          <PrazosAutomaticos compacto titulo="Padrões do mês" prazos={prazosFixosMes} />
+        </aside>
       </div>
 
       <div className="agenda-trimestre-legends">

@@ -1,0 +1,7 @@
+ROTEIRO DE ADMISSAO DE FUNCIONARIO
+
+1. Coletar documentos pessoais.
+2. Conferir dados do eSocial.
+3. Validar exame admissional.
+4. Registrar contrato e beneficios.
+5. Arquivar comprovantes na pasta trabalhista.

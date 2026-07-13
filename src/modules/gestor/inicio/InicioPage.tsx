@@ -25,7 +25,7 @@ import {
 } from '../atividades/services/rotinasAtividadesService';
 import { useInicio } from './hooks/useInicio';
 import type { VencimentoAlerta } from './services/inicioService';
-import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
+import { frasesMotivacionais, getMensagemInspiradoraDoDia, type FraseMotivacional } from './services/motivationalPhrases';
 import './InicioPage.css';
 
 const alertasPadrao: VencimentoAlerta[] = [];
@@ -132,7 +132,28 @@ export const InicioPage: React.FC = () => {
   const fimSemana = addDays(hoje, 6);
   const alertasCriticos = vencimentosProximos.length > 0 ? vencimentosProximos.slice(0, 4) : alertasPadrao;
 
-  const fraseMotivacional: FraseMotivacional = frasesMotivacionais[(getDayOfYear(hoje) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length];
+  const fraseMotivacionalFallback: FraseMotivacional = useMemo(
+    () => frasesMotivacionais[(getDayOfYear(hoje) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length],
+    [hoje],
+  );
+  const [fraseMotivacional, setFraseMotivacional] = useState<FraseMotivacional>(fraseMotivacionalFallback);
+
+  useEffect(() => {
+    let active = true;
+
+    setFraseMotivacional(fraseMotivacionalFallback);
+    getMensagemInspiradoraDoDia(hoje)
+      .then((frase) => {
+        if (active && frase) setFraseMotivacional(frase);
+      })
+      .catch((error) => {
+        console.error('Erro ao carregar mensagem inspiradora:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fraseMotivacionalFallback, hoje]);
 
   useEffect(() => {
     let mounted = true;

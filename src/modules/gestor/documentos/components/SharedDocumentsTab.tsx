@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Clipboard, FileText, Key, Link2, Search, ShieldX, Trash2, ExternalLink } from 'lucide-react';
+import { Check, Clipboard, ExternalLink, FileText, Key, Link2, RotateCcw, Search, ShieldX, UserRound } from 'lucide-react';
 import { documentShareService, type SharedDocumentLink } from '../services/documentShareService';
 import { SystemQuickModal } from '../../components/SystemQuickModal';
+import { RenewShareModal } from './RenewShareModal';
 
 interface SharedDocumentsTabProps {
   refreshKey: number;
@@ -57,16 +58,10 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [revokingGroupIds, setRevokingGroupIds] = useState<Set<string>>(new Set());
+  const [renewingGroupIds, setRenewingGroupIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [confirmModalState, setConfirmModalState] = useState<{
-    isOpen: boolean;
-    groupId: string;
-    action: 'revoke' | 'delete';
-  }>({
-    isOpen: false,
-    groupId: '',
-    action: 'revoke',
-  });
+  const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; groupId: string }>({ isOpen: false, groupId: '' });
+  const [renewModalBatch, setRenewModalBatch] = useState<SharedDocumentBatch | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -202,49 +197,32 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
     });
   };
 
-  const handleDelete = async (groupId: string) => {
-    setRevokingGroupIds((current) => {
+  const handleRenew = async (batch: SharedDocumentBatch, input: { tempoLimite: string; exigirSenha: boolean; senha?: string }) => {
+    setRenewingGroupIds((current) => {
       const next = new Set(current);
-      next.add(groupId);
+      next.add(batch.groupId);
       return next;
     });
 
-    setLinks((current) => current.filter((link) => (
-      link.id !== groupId && link.shareGroupId !== groupId
-    )));
-
-    const deleted = await documentShareService.delete(groupId);
+    const renewed = await documentShareService.renew(batch.groupId, input);
     const latest = await documentShareService.list();
     setLinks(latest);
 
-    if (!deleted) {
-      onNotify?.('Não foi possível excluir agora no servidor. Alteração salva localmente.');
+    if (!renewed) {
+      onNotify?.('Não foi possível renovar agora no servidor. Alteração salva localmente.');
     } else {
-      onNotify?.('Link de compartilhamento excluído definitivamente.');
+      onNotify?.('Link de compartilhamento renovado.');
     }
 
-    setRevokingGroupIds((current) => {
+    setRenewingGroupIds((current) => {
       const next = new Set(current);
-      next.delete(groupId);
+      next.delete(batch.groupId);
       return next;
     });
+    setRenewModalBatch(null);
   };
 
-  const handleActionClick = (groupId: string, status: 'Ativo' | 'Expirado') => {
-    setConfirmModalState({
-      isOpen: true,
-      groupId,
-      action: status === 'Ativo' ? 'revoke' : 'delete',
-    });
-  };
-
-  const handleConfirmAction = () => {
-    if (confirmModalState.action === 'revoke') {
-      handleRevoke(confirmModalState.groupId);
-    } else {
-      handleDelete(confirmModalState.groupId);
-    }
-  };
+  const handleRevokeClick = (groupId: string) => setConfirmModalState({ isOpen: true, groupId });
 
   const handleTogglePassword = (groupId: string) => {
     setVisiblePasswordId((current) => (current === groupId ? null : groupId));
@@ -342,18 +320,24 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                     </div>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyLinkOnly(batch)}
-                      disabled={batch.status === 'Expirado'}
-                      style={{ maxWidth: '240px', border: '1px solid #d8e0ea', background: isLinkCopied ? '#f0fdf4' : '#ffffff', color: isLinkCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.72rem' }}
-                      title={batch.link}
-                    >
-                      {isLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {isLinkCopied ? 'Link copiado' : formatDisplayLink(batch.link)}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLinkOnly(batch)}
+                        disabled={batch.status === 'Expirado'}
+                        style={{ maxWidth: '240px', border: '1px solid #d8e0ea', background: isLinkCopied ? '#f0fdf4' : '#ffffff', color: isLinkCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.72rem' }}
+                        title={batch.link}
+                      >
+                        {isLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isLinkCopied ? 'Link copiado' : formatDisplayLink(batch.link)}
+                        </span>
+                      </button>
+                      <span style={{ color: '#64748b', fontSize: '0.68rem', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 700 }}>
+                        <UserRound size={12} color="#94a3b8" />
+                        Compartilhado por {batch.geradoPor}
                       </span>
-                    </button>
+                    </div>
                   </td>
                   <td style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 700 }}>{batch.dataExpiracao}</td>
                   <td>
@@ -437,12 +421,13 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleActionClick(batch.groupId, batch.status)}
-                        disabled={revokingGroupIds.has(batch.groupId)}
-                        title={revokingGroupIds.has(batch.groupId) ? 'Processando...' : batch.status === 'Ativo' ? 'Revogar' : 'Excluir'}
-                        style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', borderRadius: '7px', width: '32px', height: '32px', cursor: revokingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => (batch.status === 'Ativo' ? handleRevokeClick(batch.groupId) : setRenewModalBatch(batch))}
+                        disabled={revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId)}
+                        title={batch.status === 'Ativo' ? 'Revogar' : 'Renovar'}
+                        style={{ border: batch.status === 'Ativo' ? '1px solid #fecaca' : '1px solid #fde68a', background: batch.status === 'Ativo' ? '#fef2f2' : '#fffbeb', color: batch.status === 'Ativo' ? '#ef4444' : '#b45309', borderRadius: '7px', padding: '6px 9px', cursor: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
                       >
-                        {revokingGroupIds.has(batch.groupId) ? <span style={{ fontSize: '0.58rem' }}>...</span> : batch.status === 'Ativo' ? <ShieldX size={14} /> : <Trash2 size={14} />}
+                        {revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? <span style={{ fontSize: '0.58rem' }}>...</span> : batch.status === 'Ativo' ? <ShieldX size={14} /> : <RotateCcw size={14} />}
+                        {batch.status === 'Ativo' ? 'Revogar' : 'Renovar'}
                       </button>
                     </div>
                   </td>
@@ -487,18 +472,26 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
 
       <SystemQuickModal
         isOpen={confirmModalState.isOpen}
-        title={confirmModalState.action === 'revoke' ? 'Revogar Compartilhamento' : 'Excluir Compartilhamento'}
-        message={
-          confirmModalState.action === 'revoke'
-            ? 'Tem certeza de que deseja revogar este link de compartilhamento? O acesso público aos arquivos correspondentes será bloqueado imediatamente.'
-            : 'Tem certeza de que deseja excluir definitivamente este link de compartilhamento? Esta ação removerá o registro do histórico do servidor.'
-        }
-        confirmLabel={confirmModalState.action === 'revoke' ? 'Revogar' : 'Excluir'}
+        title="Revogar Compartilhamento"
+        message="Tem certeza de que deseja revogar este link de compartilhamento? O acesso público aos arquivos correspondentes será bloqueado imediatamente."
+        confirmLabel="Revogar"
         cancelLabel="Cancelar"
-        onConfirm={handleConfirmAction}
+        onConfirm={() => handleRevoke(confirmModalState.groupId)}
         onClose={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
         danger={true}
       />
+      {renewModalBatch && (
+        <RenewShareModal
+          isOpen={Boolean(renewModalBatch)}
+          documento={buildBatchDisplayLabel(renewModalBatch)}
+          documentosCount={renewModalBatch.documentos.length}
+          senhaAtual={renewModalBatch.senha}
+          senhaHashAtual={renewModalBatch.senhaHash}
+          isRenewing={renewingGroupIds.has(renewModalBatch.groupId)}
+          onClose={() => setRenewModalBatch(null)}
+          onRenew={(input) => handleRenew(renewModalBatch, input)}
+        />
+      )}
     </div>
   );
 };
