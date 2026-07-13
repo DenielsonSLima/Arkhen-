@@ -167,48 +167,7 @@ export const PublicCobrancaPage = () => {
 
             <div className="public-charge-preview-frame">
               {!isExpired && cobranca.bankSlipLink ? (
-                <div className="public-charge-invoice-preview">
-                  <div className="invoice-header">
-                    <span className="invoice-badge pending">Cobrança {cobranca.status}</span>
-                    <span className="invoice-number">Ref: #{cobranca.id.slice(0, 8).toUpperCase()}</span>
-                  </div>
-                  
-                  <div className="invoice-main">
-                    <small>Valor da Fatura</small>
-                    <h1>{amount}</h1>
-                    <p>Vencimento em <strong>{dueDate}</strong></p>
-                  </div>
-
-                  <div className="invoice-details-table">
-                    <div className="table-header">
-                      <span>Descrição do Serviço</span>
-                      <span>Total</span>
-                    </div>
-                    <div className="table-row">
-                      <span>{serviceDescription}</span>
-                      <span>{amount}</span>
-                    </div>
-                  </div>
-
-                  <div className="invoice-parties">
-                    <div>
-                      <small>Emissor</small>
-                      <strong>{emissorName}</strong>
-                      <span>CNPJ: {emissorCnpj}</span>
-                    </div>
-                    <div>
-                      <small>Pagador</small>
-                      <strong>{cobranca.clienteNome}</strong>
-                      <span>CNPJ: {clienteCnpj}</span>
-                    </div>
-                  </div>
-
-                  <div className="invoice-actions-fallback">
-                    <a href={cobranca.bankSlipLink} target="_blank" rel="noreferrer" className="invoice-btn-primary">
-                      <Download size={15} /> Abrir Boleto em PDF (Nova Aba)
-                    </a>
-                  </div>
-                </div>
+                <iframe title="Boleto da cobrança" src={cobranca.bankSlipLink} />
               ) : (
                 <div className="public-charge-empty-preview">
                   <FileText size={38} />
