@@ -187,6 +187,7 @@ export const AgendaPage: React.FC = () => {
             key={evento.id}
             evento={evento}
             onEdit={handleAbrirEdicao}
+            onDelete={handleExcluirEvento}
           />
         ))}
       </div>

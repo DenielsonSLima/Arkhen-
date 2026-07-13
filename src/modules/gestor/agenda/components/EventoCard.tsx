@@ -1,19 +1,21 @@
 import React from 'react';
-import { Clock, Building2, UserRound } from 'lucide-react';
+import { Clock, Building2, UserRound, Pencil, Trash2 } from 'lucide-react';
 import { getEventoCategoriaConfig, getEventoOrigemConfig, type Evento } from '../services/agenda.service';
 
 interface EventoCardProps {
   evento: Evento;
   onEdit: (evento: Evento) => void;
+  onDelete?: (eventoId: string) => void;
 }
 
-export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit }) => {
+export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete }) => {
   const config = getEventoCategoriaConfig(evento) || { label: 'Evento', cor: '#64748b', corFundo: '#f1f5f9' };
   const origem = getEventoOrigemConfig(evento);
   const dataFormatada = new Date(evento.data + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
   });
+  const isDeletingAllowed = !!onDelete;
 
   return (
     <div className="evento-item" onClick={() => onEdit(evento)}>
@@ -56,6 +58,32 @@ export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit }) => {
             {evento.responsavelPerfil ? ` • ${evento.responsavelPerfil}` : ''}
           </div>
         )}
+      </div>
+      <div className="evento-acoes" onClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          className="evento-acao-btn"
+          onClick={() => onEdit(evento)}
+          title="Editar evento"
+          aria-label="Editar evento"
+        >
+          <Pencil size={13} />
+        </button>
+        {isDeletingAllowed ? (
+          <button
+            type="button"
+            className="evento-acao-btn delete"
+            onClick={() => {
+              if (window.confirm(`Deseja remover o evento "${evento.titulo}"?`)) {
+                onDelete?.(evento.id);
+              }
+            }}
+            title="Remover evento"
+            aria-label="Remover evento"
+          >
+            <Trash2 size={13} />
+          </button>
+        ) : null}
       </div>
     </div>
   );
