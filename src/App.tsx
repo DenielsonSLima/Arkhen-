@@ -96,6 +96,33 @@ function App() {
 
   useConfiguracoesRealtime(view === 'gestor');
 
+  const syncUserProfile = (user: any) => {
+    try {
+      const metadata = user.user_metadata || {};
+      const saved = localStorage.getItem('gestor_user_profile');
+      let localProfile: any = {};
+      if (saved) {
+        try {
+          localProfile = JSON.parse(saved);
+        } catch (error) {
+          console.error('Erro ao ler perfil do usuário local:', error);
+        }
+      }
+      const updated = {
+        nome: metadata.nome || metadata.name || localProfile.nome || 'João Silva',
+        email: user.email || localProfile.email || 'joao.silva@arkhen.com.br',
+        perfil: localProfile.perfil || 'Administrador',
+        avatar: metadata.avatar_url || metadata.picture || localProfile.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+        googleLinked: localProfile.googleLinked || false,
+        googleEmail: localProfile.googleEmail || undefined,
+      };
+      localStorage.setItem('gestor_user_profile', JSON.stringify(updated));
+      window.dispatchEvent(new Event('profile_updated'));
+    } catch (error) {
+      console.error('Erro ao sincronizar perfil do usuário localmente:', error);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -105,12 +132,15 @@ function App() {
       if (error || !data.session) {
         try {
           localStorage.removeItem('contabil_auth');
+          localStorage.removeItem('gestor_user_profile');
         } catch (error) {
           console.error('Erro ao remover auth do localStorage:', error);
         }
         setView('login');
         return;
       }
+
+      syncUserProfile(data.session.user);
 
       try {
         await loginService.completeOnboarding({ email: data.session.user.email || undefined });
@@ -123,6 +153,7 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        syncUserProfile(session.user);
         void loginService.completeOnboarding({ email: session.user.email || undefined }).catch((error) => {
           console.error('Erro ao finalizar cadastro autenticado:', error);
         });
@@ -132,6 +163,7 @@ function App() {
 
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('contabil_auth');
+        localStorage.removeItem('gestor_user_profile');
         setView('login');
       }
     });
@@ -172,6 +204,7 @@ function App() {
       } finally {
         try {
           localStorage.removeItem('contabil_auth');
+          localStorage.removeItem('gestor_user_profile');
         } catch (error) {
           console.error('Erro ao remover auth do localStorage:', error);
         }
