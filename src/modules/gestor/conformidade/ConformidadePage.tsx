@@ -10,6 +10,8 @@ import {
   Search,
   ShieldCheck,
   User,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useConformidade } from './hooks/useConformidade';
 import { useConformidadeRealtime } from './hooks/useConformidadeRealtime';
@@ -92,6 +94,15 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
   const delayByResponsavel = useMemo(() => metricas.atrasadasPorResponsavel, [metricas.atrasadasPorResponsavel]);
   const delayByCliente = useMemo(() => metricas.atrasadasPorCliente, [metricas.atrasadasPorCliente]);
   const delayByRotina = useMemo(() => metricas.atrasadasPorRotina, [metricas.atrasadasPorRotina]);
+
+  const [expandedCards, setExpandedCards] = React.useState<Record<string, boolean>>({});
+
+  const toggleCard = (cardId: string) => {
+    setExpandedCards((prev) => ({
+      ...prev,
+      [cardId]: !prev[cardId],
+    }));
+  };
 
   if (isLoading) {
     return (
@@ -253,6 +264,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
             const diasParaVencimento = getDaysTo(item.vencimento);
             const isVencido = diasParaVencimento < 0;
             const dataVenc = formatDate(item.vencimento);
+            const isExpanded = !!expandedCards[item.id];
 
             return (
               <article key={item.id} className={`conformidade-obrigacao-card ${PRIORITY_CLASS[item.prioridade]}`}>
@@ -282,60 +294,95 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
                   </span>
                 </div>
 
-                <div className="conformidade-regra-box">
-                  <p>Contrato: entrega em até {item.regraContrato.prazoDias} dias</p>
-                  <p>Impacto: {item.regraContrato.impacto}/5</p>
-                  <p>Consequência: {item.regraContrato.consequencia}</p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCard(item.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-gold-dark, #c59235)',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      transition: 'background 0.2s',
+                    }}
+                  >
+                    {isExpanded ? (
+                      <>
+                        Ocultar Detalhes <ChevronUp size={14} />
+                      </>
+                    ) : (
+                      <>
+                        Ver Detalhes <ChevronDown size={14} />
+                      </>
+                    )}
+                  </button>
                 </div>
 
-                <div className="conformidade-checklist">
-                  <h4>Checklist de competência</h4>
-                  <div className="conformidade-checklist-steps">
-                    {referenceSteps.map((step, stepIndex) => {
-                      const stepState = item.etapas.find((itemStep) => itemStep.id === step.id);
-                      const isCompleted = !!stepState?.concluida;
-                      const isLocked = stepIndex > 0 && !item.etapas[stepIndex - 1]?.concluida;
+                {isExpanded && (
+                  <>
+                    <div className="conformidade-regra-box" style={{ marginTop: '12px' }}>
+                      <p>Contrato: entrega em até {item.regraContrato.prazoDias} dias</p>
+                      <p>Impacto: {item.regraContrato.impacto}/5</p>
+                      <p>Consequência: {item.regraContrato.consequencia}</p>
+                    </div>
 
-                      return (
-                        <label
-                          key={`${item.id}-${step.id}`}
-                          className={`conformidade-step-row ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isCompleted}
-                            disabled={isLocked}
-                            onChange={(event) => handleToggleStep(item.id, step.id, event.target.checked)}
-                          />
-                          <div>
-                            <strong>{step.label}</strong>
-                            <span>
-                              {isCompleted && stepState?.responsavel
-                                ? `Concluído por ${stepState.responsavel}${stepState.concluidaEm ? ` • ${formatDate(stepState.concluidaEm.slice(0, 10))}` : ''}`
-                                : isLocked ? 'Bloqueado até etapa anterior concluir' : 'Pendente'}
-                            </span>
-                          </div>
-                          {isCompleted ? <CheckCircle2 size={15} /> : <Clock size={15} />}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+                    <div className="conformidade-checklist">
+                      <h4>Checklist de competência</h4>
+                      <div className="conformidade-checklist-steps">
+                        {referenceSteps.map((step, stepIndex) => {
+                          const stepState = item.etapas.find((itemStep) => itemStep.id === step.id);
+                          const isCompleted = !!stepState?.concluida;
+                          const isLocked = stepIndex > 0 && !item.etapas[stepIndex - 1]?.concluida;
 
-                <div className="conformidade-documentos">
-                  <h4>Canal de controle de documentos</h4>
-                  {item.documentosPendentes.length === 0 && <p>Nenhuma pendência documental cadastrada.</p>}
-                  {item.documentosPendentes.length > 0 && (
-                    <ul>
-                      {item.documentosPendentes.map((doc) => (
-                        <li key={doc.id}>
-                          <span>{doc.nome}</span>
-                          <span className="faltando-desde">em falta desde {formatDate(doc.faltaDesde)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                          return (
+                            <label
+                              key={`${item.id}-${step.id}`}
+                              className={`conformidade-step-row ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isCompleted}
+                                disabled={isLocked}
+                                onChange={(event) => handleToggleStep(item.id, step.id, event.target.checked)}
+                              />
+                              <div>
+                                <strong>{step.label}</strong>
+                                <span>
+                                  {isCompleted && stepState?.responsavel
+                                    ? `Concluído por ${stepState.responsavel}${stepState.concluidaEm ? ` • ${formatDate(stepState.concluidaEm.slice(0, 10))}` : ''}`
+                                    : isLocked ? 'Bloqueado até etapa anterior concluir' : 'Pendente'}
+                                </span>
+                              </div>
+                              {isCompleted ? <CheckCircle2 size={15} /> : <Clock size={15} />}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="conformidade-documentos">
+                      <h4>Canal de controle de documentos</h4>
+                      {item.documentosPendentes.length === 0 && <p>Nenhuma pendência documental cadastrada.</p>}
+                      {item.documentosPendentes.length > 0 && (
+                        <ul>
+                          {item.documentosPendentes.map((doc) => (
+                            <li key={doc.id}>
+                              <span>{doc.nome}</span>
+                              <span className="faltando-desde">em falta desde {formatDate(doc.faltaDesde)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
               </article>
             );
           })}

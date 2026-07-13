@@ -1,38 +1,85 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BarChart3, CheckCircle2, Clock, AlertTriangle, Users } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
-import { todayKey } from '../services/rotinasAtividadesService';
+import { todayKey, addDaysKey } from '../services/rotinasAtividadesService';
+
+const getMonday = (dateKey: string) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const day = date.getDay();
+  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1));
+  return date.toISOString().split('T')[0];
+};
 
 export const AtividadesControle: React.FC = () => {
   const { tarefas } = useAtividadesWorkspace();
+  const [activePeriod, setActivePeriod] = useState<'dia' | 'semana' | 'mes' | 'todos'>('mes');
+
+  // Filtragem das tarefas baseada no período
+  const filteredTasks = useMemo(() => {
+    const hoje = todayKey();
+    return tarefas.filter((t) => {
+      if (activePeriod === 'dia') {
+        return t.vencimento === hoje;
+      }
+      if (activePeriod === 'semana') {
+        const monday = getMonday(hoje);
+        const sunday = addDaysKey(monday, 6);
+        return t.vencimento >= monday && t.vencimento <= sunday;
+      }
+      if (activePeriod === 'mes') {
+        return t.vencimento.slice(0, 7) === hoje.slice(0, 7);
+      }
+      return true; // todos
+    });
+  }, [tarefas, activePeriod]);
 
   // Métricas gerais
   const metrics = useMemo(() => {
-    const total = tarefas.length;
-    const concluidas = tarefas.filter((t) => t.status === 'Concluída').length;
-    const emAndamento = tarefas.filter((t) => t.status === 'Em andamento').length;
-    const pendentes = tarefas.filter((t) => t.status === 'Pendente').length;
-    const atrasadas = tarefas.filter((t) => t.status !== 'Concluída' && t.vencimento < todayKey()).length;
+    const total = filteredTasks.length;
+    const concluidas = filteredTasks.filter((t) => t.status === 'Concluída').length;
+    const emAndamento = filteredTasks.filter((t) => t.status === 'Em andamento').length;
+    const pendentes = filteredTasks.filter((t) => t.status === 'Pendente').length;
+    const atrasadas = filteredTasks.filter((t) => t.status !== 'Concluída' && t.vencimento < todayKey()).length;
     const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
     return { total, concluidas, emAndamento, pendentes, atrasadas, pct };
-  }, [tarefas]);
+  }, [filteredTasks]);
 
   // Estatísticas por colaborador
   const workerStats = useMemo(() => {
-    const responsaveis = Array.from(new Set(tarefas.map((tarefa) => tarefa.responsavel).filter(Boolean)));
+    const responsaveis = Array.from(new Set(filteredTasks.map((tarefa) => tarefa.responsavel).filter(Boolean)));
     return responsaveis.map((nome) => {
-      const userTasks = tarefas.filter((t) => t.responsavel === nome);
+      const userTasks = filteredTasks.filter((t) => t.responsavel === nome);
       const concluidas = userTasks.filter((t) => t.status === 'Concluída').length;
       const total = userTasks.length;
       const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
       return { nome, total, concluidas, pct };
     }).sort((a, b) => b.pct - a.pct);
-  }, [tarefas]);
+  }, [filteredTasks]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      {/* Filtros de Período */}
+      <div style={toolbarStyle}>
+        <div style={filterGroupStyle}>
+          {(['dia', 'semana', 'mes', 'todos'] as const).map((periodo) => {
+            const labelMap = { dia: 'Hoje', semana: 'Semana', mes: 'Mês', todos: 'Todos' };
+            const isActive = activePeriod === periodo;
+            return (
+              <button
+                key={periodo}
+                type="button"
+                onClick={() => setActivePeriod(periodo)}
+                style={isActive ? activeFilterBtnStyle : filterBtnStyle}
+              >
+                {labelMap[periodo]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
 
       {/* Grid de Métricas */}
@@ -167,4 +214,42 @@ const progressFillStyle = {
   height: '100%',
   borderRadius: '4px',
   transition: 'width 0.3s ease',
+};
+
+const toolbarStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: '12px',
+  flexWrap: 'wrap' as const,
+  borderBottom: '1px solid #e2e8f0',
+  paddingBottom: '16px',
+};
+
+const filterGroupStyle = {
+  display: 'flex',
+  gap: '8px',
+  flexWrap: 'wrap' as const,
+};
+
+const filterBtnBaseStyle = {
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  padding: '8px 16px',
+  fontSize: '0.82rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+};
+
+const filterBtnStyle = {
+  ...filterBtnBaseStyle,
+  background: '#ffffff',
+  color: '#64748b',
+};
+
+const activeFilterBtnStyle = {
+  ...filterBtnBaseStyle,
+  background: '#1f2937',
+  color: '#ffffff',
+  borderColor: '#c59235',
 };

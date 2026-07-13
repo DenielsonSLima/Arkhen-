@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMemo, useState, type ChangeEvent, type FocusEvent, type ReactNode } from 'react';
-import { Building2, Check, Landmark, Search } from 'lucide-react';
+import { useMemo, useState, useRef, type ChangeEvent, type FocusEvent, type ReactNode } from 'react';
+import { Building2, Check, Landmark, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 
 export const onlyDigits = (value: string) => value.replace(/\D/g, '');
@@ -120,6 +120,7 @@ interface BillingClientSelectProps {
 export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: BillingClientSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const selectedCliente = useMemo(
     () => clientes.find((cliente) => cliente.id === value),
     [clientes, value],
@@ -160,16 +161,23 @@ export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: Bi
     if (value) onChange('');
   };
 
+  const handleTriggerClick = () => {
+    inputRef.current?.focus();
+    setIsOpen(true);
+  };
+
   return (
     <div className="faturamento-client-select" onBlur={handleBlur}>
       <div
         className={`faturamento-client-select-trigger ${selectedCliente ? 'has-value' : ''}`}
+        onClick={handleTriggerClick}
       >
         <span className="faturamento-client-select-avatar">
           {selectedCliente ? getBillingInitials(selectedCliente.nome || selectedCliente.razaoSocial) : <Search size={18} />}
         </span>
         <span className="faturamento-client-select-text">
           <input
+            ref={inputRef}
             type="text"
             value={isOpen ? search : (selectedCliente ? getBillingClientName(selectedCliente) : search)}
             onChange={handleSearchChange}
@@ -184,6 +192,9 @@ export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: Bi
             autoComplete="off"
           />
           <small>{selectedCliente ? getBillingClientMeta(selectedCliente) : 'Nome, CNPJ, unidade e regime tributario'}</small>
+        </span>
+        <span className="faturamento-client-select-arrow">
+          {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </span>
       </div>
 

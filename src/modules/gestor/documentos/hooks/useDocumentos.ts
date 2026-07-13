@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { documentosService, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
 import type { DocumentCategory, MeusDocumentosData } from '../services/documentosService';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { useDocumentosRealtime } from './useDocumentosRealtime';
-import { useDocumentosBaseQueries, useDocumentosMutations } from '../queries/useDocumentosQueries';
+import { useDocumentosBaseQueries, useDocumentosMutations, documentosKeys } from '../queries/useDocumentosQueries';
 
 export type DocumentosTab = 'meus' | 'empresas' | 'inativas' | 'todos' | 'compartilhados';
 
@@ -16,6 +17,7 @@ const EMPTY_COMPANIES: Company[] = [];
 const EMPTY_SETTINGS: MeusDocumentosData = { pastas: [], categorias: [], documentos: [] };
 
 export const useDocumentos = (options: UseDocumentosOptions = {}) => {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<DocumentosTab>(() => options.initialActiveTab || 'meus');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,8 +65,6 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   }, [companyRows, companyDocs]);
 
   const {
-    uploadPersonalMutation,
-    uploadCompanyMutation,
     saveSettingsMutation,
     saveCategoriesMutation,
     saveCompanyMutation,
@@ -83,12 +83,17 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   }, [saveCompanyMutation]);
 
   const uploadPersonalDocument = useCallback(async (input: UploadDocumentInput) => {
-    return uploadPersonalMutation.mutateAsync(input);
-  }, [uploadPersonalMutation]);
+    const doc = await documentosService.uploadPersonalDocument(input);
+    queryClient.invalidateQueries({ queryKey: documentosKeys.personal(), exact: true });
+    return doc;
+  }, [queryClient]);
 
   const uploadCompanyDocument = useCallback(async (input: UploadCompanyDocumentInput) => {
-    return uploadCompanyMutation.mutateAsync(input);
-  }, [uploadCompanyMutation]);
+    const doc = await documentosService.uploadCompanyDocument(input);
+    queryClient.invalidateQueries({ queryKey: documentosKeys.companyDocs(), exact: true });
+    queryClient.invalidateQueries({ queryKey: documentosKeys.company(input.companyId) });
+    return doc;
+  }, [queryClient]);
 
   const toggleSelectDoc = useCallback((docId: string) => {
     setSelectedDocIds((prev) => (

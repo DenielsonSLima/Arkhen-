@@ -1,6 +1,98 @@
 -- Massa de teste para conferir Empresas, Usuarios, Atividades e Documentos.
 -- Escopo: tenant b9b06f80-10ff-4bb1-bf53-63f3df0deca1.
 
+CREATE OR REPLACE FUNCTION public.perfis_acesso_padrao()
+RETURNS TABLE (
+  id uuid,
+  codigo varchar,
+  nome varchar,
+  descricao text,
+  sistema boolean,
+  permissoes text[],
+  ordem integer,
+  created_at timestamptz
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $seed$
+  VALUES
+    (
+      '00000000-0000-0000-0000-000000000101'::uuid,
+      'administrador'::varchar,
+      'Administrador'::varchar,
+      'Acesso completo ao sistema, configuracoes, equipe, clientes, documentos, atividades e financeiro do escritorio.'::text,
+      true,
+      ARRAY[
+        'inicio:view','clientes:view','clientes:create','clientes:update','clientes:delete',
+        'parametrizacao:view','parametrizacao:manage','agenda:view','agenda:manage',
+        'atividades:view','atividades:manage','protocolos:view','protocolos:manage',
+        'conformidade:view','simulacoes:view','faturamento:view','faturamento:manage',
+        'financeiro:view','financeiro:manage','documentos:view','documentos:manage',
+        'configuracoes:view','configuracoes:manage','usuarios:manage','perfis:manage'
+      ]::text[],
+      10,
+      '2026-01-01 00:00:00+00'::timestamptz
+    ),
+    (
+      '00000000-0000-0000-0000-000000000102'::uuid,
+      'financeiro'::varchar,
+      'Financeiro'::varchar,
+      'Controla faturamento, cobrancas, contas bancarias e relatorios financeiros, sem administrar usuarios ou perfis.'::text,
+      true,
+      ARRAY[
+        'inicio:view','clientes:view','faturamento:view','faturamento:manage',
+        'financeiro:view','financeiro:manage','documentos:view',
+        'configuracoes:view','contas-bancarias:manage','integracao-bancaria:manage'
+      ]::text[],
+      20,
+      '2026-01-01 00:00:00+00'::timestamptz
+    ),
+    (
+      '00000000-0000-0000-0000-000000000103'::uuid,
+      'funcionario'::varchar,
+      'Funcionário'::varchar,
+      'Acessa sua rotina de trabalho, atividades atribuídas, agenda, protocolos e documentos operacionais.'::text,
+      true,
+      ARRAY[
+        'inicio:view','agenda:view','atividades:view','atividades:update-own',
+        'protocolos:view','protocolos:create','documentos:view','documentos:create',
+        'meu-perfil:manage'
+      ]::text[],
+      30,
+      '2026-01-01 00:00:00+00'::timestamptz
+    ),
+    (
+      '00000000-0000-0000-0000-000000000104'::uuid,
+      'fiscal'::varchar,
+      'Analista Fiscal'::varchar,
+      'Atua em obrigacoes fiscais, conformidade, cadastros de clientes e integracao fiscal, sem acesso ao financeiro do escritorio.'::text,
+      true,
+      ARRAY[
+        'inicio:view','clientes:view','clientes:update','parametrizacao:view',
+        'agenda:view','atividades:view','atividades:manage','protocolos:view',
+        'protocolos:manage','conformidade:view','simulacoes:view',
+        'documentos:view','documentos:manage','integracao-fiscal:manage'
+      ]::text[],
+      40,
+      '2026-01-01 00:00:00+00'::timestamptz
+    ),
+    (
+      '00000000-0000-0000-0000-000000000105'::uuid,
+      'cliente'::varchar,
+      'Cliente Externo'::varchar,
+      'Visualiza apenas documentos, protocolos, obrigacoes e solicitacoes vinculadas a propria empresa cliente.'::text,
+      true,
+      ARRAY[
+        'cliente-portal:view','documentos:view-own','documentos:create-own',
+        'protocolos:view-own','atividades:view-own','faturamento:view-own',
+        'meu-perfil:manage'
+      ]::text[],
+      50,
+      '2026-01-01 00:00:00+00'::timestamptz
+    )
+$seed$;
+
 DO $$
 DECLARE
   v_empresa_id uuid := 'b9b06f80-10ff-4bb1-bf53-63f3df0deca1';
@@ -26,98 +118,6 @@ BEGIN
   IF v_owner_user_id IS NULL THEN
     RAISE EXCEPTION 'Nenhum usuario auth encontrado para a empresa de demonstracao.';
   END IF;
-
-  CREATE OR REPLACE FUNCTION public.perfis_acesso_padrao()
-  RETURNS TABLE (
-    id uuid,
-    codigo varchar,
-    nome varchar,
-    descricao text,
-    sistema boolean,
-    permissoes text[],
-    ordem integer,
-    created_at timestamptz
-  )
-  LANGUAGE sql
-  STABLE
-  SET search_path = public, pg_temp
-  AS $seed$
-    VALUES
-      (
-        '00000000-0000-0000-0000-000000000101'::uuid,
-        'administrador'::varchar,
-        'Administrador'::varchar,
-        'Acesso completo ao sistema, configuracoes, equipe, clientes, documentos, atividades e financeiro do escritorio.'::text,
-        true,
-        ARRAY[
-          'inicio:view','clientes:view','clientes:create','clientes:update','clientes:delete',
-          'parametrizacao:view','parametrizacao:manage','agenda:view','agenda:manage',
-          'atividades:view','atividades:manage','protocolos:view','protocolos:manage',
-          'conformidade:view','simulacoes:view','faturamento:view','faturamento:manage',
-          'financeiro:view','financeiro:manage','documentos:view','documentos:manage',
-          'configuracoes:view','configuracoes:manage','usuarios:manage','perfis:manage'
-        ]::text[],
-        10,
-        '2026-01-01 00:00:00+00'::timestamptz
-      ),
-      (
-        '00000000-0000-0000-0000-000000000102'::uuid,
-        'financeiro'::varchar,
-        'Financeiro'::varchar,
-        'Controla faturamento, cobrancas, contas bancarias e relatorios financeiros, sem administrar usuarios ou perfis.'::text,
-        true,
-        ARRAY[
-          'inicio:view','clientes:view','faturamento:view','faturamento:manage',
-          'financeiro:view','financeiro:manage','documentos:view',
-          'configuracoes:view','contas-bancarias:manage','integracao-bancaria:manage'
-        ]::text[],
-        20,
-        '2026-01-01 00:00:00+00'::timestamptz
-      ),
-      (
-        '00000000-0000-0000-0000-000000000103'::uuid,
-        'funcionario'::varchar,
-        'Funcionário'::varchar,
-        'Acessa sua rotina de trabalho, atividades atribuídas, agenda, protocolos e documentos operacionais.'::text,
-        true,
-        ARRAY[
-          'inicio:view','agenda:view','atividades:view','atividades:update-own',
-          'protocolos:view','protocolos:create','documentos:view','documentos:create',
-          'meu-perfil:manage'
-        ]::text[],
-        30,
-        '2026-01-01 00:00:00+00'::timestamptz
-      ),
-      (
-        '00000000-0000-0000-0000-000000000104'::uuid,
-        'fiscal'::varchar,
-        'Analista Fiscal'::varchar,
-        'Atua em obrigacoes fiscais, conformidade, cadastros de clientes e integracao fiscal, sem acesso ao financeiro do escritorio.'::text,
-        true,
-        ARRAY[
-          'inicio:view','clientes:view','clientes:update','parametrizacao:view',
-          'agenda:view','atividades:view','atividades:manage','protocolos:view',
-          'protocolos:manage','conformidade:view','simulacoes:view',
-          'documentos:view','documentos:manage','integracao-fiscal:manage'
-        ]::text[],
-        40,
-        '2026-01-01 00:00:00+00'::timestamptz
-      ),
-      (
-        '00000000-0000-0000-0000-000000000105'::uuid,
-        'cliente'::varchar,
-        'Cliente Externo'::varchar,
-        'Visualiza apenas documentos, protocolos, obrigacoes e solicitacoes vinculadas a propria empresa cliente.'::text,
-        true,
-        ARRAY[
-          'cliente-portal:view','documentos:view-own','documentos:create-own',
-          'protocolos:view-own','atividades:view-own','faturamento:view-own',
-          'meu-perfil:manage'
-        ]::text[],
-        50,
-        '2026-01-01 00:00:00+00'::timestamptz
-      )
-  $seed$;
 
   SELECT COALESCE(
     (SELECT c.modelos_ativos FROM public.clientes c WHERE c.empresa_id = v_empresa_id AND array_length(c.modelos_ativos, 1) > 0 LIMIT 1),
@@ -403,20 +403,15 @@ BEGIN
     WHERE id = v_cliente_agro;
   END IF;
 
-  DELETE FROM storage.objects o
-  USING public.documentos d
-  WHERE d.empresa_id = v_empresa_id
-    AND d.storage_bucket = 'documentos'
-    AND o.bucket_id = d.storage_bucket
-    AND o.name = d.storage_path;
-
   DELETE FROM public.documentos
   WHERE empresa_id = v_empresa_id;
 
   DELETE FROM public.documentos_categorias
   WHERE empresa_id = v_empresa_id;
 
-  DELETE FROM public.parametrizacao_pastas_documentos
+  UPDATE public.parametrizacao_pastas_documentos
+  SET ativo = false,
+      updated_at = now()
   WHERE empresa_id = v_empresa_id;
 
   FOR v_pasta IN
@@ -459,12 +454,7 @@ BEGIN
     (v_empresa_id, v_cliente_clinica, 'Alvarás', true, false, 10),
     (v_empresa_id, v_cliente_clinica, 'Folha', true, false, 20),
     (v_empresa_id, v_cliente_agro, 'Contratos Rurais', true, false, 10),
-    (v_empresa_id, v_cliente_agro, 'Notas de Insumos', true, false, 20)
-  ON CONFLICT (empresa_id, scope_key, nome_key) DO UPDATE
-  SET ativo = true,
-      sistema = false,
-      ordem = EXCLUDED.ordem,
-      updated_at = now();
+    (v_empresa_id, v_cliente_agro, 'Notas de Insumos', true, false, 20);
 
   INSERT INTO public.documentos (
     empresa_id, owner_user_id, scope, cliente_id, storage_bucket, storage_path,
@@ -475,10 +465,10 @@ BEGIN
     (v_empresa_id, v_owner_user_id, 'pessoal', NULL, 'amostras_xml', '/documentos/biblioteca-demo/checklist-fiscal-mensal.txt', 'Checklist Fiscal Mensal.txt', 'Checklists', 'Modelo de checklist fiscal para conferencia mensal.', 'Biblioteca/Checklists', NULL, 'text/plain', 420),
     (v_empresa_id, v_owner_user_id, 'pessoal', NULL, 'amostras_xml', '/documentos/biblioteca-demo/roteiro-admissao-funcionario.txt', 'Roteiro de Admissão de Funcionário.txt', 'Modelos Internos', 'Roteiro para testar arquivos trabalhistas na biblioteca.', 'Biblioteca/Modelos', NULL, 'text/plain', 420),
     (v_empresa_id, v_owner_user_id, 'pessoal', NULL, 'amostras_xml', '/documentos/biblioteca-demo/modelo-controle-pendencias.txt', 'Modelo de Controle de Pendências.txt', 'Modelos Internos', 'Modelo para acompanhamento de pendencias por cliente.', 'Biblioteca/Modelos', NULL, 'text/plain', 360),
-    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_mercado::text, 'amostras_xml', '/documentos/biblioteca-demo/checklist-fiscal-mensal.txt', 'Mercado Sol Nascente - Checklist Fiscal.txt', 'Notas Fiscais', 'Documento de teste vinculado a etapa fiscal.', '02 - Fiscal', CURRENT_DATE + 45, 'text/plain', 420),
-    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_mercado::text, 'amostras_xml', '/documentos/biblioteca-demo/modelo-controle-pendencias.txt', 'Mercado Sol Nascente - Pendências.txt', 'Relatórios', 'Controle de pendencias do cliente.', '05 - Entregas', CURRENT_DATE + 15, 'text/plain', 360),
-    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_clinica::text, 'amostras_xml', '/documentos/biblioteca-demo/roteiro-admissao-funcionario.txt', 'Clínica Vida Plena - Admissão.txt', 'Folha', 'Documento trabalhista para testar pasta por empresa.', '03 - Trabalhista', CURRENT_DATE + 30, 'text/plain', 420),
-    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_agro::text, 'amostras_xml', '/documentos/biblioteca-demo/guia-biblioteca-documentos.txt', 'AgroVale Insumos - Guia Documental.txt', 'Contratos Rurais', 'Documento de cadastro e organizacao por etapas.', '01 - Cadastro', CURRENT_DATE + 60, 'text/plain', 620);
+    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_mercado::text, 'amostras_xml', '/documentos/biblioteca-demo/checklist-fiscal-mensal.txt?empresa=mercado-fiscal', 'Mercado Sol Nascente - Checklist Fiscal.txt', 'Notas Fiscais', 'Documento de teste vinculado a etapa fiscal.', '02 - Fiscal', CURRENT_DATE + 45, 'text/plain', 420),
+    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_mercado::text, 'amostras_xml', '/documentos/biblioteca-demo/modelo-controle-pendencias.txt?empresa=mercado-entregas', 'Mercado Sol Nascente - Pendências.txt', 'Relatórios', 'Controle de pendencias do cliente.', '05 - Entregas', CURRENT_DATE + 15, 'text/plain', 360),
+    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_clinica::text, 'amostras_xml', '/documentos/biblioteca-demo/roteiro-admissao-funcionario.txt?empresa=clinica-trabalhista', 'Clínica Vida Plena - Admissão.txt', 'Folha', 'Documento trabalhista para testar pasta por empresa.', '03 - Trabalhista', CURRENT_DATE + 30, 'text/plain', 420),
+    (v_empresa_id, v_owner_user_id, 'empresa', v_cliente_agro::text, 'amostras_xml', '/documentos/biblioteca-demo/guia-biblioteca-documentos.txt?empresa=agro-cadastro', 'AgroVale Insumos - Guia Documental.txt', 'Contratos Rurais', 'Documento de cadastro e organizacao por etapas.', '01 - Cadastro', CURRENT_DATE + 60, 'text/plain', 620);
 
   DELETE FROM public.atividades_tarefas
   WHERE empresa_id = v_empresa_id;
@@ -523,7 +513,7 @@ BEGIN
   VALUES
     (v_empresa_id, v_rotina_fiscal, v_cliente_mercado, 'Apurar DAS e conferir notas de julho', 'Fiscal', 'Mensal', 'Rafael Lima Fiscal', 'Mercado Sol Nascente', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE, 'Alta', 'Em andamento', 'Rotina', '[{"titulo":"Receber XMLs","concluida":true},{"titulo":"Conferir notas","concluida":true},{"titulo":"Apurar guia","concluida":false}]'::jsonb, 'Faltam duas notas de serviço.', NULL, NULL, true),
     (v_empresa_id, v_rotina_folha, v_cliente_clinica, 'Fechar folha e enviar encargos', 'Folha', 'Mensal', 'Marina Costa Funcionária', 'Clínica Vida Plena', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE + 1, 'Média', 'Pendente', 'Rotina', '[{"titulo":"Conferir ponto","concluida":false},{"titulo":"Validar admissões","concluida":false},{"titulo":"Gerar guias","concluida":false}]'::jsonb, 'Aguardando ASO de um funcionário.', NULL, 'ASO admissional pendente.', true),
-    (v_empresa_id, v_rotina_documentos, v_cliente_agro, 'Cobrar contratos rurais e notas de insumos', 'Cliente', 'Semanal', 'João Silva Administrador', 'AgroVale Insumos', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE - 1, 'Alta', 'Pendente', 'Gestor', '[{"titulo":"Enviar solicitação","concluida":true},{"titulo":"Cliente retornou","concluida":false}]'::jsonb, 'Atrasada para testar alerta de prazo.', NULL, 'Cliente ainda nao enviou documentos.', true),
+    (v_empresa_id, v_rotina_documentos, v_cliente_agro, 'Cobrar contratos rurais e notas de insumos', 'Cliente', 'Semanal', 'João Silva Administrador', 'AgroVale Insumos', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE - 1, 'Alta', 'Pendente', 'Manual', '[{"titulo":"Enviar solicitação","concluida":true},{"titulo":"Cliente retornou","concluida":false}]'::jsonb, 'Atrasada para testar alerta de prazo.', NULL, 'Cliente ainda nao enviou documentos.', true),
     (v_empresa_id, v_rotina_contabil, NULL, 'Conciliar extratos do escritório', 'Contábil', 'Mensal', 'Bianca Rocha Financeiro', 'Escritório', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE - 2, 'Média', 'Concluída', 'Manual', '[{"titulo":"Importar extratos","concluida":true},{"titulo":"Conciliar saldos","concluida":true},{"titulo":"Registrar divergências","concluida":true}]'::jsonb, 'Tarefa marcada como realizada para teste.', now() - interval '3 hours', NULL, true),
     (v_empresa_id, NULL, v_cliente_mercado, 'Atualizar dados cadastrais do Mercado Sol Nascente', 'Controle', 'Única', 'João Silva Administrador', 'Mercado Sol Nascente', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE + 3, 'Baixa', 'Concluída', 'Manual', '[{"titulo":"Conferir CNPJ","concluida":true},{"titulo":"Conferir endereço","concluida":true}]'::jsonb, 'Concluída para testar histórico.', now() - interval '1 day', NULL, true),
     (v_empresa_id, NULL, v_cliente_clinica, 'Revisar alvarás da Clínica Vida Plena', 'Cliente', 'Única', 'Rafael Lima Fiscal', 'Clínica Vida Plena', to_char(CURRENT_DATE, 'YYYY-MM'), CURRENT_DATE + 5, 'Alta', 'Em andamento', 'Manual', '[{"titulo":"Conferir alvará sanitário","concluida":true},{"titulo":"Validar vencimento","concluida":false}]'::jsonb, 'Alvará sanitário em conferência.', NULL, NULL, true),
