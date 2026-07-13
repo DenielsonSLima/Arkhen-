@@ -17,6 +17,7 @@ import {
   ReceiptText,
   Share2,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { useCreateCobrancaFinanceiraMutation } from '../../financeiro/queries/useFinanceiroQueries';
@@ -42,6 +43,14 @@ interface ModalNovoLancamentoAvulsoProps {
   onClose: () => void;
 }
 
+const getTodayString = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps> = ({ isOpen, onClose }) => {
   const clientesQuery = useQuery({
     queryKey: ['gestao-empresarial', 'companies'],
@@ -53,7 +62,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const [tipo, setTipo] = useState<'cobranca' | null>('cobranca');
   const [clienteEmpresaId, setClienteEmpresaId] = useState('');
   const [valor, setValor] = useState('');
-  const [dataVencimento, setDataVencimento] = useState('');
+  const [dataVencimento, setDataVencimento] = useState(getTodayString());
   const [descricao, setDescricao] = useState('');
   const [meioPagamento, setMeioPagamento] = useState<'Pix' | 'Boleto' | 'Ambos'>('Ambos');
   const [descontoPercentual, setDescontoPercentual] = useState('');
@@ -82,7 +91,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
     setTipo('cobranca');
     setClienteEmpresaId('');
     setValor('');
-    setDataVencimento('');
+    setDataVencimento(getTodayString());
     setDescricao('');
     setMeioPagamento('Ambos');
     setDescontoPercentual('');
@@ -222,6 +231,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               }>
                 <input type="date" value={dataVencimento} onChange={(event) => setDataVencimento(event.target.value)} />
               </BillingInputFrame>
+              {dataVencimento === getTodayString() && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#b45309', fontSize: '0.72rem', fontWeight: 600, marginTop: '4px' }}>
+                  <AlertTriangle size={12} /> Vencimento hoje. Altere se necessário.
+                </span>
+              )}
             </div>
 
             <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>

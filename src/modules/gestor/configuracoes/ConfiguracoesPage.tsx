@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Building2, Users, Activity, History, CreditCard, FileText, ArrowLeft,
-  UserCheck, Landmark, HardDrive, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2
+  UserCheck, Landmark, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2
 } from 'lucide-react';
 
 // Import submodules
@@ -173,12 +173,14 @@ export const ConfiguracoesPage: React.FC = () => {
       desc: 'Defina o modelo da calculadora padrão e gerencie preferências de abas.',
       icon: <Calculator size={28} />,
     },
+    /*
     {
       id: 'armazenamento',
       title: 'Planos e Contratações',
       desc: 'Acompanhe limites de empresas, usuários, armazenamento contratado e opções de contratação.',
       icon: <HardDrive size={28} />,
     },
+    */
     {
       id: 'api-status',
       title: 'Status das APIs',

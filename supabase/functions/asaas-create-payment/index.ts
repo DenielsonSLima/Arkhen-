@@ -231,6 +231,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: true, cobranca: saved as Record<string, unknown> });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Falha ao gerar cobranca Asaas.';
-    return jsonResponse({ ok: false, error: message }, 400);
+    return jsonResponse({ ok: false, error: message }, 200);
   }
 });
