@@ -3,6 +3,9 @@ import { Search, Calendar, CheckCircle2, ShieldAlert, CheckCircle, Clock, AlertT
 import type { LancamentoFinanceiro } from '../services/financeiroService';
 import './ContasAPagarTab.css';
 import { AddContasAPagarModal } from './AddContasAPagarModal';
+import { ModalPagarDespesa } from './ModalPagarDespesa';
+import { usePagarDespesaManualMutation } from '../queries/useFinanceiroQueries';
+import { useContasBancariasQuery } from '../../configuracoes/contas-bancarias/queries/useContasBancariasQueries';
 
 type FiltroStatus = 'todos' | 'aberto' | 'hoje' | 'atrasado' | 'pago' | 'cancelado';
 type ContasAPagarTabProps = {
@@ -32,6 +35,45 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // Manual payment states
+  const [selectedDespesa, setSelectedDespesa] = useState<LancamentoFinanceiro | null>(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [isPayLoading, setIsPayLoading] = useState(false);
+
+  const contasBancariasQuery = useContasBancariasQuery();
+  const pagarDespesaMutation = usePagarDespesaManualMutation();
+
+  const handleRowClick = (item: LancamentoFinanceiro) => {
+    if (item.status === 'Pendente') {
+      setSelectedDespesa(item);
+      setShowPayModal(true);
+    }
+  };
+
+  const handlePaySubmit = async (dadosPgto: {
+    lancamentoId: string;
+    contaBancariaId: string;
+    dataPagamento: string;
+    valorPago: number;
+    desconto: number;
+    juros: number;
+    observacao: string;
+  }) => {
+    setIsPayLoading(true);
+    try {
+      await pagarDespesaMutation.mutateAsync(dadosPgto);
+      setShowPayModal(false);
+      setSelectedDespesa(null);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Falha ao registrar pagamento.');
+    } finally {
+      setIsPayLoading(false);
+    }
+  };
+
+  const contasBancarias = contasBancariasQuery.data || [];
 
   useEffect(() => {
     setCurrentPage(1);
@@ -346,7 +388,12 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
                 const tipoDespesa = item.metadados?.tipoDespesa === 'variavel' ? 'Variável' : 'Fixa';
 
                 return (
-                  <tr key={item.id} className={item.status === 'Pago' ? 'row-paid' : ''}>
+                  <tr 
+                    key={item.id} 
+                    className={item.status === 'Pago' ? 'row-paid' : ''}
+                    style={{ cursor: item.status === 'Pendente' ? 'pointer' : 'default' }}
+                    onClick={() => handleRowClick(item)}
+                  >
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <span className={`status-badge-pill ${badge.className}`} style={{ width: 'fit-content' }}>
@@ -424,6 +471,19 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
             }
           }}
           isLoading={isSubmitLoading}
+        />
+      )}
+      {showPayModal && (
+        <ModalPagarDespesa
+          isOpen={showPayModal}
+          onClose={() => {
+            setShowPayModal(false);
+            setSelectedDespesa(null);
+          }}
+          onSubmit={handlePaySubmit}
+          despesa={selectedDespesa}
+          contasBancarias={contasBancarias}
+          isLoading={isPayLoading}
         />
       )}
     </div>

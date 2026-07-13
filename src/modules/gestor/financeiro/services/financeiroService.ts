@@ -419,6 +419,28 @@ export const financeiroService = {
     }
   },
 
+  async pagarDespesaManual(dados: {
+    lancamentoId: string;
+    contaBancariaId: string;
+    dataPagamento: string;
+    valorPago: number;
+    desconto: number;
+    juros: number;
+    observacao: string;
+  }): Promise<void> {
+    const { error } = await supabase.rpc('pagar_despesa_financeira', {
+      p_lancamento_id: dados.lancamentoId,
+      p_conta_bancaria_id: dados.contaBancariaId,
+      p_data_pagamento: dados.dataPagamento,
+      p_valor_pago: dados.valorPago,
+      p_desconto: dados.desconto,
+      p_juros: dados.juros,
+      p_observacao: dados.observacao,
+    });
+
+    if (error) throw new Error(`Erro ao registrar pagamento de despesa: ${error.message}`);
+  },
+
   async getStats(meses = 6): Promise<DashboardStats> {
     const { data, error } = await supabase.rpc('get_financeiro_dashboard', {
       p_meses: meses,

@@ -151,3 +151,20 @@ export const useSaveLancamentoFinanceiroMutation = () => {
     onSuccess: () => invalidateFinanceiro(queryClient),
   });
 };
+
+export const usePagarDespesaManualMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dados: {
+      lancamentoId: string;
+      contaBancariaId: string;
+      dataPagamento: string;
+      valorPago: number;
+      desconto: number;
+      juros: number;
+      observacao: string;
+    }) => financeiroService.pagarDespesaManual(dados),
+    onSuccess: () => invalidateFinanceiro(queryClient),
+  });
+};
