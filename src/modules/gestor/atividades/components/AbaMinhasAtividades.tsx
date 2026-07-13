@@ -4,6 +4,21 @@ import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { formatDateBR, todayKey, addDaysKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 
+const getUsuarioAtual = () => {
+  const fallback = 'Usuario';
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const profileRaw = window.localStorage.getItem('gestor_user_profile');
+    if (!profileRaw) return fallback;
+    const profile = JSON.parse(profileRaw);
+    return typeof profile?.nome === 'string' && profile.nome.trim().length > 0
+      ? profile.nome
+      : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 interface AbaMinhasAtividadesProps {
   initialPeriodo?: 'dia' | 'semana' | 'mes';
   showInternasOnly?: boolean;
@@ -23,6 +38,14 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
   const [dataBase, setDataBase] = useState(todayKey());
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+  const usuarioLogado = getUsuarioAtual();
+  const tarefaPadraoFrequencia: TarefaGestor['frequencia'] = initialPeriodo === 'dia'
+    ? 'Diária'
+    : initialPeriodo === 'semana'
+      ? 'Semanal'
+      : initialPeriodo === 'mes'
+        ? 'Mensal'
+        : 'Única';
 
   const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
     setFeedback({ texto, tipo });
@@ -77,8 +100,8 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
     const nova: TarefaGestor = {
       ...dados,
       id: `task-usuario-${Date.now()}`,
-      frequencia: 'Única',
-      responsavel: '',
+      frequencia: tarefaPadraoFrequencia,
+      responsavel: usuarioLogado,
       cliente: 'Escritório',
       origem: 'Usuario',
       status: 'Pendente',
@@ -342,7 +365,7 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
         aberto={modalNovaAberto}
         onClose={() => setModalNovaAberto(false)}
         onSalvar={handleSalvarTarefaUsuario}
-        usuarioNome=""
+        usuarioNome={usuarioLogado}
       />
     </div>
   );
