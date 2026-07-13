@@ -6,16 +6,17 @@ interface EventoCardProps {
   evento: Evento;
   onEdit: (evento: Evento) => void;
   onDelete?: (eventoId: string) => void;
+  onDeleteRequest?: (evento: Evento) => void;
 }
 
-export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete }) => {
+export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete, onDeleteRequest }) => {
   const config = getEventoCategoriaConfig(evento) || { label: 'Evento', cor: '#64748b', corFundo: '#f1f5f9' };
   const origem = getEventoOrigemConfig(evento);
   const dataFormatada = new Date(evento.data + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
   });
-  const isDeletingAllowed = !!onDelete;
+  const isDeletingAllowed = !!onDeleteRequest || !!onDelete;
 
   return (
     <div className="evento-item" onClick={() => onEdit(evento)}>
@@ -73,10 +74,14 @@ export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete
           <button
             type="button"
             className="evento-acao-btn delete"
-            onClick={() => {
-              if (window.confirm(`Deseja remover o evento "${evento.titulo}"?`)) {
-                onDelete?.(evento.id);
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (onDeleteRequest) {
+                onDeleteRequest(evento);
+                return;
               }
+              onDelete?.(evento.id);
             }}
             title="Remover evento"
             aria-label="Remover evento"

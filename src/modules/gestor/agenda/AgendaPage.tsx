@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Building2,
   CalendarDays,
   CalendarRange,
   ChevronDown,
+  CheckCircle2,
   Palette,
   Settings2,
   Plus,
@@ -18,6 +20,7 @@ import { EventoCard } from './components/EventoCard';
 import { EventoModal } from './components/EventoModal';
 import { AgendaConfigListModal } from './components/AgendaConfigListModal';
 import { AgendaResponsavelCorModal } from './components/AgendaResponsavelCorModal';
+import { AgendaDeleteEventModal } from './components/AgendaDeleteEventModal';
 import { PrazosAutomaticos } from './components/PrazosAutomaticos';
 import { AgendaTrimestreAtividades } from './components/AgendaTrimestreAtividades';
 import { getEventoOrigem, type Evento } from './services/agenda.service';
@@ -25,6 +28,11 @@ import { inicioService } from '../inicio/services/inicioService';
 import './Agenda.css';
 
 const RESUMO_FILTRO_LIMIT = 2;
+
+type AgendaToast = {
+  type: 'success' | 'error';
+  message: string;
+};
 
 export const AgendaPage: React.FC = () => {
   useAgendaRealtime(true);
@@ -71,8 +79,16 @@ export const AgendaPage: React.FC = () => {
   const [modalGerenciarTipoAberto, setModalGerenciarTipoAberto] = useState(false);
   const [modalGerenciarCategoriaAberto, setModalGerenciarCategoriaAberto] = useState(false);
   const [modalCorResponsavelAberto, setModalCorResponsavelAberto] = useState(false);
+  const [eventoParaExcluir, setEventoParaExcluir] = useState<Evento | null>(null);
+  const [agendaToast, setAgendaToast] = useState<AgendaToast | null>(null);
   const tiposDisponiveis = useMemo(() => tiposEvento.filter((item) => item.ativo), [tiposEvento]);
   const categoriasDisponiveis = useMemo(() => categoriasEvento.filter((item) => item.ativo), [categoriasEvento]);
+
+  useEffect(() => {
+    if (!agendaToast) return;
+    const timer = window.setTimeout(() => setAgendaToast(null), 3600);
+    return () => window.clearTimeout(timer);
+  }, [agendaToast]);
 
   const funcionariosFiltro = useMemo(() => {
     const map = new Map<string, string>();
@@ -171,6 +187,40 @@ export const AgendaPage: React.FC = () => {
     };
   }, [eventosDoDia, eventosFiltrados]);
 
+  const abrirConfirmacaoExclusao = (evento: Evento) => {
+    setEventoParaExcluir(evento);
+  };
+
+  const fecharConfirmacaoExclusao = () => {
+    setEventoParaExcluir(null);
+  };
+
+  const confirmarExclusaoEvento = () => {
+    if (!eventoParaExcluir) {
+      return;
+    }
+
+    const tituloEvento = eventoParaExcluir.titulo;
+    handleExcluirEvento(eventoParaExcluir.id, {
+      onSuccess: () => {
+        setAgendaToast({
+          type: 'success',
+          message: `Evento "${tituloEvento}" excluido com sucesso.`,
+        });
+      },
+      onError: (error) => {
+        const message = error instanceof Error
+          ? error.message
+          : 'Nao foi possivel excluir o evento agora.';
+        setAgendaToast({
+          type: 'error',
+          message,
+        });
+      },
+    });
+    fecharConfirmacaoExclusao();
+  };
+
   const formattedSelectedDate = diaSelecionado
     ? new Date(diaSelecionado + 'T00:00:00').toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -188,7 +238,7 @@ export const AgendaPage: React.FC = () => {
             key={evento.id}
             evento={evento}
             onEdit={handleAbrirEdicao}
-            onDelete={handleExcluirEvento}
+            onDeleteRequest={abrirConfirmacaoExclusao}
           />
         ))}
       </div>
@@ -577,6 +627,48 @@ export const AgendaPage: React.FC = () => {
         onClose={() => setModalCorResponsavelAberto(false)}
         usuarios={usuariosAgenda}
       />
+
+      <AgendaDeleteEventModal
+        isOpen={!!eventoParaExcluir}
+        evento={eventoParaExcluir}
+        onClose={fecharConfirmacaoExclusao}
+        onConfirm={confirmarExclusaoEvento}
+      />
+
+      {agendaToast && (
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: '18px',
+            right: '18px',
+            zIndex: 10000,
+            width: 'min(380px, calc(100vw - 32px))',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            background: '#0f172a',
+            border: `1px solid ${agendaToast.type === 'success' ? 'rgba(197, 146, 53, 0.5)' : 'rgba(239, 68, 68, 0.55)'}`,
+            color: '#ffffff',
+            boxShadow: '0 18px 46px rgba(15, 23, 42, 0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.82rem',
+            fontWeight: 750,
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          {agendaToast.type === 'success' ? (
+            <CheckCircle2 size={18} style={{ color: '#d9a441', flexShrink: 0 }} />
+          ) : (
+            <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+          )}
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {agendaToast.message}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

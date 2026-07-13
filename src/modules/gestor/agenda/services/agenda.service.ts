@@ -420,12 +420,12 @@ export async function editarEvento(id: string, dados: Partial<Evento>): Promise<
 export async function removerEvento(id: string): Promise<void> {
   if (id.startsWith('atividade:')) {
     const tarefaId = id.replace('atividade:', '');
-    const { error } = await supabase.from('atividades_tarefas').update({ ativo: false }).eq('id', tarefaId);
+    const { error } = await supabase.from('atividades_tarefas').delete().eq('id', tarefaId);
     if (error) throw error;
     return;
   }
 
-  const { error } = await supabase.from('agenda_eventos').update({ ativo: false }).eq('id', id);
+  const { error } = await supabase.from('agenda_eventos').delete().eq('id', id);
   if (error) throw error;
 }
 

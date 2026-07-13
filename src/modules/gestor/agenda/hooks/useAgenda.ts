@@ -221,8 +221,14 @@ export function useAgenda() {
     });
   }, [salvarEventoMutation, usuarioAtual, usuariosAtribuiveis]);
 
-  const handleExcluirEvento = useCallback((id: string) => {
-    excluirEventoMutation.mutate(id);
+  const handleExcluirEvento = useCallback((
+    id: string,
+    options?: {
+      onSuccess?: () => void;
+      onError?: (error: unknown) => void;
+    },
+  ) => {
+    excluirEventoMutation.mutate(id, options);
   }, [excluirEventoMutation]);
 
   const handleAbrirNovoEvento = useCallback((data?: string) => {
