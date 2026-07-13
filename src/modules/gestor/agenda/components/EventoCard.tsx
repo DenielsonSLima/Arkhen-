@@ -1,6 +1,6 @@
 import React from 'react';
-import { Clock, Building2, UserRound, Pencil, Trash2 } from 'lucide-react';
-import { getEventoCategoriaConfig, getEventoOrigemConfig, type Evento } from '../services/agenda.service';
+import { Clock, Building2, UserRound, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { getEventoCategoriaConfig, getEventoOrigem, getEventoOrigemConfig, type Evento } from '../services/agenda.service';
 
 interface EventoCardProps {
   evento: Evento;
@@ -12,6 +12,7 @@ interface EventoCardProps {
 export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete, onDeleteRequest }) => {
   const config = getEventoCategoriaConfig(evento) || { label: 'Evento', cor: '#64748b', corFundo: '#f1f5f9' };
   const origem = getEventoOrigemConfig(evento);
+  const isManual = getEventoOrigem(evento) === 'manual';
   const dataFormatada = new Date(evento.data + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
@@ -65,10 +66,10 @@ export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete
           type="button"
           className="evento-acao-btn"
           onClick={() => onEdit(evento)}
-          title="Editar evento"
-          aria-label="Editar evento"
+          title={isManual ? 'Editar evento' : 'Abrir origem'}
+          aria-label={isManual ? 'Editar evento' : 'Abrir origem'}
         >
-          <Pencil size={13} />
+          {isManual ? <Pencil size={13} /> : <ExternalLink size={13} />}
         </button>
         {isDeletingAllowed ? (
           <button

@@ -103,12 +103,12 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
     <div className="conformidade-page animate-fade-in">
       <header className="conformidade-page-header">
         <div>
-          <h1>Conformidade e Obrigações</h1>
-          <p>Controle único de pendências por competência com prioridade automática, trilha documental e métricas de gestão.</p>
+          <h1>Conformidade</h1>
+          <p>Painel derivado de riscos, atrasos, SLA e gargalos calculados sobre atividades, protocolos e prazos.</p>
         </div>
         <div className="conformidade-page-kpi">
           <ShieldCheck size={18} />
-          <span>{metricas.total} obrigações monitoradas</span>
+          <span>{metricas.total} riscos monitorados</span>
         </div>
       </header>
 

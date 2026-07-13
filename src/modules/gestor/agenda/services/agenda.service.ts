@@ -383,17 +383,7 @@ export async function adicionarEvento(evento: Omit<Evento, 'id'>): Promise<Event
 
 export async function editarEvento(id: string, dados: Partial<Evento>): Promise<Evento | null> {
   if (id.startsWith('atividade:')) {
-    const tarefaId = id.replace('atividade:', '');
-    const payload: Record<string, any> = {};
-    if (dados.titulo) payload.titulo = dados.titulo.replace('[Atividade] ', '');
-    if (dados.data) payload.vencimento = dados.data;
-    if (dados.concluido !== undefined) {
-      payload.status = dados.concluido ? 'Concluída' : 'Pendente';
-      payload.data_hora_conclusao = dados.concluido ? new Date().toISOString() : null;
-    }
-    const { error } = await supabase.from('atividades_tarefas').update(payload).eq('id', tarefaId);
-    if (error) throw error;
-    return null;
+    throw new Error('Abra esta tarefa em Atividades para alterar prazo, status ou responsável.');
   }
 
   const payload: Record<string, any> = {};
@@ -419,10 +409,7 @@ export async function editarEvento(id: string, dados: Partial<Evento>): Promise<
 
 export async function removerEvento(id: string): Promise<void> {
   if (id.startsWith('atividade:')) {
-    const tarefaId = id.replace('atividade:', '');
-    const { error } = await supabase.from('atividades_tarefas').delete().eq('id', tarefaId);
-    if (error) throw error;
-    return;
+    throw new Error('Tarefas operacionais só podem ser excluídas pelo módulo Atividades.');
   }
 
   const { error } = await supabase.from('agenda_eventos').delete().eq('id', id);
@@ -431,16 +418,7 @@ export async function removerEvento(id: string): Promise<void> {
 
 export async function toggleConcluido(id: string): Promise<void> {
   if (id.startsWith('atividade:')) {
-    const tarefaId = id.replace('atividade:', '');
-    const { data, error } = await supabase.from('atividades_tarefas').select('status').eq('id', tarefaId).maybeSingle();
-    if (error) throw error;
-    const isDone = data?.status === 'Concluída';
-    const { error: updateError } = await supabase
-      .from('atividades_tarefas')
-      .update({ status: isDone ? 'Pendente' : 'Concluída', data_hora_conclusao: isDone ? null : new Date().toISOString() })
-      .eq('id', tarefaId);
-    if (updateError) throw updateError;
-    return;
+    throw new Error('Abra esta tarefa em Atividades para concluir ou reabrir.');
   }
 
   const { data, error } = await supabase.from('agenda_eventos').select('status').eq('id', id).maybeSingle();

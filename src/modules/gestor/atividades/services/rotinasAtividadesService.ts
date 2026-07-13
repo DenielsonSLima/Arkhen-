@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
 
 export type FrequenciaAtividade = 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Personalizada';
 export type CategoriaAtividade = 'Interna' | 'Cliente' | 'Fiscal' | 'Folha' | 'Contábil' | 'Controle';
@@ -37,6 +38,12 @@ export interface TarefaGestor {
   notas: string;
   dataHoraConclusao?: string;
   observacaoFalta?: string;
+  prazoLegal?: string;
+  prazoInterno?: string;
+  bloqueada?: boolean;
+  motivoBloqueio?: MotivoBloqueioAtividade;
+  bloqueadaDesde?: string;
+  observacaoBloqueio?: string;
 }
 
 interface RotinaAtividadeRow {

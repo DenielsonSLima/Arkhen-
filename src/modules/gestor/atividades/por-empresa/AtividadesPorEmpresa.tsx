@@ -26,8 +26,8 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
       {/* Top Filter Header */}
       <div className="atividades-filter-header" style={{ marginTop: 0 }}>
         <div className="atividades-title">
-          <h2 style={{ color: '#0f172a', margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Atividades por Empresa</h2>
-          <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '2px 0 0 0' }}>Painel operacional das rotinas de cada cliente por competência.</p>
+          <h2 style={{ color: '#0f172a', margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Fechamentos de Clientes</h2>
+          <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '2px 0 0 0' }}>Rotinas, competências e pendências de cada empresa.</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

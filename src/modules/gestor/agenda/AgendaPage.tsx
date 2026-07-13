@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAgenda } from './hooks/useAgenda';
 import { useAgendaRealtime } from './hooks/useAgendaRealtime';
+import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import { EventoCard } from './components/EventoCard';
 import { EventoModal } from './components/EventoModal';
 import { AgendaConfigListModal } from './components/AgendaConfigListModal';
@@ -24,6 +25,7 @@ import { AgendaDeleteEventModal } from './components/AgendaDeleteEventModal';
 import { PrazosAutomaticos } from './components/PrazosAutomaticos';
 import { AgendaTrimestreAtividades } from './components/AgendaTrimestreAtividades';
 import { getEventoOrigem, type Evento } from './services/agenda.service';
+import type { NavigationContext } from '../shared/operationalTypes';
 import { inicioService } from '../inicio/services/inicioService';
 import './Agenda.css';
 
@@ -36,6 +38,7 @@ type AgendaToast = {
 
 export const AgendaPage: React.FC = () => {
   useAgendaRealtime(true);
+  const { openTab } = useInternalTabs();
 
   const {
     anoAtual,
@@ -221,6 +224,50 @@ export const AgendaPage: React.FC = () => {
     fecharConfirmacaoExclusao();
   };
 
+  const abrirOrigemEvento = (evento: Evento) => {
+    const origem = getEventoOrigem(evento);
+    if (origem === 'manual') {
+      handleAbrirEdicao(evento);
+      return;
+    }
+
+    if (origem === 'atividade') {
+      const navigationContext: NavigationContext = {
+        sourceModule: 'agenda',
+        sourceId: evento.id,
+        atividadeId: evento.id.replace('atividade:', ''),
+        companyId: evento.empresaId,
+        returnTo: 'agenda',
+      };
+
+      openTab('atividades', 'Minha Fila', 'ClipboardList', {
+        titleSuffix: 'Minha Fila',
+        data: {
+          ...navigationContext,
+          activeView: 'minha-fila',
+          queueFilter: 'semana',
+        },
+      });
+    }
+
+    if (origem === 'prazo_fiscal') {
+      const navigationContext: NavigationContext = {
+        sourceModule: 'agenda',
+        sourceId: evento.id,
+        companyId: evento.empresaId,
+        returnTo: 'agenda',
+      };
+
+      openTab('conformidade', 'Conformidade', 'ShieldCheck', {
+        titleSuffix: 'Riscos e SLA',
+        data: {
+          ...navigationContext,
+          selectedCompanyId: evento.empresaId,
+        },
+      });
+    }
+  };
+
   const formattedSelectedDate = diaSelecionado
     ? new Date(diaSelecionado + 'T00:00:00').toLocaleDateString('pt-BR', {
         day: '2-digit',
@@ -237,8 +284,8 @@ export const AgendaPage: React.FC = () => {
           <EventoCard
             key={evento.id}
             evento={evento}
-            onEdit={handleAbrirEdicao}
-            onDeleteRequest={abrirConfirmacaoExclusao}
+            onEdit={abrirOrigemEvento}
+            onDeleteRequest={getEventoOrigem(evento) === 'manual' ? abrirConfirmacaoExclusao : undefined}
           />
         ))}
       </div>

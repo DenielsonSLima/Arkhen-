@@ -18,6 +18,7 @@ import { ProtocoloEmpresaCard } from './components/ProtocoloEmpresaCard';
 import type { EmpresaProtocolosGrupo } from './hooks/useProtocolos';
 import type { ProtocoloEntrega, ProtocoloUpdate } from './services/protocolosService';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
+import type { NavigationContext } from '../shared/operationalTypes';
 import './Protocolos.css';
 
 const tabLabels = {
@@ -136,8 +137,8 @@ export const ProtocolosPage: React.FC = () => {
     <div className="protocolos-page animate-fade-in">
       <div className="protocolos-page-header">
         <div>
-          <h1>Controle de Obrigações e Documentos</h1>
-          <p>Acompanhe por empresa e competência o que entrou, o que ainda está pendente e o que já foi concluído.</p>
+          <h1>Protocolos e Documentos</h1>
+          <p>Controle por empresa e competência do que foi recebido, enviado, protocolado e comprovado.</p>
         </div>
         <div className="protocolos-header-metric">
           <FileCheck size={18} />
@@ -270,12 +271,21 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
   const { openTab } = useInternalTabs();
 
   const handleOpenAtividades = () => {
-      openTab(
-        'atividades-empresa',
-        'Atividades',
+    const navigationContext: NavigationContext = {
+      sourceModule: 'protocolos',
+      companyId: company.empresaId,
+      competencia: formatCompetenciaAtividade(company.competencia),
+      returnTo: 'protocolos',
+    };
+
+    openTab(
+      'atividades-fechamentos',
+      'Fechamentos de Clientes',
       'Building2',
       {
+        titleSuffix: company.empresaNome,
         data: {
+          ...navigationContext,
           selectedCompanyId: company.empresaId,
           selectedCompetencia: formatCompetenciaAtividade(company.competencia),
         },
@@ -284,12 +294,21 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
   };
 
   const handleOpenConformidade = () => {
+    const navigationContext: NavigationContext = {
+      sourceModule: 'protocolos',
+      companyId: company.empresaId,
+      competencia: formatCompetenciaAtividade(company.competencia),
+      returnTo: 'protocolos',
+    };
+
     openTab(
       'conformidade',
       'Conformidade',
       'ShieldCheck',
       {
+        titleSuffix: company.empresaNome,
         data: {
+          ...navigationContext,
           selectedCompanyId: company.empresaId,
         },
       },
@@ -337,8 +356,8 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
         <div className="protocolo-section-title">
           <FolderOpen size={17} />
           <div>
-            <h3>Obrigações da competência {formatCompetencia(company.competencia)}</h3>
-            <p>Documento/obrigação por cliente para controle documental e prazos.</p>
+            <h3>Evidências da competência {formatCompetencia(company.competencia)}</h3>
+            <p>Arquivos, recibos, envios, recebimentos e provas vinculadas à operação.</p>
           </div>
           <button type="button" className="protocolos-open-atividades" onClick={handleOpenAtividades}>
             <Link size={14} /> Abrir atividades

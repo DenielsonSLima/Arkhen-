@@ -404,7 +404,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     conformidade: { id: 'conformidade', label: 'Conformidade', icon: <ShieldCheck size={20} /> },
     'simulacoes-calculos': { id: 'simulacoes-calculos', label: 'Simulações e Cálculos', icon: <Calculator size={20} /> },
     documentos: { id: 'documentos', label: 'Documentos', icon: <FolderOpen size={20} /> },
-    protocolos: { id: 'protocolos', label: 'Protocolos', icon: <FileCheck size={20} /> },
+    protocolos: { id: 'protocolos', label: 'Protocolos e Documentos', icon: <FileCheck size={20} /> },
     faturamento: { id: 'faturamento', label: 'Faturamento', icon: <Receipt size={20} /> },
     financeiro: { id: 'financeiro', label: 'Financeiro', icon: <Landmark size={20} /> },
     agenda: { id: 'agenda', label: 'Agenda', icon: <CalendarDays size={20} /> },
@@ -441,14 +441,11 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     { id: 'parametrizacao-categoria-financeira', label: 'Categorias Financeiras' },
   ];
   const atividadesItems = [
-    { id: 'atividades-diarias', label: 'Atividades diárias' },
-    { id: 'atividades-semanais', label: 'Atividades semanais' },
-    { id: 'atividades-mensais', label: 'Atividades mensais' },
-    { id: 'atividades-empresa', label: 'Atividades por empresa' },
-    { id: 'atividades-funcionario', label: 'Atividades por funcionário' },
-    { id: 'atividades-internas', label: 'Atividades internas' },
-    { id: 'atividades-rotinas', label: 'Checklists' },
-    { id: 'atividades-controle', label: 'Controle de andamento' },
+    { id: 'atividades', label: 'Minha Fila' },
+    { id: 'atividades-equipe', label: 'Equipe' },
+    { id: 'atividades-fechamentos', label: 'Fechamentos de Clientes' },
+    { id: 'atividades-modelos', label: 'Rotinas e Modelos' },
+    { id: 'atividades-painel-operacional', label: 'Painel Operacional' },
   ];
 
 
@@ -580,33 +577,44 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       case 'parametrizacao-checklists':
         return <ConfigFluxosPage />;
       case 'atividades':
-      case 'atividades-diarias':
-      case 'atividades-painel':
-      case 'atividades-resumo':
-        return <AtividadesPage view="diarias" />;
-      case 'atividades-semanais':
-      case 'atividades-agenda':
-        return <AtividadesPage view="semanais" />;
-      case 'atividades-mensais':
-        return <AtividadesPage view="mensais" />;
-      case 'atividades-empresa':
         return (
           <AtividadesPage
-            view="empresa"
+            view={(initialContext?.data?.activeView as string | undefined) || 'minha-fila'}
+            initialQueueFilter={initialContext?.data?.queueFilter as any}
             initialCompanyId={initialContext?.data?.selectedCompanyId as string | undefined}
             initialCompetencia={initialContext?.data?.selectedCompetencia as string | undefined}
           />
         );
-      case 'atividades-funcionario':
-      case 'atividades-equipe':
-        return <AtividadesPage view="funcionario" />;
+      case 'atividades-diarias':
+      case 'atividades-painel':
+      case 'atividades-resumo':
+        return <AtividadesPage view="minha-fila" initialQueueFilter="hoje" />;
+      case 'atividades-semanais':
+      case 'atividades-agenda':
+        return <AtividadesPage view="minha-fila" initialQueueFilter="semana" />;
+      case 'atividades-mensais':
+        return <AtividadesPage view="minha-fila" initialQueueFilter="mes" />;
       case 'atividades-internas':
-        return <AtividadesPage view="internas" />;
+        return <AtividadesPage view="minha-fila" initialQueueFilter="internas" />;
+      case 'atividades-fechamentos':
+      case 'atividades-empresa':
+        return (
+          <AtividadesPage
+            view="fechamentos"
+            initialCompanyId={initialContext?.data?.selectedCompanyId as string | undefined}
+            initialCompetencia={initialContext?.data?.selectedCompetencia as string | undefined}
+          />
+        );
+      case 'atividades-equipe':
+      case 'atividades-funcionario':
+        return <AtividadesPage view="equipe" />;
+      case 'atividades-modelos':
       case 'atividades-rotinas':
-        return <AtividadesPage view="rotinas" />;
+        return <AtividadesPage view="modelos" />;
+      case 'atividades-painel-operacional':
       case 'atividades-controle':
       case 'atividades-controle-andamento':
-        return <AtividadesPage view="controle" />;
+        return <AtividadesPage view="painel" />;
       case 'gestao-empresarial':
         return <GestaoEmpresarialPage />;
       case 'planejamento-tributario':

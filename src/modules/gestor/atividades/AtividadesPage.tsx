@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbaMinhasAtividades } from './components/AbaMinhasAtividades';
+import { MinhaFilaAtividades, type MinhaFilaFiltro } from './components/MinhaFilaAtividades';
 import { AbaGerirEquipe } from './components/AbaGerirEquipe';
 import { AbaRotinas } from './components/AbaRotinas';
 import { AtividadesPorEmpresa } from './por-empresa/AtividadesPorEmpresa';
@@ -12,27 +12,42 @@ import './AtividadesRedesign.css';
 
 interface AtividadesPageProps {
   view?: string;
+  initialQueueFilter?: MinhaFilaFiltro;
   initialCompanyId?: string;
   initialCompetencia?: string;
 }
 
-  const VIEW_INFO: Record<string, { title: string; subtitle: string }> = {
-  diarias: { title: 'Atividades Diárias', subtitle: 'Checklist de tarefas operacionais do dia.' },
-  semanais: { title: 'Atividades Semanais', subtitle: 'Conciliações e rotinas da semana em andamento.' },
-  mensais: { title: 'Atividades Mensais', subtitle: 'Acompanhe e monitore rotinas mensais por competência.' },
-  empresa: { title: 'Atividades por Empresa', subtitle: 'Visualize o fechamento e as rotinas de cada cliente.' },
-  funcionario: { title: 'Atividades por Funcionário', subtitle: 'Atribua e acompanhe rotinas de cada colaborador.' },
-  internas: { title: 'Atividades Internas', subtitle: 'Atividades administrativas do escritório.' },
-  rotinas: { title: 'Configuração de Rotinas', subtitle: 'Cadastre e gerencie os modelos operacionais padrão.' },
-  controle: { title: 'Painel de Andamento', subtitle: 'Métricas e gráficos analíticos da operação.' },
+type AtividadesView = 'minha-fila' | 'equipe' | 'fechamentos' | 'modelos' | 'painel';
+
+const LEGACY_VIEW_MAP: Record<string, { view: AtividadesView; filter?: MinhaFilaFiltro }> = {
+  diarias: { view: 'minha-fila', filter: 'hoje' },
+  semanais: { view: 'minha-fila', filter: 'semana' },
+  mensais: { view: 'minha-fila', filter: 'mes' },
+  internas: { view: 'minha-fila', filter: 'internas' },
+  empresa: { view: 'fechamentos' },
+  funcionario: { view: 'equipe' },
+  rotinas: { view: 'modelos' },
+  controle: { view: 'painel' },
+};
+
+const VIEW_INFO: Record<AtividadesView, { title: string; subtitle: string }> = {
+  'minha-fila': { title: 'Minha Fila', subtitle: 'Tarefas operacionais por prazo, prioridade, status e bloqueios.' },
+  equipe: { title: 'Equipe', subtitle: 'Acompanhe carga, atrasos, tarefas concluídas e pendências por colaborador.' },
+  fechamentos: { title: 'Fechamentos de Clientes', subtitle: 'Visualize rotinas, competências e pendências de cada empresa.' },
+  modelos: { title: 'Rotinas e Modelos', subtitle: 'Cadastre modelos de fechamento, rotinas internas e tarefas recorrentes.' },
+  painel: { title: 'Painel Operacional', subtitle: 'Métricas de produtividade, gargalos, atrasos e clientes travados.' },
 };
 
 export const AtividadesPage: React.FC<AtividadesPageProps> = ({
-  view = 'diarias',
+  view = 'minha-fila',
+  initialQueueFilter,
   initialCompanyId,
   initialCompetencia,
 }) => {
-  const currentInfo = VIEW_INFO[view] || VIEW_INFO.diarias;
+  const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
+  const activeView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
+  const currentInfo = VIEW_INFO[activeView];
+  const queueFilter = initialQueueFilter || normalized.filter || 'hoje';
 
   // Carrega os estados originais do hook de atividades por empresa
   const {
@@ -56,8 +71,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
 
   useAtividadesRealtime(true, refresh);
 
-  // Se o gestor selecionou uma empresa para detalhar e estamos na view 'empresa'
-  if (view === 'empresa' && selectedGroup) {
+  if (activeView === 'fechamentos' && selectedGroup) {
     return (
       <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
         <AtividadeDetailView
@@ -75,14 +89,10 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   }
 
   const renderViewContent = () => {
-    switch (view) {
-      case 'diarias':
-        return <AbaMinhasAtividades initialPeriodo="dia" />;
-      case 'semanais':
-        return <AbaMinhasAtividades initialPeriodo="semana" />;
-      case 'mensais':
-        return <AbaMinhasAtividades initialPeriodo="mes" />;
-      case 'empresa':
+    switch (activeView) {
+      case 'minha-fila':
+        return <MinhaFilaAtividades initialFilter={queueFilter} />;
+      case 'fechamentos':
         return (
           <AtividadesPorEmpresa
             globalFilter={globalFilter}
@@ -93,23 +103,21 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
             metrics={metrics}
           />
         );
-      case 'funcionario':
+      case 'equipe':
         return <AbaGerirEquipe companyGroups={companyGroups} handleToggleStep={handleToggleStep} />;
-      case 'internas':
-        return <AbaMinhasAtividades initialPeriodo="semana" showInternasOnly={true} />;
-      case 'rotinas':
+      case 'modelos':
         return <AbaRotinas />;
-      case 'controle':
+      case 'painel':
         return <AtividadesControle />;
       default:
-        return <AbaMinhasAtividades initialPeriodo="dia" />;
+        return <MinhaFilaAtividades initialFilter={queueFilter} />;
     }
   };
 
   return (
     <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
       {/* Header Centralizado Light */}
-      {view !== 'empresa' && (
+      {activeView !== 'fechamentos' && (
         <div style={headerStyle}>
           <div>
             <h1 style={titleStyle}>{currentInfo.title}</h1>
@@ -119,7 +127,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
       )}
 
       {/* Conteúdo Principal */}
-      <main style={{ marginTop: view === 'empresa' ? '0px' : '20px' }}>
+      <main style={{ marginTop: activeView === 'fechamentos' ? '0px' : '20px' }}>
         {renderViewContent()}
       </main>
     </div>
