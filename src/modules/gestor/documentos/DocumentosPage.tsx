@@ -421,7 +421,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
               onClick={() => setShowUploadModal(true)}
               style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', padding: '6px 10px', background: 'var(--color-gold-gradient)', color: '#ffffff', border: 'none' }}
             >
-              <Upload size={12} /> Enviar Arquivo
+              <Upload size={12} /> Enviar / Pasta
             </button>
 
             <button

@@ -10,6 +10,33 @@ interface DocumentUploadModalProps {
   onUpload: (file: File, category: string, description: string, targetFolder: string, dataValidade: string) => Promise<unknown>;
 }
 
+interface UploadFileItem {
+  file: File;
+  relativePath: string;
+}
+
+interface UploadProgressState {
+  totalFiles: number;
+  completedFiles: number;
+  totalBytes: number;
+  uploadedBytes: number;
+  currentFile: string;
+  startedAt: number;
+}
+
+interface DragFileSystemEntry {
+  isFile: boolean;
+  isDirectory: boolean;
+  name: string;
+  file?: (successCallback: (file: File) => void, errorCallback?: (error: DOMException) => void) => void;
+  createReader?: () => {
+    readEntries: (
+      successCallback: (entries: DragFileSystemEntry[]) => void,
+      errorCallback?: (error: DOMException) => void,
+    ) => void;
+  };
+}
+
 const ALLOWED_ACCOUNTING_EXTENSIONS = [
   '.pdf',
   '.doc',
@@ -62,6 +89,102 @@ const getFileExtension = (fileName: string) => {
   return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
 };
 
+const getFileRelativePath = (file: File) => (
+  (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
+);
+
+const formatBytesLabel = (bytes: number) => {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+};
+
+const formatRemainingTime = (milliseconds: number) => {
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) return 'calculando...';
+  const seconds = Math.ceil(milliseconds / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes < 60) return rest ? `${minutes}min ${rest}s` : `${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  const minutesRest = minutes % 60;
+  return minutesRest ? `${hours}h ${minutesRest}min` : `${hours}h`;
+};
+
+const getRelativeFolder = (relativePath: string, fileName: string) => {
+  const parts = relativePath.split('/').filter(Boolean);
+  if (parts.length <= 1) return '';
+  if (parts.at(-1) === fileName) parts.pop();
+  return parts.join('/');
+};
+
+const combineFolders = (baseFolder: string | null, relativeFolder: string) => (
+  [baseFolder || '', relativeFolder].map((part) => part.trim()).filter(Boolean).join('/')
+);
+
+const readDirectoryEntries = (entry: DragFileSystemEntry) => new Promise<DragFileSystemEntry[]>((resolve, reject) => {
+  const reader = entry.createReader?.();
+  if (!reader) {
+    resolve([]);
+    return;
+  }
+
+  const entries: DragFileSystemEntry[] = [];
+  const readBatch = () => {
+    reader.readEntries((batch) => {
+      if (batch.length === 0) {
+        resolve(entries);
+        return;
+      }
+      entries.push(...batch);
+      readBatch();
+    }, reject);
+  };
+
+  readBatch();
+});
+
+const collectEntryFiles = async (entry: DragFileSystemEntry, parentPath = ''): Promise<UploadFileItem[]> => {
+  if (entry.isFile && entry.file) {
+    return new Promise((resolve, reject) => {
+      entry.file?.(
+        (file) => resolve([{ file, relativePath: `${parentPath}${file.name}` }]),
+        reject,
+      );
+    });
+  }
+
+  if (!entry.isDirectory) return [];
+  const children = await readDirectoryEntries(entry);
+  const nested = await Promise.all(children.map((child) => collectEntryFiles(child, `${parentPath}${entry.name}/`)));
+  return nested.flat();
+};
+
+const collectDroppedFiles = async (dataTransfer: DataTransfer): Promise<UploadFileItem[]> => {
+  const entries = Array.from(dataTransfer.items || [])
+    .map((item) => {
+      const getEntry = (item as unknown as { webkitGetAsEntry?: () => unknown }).webkitGetAsEntry;
+      return getEntry?.();
+    })
+    .filter((entry): entry is DragFileSystemEntry => Boolean(entry));
+
+  if (entries.length > 0) {
+    const nested = await Promise.all(entries.map((entry) => collectEntryFiles(entry)));
+    return nested.flat();
+  }
+
+  return Array.from(dataTransfer.files || []).map((file) => ({
+    file,
+    relativePath: file.name,
+  }));
+};
+
 export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   isOpen,
   onClose,
@@ -71,7 +194,8 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   onUpload,
 }) => {
   const wasOpenRef = useRef(false);
-  const [file, setFile] = useState<File | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+  const [files, setFiles] = useState<UploadFileItem[]>([]);
   const [category, setCategory] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -82,10 +206,17 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const [categoryValidationMessage, setCategoryValidationMessage] = useState('');
+  const [isDraggingUpload, setIsDraggingUpload] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgressState | null>(null);
+
+  useEffect(() => {
+    folderInputRef.current?.setAttribute('webkitdirectory', '');
+    folderInputRef.current?.setAttribute('directory', '');
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
-      setFile(null);
+      setFiles([]);
       setCategory(categories[0] || 'Outros');
       setNewCategory('');
       setShowCategoryModal(false);
@@ -94,6 +225,8 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       setDataValidade('');
       setValidationMessage('');
       setCategoryValidationMessage('');
+      setIsDraggingUpload(false);
+      setUploadProgress(null);
     }
     wasOpenRef.current = isOpen;
   }, [isOpen, categories]);
@@ -106,27 +239,102 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!file || !category) {
-      setValidationMessage('Selecione um arquivo e uma categoria.');
-      return;
+  const totalSelectedBytes = files.reduce((total, item) => total + item.file.size, 0);
+  const progressPercent = uploadProgress
+    ? Math.min(100, Math.round((uploadProgress.uploadedBytes / Math.max(uploadProgress.totalBytes, 1)) * 100))
+    : 0;
+  const remainingTime = uploadProgress && uploadProgress.uploadedBytes > 0
+    ? formatRemainingTime(((Date.now() - uploadProgress.startedAt) / uploadProgress.uploadedBytes) * (uploadProgress.totalBytes - uploadProgress.uploadedBytes))
+    : 'calculando...';
+
+  const setInputFiles = (fileList: FileList | null) => {
+    const nextFiles = Array.from(fileList || []).map((nextFile) => ({
+      file: nextFile,
+      relativePath: getFileRelativePath(nextFile),
+    }));
+    setFiles(nextFiles);
+    setValidationMessage('');
+  };
+
+  const validateSelectedFiles = () => {
+    if (files.length === 0 || !category) {
+      setValidationMessage('Selecione pelo menos um arquivo e uma categoria.');
+      return false;
     }
 
-    const extension = getFileExtension(file.name);
-    if (!ALLOWED_ACCOUNTING_EXTENSIONS.includes(extension)) {
-      setValidationMessage(`Formato não permitido. Use: ${ACCEPTED_FORMATS_LABEL}.`);
+    const invalidFiles = files.filter((item) => !ALLOWED_ACCOUNTING_EXTENSIONS.includes(getFileExtension(item.file.name)));
+    if (invalidFiles.length > 0) {
+      setValidationMessage(`Formato não permitido em "${invalidFiles[0].file.name}". Use: ${ACCEPTED_FORMATS_LABEL}.`);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validateSelectedFiles()) {
       return;
     }
 
     setIsSubmitting(true);
     setValidationMessage('');
+    const startedAt = Date.now();
+    setUploadProgress({
+      totalFiles: files.length,
+      completedFiles: 0,
+      totalBytes: totalSelectedBytes,
+      uploadedBytes: 0,
+      currentFile: files[0]?.file.name || '',
+      startedAt,
+    });
+
     try {
-      await onUpload(file, category, description.trim(), currentFolder || '', hasValidityControl ? dataValidade : '');
+      let uploadedBytes = 0;
+      for (let index = 0; index < files.length; index += 1) {
+        const item = files[index];
+        const relativeFolder = getRelativeFolder(item.relativePath, item.file.name);
+        const targetFolder = combineFolders(currentFolder, relativeFolder);
+        setUploadProgress({
+          totalFiles: files.length,
+          completedFiles: index,
+          totalBytes: totalSelectedBytes,
+          uploadedBytes,
+          currentFile: item.file.name,
+          startedAt,
+        });
+        await onUpload(item.file, category, description.trim(), targetFolder, hasValidityControl ? dataValidade : '');
+        uploadedBytes += item.file.size;
+        setUploadProgress({
+          totalFiles: files.length,
+          completedFiles: index + 1,
+          totalBytes: totalSelectedBytes,
+          uploadedBytes,
+          currentFile: item.file.name,
+          startedAt,
+        });
+      }
       onClose();
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(null);
     }
+  };
+
+  const handleDropUpload = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingUpload(false);
+    if (isSubmitting) return;
+
+    const droppedFiles = await collectDroppedFiles(event.dataTransfer);
+    setFiles(droppedFiles);
+    setValidationMessage('');
+  };
+
+  const closeSafely = () => {
+    if (isSubmitting) return;
+    onClose();
   };
 
   const handleCreateCategory = async () => {
@@ -173,11 +381,11 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={closeSafely}>
       <div
         className="modal-container"
         style={{
-          maxWidth: '520px',
+          maxWidth: '620px',
           padding: '0',
           overflow: 'hidden',
           border: '1px solid rgba(197, 146, 53, 0.42)',
@@ -195,29 +403,117 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               {currentFolder ? `Destino: ${currentFolder}` : 'Destino: Biblioteca principal'}
             </p>
           </div>
-          <button onClick={onClose} style={{ border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', color: '#64748b', borderRadius: '8px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button disabled={isSubmitting} onClick={closeSafely} style={{ border: '1px solid #e2e8f0', background: '#f8fafc', cursor: isSubmitting ? 'not-allowed' : 'pointer', color: '#64748b', borderRadius: '8px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '18px 22px 22px', background: '#ffffff' }}>
-          <label style={{ border: '1.5px dashed #cbd5e1', borderRadius: '8px', padding: '18px', textAlign: 'center', background: '#f8fafc', cursor: 'pointer' }}>
+          <div
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDraggingUpload(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'copy';
+              setIsDraggingUpload(true);
+            }}
+            onDragLeave={() => setIsDraggingUpload(false)}
+            onDrop={handleDropUpload}
+            style={{
+              border: `1.5px dashed ${isDraggingUpload ? 'var(--color-gold-primary)' : '#cbd5e1'}`,
+              borderRadius: '10px',
+              padding: '18px',
+              textAlign: 'center',
+              background: isDraggingUpload ? 'linear-gradient(135deg, #fff8e7 0%, #ffffff 74%)' : '#f8fafc',
+              boxShadow: isDraggingUpload ? '0 14px 32px rgba(197, 146, 53, 0.16)' : 'none',
+              transition: 'all 160ms ease',
+            }}
+          >
             <span style={{ width: '40px', height: '40px', borderRadius: '8px', margin: '0 auto 9px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fffbeb', color: 'var(--color-gold-dark)', border: '1px solid #f1d9a3' }}>
               <FileUp size={22} />
             </span>
             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b' }}>
-              {file ? file.name : 'Selecionar Arquivo Contábil'}
+              {files.length > 0
+                ? `${files.length} ${files.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}`
+                : 'Arraste uma pasta, subpastas ou arquivos aqui'}
             </div>
             <div style={{ fontSize: '0.68rem', color: '#64748b', marginTop: '2px' }}>
               {ACCEPTED_FORMATS_LABEL}
             </div>
-            <input
-              type="file"
-              accept={ALLOWED_ACCOUNTING_ACCEPT}
-              onChange={(event) => setFile(event.target.files?.[0] || null)}
-              style={{ display: 'none' }}
-            />
-          </label>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+              <label style={{ border: '1px solid #e2e8f0', background: '#ffffff', color: '#334155', borderRadius: '8px', padding: '7px 10px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.74rem', fontWeight: 800 }}>
+                Selecionar arquivos
+                <input
+                  type="file"
+                  multiple
+                  accept={ALLOWED_ACCOUNTING_ACCEPT}
+                  disabled={isSubmitting}
+                  onChange={(event) => setInputFiles(event.target.files)}
+                  style={{ display: 'none' }}
+                />
+              </label>
+              <label style={{ border: '1px solid #f1d9a3', background: '#fffbeb', color: 'var(--color-gold-dark)', borderRadius: '8px', padding: '7px 10px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.74rem', fontWeight: 850 }}>
+                Selecionar pasta
+                <input
+                  ref={folderInputRef}
+                  type="file"
+                  multiple
+                  disabled={isSubmitting}
+                  onChange={(event) => setInputFiles(event.target.files)}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+
+          {files.length > 0 && (
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', background: '#ffffff', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <strong style={{ color: '#0f172a', fontSize: '0.78rem' }}>
+                  {files.length} arquivo(s) • {formatBytesLabel(totalSelectedBytes)}
+                </strong>
+                {!isSubmitting && (
+                  <button
+                    type="button"
+                    onClick={() => setFiles([])}
+                    style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 800 }}
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <div style={{ maxHeight: '118px', overflowY: 'auto', padding: '6px 0' }}>
+                {files.slice(0, 8).map((item) => (
+                  <div key={`${item.relativePath}-${item.file.size}`} style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', padding: '5px 12px', color: '#475569', fontSize: '0.72rem' }}>
+                    <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.relativePath}</span>
+                    <span style={{ color: '#94a3b8', flexShrink: 0 }}>{formatBytesLabel(item.file.size)}</span>
+                  </div>
+                ))}
+                {files.length > 8 && (
+                  <div style={{ padding: '5px 12px', color: '#94a3b8', fontSize: '0.72rem', fontWeight: 700 }}>
+                    + {files.length - 8} arquivo(s) na fila
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {uploadProgress && (
+            <div style={{ border: '1px solid #f1d9a3', borderRadius: '10px', background: '#fffbeb', padding: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px', color: '#92400e', fontSize: '0.74rem', fontWeight: 850 }}>
+                <span>Enviando {uploadProgress.completedFiles}/{uploadProgress.totalFiles}</span>
+                <span>{progressPercent}% • resta {remainingTime}</span>
+              </div>
+              <div style={{ height: '8px', borderRadius: '999px', background: '#f8e4b4', overflow: 'hidden' }}>
+                <div style={{ width: `${progressPercent}%`, height: '100%', borderRadius: '999px', background: 'var(--color-gold-gradient)', transition: 'width 180ms ease' }} />
+              </div>
+              <div style={{ marginTop: '7px', color: '#64748b', fontSize: '0.7rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Atual: {uploadProgress.currentFile}
+              </div>
+            </div>
+          )}
 
           {validationMessage && (
             <div style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #fed7aa', background: '#fff7ed', color: '#c2410c', fontSize: '0.76rem', fontWeight: 700 }}>
@@ -298,7 +594,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={closeSafely}
               style={{ padding: '8px 16px', fontSize: '0.82rem', cursor: 'pointer', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#ffffff', color: '#475569' }}
               disabled={isSubmitting}
             >
@@ -309,7 +605,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               style={{ padding: '8px 16px', fontSize: '0.82rem', background: 'var(--color-gold-gradient)', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Enviando...' : 'Enviar'}
+              {isSubmitting ? 'Enviando...' : files.length > 1 ? `Enviar ${files.length} arquivos` : 'Enviar'}
             </button>
           </div>
         </form>
