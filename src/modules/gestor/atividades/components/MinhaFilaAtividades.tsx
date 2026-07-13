@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, CheckCircle2, Circle, Clock, Plus, UserRound, X } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { addDaysKey, formatDateBR, todayKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
+import { TaskDetailsDrawer } from './TaskDetailsDrawer';
 
 export type MinhaFilaFiltro = 'hoje' | 'semana' | 'mes' | 'atrasadas' | 'internas';
 
@@ -35,48 +36,108 @@ const getMonday = (dateKey: string) => {
 };
 
 const isDone = (tarefa: TarefaGestor) => tarefa.status === 'Concluída';
-const isLate = (tarefa: TarefaGestor) => !isDone(tarefa) && tarefa.vencimento < todayKey();
+const isLate = (tarefa: TarefaGestor, refDate: string = todayKey()) => !isDone(tarefa) && tarefa.vencimento < refDate;
 const isBlocked = (tarefa: TarefaGestor) => Boolean(tarefa.bloqueada || tarefa.observacaoFalta);
 
-const matchesFilter = (tarefa: TarefaGestor, filtro: MinhaFilaFiltro) => {
-  const hoje = todayKey();
-  if (filtro === 'hoje') return tarefa.vencimento === hoje;
+const matchesFilter = (tarefa: TarefaGestor, filtro: MinhaFilaFiltro, refDate: string) => {
+  if (filtro === 'hoje') return tarefa.vencimento === refDate;
   if (filtro === 'semana') {
-    const monday = getMonday(hoje);
+    const monday = getMonday(refDate);
     const sunday = addDaysKey(monday, 6);
     return tarefa.vencimento >= monday && tarefa.vencimento <= sunday;
   }
-  if (filtro === 'mes') return tarefa.vencimento.slice(0, 7) === hoje.slice(0, 7);
-  if (filtro === 'atrasadas') return isLate(tarefa);
+  if (filtro === 'mes') return tarefa.vencimento.slice(0, 7) === refDate.slice(0, 7);
+  if (filtro === 'atrasadas') return isLate(tarefa, todayKey());
   return tarefa.categoria === 'Interna';
 };
 
+const addMonthsKey = (dateKey: string, months: number) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().split('T')[0];
+};
+
+const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
+  if (filtro === 'hoje') {
+    const date = new Date(`${refDate}T00:00:00`);
+    const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${formatDateBR(refDate)}`;
+  }
+  if (filtro === 'semana') {
+    const monday = getMonday(refDate);
+    const sunday = addDaysKey(monday, 6);
+    return `Semana de ${formatDateBR(monday)} a ${formatDateBR(sunday)}`;
+  }
+  if (filtro === 'mes') {
+    const date = new Date(`${refDate}T00:00:00`);
+    const monthLabel = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  }
+  return '';
+};
+
 export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> = ({ initialFilter = 'hoje' }) => {
-  const { tarefas, updateTarefa, saveTarefaAsync } = useAtividadesWorkspace();
+  const { tarefas, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [referenceDate, setReferenceDate] = useState(todayKey());
   const usuarioLogado = getUsuarioAtual();
+
+  const handlePrevPeriod = () => {
+    if (activeFilter === 'hoje') {
+      setReferenceDate(prev => addDaysKey(prev, -1));
+    } else if (activeFilter === 'semana') {
+      setReferenceDate(prev => addDaysKey(prev, -7));
+    } else if (activeFilter === 'mes') {
+      setReferenceDate(prev => addMonthsKey(prev, -1));
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (activeFilter === 'hoje') {
+      setReferenceDate(prev => addDaysKey(prev, 1));
+    } else if (activeFilter === 'semana') {
+      setReferenceDate(prev => addDaysKey(prev, 7));
+    } else if (activeFilter === 'mes') {
+      setReferenceDate(prev => addMonthsKey(prev, 1));
+    }
+  };
+
+  // Se o filtro mudar, sincroniza ou reseta datas adequadas se necessário
+  const counts = useMemo(() => FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
+    acc[filtro.id] = tarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
+    return acc;
+  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [tarefas, referenceDate]);
 
   const filteredTasks = useMemo(() => (
     tarefas
-      .filter((tarefa) => matchesFilter(tarefa, activeFilter))
+      .filter((tarefa) => {
+        const matchesDate = matchesFilter(tarefa, activeFilter, referenceDate);
+        if (!matchesDate) return false;
+
+        if (searchTerm.trim() !== '') {
+          const term = searchTerm.toLowerCase();
+          const matchesTitle = (tarefa.titulo || '').toLowerCase().includes(term);
+          const matchesClient = (tarefa.cliente || '').toLowerCase().includes(term);
+          const matchesResp = (tarefa.responsavel || '').toLowerCase().includes(term);
+          return matchesTitle || matchesClient || matchesResp;
+        }
+
+        return true;
+      })
       .sort((a, b) => {
-        if (isLate(a) !== isLate(b)) return isLate(a) ? -1 : 1;
+        if (isLate(a, todayKey()) !== isLate(b, todayKey())) return isLate(a, todayKey()) ? -1 : 1;
         if (isBlocked(a) !== isBlocked(b)) return isBlocked(a) ? -1 : 1;
         return a.vencimento.localeCompare(b.vencimento);
       })
-  ), [activeFilter, tarefas]);
+  ), [activeFilter, referenceDate, searchTerm, tarefas]);
 
   const selectedTask = useMemo(() => (
-    filteredTasks.find((tarefa) => tarefa.id === selectedTaskId) || null
-  ), [filteredTasks, selectedTaskId]);
-
-  const counts = useMemo(() => FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
-    acc[filtro.id] = tarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id)).length;
-    return acc;
-  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [tarefas]);
+    tarefas.find((tarefa) => tarefa.id === selectedTaskId) || null
+  ), [tarefas, selectedTaskId]);
 
   const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
     setFeedback({ texto, tipo });
@@ -131,6 +192,72 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
         </button>
       </section>
 
+      {/* Barra de Filtros de Busca e Navegação de Data */}
+      <section style={subToolbarStyle}>
+        {/* Input de Busca */}
+        <div style={searchWrapperStyle}>
+          <Search size={16} color="#64748b" style={searchIconStyle} />
+          <input
+            type="text"
+            placeholder="Buscar por título, cliente ou responsável..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={searchInputStyle}
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => setSearchTerm('')} style={clearSearchBtnStyle}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Navegação de Datas para Hoje, Semana, Mês */}
+        {['hoje', 'semana', 'mes'].includes(activeFilter) && (
+          <div style={dateNavContainerStyle}>
+            <button
+              type="button"
+              onClick={handlePrevPeriod}
+              style={dateNavBtnStyle}
+              title="Período Anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span style={dateLabelStyle}>
+              {getPeriodLabel(activeFilter, referenceDate)}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextPeriod}
+              style={dateNavBtnStyle}
+              title="Próximo Período"
+            >
+              <ChevronRight size={16} />
+            </button>
+
+            {/* Input Date Picker */}
+            <input
+              type="date"
+              value={referenceDate}
+              onChange={(e) => {
+                if (e.target.value) setReferenceDate(e.target.value);
+              }}
+              style={dateInputStyle}
+            />
+
+            {/* Reset to Today button */}
+            {referenceDate !== todayKey() && (
+              <button
+                type="button"
+                onClick={() => setReferenceDate(todayKey())}
+                style={todayBtnStyle}
+              >
+                Voltar para Hoje
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
       {feedback && (
         <div style={{ color: feedback.tipo === 'sucesso' ? '#166534' : '#b91c1c', fontWeight: 700 }}>
           {feedback.texto}
@@ -153,7 +280,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
               <button type="button" onClick={() => setSelectedTaskId(tarefa.id)} style={taskMainBtnStyle}>
                 <div style={taskTitleRowStyle}>
                   <strong>{tarefa.titulo}</strong>
-                  {isLate(tarefa) && <span style={dangerChipStyle}>Atrasada</span>}
+                  {isLate(tarefa, todayKey()) && <span style={dangerChipStyle}>Atrasada</span>}
                   {isBlocked(tarefa) && <span style={blockChipStyle}>Bloqueio</span>}
                 </div>
                 <div style={metaGridStyle}>
@@ -171,47 +298,12 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
       )}
 
       {selectedTask && (
-        <div style={drawerBackdropStyle} onClick={() => setSelectedTaskId(null)}>
-          <aside style={drawerStyle} onClick={(event) => event.stopPropagation()}>
-            <div style={drawerHeaderStyle}>
-              <div>
-                <span style={drawerEyebrowStyle}>Detalhe da tarefa</span>
-                <h3>{selectedTask.titulo}</h3>
-              </div>
-              <button type="button" onClick={() => setSelectedTaskId(null)} style={closeBtnStyle}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={drawerMetaStyle}>
-              <span><CalendarDays size={14} /> {formatDateBR(selectedTask.vencimento)}</span>
-              <span><UserRound size={14} /> {selectedTask.responsavel || 'Sem responsável'}</span>
-              <span><Clock size={14} /> {selectedTask.status}</span>
-              {isBlocked(selectedTask) && <span><AlertTriangle size={14} /> Bloqueada ou com observação</span>}
-            </div>
-
-            <label style={fieldStyle}>
-              Observações / bloqueio
-              <textarea
-                value={selectedTask.observacaoFalta || selectedTask.notas || ''}
-                onChange={(event) => updateTarefa(selectedTask.id, { observacaoFalta: event.target.value })}
-                rows={4}
-                style={textareaStyle}
-              />
-            </label>
-
-            <div style={checklistBoxStyle}>
-              <strong>Checklist</strong>
-              {selectedTask.checklist.length === 0 ? (
-                <span style={{ color: '#64748b' }}>Nenhuma etapa cadastrada.</span>
-              ) : selectedTask.checklist.map((item) => (
-                <span key={item.titulo} style={{ color: item.concluida ? '#10b981' : '#334155' }}>
-                  {item.concluida ? '✓' : '○'} {item.titulo}
-                </span>
-              ))}
-            </div>
-          </aside>
-        </div>
+        <TaskDetailsDrawer
+          selectedTask={selectedTask}
+          onClose={() => setSelectedTaskId(null)}
+          updateTarefa={updateTarefa}
+          toggleChecklist={toggleChecklist}
+        />
       )}
 
       <ModalNovaTarefa
@@ -277,29 +369,98 @@ const metaGridStyle = {
 const chipBaseStyle = { borderRadius: '999px', padding: '2px 7px', fontSize: '0.66rem', fontWeight: 800 };
 const dangerChipStyle = { ...chipBaseStyle, background: '#fee2e2', color: '#b91c1c' };
 const blockChipStyle = { ...chipBaseStyle, background: '#fff7ed', color: '#c2410c' };
-const drawerBackdropStyle = {
-  position: 'fixed' as const,
-  inset: 0,
-  background: 'rgba(15, 23, 42, 0.24)',
-  zIndex: 1200,
+
+// Sub-toolbar and search styles
+const subToolbarStyle = {
   display: 'flex',
-  justifyContent: 'flex-end',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: '12px',
+  flexWrap: 'wrap' as const,
+  backgroundColor: '#f8fafc',
+  border: '1px solid #e2e8f0',
+  borderRadius: '10px',
+  padding: '12px 16px',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
 };
-const drawerStyle = {
-  width: 'min(520px, 100vw)',
-  height: '100%',
+const searchWrapperStyle = {
+  position: 'relative' as const,
+  flex: '1 1 300px',
+  display: 'flex',
+  alignItems: 'center',
+};
+const searchInputStyle = {
+  width: '100%',
+  padding: '9px 12px 9px 36px',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  fontSize: '0.84rem',
+  color: '#0f172a',
+  outline: 'none',
   background: '#ffffff',
-  borderLeft: '1px solid #e2e8f0',
-  padding: '22px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '18px',
-  boxShadow: '-18px 0 44px rgba(15, 23, 42, 0.16)',
 };
-const drawerHeaderStyle = { display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' };
-const drawerEyebrowStyle = { color: '#c59235', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' as const };
-const closeBtnStyle = { border: 'none', background: '#f1f5f9', borderRadius: '8px', padding: '7px', cursor: 'pointer' };
-const drawerMetaStyle = { display: 'grid', gap: '8px', color: '#475569', fontSize: '0.84rem' };
-const fieldStyle = { display: 'flex', flexDirection: 'column' as const, gap: '7px', color: '#334155', fontWeight: 700 };
-const textareaStyle = { border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', resize: 'vertical' as const };
-const checklistBoxStyle = { display: 'flex', flexDirection: 'column' as const, gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' };
+const searchIconStyle = {
+  position: 'absolute' as const,
+  left: '12px',
+  pointerEvents: 'none' as const,
+};
+const clearSearchBtnStyle = {
+  position: 'absolute' as const,
+  right: '10px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#94a3b8',
+  padding: '4px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+const dateNavContainerStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  flexWrap: 'wrap' as const,
+};
+const dateNavBtnStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '34px',
+  height: '34px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  background: '#ffffff',
+  color: '#475569',
+  cursor: 'pointer',
+  transition: 'all 0.18s ease',
+};
+const dateLabelStyle = {
+  fontSize: '0.86rem',
+  fontWeight: 700,
+  color: '#0f172a',
+  minWidth: '180px',
+  textAlign: 'center' as const,
+};
+const dateInputStyle = {
+  padding: '8px 10px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  fontSize: '0.82rem',
+  fontWeight: 600,
+  color: '#334155',
+  cursor: 'pointer',
+  outline: 'none',
+  background: '#ffffff',
+};
+const todayBtnStyle = {
+  padding: '8px 12px',
+  border: '1px solid rgba(197, 146, 53, 0.3)',
+  borderRadius: '8px',
+  background: 'rgba(197, 146, 53, 0.08)',
+  color: '#aa7c28',
+  fontSize: '0.8rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'all 0.18s ease',
+};
