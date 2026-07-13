@@ -1,13 +1,38 @@
 import React, { useState, useRef } from 'react';
 import { Calculator, Clock, User, Pencil } from 'lucide-react';
 import type { CompanyActivity } from '../hooks/useAtividades';
+import type { ValoresCompetenciaAtividade } from '../services/atividadesService';
 
 interface ChecklistTabProps {
   atv: CompanyActivity;
   handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
   handleSaveStepDate: (instanciaId: string, etapa: string, dateStr: string) => Promise<void>;
-  handleSaveTaxValores: (instanciaId: string, valores: { valorInss: number; valorIrrf: number; valorReinf: number }) => Promise<void>;
+  handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
+
+const CAMPOS_VALORES_COMPETENCIA: Array<{ key: keyof ValoresCompetenciaAtividade; label: string }> = [
+  { key: 'valorPis', label: 'PIS' },
+  { key: 'valorCofins', label: 'COFINS' },
+  { key: 'valorIrpj', label: 'IRPJ' },
+  { key: 'valorCsll', label: 'CSLL' },
+  { key: 'valorRetencao1708', label: '1708' },
+  { key: 'valorRetencao3208', label: '3208' },
+  { key: 'valorRetencao5952', label: '5952' },
+  { key: 'valorIssRetido', label: 'ISS retido' },
+  { key: 'valorFunrural', label: 'Funrural' },
+];
+
+const CAMPOS_ENCARGOS_DCTFWEB: Array<{ key: keyof ValoresCompetenciaAtividade; label: string }> = [
+  { key: 'valorInss', label: 'INSS' },
+  { key: 'valorIrrf', label: 'IRRF' },
+  { key: 'valorReinf', label: 'REINF' },
+];
+
+const isDctfWebModel = (atv: CompanyActivity) => (
+  atv.modeloId === 'dctfweb' ||
+  atv.modeloId === 'dctfweb-tributos-federais' ||
+  atv.modeloNome.toLowerCase().includes('dctfweb')
+);
 
 // Sub-componente que exibe o badge de conclusão sem o input nativo visível
 interface CheckedBadgeProps {
@@ -101,27 +126,24 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
   handleSaveStepDate,
   handleSaveTaxValores,
 }) => {
-  // States for tax inputs
-  const [valInss, setValInss] = useState('0.00');
-  const [valIrrf, setValIrrf] = useState('0.00');
-  const [valReinf, setValReinf] = useState('0.00');
+  const [valoresDraft, setValoresDraft] = useState<Record<string, string>>({});
   const [isEditingTax, setIsEditingTax] = useState(false);
+  const camposValores = [...CAMPOS_VALORES_COMPETENCIA, ...CAMPOS_ENCARGOS_DCTFWEB];
 
-  // Open tax values editor
   const openTaxEditor = () => {
+    const current = atv.valores || {};
+    setValoresDraft(Object.fromEntries(
+      camposValores.map((campo) => [campo.key, String(current[campo.key] ?? '0.00')])
+    ));
     setIsEditingTax(true);
-    setValInss(atv.valores?.valorInss?.toString() || '0.00');
-    setValIrrf(atv.valores?.valorIrrf?.toString() || '0.00');
-    setValReinf(atv.valores?.valorReinf?.toString() || '0.00');
   };
 
   const handleSaveTax = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSaveTaxValores(atv.instanciaId, {
-      valorInss: parseFloat(valInss) || 0,
-      valorIrrf: parseFloat(valIrrf) || 0,
-      valorReinf: parseFloat(valReinf) || 0,
-    });
+    const valores = Object.fromEntries(
+      camposValores.map((campo) => [campo.key, parseFloat(valoresDraft[campo.key] || '0') || 0])
+    ) as ValoresCompetenciaAtividade;
+    handleSaveTaxValores(atv.instanciaId, valores);
     setIsEditingTax(false);
   };
 
@@ -131,6 +153,10 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
       currency: 'BRL',
     }).format(val || 0);
   };
+
+  const totalValores = CAMPOS_VALORES_COMPETENCIA.reduce((total, campo) => (
+    total + (Number(atv.valores?.[campo.key]) || 0)
+  ), 0);
 
   return (
     <div className="tab-pane animate-fade-in" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.02)' }}>
@@ -144,47 +170,34 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
         </span>
       </div>
 
-      {/* Inline values editor (DCTFWeb) */}
-      {atv.modeloId === 'dctfweb' && (
+      {isDctfWebModel(atv) && (
         <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-            <Calculator size={14} style={{ color: 'var(--color-gold-primary)' }} />
-            Valores Consolidados de Tributos
-          </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Calculator size={14} style={{ color: 'var(--color-gold-primary)' }} />
+              Valores da Competência
+            </span>
+            <strong style={{ color: 'var(--color-gold-dark)', fontSize: '0.86rem' }}>
+              Total: {formatCurrency(totalValores)}
+            </strong>
+          </div>
 
           {isEditingTax ? (
             <form onSubmit={handleSaveTax} className="config-form" style={{ padding: 0, margin: 0, border: 'none', background: 'none' }}>
-              <div className="form-row-grid" style={{ gap: '10px', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="form-item-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.72rem', color: '#475569' }}>INSS (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={valInss}
-                    onChange={(e) => setValInss(e.target.value)}
-                    style={{ padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                  />
-                </div>
-                <div className="form-item-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.72rem', color: '#475569' }}>IRRF (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={valIrrf}
-                    onChange={(e) => setValIrrf(e.target.value)}
-                    style={{ padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                  />
-                </div>
-                <div className="form-item-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.72rem', color: '#475569' }}>REINF (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={valReinf}
-                    onChange={(e) => setValReinf(e.target.value)}
-                    style={{ padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                  />
-                </div>
+              <div className="form-row-grid" style={{ gap: '10px', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+                {camposValores.map((campo) => (
+                  <div key={campo.key} className="form-item-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.72rem', color: '#475569' }}>{campo.label}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={valoresDraft[campo.key] || '0.00'}
+                      onChange={(event) => setValoresDraft((current) => ({ ...current, [campo.key]: event.target.value }))}
+                      style={{ padding: '6px 10px', fontSize: '0.8rem', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                    />
+                  </div>
+                ))}
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button type="button" className="btn-cancel" onClick={() => setIsEditingTax(false)} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
@@ -197,10 +210,20 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
             </form>
           ) : (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', fontSize: '0.78rem' }}>
-                <div>INSS: <strong style={{ color: 'var(--color-gold-dark)', display: 'block', fontSize: '0.95rem', marginTop: '2px' }}>{formatCurrency(atv.valores?.valorInss)}</strong></div>
-                <div>IRRF: <strong style={{ color: 'var(--color-gold-dark)', display: 'block', fontSize: '0.95rem', marginTop: '2px' }}>{formatCurrency(atv.valores?.valorIrrf)}</strong></div>
-                <div>REINF: <strong style={{ color: 'var(--color-gold-dark)', display: 'block', fontSize: '0.95rem', marginTop: '2px' }}>{formatCurrency(atv.valores?.valorReinf)}</strong></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', fontSize: '0.78rem' }}>
+                {CAMPOS_VALORES_COMPETENCIA.map((campo) => (
+                  <div key={campo.key} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '9px' }}>
+                    <span style={{ color: '#64748b', fontWeight: 700 }}>{campo.label}</span>
+                    <strong style={{ color: 'var(--color-gold-dark)', display: 'block', fontSize: '0.92rem', marginTop: '2px' }}>
+                      {formatCurrency(Number(atv.valores?.[campo.key]) || 0)}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', fontSize: '0.76rem', color: '#64748b' }}>
+                {CAMPOS_ENCARGOS_DCTFWEB.map((campo) => (
+                  <span key={campo.key}>{campo.label}: <strong style={{ color: '#334155' }}>{formatCurrency(Number(atv.valores?.[campo.key]) || 0)}</strong></span>
+                ))}
               </div>
               <button
                 type="button"
@@ -208,7 +231,7 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
                 style={{ marginTop: '12px', padding: '6px 12px', fontSize: '0.72rem' }}
                 onClick={openTaxEditor}
               >
-                Lançar / Editar Valores Fiscais
+                Lançar / Editar Valores
               </button>
             </div>
           )}

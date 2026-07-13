@@ -32,9 +32,20 @@ export interface AtividadeInstancia {
     valorInss?: number;
     valorIrrf?: number;
     valorReinf?: number;
+    valorPis?: number;
+    valorCofins?: number;
+    valorIrpj?: number;
+    valorCsll?: number;
+    valorRetencao1708?: number;
+    valorRetencao3208?: number;
+    valorRetencao5952?: number;
+    valorIssRetido?: number;
+    valorFunrural?: number;
     database?: string;
   };
 }
+
+export type ValoresCompetenciaAtividade = NonNullable<AtividadeInstancia['valores']>;
 
 interface ClienteRow {
   id: string;

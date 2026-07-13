@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { atividadesService } from '../services/atividadesService';
-import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia } from '../services/atividadesService';
+import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
 
 export interface CompanyActivity {
   instanciaId: string;
@@ -394,7 +394,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   // Save values (specifically for DCTFWeb)
   const handleSaveTaxValores = async (
     instanciaId: string,
-    valores: { valorInss: number; valorIrrf: number; valorReinf: number }
+    valores: ValoresCompetenciaAtividade
   ) => {
     const target = instancias.find((i) => i.id === instanciaId);
     if (!target) return;

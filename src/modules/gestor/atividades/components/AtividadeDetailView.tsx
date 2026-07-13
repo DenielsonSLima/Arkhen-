@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ShieldCheck, Users, UserCheck, Receipt, Calendar as CalendarIcon, Hammer, ClipboardList } from 'lucide-react';
 import type { CompanyActivityGroup } from '../hooks/useAtividades';
+import type { ValoresCompetenciaAtividade } from '../services/atividadesService';
 import { renderCompanyLogo } from '../por-empresa/CompanyActivityCard';
 import { ResumoAuditoriaTab } from './ResumoAuditoriaTab';
 import { ChecklistTab } from './ChecklistTab';
@@ -13,7 +14,7 @@ interface AtividadeDetailViewProps {
   handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string }) => Promise<void>;
   handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
   handleSaveStepDate: (instanciaId: string, etapa: string, dateStr: string) => Promise<void>;
-  handleSaveTaxValores: (instanciaId: string, valores: { valorInss: number; valorIrrf: number; valorReinf: number }) => Promise<void>;
+  handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
 
 export const getActivityIcon = (modeloId: string, status: string, size = 15) => {
@@ -24,12 +25,16 @@ export const getActivityIcon = (modeloId: string, status: string, size = 15) => 
 
   switch (modeloId) {
     case 'folha':
+    case 'folha-pagamento':
       return <Users size={size} style={{ color }} />;
     case 'prolabore':
+    case 'pro-labore':
       return <UserCheck size={size} style={{ color }} />;
     case 'dctfweb':
+    case 'dctfweb-tributos-federais':
       return <Receipt size={size} style={{ color }} />;
     case 'obrigacoes':
+    case 'obrigacoes-mensais':
       return <CalendarIcon size={size} style={{ color }} />;
     case 'obras':
       return <Hammer size={size} style={{ color }} />;
