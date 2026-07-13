@@ -1,3 +1,4 @@
+import { supabase } from '../../../../lib/supabase';
 import { gestaoEmpresarialService, type Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 
 export type ConformidadeTipo = 'fiscal' | 'folha' | 'documentos' | 'protocolo' | 'atendimento';
@@ -161,6 +162,12 @@ const readJson = <T,>(key: string, fallback: T): T => {
 
 const writeJson = <T,>(key: string, value: T) => {
   localStorage.setItem(key, JSON.stringify(value));
+};
+
+const notifyConformidadeChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('conformidade:changed'));
+  }
 };
 
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10);
@@ -347,6 +354,18 @@ const initializeSeed = async () => {
   return merged;
 };
 
+const loadRpcObrigacoes = async (companyId?: string): Promise<ConformidadeObrigacao[] | null> => {
+  const { data, error } = await supabase.rpc('get_conformidade_operacional', {
+    p_cliente_id: companyId || null,
+  });
+
+  if (error || !Array.isArray(data)) {
+    return null;
+  }
+
+  return data.map((item) => enrichObrigacao(item as ConformidadeObrigacao));
+};
+
 const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: ConformidadeEtapaId, checked: boolean, usuario: string) => {
   const index = stepIndexById.get(etapaId);
   if (index === undefined) return obrigacao;
@@ -401,15 +420,25 @@ const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: Conformid
 };
 
 export const conformidadeService = {
-  async getObrigacoes() {
-    const persisted = loadPersisted();
-    if (persisted.length === 0) {
-      return initializeSeed();
+  async getObrigacoes(companyId?: string) {
+    try {
+      const rpcItems = await loadRpcObrigacoes(companyId);
+      if (rpcItems && rpcItems.length > 0) {
+        return sortObrigacoes(rpcItems);
+      }
+    } catch {
+      // Mantem fallback local para ambientes sem a RPC aplicada.
     }
 
-    const normalized = sortObrigacoes(persisted).map(enrichObrigacao);
-    writeJson(STORAGE_KEY, normalized);
-    return normalized;
+    const persisted = loadPersisted();
+    const items = persisted.length === 0 ? await initializeSeed() : sortObrigacoes(persisted).map(enrichObrigacao);
+    const scoped = companyId ? items.filter((item) => item.clienteId === companyId) : items;
+
+    if (persisted.length > 0) {
+      writeJson(STORAGE_KEY, items);
+    }
+
+    return scoped;
   },
 
   async toggleEtapa(obrigacaoId: string, etapaId: ConformidadeEtapaId, checked: boolean, responsavel: string) {
@@ -421,6 +450,7 @@ export const conformidadeService = {
     ));
     const sorted = sortObrigacoes(next);
     writeJson(STORAGE_KEY, sorted);
+    notifyConformidadeChanged();
     return sorted;
   },
 

@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUsuarioLogado } from '../../atividades/utils/periodoAtividades';
 import {
-  conformidadeService,
   type ConformidadeEtapa,
-  type ConformidadeObrigacao,
   type ConformidadePrioridade,
-  type ConformidadeReferenceStep,
   type ConformidadeTipo,
 } from '../services/conformidadeService';
+import { conformidadeKeys, conformidadeQueries } from '../queries/conformidadeQueries';
 
 type TimeWindow = 'hoje' | 'semana' | 'atrasados';
 
@@ -60,27 +59,32 @@ const buildTopList = (items: [string, number][]) => (
 );
 
 export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {}) => {
+  const queryClient = useQueryClient();
   const [timeWindow, setTimeWindow] = useState<TimeWindow>('semana');
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | ConformidadeTipo>('todos');
   const [responsavelFiltro, setResponsavelFiltro] = useState<'todos' | string>('todos');
   const [searchTerm, setSearchTerm] = useState('');
-  const [obrigacoes, setObrigacoes] = useState<ConformidadeObrigacao[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [referenceSteps, setReferenceSteps] = useState<ConformidadeReferenceStep[]>([]);
+  const obrigacoesQuery = useQuery(conformidadeQueries.obrigacoes(initialCompanyId));
+  const referenceStepsQuery = useQuery(conformidadeQueries.referenceSteps());
+  const obrigacoes = obrigacoesQuery.data || [];
+  const referenceSteps = referenceStepsQuery.data || [];
 
-  const loadData = async () => {
-    setIsLoading(true);
-    const items = await conformidadeService.getObrigacoes();
-    const scoped = initialCompanyId ? items.filter((item) => item.clienteId === initialCompanyId) : items;
-    setObrigacoes(scoped);
-    const steps = await conformidadeService.getReferenceSteps();
-    setReferenceSteps(steps);
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [initialCompanyId]);
+  const toggleEtapaMutation = useMutation({
+    mutationFn: ({
+      obrigacaoId,
+      etapaId,
+      checked,
+      responsavel,
+    }: {
+      obrigacaoId: string;
+      etapaId: ConformidadeEtapa['id'];
+      checked: boolean;
+      responsavel: string;
+    }) => conformidadeQueries.toggleEtapa(obrigacaoId, etapaId, checked, responsavel),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: conformidadeKeys.all });
+    },
+  });
 
   const filteredByContext = useMemo(() => {
     const now = new Date();
@@ -156,9 +160,12 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
 
   const handleToggleStep = async (obrigacaoId: string, etapaId: string, checked: boolean) => {
     const responsavel = getUsuarioLogado('João Silva');
-    const refreshed = await conformidadeService.toggleEtapa(obrigacaoId, etapaId as ConformidadeEtapa['id'], checked, responsavel);
-    const scoped = initialCompanyId ? refreshed.filter((item) => item.clienteId === initialCompanyId) : refreshed;
-    setObrigacoes(scoped);
+    await toggleEtapaMutation.mutateAsync({
+      obrigacaoId,
+      etapaId: etapaId as ConformidadeEtapa['id'],
+      checked,
+      responsavel,
+    });
   };
 
   const typeOptions = useMemo(() => {
@@ -188,7 +195,7 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
     timeWindow,
     tipoFiltro,
     searchTerm,
-    isLoading,
+    isLoading: obrigacoesQuery.isLoading || referenceStepsQuery.isLoading,
     obrSorted,
     metricas,
     referenceSteps,

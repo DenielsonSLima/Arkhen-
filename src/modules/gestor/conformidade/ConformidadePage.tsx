@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { useConformidade } from './hooks/useConformidade';
+import { useConformidadeRealtime } from './hooks/useConformidadeRealtime';
 import type { ConformidadeTipo } from './services/conformidadeService';
 import './ConformidadePage.css';
 
@@ -70,6 +71,7 @@ const getStatusClass = (status: string) => {
 };
 
 export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompanyId }) => {
+  useConformidadeRealtime(true);
   const {
     timeWindow,
     tipoFiltro,

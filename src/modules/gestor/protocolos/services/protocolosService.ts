@@ -84,6 +84,12 @@ const readJson = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const notifyProtocolosChanged = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('protocolos:changed'));
+  }
+};
+
 const makePrazo = (competencia: string, diaLimite: number, referenciaMesAnterior: boolean) => {
   const [year, month] = competencia.split('-').map(Number);
   const dueDate = new Date(year, month - 1 + (referenciaMesAnterior ? 1 : 0), 1);
@@ -226,6 +232,7 @@ export const protocolosService = {
       });
     }
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    notifyProtocolosChanged();
   },
 
   saveEntregasEmpresaConfig(company: Company, configs: ProtocoloEmpresaConfig[]) {
@@ -241,6 +248,7 @@ export const protocolosService = {
       };
     });
     localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    notifyProtocolosChanged();
     return config[company.id];
   },
 
@@ -354,6 +362,7 @@ export const protocolosService = {
       item.id === id ? withAuditDates(item, updates, now) : item
     ));
     localStorage.setItem(PROTOCOLOS_KEY, JSON.stringify(updated));
+    notifyProtocolosChanged();
     return updated;
   },
 };

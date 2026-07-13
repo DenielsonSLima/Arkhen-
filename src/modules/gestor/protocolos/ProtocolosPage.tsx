@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useProtocolos } from './hooks/useProtocolos';
+import { useProtocolosRealtime } from './hooks/useProtocolosRealtime';
 import { ProtocoloArquivosList } from './components/ProtocoloArquivosList';
 import { ProtocoloEmpresaCard } from './components/ProtocoloEmpresaCard';
 import type { EmpresaProtocolosGrupo } from './hooks/useProtocolos';
@@ -71,6 +72,7 @@ const formatCompetenciaAtividade = (competencia: string) => {
 };
 
 export const ProtocolosPage: React.FC = () => {
+  useProtocolosRealtime(true);
   
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const {

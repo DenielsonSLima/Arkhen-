@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { protocolosService } from '../services/protocolosService';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ProtocoloEntrega, ProtocoloStatus, ProtocoloUpdate } from '../services/protocolosService';
+import { protocolosKeys, protocolosQueries } from '../queries/protocolosQueries';
 
 export type ProtocoloTab = 'pendentes' | 'concluidos' | 'todos';
 export type ProtocoloEmpresaStatusTab = 'todas' | 'ativas' | 'inativas';
@@ -20,24 +21,29 @@ export interface EmpresaProtocolosGrupo {
 }
 
 export const useProtocolos = () => {
-  const [protocolos, setProtocolos] = useState<ProtocoloEntrega[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProtocoloTab>('pendentes');
   const [activeEmpresaTab, setActiveEmpresaTab] = useState<ProtocoloEmpresaStatusTab>('ativas');
   const [searchTerm, setSearchTerm] = useState('');
   const [dataInicial, setDataInicial] = useState('');
   const [dataFinal, setDataFinal] = useState('');
 
-  const loadProtocolos = async () => {
-    setIsLoading(true);
-    const data = await protocolosService.getProtocolos();
-    setProtocolos(data);
-    setIsLoading(false);
+  const protocolosQuery = useQuery(protocolosQueries.list());
+  const protocolos = protocolosQuery.data || [];
+
+  const invalidateProtocolos = () => {
+    queryClient.invalidateQueries({ queryKey: protocolosKeys.all });
   };
 
-  useEffect(() => {
-    loadProtocolos();
-  }, []);
+  const updateProtocoloMutation = useMutation({
+    mutationFn: protocolosQueries.update,
+    onSuccess: invalidateProtocolos,
+  });
+
+  const updateEntregasEmpresaMutation = useMutation({
+    mutationFn: protocolosQueries.saveEntregasEmpresa,
+    onSuccess: invalidateProtocolos,
+  });
 
   const filteredProtocolos = useMemo(() => {
     return protocolos.filter((item) => {
@@ -125,15 +131,13 @@ export const useProtocolos = () => {
   }, [activeEmpresaTab, dataFinal, dataInicial, protocolos, searchTerm]);
 
   const updateProtocolo = async (id: string, updates: ProtocoloUpdate) => {
-    const updated = await protocolosService.updateProtocolo(id, updates);
-    setProtocolos(updated);
+    await updateProtocoloMutation.mutateAsync({ id, updates });
   };
 
   const updateStatus = (id: string, status: ProtocoloStatus) => updateProtocolo(id, { status });
 
   const updateEntregasEmpresa = async (empresaId: string, entregaIds: string[]) => {
-    protocolosService.saveEntregasEmpresa(empresaId, entregaIds);
-    await loadProtocolos();
+    await updateEntregasEmpresaMutation.mutateAsync({ empresaId, entregaIds });
   };
 
   return {
@@ -143,7 +147,7 @@ export const useProtocolos = () => {
     counters,
     activeEmpresaTab,
     setActiveEmpresaTab,
-    isLoading,
+    isLoading: protocolosQuery.isLoading,
     activeTab,
     setActiveTab,
     searchTerm,
@@ -155,6 +159,6 @@ export const useProtocolos = () => {
     updateProtocolo,
     updateStatus,
     updateEntregasEmpresa,
-    reload: loadProtocolos,
+    reload: invalidateProtocolos,
   };
 };
