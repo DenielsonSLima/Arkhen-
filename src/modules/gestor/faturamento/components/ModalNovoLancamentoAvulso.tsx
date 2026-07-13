@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -73,18 +73,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const [generatedCobranca, setGeneratedCobranca] = useState<CobrancaFinanceira | null>(null);
   const [copyStatus, setCopyStatus] = useState('');
 
-  if (!isOpen) return null;
-
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value: string) => {
     const parts = value.split('-');
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
   };
-
-  const selectedCliente = (clientesQuery.data || []).find((cliente) => cliente.id === clienteEmpresaId);
-  const asaasPaymentLink = generatedCobranca ? getCobrancaPaymentLink(generatedCobranca) : '';
-  const paymentLink = generatedCobranca ? getPublicCobrancaLink(generatedCobranca, selectedCliente) : '';
-  const shareText = generatedCobranca ? buildCobrancaShareMessage(generatedCobranca, selectedCliente) : '';
 
   const resetForm = () => {
     setStep(1);
@@ -102,6 +95,20 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
     setGeneratedCobranca(null);
     setCopyStatus('');
   };
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const selectedCliente = (clientesQuery.data || []).find((cliente) => cliente.id === clienteEmpresaId);
+  const asaasPaymentLink = generatedCobranca ? getCobrancaPaymentLink(generatedCobranca) : '';
+  const paymentLink = generatedCobranca ? getPublicCobrancaLink(generatedCobranca, selectedCliente) : '';
+  const shareText = generatedCobranca ? buildCobrancaShareMessage(generatedCobranca, selectedCliente) : '';
 
   const handleClose = () => {
     resetForm();
@@ -131,8 +138,16 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
 
   const handleSubmit = async () => {
     const parsedValor = parseCurrencyInput(valor);
-    if (!clienteEmpresaId || parsedValor <= 0 || !dataVencimento) {
-      setErrorMsg('Selecione o parceiro, valor e data.');
+    if (!clienteEmpresaId) {
+      setErrorMsg('Por favor, selecione um parceiro/cliente.');
+      return;
+    }
+    if (parsedValor <= 0) {
+      setErrorMsg('Por favor, insira um valor válido maior que zero.');
+      return;
+    }
+    if (!dataVencimento) {
+      setErrorMsg('Por favor, selecione a data de vencimento.');
       return;
     }
 
@@ -312,6 +327,35 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               <label>Mensagem no boleto</label>
               <textarea rows={2} maxLength={220} placeholder="Ex: Após o vencimento, cobrar juros e multa conforme contrato." value={mensagemBoleto} onChange={(event) => setMensagemBoleto(event.target.value)} />
             </div>
+
+            {/* Live calculations preview */}
+            {(parsePercentInput(descontoPercentual) > 0 || parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && parseCurrencyInput(valor) > 0 && (
+              <div className="faturamento-form-group" style={{ gridColumn: '1 / -1', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '8px' }}>Simulação de Valores:</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {parsePercentInput(descontoPercentual) > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#475569' }}>Valor com desconto (até o vencimento):</span>
+                      <strong style={{ color: '#16a34a' }}>
+                        {formatCurrency(parseCurrencyInput(valor) * (1 - parsePercentInput(descontoPercentual)))}
+                      </strong>
+                    </div>
+                  )}
+                  {(parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <span style={{ color: '#475569' }}>Valor após o vencimento (com multa e juros/mês):</span>
+                      <strong style={{ color: '#dc2626' }}>
+                        {formatCurrency(
+                          parseCurrencyInput(valor) +
+                          (parseCurrencyInput(valor) * parsePercentInput(multaPercentual)) +
+                          (parseCurrencyInput(valor) * parsePercentInput(jurosPercentual))
+                        )}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -328,13 +372,38 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
                 <strong>{selectedCliente?.nome || 'Cliente selecionado'}</strong>
               </div>
               <div>
-                <span>Valor</span>
+                <span>Valor original</span>
                 <strong>{formatCurrency(generatedCobranca.valor)}</strong>
               </div>
               <div>
                 <span>Vencimento</span>
                 <strong>{formatDate(generatedCobranca.dataVencimento)}</strong>
               </div>
+
+              {/* Discount row */}
+              {parsePercentInput(descontoPercentual) > 0 && (
+                <div>
+                  <span>Com desconto (até o vencimento)</span>
+                  <strong style={{ color: '#16a34a' }}>
+                    {formatCurrency(generatedCobranca.valor * (1 - parsePercentInput(descontoPercentual)))}
+                  </strong>
+                </div>
+              )}
+
+              {/* Fine and interest row */}
+              {(parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && (
+                <div>
+                  <span>Após o vencimento (valor + multa + juros/mês)</span>
+                  <strong style={{ color: '#dc2626' }}>
+                    {formatCurrency(
+                      generatedCobranca.valor + 
+                      (generatedCobranca.valor * parsePercentInput(multaPercentual)) + 
+                      (generatedCobranca.valor * parsePercentInput(jurosPercentual))
+                    )}
+                  </strong>
+                </div>
+              )}
+
               <div>
                 <span>Status</span>
                 <strong>{generatedCobranca.status}</strong>
