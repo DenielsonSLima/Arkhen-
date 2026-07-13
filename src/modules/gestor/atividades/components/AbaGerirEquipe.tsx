@@ -24,7 +24,7 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   companyGroups = [],
   handleToggleStep,
 }) => {
-  const { rotinas, tarefas, saveRotina, saveTarefa, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
+  const { rotinas, tarefas, saveRotina, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('semana');
   const [dataBase, setDataBase] = useState(todayKey());
@@ -32,6 +32,12 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [modalVincularAberto, setModalVincularAberto] = useState(false);
   const [modalNovaTarefaAberto, setModalNovaTarefaAberto] = useState(false);
+  const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
+    setFeedback({ texto, tipo });
+    window.setTimeout(() => setFeedback(null), 3000);
+  };
 
   const responsaveis = useMemo(() => {
     const nomes = new Set<string>();
@@ -103,14 +109,21 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
     const nova: TarefaGestor = {
       ...dados,
       id: `task-manual-${Date.now()}`,
+      frequencia: 'Única',
       responsavel: selectedUser,
       cliente: 'Escritório',
       origem: 'Gestor',
       status: 'Pendente',
       checklist: dados.checklist.map((item: string) => ({ titulo: item, concluida: false })),
     };
-    saveTarefa(nova);
-    setModalNovaTarefaAberto(false);
+    saveTarefaAsync(nova)
+      .then(() => {
+        showFeedback('Tarefa criada com sucesso para o responsável.', 'sucesso');
+        setModalNovaTarefaAberto(false);
+      })
+      .catch(() => {
+        showFeedback('Não foi possível criar a tarefa. Tente novamente.', 'erro');
+      });
   };
 
   if (!selectedUser) {
@@ -133,6 +146,12 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
         onNovaAtividade={() => setModalNovaTarefaAberto(true)}
         onVincularRotina={() => setModalVincularAberto(true)}
       />
+
+      {feedback && (
+        <div style={{ color: feedback.tipo === 'sucesso' ? '#166534' : '#b91c1c', fontWeight: 600 }}>
+          {feedback.texto}
+        </div>
+      )}
 
       <PeriodToolbar
         dataBase={dataBase}

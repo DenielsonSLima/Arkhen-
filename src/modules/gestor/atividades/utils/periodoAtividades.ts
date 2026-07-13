@@ -7,6 +7,75 @@ export interface PeriodTask {
   concluidaPor?: string;
 }
 
+const TASK_STORAGE_KEY = 'contabil_atividade_period_tasks_v1';
+const NOTE_STORAGE_KEY = 'contabil_atividade_period_notes_v1';
+
+const parseJson = <T,>(value: string | null, fallback: T): T => {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value) as T;
+    return parsed;
+  } catch {
+    return fallback;
+  }
+};
+
+const canUseStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
+type PeriodStore = Record<string, Record<string, PeriodTask[]>>;
+type NoteStore = Record<string, Record<string, string>>;
+
+const readPeriodTasksStore = (): PeriodStore => {
+  if (!canUseStorage()) return {};
+  return parseJson(localStorage.getItem(TASK_STORAGE_KEY), {} as PeriodStore);
+};
+
+const writePeriodTasksStore = (value: PeriodStore) => {
+  if (!canUseStorage()) return;
+  localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(value));
+};
+
+const readPeriodNoteStore = (): NoteStore => {
+  if (!canUseStorage()) return {};
+  return parseJson(localStorage.getItem(NOTE_STORAGE_KEY), {} as NoteStore);
+};
+
+const writePeriodNoteStore = (value: NoteStore) => {
+  if (!canUseStorage()) return;
+  localStorage.setItem(NOTE_STORAGE_KEY, JSON.stringify(value));
+};
+
+const sanitizePeriodTask = (task: unknown): PeriodTask | null => {
+  if (!task || typeof task !== 'object') return null;
+  const record = task as Record<string, unknown>;
+  const id = typeof record.id === 'string' ? record.id : '';
+  const tarefa = typeof record.tarefa === 'string' ? record.tarefa : '';
+  const responsavel = typeof record.responsavel === 'string' ? record.responsavel : '';
+  const concluida = Boolean(record.concluida);
+  if (!id || !tarefa || !responsavel) return null;
+
+  return {
+    id,
+    tarefa,
+    responsavel,
+    concluida,
+    concluidaEm: typeof record.concluidaEm === 'string' ? record.concluidaEm : undefined,
+    concluidaPor: typeof record.concluidaPor === 'string' ? record.concluidaPor : undefined,
+  };
+};
+
+const getStoredPeriodTasksMap = (storageKey: string): Record<string, PeriodTask[]> => {
+  const store = readPeriodTasksStore();
+  const periodMap = store[storageKey];
+  if (!periodMap || typeof periodMap !== 'object') return {};
+  return periodMap;
+};
+
+const hasStoredPeriodTasks = (storageKey: string, periodKey: string) => {
+  const periodMap = getStoredPeriodTasksMap(storageKey);
+  return Object.prototype.hasOwnProperty.call(periodMap, periodKey);
+};
+
 export const getTodayISO = () => new Date().toISOString().split('T')[0];
 
 export const getCurrentMonthKey = () => {
@@ -71,34 +140,38 @@ export const getWeekKeyFromInput = (value: string) => {
 };
 
 export const loadPeriodTasks = (storageKey: string, periodKey: string, defaults: PeriodTask[]) => {
-  void storageKey;
-  void periodKey;
-  void defaults;
-  return [];
+  const hasStored = hasStoredPeriodTasks(storageKey, periodKey);
+  if (!hasStored) return defaults;
+  return getStoredPeriodTasks(storageKey, periodKey);
 };
 
 export const getStoredPeriodTasks = (storageKey: string, periodKey: string) => {
-  void storageKey;
-  void periodKey;
-  return [];
+  const periodMap = getStoredPeriodTasksMap(storageKey);
+  const tasks = periodMap[periodKey];
+  if (!Array.isArray(tasks)) return [];
+
+  return tasks
+    .map(sanitizePeriodTask)
+    .filter((task): task is PeriodTask => !!task);
 };
 
 export const savePeriodTasks = (storageKey: string, periodKey: string, tasks: PeriodTask[]) => {
-  void storageKey;
-  void periodKey;
-  void tasks;
+  const store = readPeriodTasksStore();
+  if (!store[storageKey]) store[storageKey] = {};
+  store[storageKey][periodKey] = tasks;
+  writePeriodTasksStore(store);
 };
 
 export const loadPeriodNote = (storageKey: string, periodKey: string) => {
-  void storageKey;
-  void periodKey;
-  return '';
+  const noteStore = readPeriodNoteStore();
+  return noteStore[storageKey]?.[periodKey] || '';
 };
 
 export const savePeriodNote = (storageKey: string, periodKey: string, note: string) => {
-  void storageKey;
-  void periodKey;
-  void note;
+  const store = readPeriodNoteStore();
+  if (!store[storageKey]) store[storageKey] = {};
+  store[storageKey][periodKey] = note;
+  writePeriodNoteStore(store);
 };
 
 export const getProgress = (tasks: PeriodTask[]) => {

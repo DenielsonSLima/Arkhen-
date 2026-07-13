@@ -13,9 +13,21 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
   initialPeriodo = 'semana',
   showInternasOnly = false,
 }) => {
-  const { tarefas, updateTarefa, toggleChecklist, saveTarefa, deleteTarefa } = useAtividadesWorkspace();
+  const {
+    tarefas,
+    updateTarefa,
+    toggleChecklist,
+    saveTarefaAsync,
+    deleteTarefa,
+  } = useAtividadesWorkspace();
   const [dataBase, setDataBase] = useState(todayKey());
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
+  const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
+    setFeedback({ texto, tipo });
+    window.setTimeout(() => setFeedback(null), 3000);
+  };
 
   const getMonday = (dateKey: string) => {
     const date = new Date(`${dateKey}T00:00:00`);
@@ -65,14 +77,22 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
     const nova: TarefaGestor = {
       ...dados,
       id: `task-usuario-${Date.now()}`,
+      frequencia: 'Única',
       responsavel: '',
       cliente: 'Escritório',
       origem: 'Usuario',
       status: 'Pendente',
       checklist: dados.checklist.map((item: string) => ({ titulo: item, concluida: false })),
     };
-    saveTarefa(nova);
-    setModalNovaAberto(false);
+
+    saveTarefaAsync(nova)
+      .then(() => {
+        showFeedback('Tarefa criada com sucesso.', 'sucesso');
+        setModalNovaAberto(false);
+      })
+      .catch(() => {
+        showFeedback('Não foi possível salvar a tarefa. Tente novamente.', 'erro');
+      });
   };
 
   const getStatusBadge = (tarefa: TarefaGestor) => {
@@ -200,10 +220,16 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
           </button>
         </div>
 
-        <button onClick={() => setModalNovaAberto(true)} style={primaryBtnStyle} type="button">
+      <button onClick={() => setModalNovaAberto(true)} style={primaryBtnStyle} type="button">
           <Plus size={15} /> Nova Atividade
         </button>
       </div>
+
+      {feedback && (
+        <div style={{ color: feedback.tipo === 'sucesso' ? '#166534' : '#b91c1c', fontWeight: 600 }}>
+          {feedback.texto}
+        </div>
+      )}
 
       {minhasTarefas.length === 0 ? (
         <div className="empty-state-card" style={emptyCardStyle}>

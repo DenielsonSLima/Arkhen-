@@ -49,6 +49,7 @@ export const useAtividadesWorkspace = () => {
     saveRotina: (rotina: RotinaAtividade) => saveRotinaMutation.mutate(rotina),
     deleteRotina: (id: string) => deleteRotinaMutation.mutate(id),
     saveTarefa: (tarefa: TarefaGestor) => saveTarefaMutation.mutate(tarefa),
+    saveTarefaAsync: (tarefa: TarefaGestor) => saveTarefaMutation.mutateAsync(tarefa),
     deleteTarefa: (id: string) => deleteTarefaMutation.mutate(id),
     updateTarefa: (id: string, patch: Partial<TarefaGestor>) => {
       const current = workspace.tarefas.find((tarefa) => tarefa.id === id);
@@ -74,5 +75,7 @@ export const useAtividadesWorkspace = () => {
     tarefas: workspace.tarefas,
     isLoading: workspaceQuery.isLoading,
     ...actions,
+    isSaving: saveTarefaMutation.isPending || saveRotinaMutation.isPending,
+    saveError: saveTarefaMutation.error || saveRotinaMutation.error || null,
   };
 };

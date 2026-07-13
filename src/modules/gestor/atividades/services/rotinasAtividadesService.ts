@@ -195,7 +195,7 @@ export const rotinasAtividadesService = {
       rotina_id: isUuid(tarefa.rotinaId) ? tarefa.rotinaId : null,
       titulo: tarefa.titulo,
       categoria: tarefa.categoria,
-      frequencia: tarefa.frequencia,
+      frequencia: tarefa.frequencia || 'Única',
       responsavel_nome: tarefa.responsavel || null,
       cliente_nome: tarefa.cliente || 'Escritório',
       vencimento: tarefa.vencimento || todayKey(),
