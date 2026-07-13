@@ -53,6 +53,7 @@ export const AgendaPage: React.FC = () => {
     handleSalvarEvento,
     handleAbrirNovoEvento,
     handleAbrirEdicao,
+    handleExcluirEvento,
     empresas,
     usuarioAtual,
     usuariosAtribuiveis,
