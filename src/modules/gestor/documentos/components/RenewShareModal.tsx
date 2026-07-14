@@ -30,7 +30,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
   onRenew,
   isRenewing = false,
 }) => {
-  const [tempoLimite, setTempoLimite] = useState(() => SHARE_EXPIRATION_OPTIONS[2]);
+  const [tempoLimite, setTempoLimite] = useState<string>(() => SHARE_EXPIRATION_OPTIONS[2]);
   const [exigirSenha, setExigirSenha] = useState(() => Boolean(senhaAtual || senhaHashAtual));
   const [senha, setSenha] = useState(() => senhaAtual || DEFAULT_SHARE_PASSWORD);
 

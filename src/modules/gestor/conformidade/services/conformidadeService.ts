@@ -440,7 +440,6 @@ const buildSeedObrigacoes = async () => {
         const vencimentoKey = vencimento.split('-').slice(0, 2).join('-');
         if (vencimentoKey < nowKey && offset < -1) continue;
         if (vencimentoKey > nowKey && offset > 1) continue;
-        const id = `${company.id}-${template.id}-${toMonthKey(new Date(vencimento))}`;
         generated.push(buildObrigacao(company, template, offset));
       }
     }
