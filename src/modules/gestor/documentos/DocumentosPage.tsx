@@ -9,6 +9,7 @@ import type { DocumentCategory } from './services/documentosService';
 import type { ShareableDocument } from './services/documentShareService';
 import type { DocumentGroupBy, DocumentSortBy } from './utils/documentOrganization';
 import { normalizeFolderPath } from './utils/folderPaths';
+import { documentosPreferencesService } from './services/documentosPreferencesService';
 import {
   createDocumentCategory,
   documentosService,
@@ -169,13 +170,19 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
-    // Carregar ultimo acesso
-    const key = 'docs_last_access';
-    const last = localStorage.getItem(key);
-    if (last) {
-      setLastAccess(new Date(last).toLocaleString('pt-BR'));
+    let mounted = true;
+    void (async () => {
+      const saved = await documentosPreferencesService.getPageLastAccess();
+      if (mounted && saved) {
+        setLastAccess(new Date(saved).toLocaleString('pt-BR'));
+      }
+
+      await documentosPreferencesService.setPageLastAccess(new Date().toISOString());
+    })();
+
+    return () => {
+      mounted = false;
     }
-    localStorage.setItem(key, new Date().toISOString());
   }, []);
 
   const handleCreatePersonalFolder = useCallback((folderName: string) => {

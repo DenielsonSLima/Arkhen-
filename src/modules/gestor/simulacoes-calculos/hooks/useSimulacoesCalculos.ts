@@ -17,6 +17,7 @@ import {
   rpc_calcularCustos,
 } from '../services/calculosNovas.service';
 import { formatCurrencyInputValue, parseCurrencyInputValue } from '../../shared/currencyInputUtils';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 import {
   DEFAULT_PARAMETROS_CALCULO,
   PARAMETROS_CALCULO_EVENT,
@@ -56,7 +57,7 @@ export function useSimulacoesCalculos() {
 
     const loadParametrizacoes = () => {
       try {
-        const savedTipos = localStorage.getItem('arkhen_param_tipos-empresa');
+        const savedTipos = persistedStorage.getItem('arkhen_param_tipos-empresa');
         if (savedTipos) {
           setTiposEmpresa(JSON.parse(savedTipos));
         } else {
@@ -74,7 +75,7 @@ export function useSimulacoesCalculos() {
       }
 
       try {
-        const savedNaturezas = localStorage.getItem('arkhen_param_natureza-juridica');
+        const savedNaturezas = persistedStorage.getItem('arkhen_param_natureza-juridica');
         if (savedNaturezas) {
           setNaturezasJuridicas(JSON.parse(savedNaturezas));
         } else {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, FolderInput } from 'lucide-react';
+import { documentosPreferencesService } from '../services/documentosPreferencesService';
 
 export interface DocumentMoveTarget {
   key: string;
@@ -29,21 +30,38 @@ export const DocumentMoveDrawer: React.FC<DocumentMoveDrawerProps> = ({
   onDropItem,
   onDropTargetChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(() => {
-    try {
-      return localStorage.getItem(storageKey) !== 'collapsed';
-    } catch {
-      return true;
-    }
-  });
+  const [isOpen, setIsOpen] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        const savedState = await documentosPreferencesService.getDrawerState(storageKey);
+        if (!mounted) return;
+        setIsOpen(savedState === null ? true : savedState);
+      } catch {
+        if (!mounted) return;
+        setIsOpen(true);
+      } finally {
+        if (!mounted) return;
+        setInitialized(true);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!initialized) return;
     try {
-      localStorage.setItem(storageKey, isOpen ? 'expanded' : 'collapsed');
+      void documentosPreferencesService.setDrawerState(storageKey, isOpen);
     } catch {
       // Local storage can be unavailable in restricted browser contexts.
     }
-  }, [isOpen, storageKey]);
+  }, [isOpen, storageKey, initialized]);
 
   if (targets.length === 0) return null;
 

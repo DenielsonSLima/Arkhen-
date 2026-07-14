@@ -1,4 +1,5 @@
 // Serviço de Agregação Contábil e Relatórios (RPCs do Banco de Dados)
+import { persistedStorage } from '../../../../lib/persistedStorage';
 
 export interface FaturamentoReportData {
   totalFaturado: number;
@@ -39,8 +40,8 @@ export interface ComparativoRegimeData {
 export const relatoriosService = {
   // Simula RPC: get_relatorio_faturamento
   async getFaturamentoReport(companyId: string, startDate: string, endDate: string): Promise<FaturamentoReportData> {
-    const rawCob = localStorage.getItem('contabil_financeiro_cobrancas');
-    const rawComps = localStorage.getItem('contabil_gestao_empresarial_companies');
+    const rawCob = persistedStorage.getItem('contabil_financeiro_cobrancas');
+    const rawComps = persistedStorage.getItem('contabil_gestao_empresarial_companies');
     
     const cobrancas = rawCob ? JSON.parse(rawCob) : [];
     const companies = rawComps ? JSON.parse(rawComps) : [];
@@ -120,7 +121,7 @@ export const relatoriosService = {
 
   // Simula RPC: get_relatorio_conformidade
   async getConformidadeReport(companyId: string): Promise<ConformidadeReportData> {
-    const rawInst = localStorage.getItem('contabil_atividades_instancias');
+    const rawInst = persistedStorage.getItem('contabil_atividades_instancias');
     const instancias = rawInst ? JSON.parse(rawInst) : [];
 
     const filtered = instancias.filter((inst: any) => {
@@ -166,7 +167,7 @@ export const relatoriosService = {
 
   // Simula RPC: get_relatorio_custo_pessoal
   async getPessoalReport(companyId: string): Promise<PessoalReportData> {
-    const rawComps = localStorage.getItem('contabil_gestao_empresarial_companies');
+    const rawComps = persistedStorage.getItem('contabil_gestao_empresarial_companies');
     const companies = rawComps ? JSON.parse(rawComps) : [];
 
     const activeCompanies = companies.filter((c: any) => companyId === 'Todos' || c.id === companyId);

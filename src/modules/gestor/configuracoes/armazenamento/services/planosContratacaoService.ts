@@ -1,4 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
+import { persistedStorage } from '../../../../../lib/persistedStorage';
 
 export type PlanoContratacaoId = 'teste' | 'standard' | 'growth' | 'maximo';
 
@@ -108,12 +109,12 @@ export const planosContratacaoService = {
   },
 
   getPlanoEmpresa(empresaId: string) {
-    const stored = localStorage.getItem(getStorageKey(empresaId));
+    const stored = persistedStorage.getItem(getStorageKey(empresaId));
     return getPlanoById(stored);
   },
 
   setPlanoEmpresa(empresaId: string, planoId: PlanoContratacaoId) {
-    localStorage.setItem(getStorageKey(empresaId), planoId);
+    persistedStorage.setItem(getStorageKey(empresaId), planoId);
     return getPlanoById(planoId);
   },
 

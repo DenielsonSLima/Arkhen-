@@ -1,9 +1,7 @@
-import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import { prazosEntregaService } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
-import { protocolosCatalogoService, type ProtocoloTipoConfig, type ProtocoloOrigemPadrao } from './protocolosCatalogoService';
-import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
-import type { EntregaModelo } from '../protocolosCatalogo';
+import { gestaoEmpresarialService, type Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { prazosEntregaService, type ProtocoloOrigemPadrao, type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
+import { protocolosCatalogoService, type EntregaModelo, type ProtocoloTipoConfig } from './protocolosCatalogoService';
+import { supabase } from '../../../../lib/supabase';
 
 export type { EntregaModelo } from '../protocolosCatalogo';
 
@@ -56,9 +54,37 @@ export type ProtocoloUpdate = Partial<Pick<
   'status' | 'anotacoesList' | 'recebidoEm' | 'concluidoPor'
 >>;
 
-const CONFIG_KEY = 'contabil_protocolos_config_empresas';
-const PROTOCOLOS_KEY = 'contabil_protocolos_entregas';
-type CompanyProtocolConfigMap = Record<string, ProtocoloEmpresaConfig[]>;
+type ProtocoloStatusDbRow = {
+  id: string;
+  status: ProtocoloStatus;
+  recebido_em: string | null;
+  concluido_por: string | null;
+  anotacoes_list: Anotacao[] | null;
+  atualizado_em: string | null;
+};
+
+type ProtocoloConfigRow = {
+  empresa_id: string;
+  configs: unknown;
+};
+
+const PROTOCOLOS_CONFIG_TABLE = 'configuracoes_protocolos_empresas';
+const PROTOCOLOS_TABLE = 'protocolos_entregas';
+
+const ALLOWED_PERIODICIDADES = new Set<TipoFechamentoEntrega>(['mensal', 'quinzenal', 'trimestral', 'semestral']);
+
+const isMissingProtocolosTableError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  return err.code === '42P01' || String(err.message || '').includes('relation "public.protocolos_entregas" does not exist');
+};
+
+const isConfigMismatch = (value: ProtocoloEmpresaConfig[] | undefined, catalogo: ProtocoloTipoConfig[]) => {
+  if (!Array.isArray(value)) return true;
+  if (value.length !== catalogo.length) return true;
+  const savedIds = new Set(value.map((item) => item.entregaId));
+  return !catalogo.every((item) => savedIds.has(item.id));
+};
 
 const getMonthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
@@ -75,32 +101,102 @@ const getCompanyStartMonthKey = (company: Company) => {
   return getMonthKey(createdAt);
 };
 
-const readJson = <T,>(key: string, fallback: T): T => {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
+const mapConfigFromDb = (companyId: string, catalogo: ProtocoloTipoConfig[], raw: unknown): ProtocoloEmpresaConfig[] => {
+  const rawArray = Array.isArray(raw) ? raw as ProtocoloEmpresaConfig[] : [];
+  const map = new Map<string, ProtocoloEmpresaConfig>();
+
+  rawArray.forEach((item) => {
+    if (!item?.entregaId) return;
+    const periodicidade = ALLOWED_PERIODICIDADES.has(item.periodicidade as TipoFechamentoEntrega)
+      ? item.periodicidade
+      : undefined;
+    map.set(item.entregaId, {
+      entregaId: item.entregaId,
+      ativo: item.ativo === false ? false : true,
+      periodicidade,
+    });
+  });
+
+  const resolved = catalogo.map((item) => {
+    const saved = map.get(item.id);
+    return {
+      entregaId: item.id,
+      ativo: saved ? saved.ativo : true,
+      periodicidade: saved?.periodicidade ?? item.periodicidadePadrao,
+    } satisfies ProtocoloEmpresaConfig;
+  });
+
+  if (isConfigMismatch(resolved, catalogo)) {
+    console.warn(`[protocolosService] Configurações inconsistentes para empresa ${companyId}, normalizando com catálogo atual.`);
+  }
+
+  return resolved;
+};
+
+const persistirConfigEmpresa = async (companyId: string, configs: ProtocoloEmpresaConfig[]) => {
   try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
+    const payload = {
+      empresa_id: companyId,
+      configs,
+    };
+
+    const { error } = await supabase
+      .from(PROTOCOLOS_CONFIG_TABLE)
+      .upsert(payload, { onConflict: 'empresa_id' });
+
+    if (error) {
+      if (isMissingProtocolosTableError(error)) return;
+      throw error;
+    }
+  } catch (error) {
+    console.error('[protocolosService] Erro ao persistir configuração de protocolos por empresa:', error);
+    throw error;
   }
 };
 
-const notifyProtocolosChanged = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('protocolos:changed'));
+const loadPersistedProtocolos = async (): Promise<Map<string, ProtocoloStatusDbRow>> => {
+  try {
+    const { data, error } = await supabase
+      .from(PROTOCOLOS_TABLE)
+      .select('id,status,recebido_em,concluido_por,anotacoes_list,atualizado_em');
+
+    if (error) {
+      if (isMissingProtocolosTableError(error)) return new Map();
+      throw error;
+    }
+
+    if (!Array.isArray(data)) return new Map();
+    return new Map(data.map((item) => [item.id, item as unknown as ProtocoloStatusDbRow]));
+  } catch (error) {
+    if (isMissingProtocolosTableError(error)) return new Map();
+    console.warn('[protocolosService] Falha ao carregar estados dos protocolos via Supabase. Carregando estado inicial padrão.', error);
+    return new Map();
   }
 };
 
-const getCurrentUserName = () => {
+const loadEntregasEmpresaConfig = async (companyId: string): Promise<ProtocoloEmpresaConfig[] | null> => {
   try {
-    const savedProfile = localStorage.getItem('gestor_user_profile');
-    if (!savedProfile) return 'Administrador';
-    const profile = JSON.parse(savedProfile) as { nome?: unknown };
-    return typeof profile.nome === 'string' && profile.nome.trim() ? profile.nome.trim() : 'Administrador';
-  } catch {
-    return 'Administrador';
+    const { data, error } = await supabase
+      .from(PROTOCOLOS_CONFIG_TABLE)
+      .select('configs')
+      .eq('empresa_id', companyId)
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === '42P01') return null;
+      throw error;
+    }
+
+    if (!data) return [];
+    return (data as ProtocoloConfigRow).configs as ProtocoloEmpresaConfig[];
+  } catch (error) {
+    if ((error as { code?: string } | null)?.code === '42P01') return null;
+    console.warn('[protocolosService] Erro ao carregar configuração de protocolos por empresa. Usando padrão do catálogo.', error);
+    return null;
   }
 };
+
+const getCurrentUserName = () => 'Administrador';
 
 const makePrazo = (competencia: string, diaLimite: number, referenciaMesAnterior: boolean) => {
   const [year, month] = competencia.split('-').map(Number);
@@ -120,7 +216,7 @@ const enrichCompanyFields = (item: ProtocoloEntrega, company: Company): Protocol
   empresaTelefone: company.telefone,
   empresaLogo: company.logo,
   origemPadrao: item.origemPadrao || 'Ambos',
-  periodoReferencia: item.periodoReferencia ?? 'Mensal',
+  periodoReferencia: item.periodoReferencia || 'Mensal',
   recebidoEm: item.recebidoEm ?? '',
   concluidoPor: item.concluidoPor ?? (item.status === 'Concluído' ? item.responsavel || 'Administrador' : ''),
 });
@@ -128,7 +224,7 @@ const enrichCompanyFields = (item: ProtocoloEntrega, company: Company): Protocol
 const withAuditDates = (
   item: ProtocoloEntrega,
   updates: ProtocoloUpdate,
-  now: string
+  now: string,
 ): ProtocoloEntrega => {
   const next = { ...item, ...updates, atualizadoEm: now };
   if (updates.status === 'Concluído' && item.status !== 'Concluído' && !next.recebidoEm) {
@@ -180,141 +276,186 @@ const getCompetenciasForCompany = (company: Company, now: Date) => {
   return allCompetencias.filter((competencia) => competencia >= startMonth);
 };
 
-const pruneLocalProtocolStorage = (companies: Company[]) => {
-  const activeCompanyIds = new Set(companies.map((company) => company.id));
+const mergePersistedState = (item: ProtocoloEntrega, persisted?: ProtocoloStatusDbRow | null): ProtocoloEntrega => {
+  if (!persisted) return item;
+  return {
+    ...item,
+    status: persisted.status || item.status,
+    recebidoEm: persisted.recebido_em || '',
+    concluidoPor: persisted.concluido_por || '',
+    anotacoesList: Array.isArray(persisted.anotacoes_list) ? persisted.anotacoes_list : item.anotacoesList,
+    atualizadoEm: persisted.atualizado_em || item.atualizadoEm,
+  };
+};
 
-  const savedConfig = readJson<CompanyProtocolConfigMap>(CONFIG_KEY, {});
-  const prunedConfig = Object.fromEntries(
-    Object.entries(savedConfig).filter(([companyId]) => activeCompanyIds.has(companyId))
-  );
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(prunedConfig));
+const persistirProtocolo = async (protocolo: ProtocoloEntrega) => {
+  try {
+    const payload = {
+      id: protocolo.id,
+      empresa_id: protocolo.empresaId,
+      entrega_id: protocolo.entregaId,
+      competencia: protocolo.competencia,
+      periodo_referencia: protocolo.periodoReferencia,
+      status: protocolo.status,
+      recebido_em: protocolo.recebidoEm || null,
+      concluido_por: protocolo.concluidoPor || null,
+      anotacoes_list: protocolo.anotacoesList || [],
+      atualizado_em: protocolo.atualizadoEm || new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from(PROTOCOLOS_TABLE)
+      .upsert(payload, { onConflict: 'id' });
+    if (error && isMissingProtocolosTableError(error)) return;
+    if (error) throw error;
+  } catch (error) {
+    if (isMissingProtocolosTableError(error)) return;
+    throw error;
+  }
+};
 
-  const savedProtocolos = readJson<ProtocoloEntrega[]>(PROTOCOLOS_KEY, []);
-  const prunedProtocolos = savedProtocolos.filter((item) => activeCompanyIds.has(item.empresaId));
-  localStorage.setItem(PROTOCOLOS_KEY, JSON.stringify(prunedProtocolos));
-  return prunedProtocolos;
+const getEntregasEmpresaConfig = async (company: Company): Promise<ProtocoloEmpresaConfig[]> => {
+  const catalogo = protocolosCatalogoService.getCatalogoPorRegime(company.tipo);
+  const dbConfig = await loadEntregasEmpresaConfig(company.id);
+
+  if (dbConfig === null) {
+    return catalogo.map((item) => ({
+      entregaId: item.id,
+      ativo: true,
+      periodicidade: item.periodicidadePadrao,
+    }));
+  }
+
+  return mapConfigFromDb(company.id, catalogo, dbConfig);
+};
+
+const getCatalogoByRegimeMap = (company: Company) => {
+  const catalogo = protocolosCatalogoService.getCatalogoPorRegime(company.tipo);
+  return new Map(catalogo.map((item) => [item.id, item]));
 };
 
 export const protocolosService = {
-  getCatalogoEntregas(): ProtocoloTipoConfig[] {
-    return protocolosCatalogoService.getCatalogoAtivo();
-  },
+  getCatalogoEntregas: () => protocolosCatalogoService.getCatalogoAtivo(),
 
   getCatalogoPorRegime(company: Company): ProtocoloTipoConfig[] {
     return protocolosCatalogoService.getCatalogoPorRegime(company.tipo);
   },
 
-  getEntregasEmpresa(company: Company): string[] {
-    return this.getEntregasEmpresaConfig(company)
-      .filter((config) => config.ativo)
-      .map((config) => config.entregaId);
+  async getEntregasEmpresa(company: Company): Promise<ProtocoloEmpresaConfig[]> {
+    return getEntregasEmpresaConfig(company);
   },
 
-  getEntregasEmpresaConfig(company: Company): ProtocoloEmpresaConfig[] {
-    const config = readJson<CompanyProtocolConfigMap>(CONFIG_KEY, {});
-    const saved = config[company.id] || [];
-    const savedById = new Map(saved.map((item) => [item.entregaId, item]));
-    const catalogo = this.getCatalogoPorRegime(company);
-    const normalized = catalogo.map((item) => {
-      const savedItem = savedById.get(item.id);
-      return {
-        entregaId: item.id,
-        ativo: savedItem?.ativo ?? true,
-        periodicidade: savedItem?.periodicidade ?? item.periodicidadePadrao,
-      };
-    });
-    config[company.id] = normalized;
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  async getEntregasEmpresaConfig(company: Company): Promise<ProtocoloEmpresaConfig[]> {
+    return getEntregasEmpresaConfig(company);
+  },
+
+  async saveEntregasEmpresa(companyOrId: Company | string, entregaIds: string[]) {
+    const company = typeof companyOrId === 'string'
+      ? await gestaoEmpresarialService.getCompanyById(companyOrId)
+      : companyOrId;
+
+    if (!company) return [];
+    const catalogo = getCatalogoByRegimeMap(company);
+  const existing = await getEntregasEmpresaConfig(company);
+    const existingById = new Map(existing.map((item) => [item.entregaId, item]));
+
+    const normalized = Array.from(catalogo.values()).map((modelo) => ({
+      entregaId: modelo.id,
+      ativo: entregaIds.includes(modelo.id),
+      periodicidade: existingById.get(modelo.id)?.periodicidade ?? modelo.periodicidadePadrao,
+    }));
+
+    await persistirConfigEmpresa(company.id, normalized);
     return normalized;
   },
 
-  saveEntregasEmpresa(companyOrId: Company | string, entregaIds: string[]) {
-    const companyId = typeof companyOrId === 'string' ? companyOrId : companyOrId.id;
-    const config = readJson<CompanyProtocolConfigMap>(CONFIG_KEY, {});
-    const existing = config[companyId] || [];
-    if (existing.length === 0) {
-      config[companyId] = entregaIds.map((entregaId) => ({ entregaId, ativo: true }));
-    } else {
-      config[companyId] = existing.map((item) => ({
-        entregaId: item.entregaId,
-        ativo: entregaIds.includes(item.entregaId),
-        periodicidade: item.periodicidade,
-      }));
-      entregaIds.forEach((entregaId) => {
-        if (!config[companyId].some((item) => item.entregaId === entregaId)) {
-          config[companyId].push({ entregaId, ativo: true });
-        }
+  async saveEntregasEmpresaConfig(company: Company, configs: ProtocoloEmpresaConfig[]) {
+    const catalogo = getCatalogoByRegimeMap(company);
+    const existing = await getEntregasEmpresaConfig(company);
+    const existingById = new Map(existing.map((item) => [item.entregaId, item]));
+    const filtered: ProtocoloEmpresaConfig[] = [];
+
+    for (const [entregaId, modelo] of catalogo.entries()) {
+      const item = configs.find((entry) => entry?.entregaId === entregaId);
+      const periodicidade = item?.periodicidade && ALLOWED_PERIODICIDADES.has(item.periodicidade)
+        ? item.periodicidade
+        : existingById.get(entregaId)?.periodicidade
+          ?? modelo.periodicidadePadrao;
+      filtered.push({
+        entregaId,
+        ativo: item ? Boolean(item.ativo) : true,
+        periodicidade,
       });
     }
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    notifyProtocolosChanged();
-  },
 
-  saveEntregasEmpresaConfig(company: Company, configs: ProtocoloEmpresaConfig[]) {
-    const existing = this.getEntregasEmpresaConfig(company);
-    const existingById = new Map(existing.map((item) => [item.entregaId, item]));
-    const config = readJson<CompanyProtocolConfigMap>(CONFIG_KEY, {});
-    config[company.id] = configs.map((item) => {
-      const existingItem = existingById.get(item.entregaId);
-      return {
-        entregaId: item.entregaId,
-        ativo: item.ativo,
-        periodicidade: item.periodicidade ?? existingItem?.periodicidade,
-      };
-    });
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-    notifyProtocolosChanged();
-    return config[company.id];
+    await persistirConfigEmpresa(company.id, filtered);
+    return filtered;
   },
 
   async getProtocolos(): Promise<ProtocoloEntrega[]> {
     const companies = await gestaoEmpresarialService.getCompanies();
-    const existing = pruneLocalProtocolStorage(companies);
-    const byId = new Map(existing.map((item) => [item.id, item]));
+    const persistedById = await loadPersistedProtocolos();
+    const companyConfigs = new Map<string, ProtocoloEmpresaConfig[]>();
     const now = new Date();
+
+    const configs = await Promise.all(
+      companies.map(async (company) => [company.id, await getEntregasEmpresaConfig(company)] as const)
+    );
+
+    for (const [companyId, companyConfig] of configs) {
+      companyConfigs.set(companyId, companyConfig);
+    }
+
+    const byId = new Map<string, ProtocoloEntrega>();
     const activeIds = new Set<string>();
 
-    companies.forEach((company) => {
+    for (const company of companies) {
+      const configsForCompany = companyConfigs.get(company.id) || [];
       const competencias = getCompetenciasForCompany(company, now);
-      const configs = this.getEntregasEmpresaConfig(company);
-      const catalogo = this.getCatalogoPorRegime(company);
+      const catalogo = protocolosCatalogoService.getCatalogoPorRegime(company.tipo);
       const catalogoById = new Map(catalogo.map((item) => [item.id, item]));
 
-      competencias.forEach((competencia) => {
-        configs.filter((config) => config.ativo).forEach((config) => {
-          const modelo = catalogoById.get(config.entregaId);
-          if (!modelo) return;
+      for (const competencia of competencias) {
+        for (const configItem of configsForCompany) {
+          if (!configItem.ativo) continue;
+          const modelo = catalogoById.get(configItem.entregaId);
+          if (!modelo) continue;
 
           const prazoConfig = prazosEntregaService.getConfigFor(company.tipo, modelo.id);
-          if (prazoConfig && !prazoConfig.ativo) return;
+          if (prazoConfig && !prazoConfig.ativo) continue;
 
           const referenciaMesAnterior = prazoConfig?.referenciaMesAnterior ?? true;
-          const fechamento = config.periodicidade ?? prazoConfig?.fechamento ?? modelo.periodicidadePadrao;
+          const fechamento = configItem.periodicidade ?? prazoConfig?.fechamento ?? modelo.periodicidadePadrao;
 
-          if (shouldSkipPeriodo(fechamento, competencia)) return;
+          if (shouldSkipPeriodo(fechamento, competencia)) continue;
+
           const periodos = getPeriodosByFechamento(fechamento, modelo, prazoConfig);
 
-          periodos.forEach((periodo) => {
+          for (const periodo of periodos) {
             const id = `${company.id}-${competencia}-${modelo.id}-${periodo.key}`;
             activeIds.add(id);
-            const existingItem = byId.get(id);
             const prazo = makePrazo(competencia, periodo.dia, referenciaMesAnterior);
-            if (existingItem) {
-            byId.set(id, enrichCompanyFields({
-              ...existingItem,
-              entregaNome: modelo.nome,
-              categoria: modelo.categoria,
-              orgao: modelo.orgao,
-              origemPadrao: existingItem.origemPadrao || modelo.origemPadrao,
-              prazo,
-              periodoReferencia: periodo.label,
-            }, company));
-              return;
+
+            const existing = byId.get(id);
+            if (existing) {
+              byId.set(
+                id,
+                enrichCompanyFields({
+                  ...existing,
+                  entregaNome: modelo.nome,
+                  categoria: modelo.categoria,
+                  orgao: modelo.orgao,
+                  origemPadrao: existing.origemPadrao || modelo.origemPadrao,
+                  prazo,
+                  periodoReferencia: periodo.label,
+                }, company)
+              );
+              continue;
             }
+
             let initialStatus: ProtocoloStatus = 'Pendente';
             let initialRecebidoEm = '';
             let initialAnotacoesList: Anotacao[] = [];
-            
+
             const isOneMonthAgo = competencia === competencias[1];
             const isTwoMonthsAgo = competencia === competencias[0];
 
@@ -334,7 +475,7 @@ export const protocolosService = {
               }
             }
 
-            byId.set(id, enrichCompanyFields({
+            const base: ProtocoloEntrega = {
               id,
               empresaId: company.id,
               empresaNome: company.nome,
@@ -359,16 +500,18 @@ export const protocolosService = {
               anotacoesList: initialAnotacoesList,
               recebidoEm: initialRecebidoEm,
               concluidoPor: initialStatus === 'Concluído' ? 'Administrador' : '',
-            }, company));
-          });
-        });
-      });
-    });
+            };
 
-    const allProtocolos = Array.from(byId.values()).sort((a, b) => b.competencia.localeCompare(a.competencia) || a.empresaNome.localeCompare(b.empresaNome));
-    const protocolos = allProtocolos.filter((item) => activeIds.has(item.id));
-    localStorage.setItem(PROTOCOLOS_KEY, JSON.stringify(allProtocolos));
-    return protocolos;
+            byId.set(id, mergePersistedState(enrichCompanyFields(base, company), persistedById.get(id)));
+          }
+        }
+      }
+    }
+
+    const allProtocolos = Array.from(byId.values())
+      .sort((a, b) => b.competencia.localeCompare(a.competencia) || a.empresaNome.localeCompare(b.empresaNome));
+
+    return allProtocolos.filter((item) => activeIds.has(item.id));
   },
 
   async updateProtocolo(id: string, updates: ProtocoloUpdate) {
@@ -377,8 +520,10 @@ export const protocolosService = {
     const updated = protocolos.map((item) => (
       item.id === id ? withAuditDates(item, updates, now) : item
     ));
-    localStorage.setItem(PROTOCOLOS_KEY, JSON.stringify(updated));
-    notifyProtocolosChanged();
+    const target = updated.find((item) => item.id === id);
+    if (target) {
+      await persistirProtocolo(target);
+    }
     return updated;
   },
 };

@@ -3,6 +3,7 @@ import { Check, Clipboard, ExternalLink, FileText, Key, Link2, RotateCcw, Search
 import { documentShareService, type SharedDocumentLink } from '../services/documentShareService';
 import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { RenewShareModal } from './RenewShareModal';
+import { copyToClipboard } from '../../../../lib/clipboard';
 
 interface SharedDocumentsTabProps {
   refreshKey: number;
@@ -156,13 +157,13 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
     const payloadSenha = batch.senha ? `\nSenha: ${batch.senha}` : '';
     const payload = `${payloadTitle}\n${docs}\n\n${batch.link}${payloadSenha}\n\nDisponível por: ${batch.tempoLimite}\nExpira em: ${batch.dataExpiracao}`;
 
-    await navigator.clipboard.writeText(payload);
+    await copyToClipboard(payload);
     setCopiedId(batch.groupId);
     window.setTimeout(() => setCopiedId(null), 1800);
   };
 
   const handleCopyLinkOnly = async (batch: SharedDocumentBatch) => {
-    await navigator.clipboard.writeText(batch.link);
+    await copyToClipboard(batch.link);
     setCopiedId(`link:${batch.groupId}`);
     window.setTimeout(() => setCopiedId(null), 1800);
   };
@@ -364,7 +365,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                             type="button"
                             onClick={async () => {
                               if (batch.senha) {
-                                await navigator.clipboard.writeText(batch.senha);
+                                await copyToClipboard(batch.senha);
                                 setCopiedPasswordId(batch.groupId);
                                 setTimeout(() => setCopiedPasswordId(null), 1500);
                               }

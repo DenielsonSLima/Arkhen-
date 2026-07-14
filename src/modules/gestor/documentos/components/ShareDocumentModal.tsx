@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clipboard, Key, Link2, Share2, Timer, X } from 'lucide-react';
-import { DEFAULT_SHARE_PASSWORD, documentShareService, formatShareDateTime, generateSharePassword, parseShareDurationMs, SHARE_EXPIRATION_OPTIONS, type ShareableDocument, type SharedDocumentLink } from '../services/documentShareService';
+import { copyToClipboard } from '../../../../lib/clipboard';
+import {
+  DEFAULT_SHARE_PASSWORD,
+  documentShareService,
+  formatShareDateTime,
+  generateSharePassword,
+  parseShareDurationMs,
+  SHARE_EXPIRATION_OPTIONS,
+  type ShareableDocument,
+  type SharedDocumentLink,
+} from '../services/documentShareService';
 
 interface ShareDocumentModalProps {
   isOpen: boolean;
@@ -15,8 +25,8 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
   onClose,
   onCreated,
 }) => {
-  const [tempoLimite, setTempoLimite] = useState(() => localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
-  const [exigirSenha, setExigirSenha] = useState(() => localStorage.getItem('cfg_share_exigir_senha_padrao') === 'true');
+  const [tempoLimite, setTempoLimite] = useState<string>(SHARE_EXPIRATION_OPTIONS[2]);
+  const [exigirSenha, setExigirSenha] = useState(false);
   const [senha, setSenha] = useState(() => DEFAULT_SHARE_PASSWORD);
   const [createdLinks, setCreatedLinks] = useState<SharedDocumentLink[]>([]);
   const [copied, setCopied] = useState(false);
@@ -41,8 +51,10 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setTempoLimite(localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
-    setExigirSenha(localStorage.getItem('cfg_share_exigir_senha_padrao') === 'true');
+    documentShareService.getConfiguracaoCompartilhamento().then((config) => {
+      setTempoLimite(config.tempoPadrao);
+      setExigirSenha(config.exigirSenhaPadrao);
+    });
     setSenha(DEFAULT_SHARE_PASSWORD);
     setCreatedLinks([]);
     setCopied(false);
@@ -77,13 +89,13 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
     const payload = createdLinks.map((link) => (
       `${link.documento}\n${link.link}${link.senha ? `\nSenha: ${link.senha}` : ''}\nDisponível por: ${link.tempoLimite}\nExpira em: ${link.dataExpiracao}`
     )).join('\n\n');
-    await navigator.clipboard.writeText(payload);
+    await copyToClipboard(payload);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
 
   const handleCopyOnlyLink = async (link: SharedDocumentLink) => {
-    await navigator.clipboard.writeText(link.link);
+    await copyToClipboard(link.link);
     setCopiedLinkId(link.id);
     window.setTimeout(() => setCopiedLinkId(null), 1800);
   };

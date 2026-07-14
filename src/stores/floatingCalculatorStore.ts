@@ -1,4 +1,5 @@
 import { DEFAULT_CALCULATOR_SIZE, type CalculatorSize } from '../components/calculators/calculatorGeometry';
+import { persistedStorage } from '../lib/persistedStorage';
 
 export type CalculatorModel = 'normal' | 'accounting' | 'tax';
 
@@ -64,7 +65,7 @@ const PREFS_STORAGE_KEY = 'contabil_calculator_prefs_'; // concatenado com userI
 
 const defaultInitialState: CalculatorState = {
   isOpen: false,
-  position: { x: 100, y: 100 }, // Posição padrão (será atualizada pelo localStorage ou centralizada na montagem)
+  position: { x: 100, y: 100 }, // Posição padrão (será atualizada pela persistência ou centralizada na montagem)
   size: DEFAULT_CALCULATOR_SIZE,
   activeModel: 'normal',
   history: [],
@@ -108,9 +109,9 @@ const defaultInitialState: CalculatorState = {
 
 let state: CalculatorState = { ...defaultInitialState };
 
-// Inicializar do localStorage
+// Inicializar da persistência compartilhada
 try {
-  const savedPos = localStorage.getItem(POSITION_STORAGE_KEY);
+  const savedPos = persistedStorage.getItem(POSITION_STORAGE_KEY);
   if (savedPos) {
     state.position = JSON.parse(savedPos);
   } else {
@@ -118,7 +119,7 @@ try {
     state.position = { x: window.innerWidth - DEFAULT_CALCULATOR_SIZE.width - 40, y: 120 };
   }
 
-  const savedSize = localStorage.getItem(SIZE_STORAGE_KEY);
+  const savedSize = persistedStorage.getItem(SIZE_STORAGE_KEY);
   if (savedSize) {
     const parsedSize = JSON.parse(savedSize);
     if (
@@ -130,12 +131,12 @@ try {
     }
   }
 
-  const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+  const savedModel = persistedStorage.getItem(MODEL_STORAGE_KEY);
   if (savedModel && ['normal', 'accounting', 'tax'].includes(savedModel)) {
     state.activeModel = savedModel as CalculatorModel;
   }
 } catch (e) {
-  console.error('Erro ao ler estado da calculadora do localStorage:', e);
+  console.error('Erro ao ler estado da calculadora persistida:', e);
 }
 
 const listeners = new Set<() => void>();
@@ -164,12 +165,12 @@ export const floatingCalculatorStore = {
   // Inicializar o modelo padrão a partir das configurações do usuário atual
   initDefaultModel(userId: string) {
     try {
-      const savedPrefs = localStorage.getItem(`${PREFS_STORAGE_KEY}${userId}`);
+      const savedPrefs = persistedStorage.getItem(`${PREFS_STORAGE_KEY}${userId}`);
       if (savedPrefs) {
         const prefs = JSON.parse(savedPrefs);
         if (prefs && prefs.defaultModel) {
           // Se não houver último modelo usado salvo, ou se for a primeira vez
-          const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+          const savedModel = persistedStorage.getItem(MODEL_STORAGE_KEY);
           if (!savedModel) {
             setState(current => ({
               ...current,
@@ -206,7 +207,7 @@ export const floatingCalculatorStore = {
 
   setPosition(pos: { x: number; y: number }) {
     try {
-      localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(pos));
+      persistedStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(pos));
     } catch (e) {
       console.error(e);
     }
@@ -218,7 +219,7 @@ export const floatingCalculatorStore = {
 
   setSize(size: CalculatorSize) {
     try {
-      localStorage.setItem(SIZE_STORAGE_KEY, JSON.stringify(size));
+      persistedStorage.setItem(SIZE_STORAGE_KEY, JSON.stringify(size));
     } catch (e) {
       console.error(e);
     }
@@ -230,7 +231,7 @@ export const floatingCalculatorStore = {
 
   setModel(model: CalculatorModel) {
     try {
-      localStorage.setItem(MODEL_STORAGE_KEY, model);
+      persistedStorage.setItem(MODEL_STORAGE_KEY, model);
     } catch (e) {
       console.error(e);
     }

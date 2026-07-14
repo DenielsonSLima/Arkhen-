@@ -15,17 +15,12 @@ export const useProtocolosRealtime = (enabled = true) => {
 
     const channel = supabase
       .channel('protocolos-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
       .subscribe();
 
-    const onLocalProtocolosChange = () => invalidate();
-    window.addEventListener('protocolos:changed', onLocalProtocolosChange);
-    window.addEventListener('storage', onLocalProtocolosChange);
-
     return () => {
-      window.removeEventListener('protocolos:changed', onLocalProtocolosChange);
-      window.removeEventListener('storage', onLocalProtocolosChange);
       supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);

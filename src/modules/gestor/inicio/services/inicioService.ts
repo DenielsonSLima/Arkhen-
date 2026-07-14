@@ -1,3 +1,5 @@
+import { persistedStorage } from '../../../../lib/persistedStorage';
+
 export interface DashboardStats {
   clientesAtivos: number;
   clientesNovos: number;
@@ -130,7 +132,7 @@ export const inicioService = {
   getVencimentosProximos(): VencimentoAlerta[] {
     const alertas: VencimentoAlerta[] = [];
     try {
-      const raw = localStorage.getItem(GESTAO_STORAGE_KEY);
+      const raw = persistedStorage.getItem(GESTAO_STORAGE_KEY);
       if (!raw) return alertas;
       const companies = JSON.parse(raw) as Array<{
         id: string;
@@ -176,4 +178,3 @@ export const inicioService = {
     return alertas.sort((a, b) => a.diasRestantes - b.diasRestantes);
   },
 };
-

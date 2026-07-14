@@ -18,19 +18,12 @@ export const useConformidadeRealtime = (enabled = true) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conformidade_obrigacoes' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
       .subscribe();
 
-    const onLocalConformidadeChange = () => invalidate();
-    window.addEventListener('conformidade:changed', onLocalConformidadeChange);
-    window.addEventListener('protocolos:changed', onLocalConformidadeChange);
-    window.addEventListener('storage', onLocalConformidadeChange);
-
     return () => {
-      window.removeEventListener('conformidade:changed', onLocalConformidadeChange);
-      window.removeEventListener('protocolos:changed', onLocalConformidadeChange);
-      window.removeEventListener('storage', onLocalConformidadeChange);
       supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);

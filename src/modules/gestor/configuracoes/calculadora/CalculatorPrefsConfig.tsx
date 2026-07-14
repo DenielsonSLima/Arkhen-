@@ -3,6 +3,7 @@ import { Save, Check } from 'lucide-react';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
 import { useFloatingCalculator } from '../../../../hooks/useFloatingCalculator';
 import type { CalculatorModel } from '../../../../stores/floatingCalculatorStore';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 
 export const CalculatorPrefsConfig: React.FC = () => {
   const { persistEnabled, setPersistEnabled } = useInternalTabs();
@@ -19,7 +20,7 @@ export const CalculatorPrefsConfig: React.FC = () => {
     setUserId(CURRENT_USER_ID);
 
     try {
-      const saved = localStorage.getItem(`${PREFS_STORAGE_KEY}${CURRENT_USER_ID}`);
+      const saved = persistedStorage.getItem(`${PREFS_STORAGE_KEY}${CURRENT_USER_ID}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.defaultModel) {
@@ -35,7 +36,7 @@ export const CalculatorPrefsConfig: React.FC = () => {
     e.preventDefault();
     try {
       // Salvar modelo padrão da calculadora para o usuário
-      localStorage.setItem(
+      persistedStorage.setItem(
         `${PREFS_STORAGE_KEY}${userId}`,
         JSON.stringify({ defaultModel })
       );

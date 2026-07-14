@@ -5,7 +5,10 @@ import { cnpjLookupService } from '../../../gestor/gestao-empresarial/services/c
 export type LoginMode = 'login' | 'signup' | 'recovery';
 
 export const useLogin = () => {
-  const [mode, setMode] = useState<LoginMode>('login');
+  const [mode, setMode] = useState<LoginMode>(() => {
+    if (window.location.pathname === '/signup') return 'signup';
+    return 'login';
+  });
   const [usuario, setUsuario] = useState(DEMO_AUTH.email);
   const [senha, setSenha] = useState(DEMO_AUTH.senha);
   const [signupNome, setSignupNome] = useState(DEMO_AUTH.nome);

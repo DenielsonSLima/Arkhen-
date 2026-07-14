@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -43,8 +43,28 @@ const periodicidadeOptions: Array<{ value: TipoFechamentoEntrega; label: string 
 export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ company }) => {
   const { openTab } = useInternalTabs();
   const catalogo = useMemo(() => protocolosService.getCatalogoPorRegime(company), [company.id, company.tipo]);
-  const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>(() => protocolosService.getEntregasEmpresaConfig(company));
+  const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+
+    protocolosService.getEntregasEmpresaConfig(company)
+      .then((nextConfigs) => {
+        if (!mounted) return;
+        setConfigs(nextConfigs);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [company.id, company.tipo]);
 
   const configById = useMemo(() => {
     const map = new Map<string, ProtocoloEmpresaConfig>();
@@ -73,8 +93,8 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     )));
   };
 
-  const handleSave = () => {
-    protocolosService.saveEntregasEmpresaConfig(company, configs);
+  const handleSave = async () => {
+    await protocolosService.saveEntregasEmpresaConfig(company, configs);
     setSaved(true);
   };
 
@@ -108,7 +128,23 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   };
 
   return (
-    <div className="tab-panel-content protocolos-config-panel">
+    <div className="tab-panel-content protocolos-config-panel" style={{ position: 'relative', opacity: isLoading ? 0.7 : 1 }}>
+      {isLoading ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            padding: '40px 0',
+            color: '#475569',
+          }}
+        >
+          <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: '2px' }} />
+          <span style={{ fontSize: '0.82rem' }}>Carregando obrigações da empresa...</span>
+        </div>
+      ) : null}
+
       <div className="protocolos-config-header">
         <div>
           <h3>Rotinas e obrigações da empresa</h3>
@@ -118,7 +154,12 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
           <button className="btn-save-protocolos" onClick={handleOpenAtividades}>
             <PlayCircle size={16} /> Abrir atividades
           </button>
-          <button className="btn-save-protocolos" onClick={handleSave} style={{ minWidth: 170 }}>
+          <button
+            className="btn-save-protocolos"
+            onClick={handleSave}
+            style={{ minWidth: 170 }}
+            disabled={isLoading}
+          >
             {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
             {saved ? 'Salvo' : 'Salvar entregas'}
           </button>
@@ -155,6 +196,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                   <label key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
                     <input
                       type="checkbox"
+                      disabled={isLoading}
                       checked={checked}
                       onChange={() => toggleEntrega(entrega.id)}
                     />
@@ -172,7 +214,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                       </span>
                       <select
                         value={config?.periodicidade ?? entrega.periodicidadePadrao}
-                        disabled={!checked}
+                        disabled={isLoading || !checked}
                         onChange={(event) => handleChangePeriodicidade(entrega.id, event.target.value as TipoFechamentoEntrega)}
                       >
                         {periodicidadeOptions.map((option) => (

@@ -1,8 +1,16 @@
 import React, { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentGridView } from '../../gestao-empresarial/components/DocumentGridView';
 import { DocumentTableView } from '../../gestao-empresarial/components/DocumentTableView';
-import { organizeDocuments, recordDocumentAccess, type DocumentGroupBy, type DocumentSortBy } from '../utils/documentOrganization';
+import {
+  initDocumentAccessMap,
+  organizeDocuments,
+  recordDocumentAccess,
+  subscribeDocumentAccess,
+  type DocumentGroupBy,
+  type DocumentSortBy,
+} from '../utils/documentOrganization';
 
 interface OrganizedDocumentListProps {
   documents: CompanyDocument[];
@@ -31,7 +39,25 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
   selectedDocIds,
   onToggleSelect,
 }) => {
-  const groups = useMemo(() => organizeDocuments(documents, groupBy, sortBy), [documents, groupBy, sortBy]);
+  const [documentAccessVersion, setDocumentAccessVersion] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    void initDocumentAccessMap().finally(() => {
+      if (mounted) setDocumentAccessVersion((current) => current + 1);
+    });
+
+    const unsubscribe = subscribeDocumentAccess(() => {
+      if (mounted) setDocumentAccessVersion((current) => current + 1);
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const groups = useMemo(() => organizeDocuments(documents, groupBy, sortBy), [documents, groupBy, sortBy, documentAccessVersion]);
 
   const handlePreview = (document: CompanyDocument) => {
     recordDocumentAccess(document.id);

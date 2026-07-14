@@ -1,3 +1,5 @@
+import { persistedStorage } from '../lib/persistedStorage';
+
 export interface InternalTabContext {
   titleSuffix?: string;
   data?: Record<string, unknown>;
@@ -30,54 +32,78 @@ let state: InternalTabsState = {
   notice: null,
 };
 
-// Carregar do localStorage se disponível
-try {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    if (parsed && typeof parsed === 'object') {
-      state.persistEnabled = parsed.persistEnabled !== false;
-      if (state.persistEnabled) {
-        const legacyIdMap = new Map<string, string>();
-        state.tabs = Array.isArray(parsed.tabs)
-          ? parsed.tabs.filter((tab: Partial<InternalTab>) => (
-              typeof tab.id === 'string'
-              && typeof tab.title === 'string'
-              && typeof tab.iconName === 'string'
-              && tab.id !== 'inicio'
-            )).map((tab: InternalTab, index: number) => {
-              const isLegacyTab = typeof tab.moduleId !== 'string';
-              const moduleId = isLegacyTab ? tab.id : tab.moduleId;
-              const id = isLegacyTab ? `${tab.id}__migrated_${index}` : tab.id;
-              if (isLegacyTab) legacyIdMap.set(tab.id, id);
-              return {
-                id,
-                moduleId,
-                baseTitle: typeof tab.baseTitle === 'string' ? tab.baseTitle : tab.title,
-                title: tab.title,
-                iconName: tab.iconName,
-                context: tab.context,
-              };
-            })
-          : [];
-        state.activeTabId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : 'inicio';
-        state.activeTabId = legacyIdMap.get(state.activeTabId) || state.activeTabId;
-        
-        // Validação de segurança: se a aba ativa não estiver aberta (e não for especial), reseta para o início
-        if (state.activeTabId !== 'inicio' && state.activeTabId.includes('__')) {
-          const exists = state.tabs.some(tab => tab.id === state.activeTabId);
-          if (!exists) {
-            state.activeTabId = 'inicio';
-          }
+const hydrateFromStorage = (raw: string | null) => {
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+
+    const nextState = { ...state };
+    nextState.persistEnabled = parsed.persistEnabled !== false;
+    if (nextState.persistEnabled) {
+      const legacyIdMap = new Map<string, string>();
+      nextState.tabs = Array.isArray(parsed.tabs)
+        ? parsed.tabs.filter((tab: Partial<InternalTab>) => (
+            typeof tab.id === 'string'
+            && typeof tab.title === 'string'
+            && typeof tab.iconName === 'string'
+            && tab.id !== 'inicio'
+          )).map((tab: InternalTab, index: number) => {
+            const isLegacyTab = typeof tab.moduleId !== 'string';
+            const moduleId = isLegacyTab ? tab.id : tab.moduleId;
+            const id = isLegacyTab ? `${tab.id}__migrated_${index}` : tab.id;
+            if (isLegacyTab) legacyIdMap.set(tab.id, id);
+            return {
+              id,
+              moduleId,
+              baseTitle: typeof tab.baseTitle === 'string' ? tab.baseTitle : tab.title,
+              title: tab.title,
+              iconName: tab.iconName,
+              context: tab.context,
+            };
+          })
+        : [];
+      nextState.activeTabId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : 'inicio';
+      nextState.activeTabId = legacyIdMap.get(nextState.activeTabId) || nextState.activeTabId;
+
+      // Validação de segurança: se a aba ativa não estiver aberta (e não for especial), reseta para o início
+      if (nextState.activeTabId !== 'inicio' && nextState.activeTabId.includes('__')) {
+        const exists = nextState.tabs.some(tab => tab.id === nextState.activeTabId);
+        if (!exists) {
+          nextState.activeTabId = 'inicio';
         }
       }
+    } else {
+      nextState.tabs = [];
+      nextState.activeTabId = 'inicio';
     }
+
+    state = nextState;
+  } catch (e) {
+    console.error('Erro ao ler estado das abas persistidas:', e);
   }
-} catch (e) {
-  console.error('Erro ao ler estado das abas do localStorage:', e);
-}
+};
 
 const listeners = new Set<() => void>();
+
+const loadFromStorage = () => {
+  hydrateFromStorage(persistedStorage.getItem(STORAGE_KEY));
+  listeners.forEach((listener) => {
+    try {
+      listener();
+    } catch {
+      // ignore
+    }
+  });
+};
+
+loadFromStorage();
+persistedStorage.subscribe((changedKey) => {
+  if (changedKey === STORAGE_KEY) {
+    loadFromStorage();
+  }
+});
 
 function notify() {
   saveState();
@@ -91,13 +117,13 @@ function setState(updater: (current: InternalTabsState) => InternalTabsState) {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    persistedStorage.setItem(STORAGE_KEY, JSON.stringify({
       tabs: state.persistEnabled ? state.tabs : [],
       activeTabId: state.activeTabId,
       persistEnabled: state.persistEnabled,
     }));
   } catch (e) {
-    console.error('Erro ao salvar estado das abas no localStorage:', e);
+    console.error('Erro ao salvar estado das abas persistidas:', e);
   }
 }
 

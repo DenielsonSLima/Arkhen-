@@ -3,12 +3,13 @@ import { CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight, Plus, Trash2 } 
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { formatDateBR, todayKey, addDaysKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 
 const getUsuarioAtual = () => {
   const fallback = 'Usuario';
   if (typeof window === 'undefined') return fallback;
   try {
-    const profileRaw = window.localStorage.getItem('gestor_user_profile');
+    const profileRaw = persistedStorage.getItem('gestor_user_profile');
     if (!profileRaw) return fallback;
     const profile = JSON.parse(profileRaw);
     return typeof profile?.nome === 'string' && profile.nome.trim().length > 0

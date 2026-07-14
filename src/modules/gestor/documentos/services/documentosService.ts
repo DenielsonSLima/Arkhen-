@@ -2,6 +2,7 @@ import { supabase } from '../../../../lib/supabase';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
 import { normalizeFolderPath, normalizeFolderPaths } from '../utils/folderPaths';
+import { documentosPreferencesService } from './documentosPreferencesService';
 
 export interface DocumentCategory {
   id: string;
@@ -84,7 +85,6 @@ const STORAGE_BUCKET = 'documentos';
 const SAMPLE_XML_BUCKET = 'amostras_xml';
 const DOCUMENT_TABLE = 'documentos';
 const DOCUMENT_CATEGORIES_TABLE = 'documentos_categorias';
-const LOCAL_STORAGE_KEY = 'contabil_gestor_meus_documentos';
 export const CORE_DOCUMENT_CATEGORY_NAMES = ['Contratos', 'Procurações', 'Certidões'];
 export const DEFAULT_DOCUMENT_CATEGORY_NAMES = [
   ...CORE_DOCUMENT_CATEGORY_NAMES,
@@ -312,21 +312,12 @@ const getEmpresaId = async () => {
   return String(data);
 };
 
-const readLocalDocumentSettings = (): MeusDocumentosData => {
-  const data = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (!data) {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SEED_MEUS_DOCUMENTOS));
-    return SEED_MEUS_DOCUMENTOS;
-  }
-
-  try {
-    const normalized = normalize(JSON.parse(data) as MeusDocumentosData);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalized));
-    return normalized;
-  } catch {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(SEED_MEUS_DOCUMENTOS));
-    return SEED_MEUS_DOCUMENTOS;
-  }
+const readMeusDocumentSettings = async (): Promise<MeusDocumentosData> => {
+  const stored = await documentosPreferencesService.getMeusDocumentosPreferences();
+  return normalize({
+    ...SEED_MEUS_DOCUMENTOS,
+    ...stored,
+  });
 };
 
 const listDocumentCategoryRows = async (clienteId: string | null): Promise<DocumentCategoryRow[]> => {
@@ -487,7 +478,7 @@ const uploadAndCreateRecord = async (
 
 export const documentosService = {
   async getMeusDocumentos(): Promise<MeusDocumentosData> {
-    const localSettings = readLocalDocumentSettings();
+    const localSettings = await readMeusDocumentSettings();
     const categorias = await listGlobalDocumentCategories();
     return {
       ...localSettings,
@@ -496,16 +487,23 @@ export const documentosService = {
   },
 
   async saveMeusDocumentos(data: MeusDocumentosData): Promise<void> {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalize(data)));
+    const normalized = normalize(data);
+    await documentosPreferencesService.saveMeusDocumentosPreferences({
+      pastas: normalized.pastas,
+      categorias: normalized.categorias,
+    });
     await saveScopedDocumentCategories(data.categorias || [], null);
   },
 
-  ensureCompanyFolder(companyName: string): void {
+  async ensureCompanyFolder(companyName: string): Promise<void> {
     const folderName = companyName.trim();
     if (!folderName) return;
-    const data = readLocalDocumentSettings();
+    const data = await readMeusDocumentSettings();
     if (data.pastas.includes(folderName)) return;
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalize({ ...data, pastas: [...data.pastas, folderName] })));
+    await this.saveMeusDocumentos(normalize({
+      ...data,
+      pastas: [...data.pastas, folderName],
+    }));
   },
 
   async listPersonalDocumentos(): Promise<CompanyDocument[]> {

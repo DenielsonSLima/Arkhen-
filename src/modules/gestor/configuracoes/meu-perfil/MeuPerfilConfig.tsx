@@ -16,6 +16,7 @@ import {
   User,
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
 
 interface UserProfile {
@@ -41,7 +42,7 @@ const DEFAULT_USER: UserProfile = {
 
 const getStoredProfile = (): UserProfile => {
   try {
-    const saved = localStorage.getItem('gestor_user_profile');
+    const saved = persistedStorage.getItem('gestor_user_profile');
     return saved ? { ...DEFAULT_USER, ...JSON.parse(saved) } : DEFAULT_USER;
   } catch (error) {
     console.error('Erro ao carregar perfil local:', error);
@@ -70,7 +71,7 @@ export const MeuPerfilConfig: React.FC = () => {
 
   const updateProfileData = (updated: UserProfile) => {
     setProfile(updated);
-    localStorage.setItem('gestor_user_profile', JSON.stringify(updated));
+    persistedStorage.setItem('gestor_user_profile', JSON.stringify(updated));
     window.dispatchEvent(new Event('profile_updated'));
   };
 

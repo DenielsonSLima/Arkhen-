@@ -9,10 +9,17 @@ type DocumentosRealtimeRow = {
   scope?: DocumentScope | null;
   cliente_id?: string | null;
 };
+type DocumentoPreferencesRow = {
+  modulo?: string | null;
+};
 
 const getDocumentosRealtimeRow = (payload: { new?: unknown; old?: unknown }): DocumentosRealtimeRow => {
   const row = (payload.new || payload.old || {}) as DocumentosRealtimeRow;
   return row;
+};
+
+const getDocumentosPreferencesRow = (payload: { new?: unknown; old?: unknown }): DocumentoPreferencesRow => {
+  return (payload.new || payload.old || {}) as DocumentoPreferencesRow;
 };
 
 export const useDocumentosRealtime = (enabled = true) => {
@@ -41,6 +48,12 @@ export const useDocumentosRealtime = (enabled = true) => {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
         invalidateDocumentosQueries(queryClient, { includeCompanies: true });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'preferencias_usuario_modulos' }, (payload) => {
+        const row = getDocumentosPreferencesRow(payload);
+        if (row?.modulo === 'documentos') {
+          invalidateDocumentosQueries(queryClient, { includeSettings: true });
+        }
       })
       .subscribe((nextStatus, nextError) => {
         if (nextStatus === 'SUBSCRIBED') {

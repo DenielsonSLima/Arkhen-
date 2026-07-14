@@ -1,4 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
+import { persistedStorage } from '../../../../../lib/persistedStorage';
 import type { XmlModelo, XmlModeloEstado, XmlModeloTipo } from '../types';
 
 interface XmlModeloRow {
@@ -100,7 +101,7 @@ export const xmlModelosService = {
 
     if (!error) return mergeWithDefaults(((data || []) as XmlModeloRow[]).map(rowToModelo));
 
-    const stored = localStorage.getItem(localKey);
+    const stored = persistedStorage.getItem(localKey);
     if (!stored) return DEFAULT_XML_MODELOS;
 
     try {
@@ -111,7 +112,7 @@ export const xmlModelosService = {
   },
 
   async save(modelos: XmlModelo[]): Promise<XmlModelo[]> {
-    localStorage.setItem(localKey, JSON.stringify(modelos));
+    persistedStorage.setItem(localKey, JSON.stringify(modelos));
 
     const { error } = await supabase
       .from('configuracoes_xml_modelos')

@@ -15,8 +15,8 @@ export const protocolosQueries = {
   update: ({ id, updates }: { id: string; updates: ProtocoloUpdate }) => (
     protocolosService.updateProtocolo(id, updates)
   ),
-  saveEntregasEmpresa: ({ empresaId, entregaIds }: { empresaId: string; entregaIds: string[] }) => {
-    protocolosService.saveEntregasEmpresa(empresaId, entregaIds);
+  saveEntregasEmpresa: async ({ empresaId, entregaIds }: { empresaId: string; entregaIds: string[] }) => {
+    await protocolosService.saveEntregasEmpresa(empresaId, entregaIds);
     return protocolosService.getProtocolos();
   },
 };

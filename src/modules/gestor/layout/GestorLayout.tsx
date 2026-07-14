@@ -61,6 +61,7 @@ import { ModuleRenderErrorBoundary } from '../components/ModuleRenderErrorBounda
 import { sidebarPreferencesService } from './services/sidebarPreferencesService';
 import { documentosService } from '../documentos/services/documentosService';
 import type { Company, CompanyDocument } from '../gestao-empresarial/services/gestaoEmpresarialService';
+import { persistedStorage } from '../../../lib/persistedStorage';
 
 import systemLogoImg from '../../../assets/camada-o.png';
 import './GestorLayout.css';
@@ -110,7 +111,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const [isReadyToDragSidebar, setIsReadyToDragSidebar] = useState(false);
   const [userProfile, setUserProfile] = useState(() => {
     try {
-      const saved = localStorage.getItem('gestor_user_profile');
+      const saved = persistedStorage.getItem('gestor_user_profile');
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -157,7 +158,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   useEffect(() => {
     const handleProfileUpdate = () => {
       try {
-        const saved = localStorage.getItem('gestor_user_profile');
+        const saved = persistedStorage.getItem('gestor_user_profile');
         if (saved) {
           try {
             setUserProfile(JSON.parse(saved));
@@ -344,7 +345,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   };
 
   const [menuOrder, setMenuOrder] = useState<string[]>(() => {
-    const saved = localStorage.getItem('arkhen_sidebar_menu_order');
+    const saved = persistedStorage.getItem('arkhen_sidebar_menu_order');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -365,7 +366,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       .then((remoteOrder) => {
         if (!mounted || !remoteOrder) return;
         setMenuOrder(remoteOrder);
-        localStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(remoteOrder));
+        persistedStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(remoteOrder));
       })
       .catch((error) => {
         console.error('Erro ao carregar ordem da sidebar:', error);
@@ -405,7 +406,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       const normalizedOrder = sidebarPreferencesService.normalizeMenuOrder(newOrder, ALL_MENU_IDS, DEFAULT_MENU_ORDER);
 
       setMenuOrder(normalizedOrder);
-      localStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(normalizedOrder));
+      persistedStorage.setItem('arkhen_sidebar_menu_order', JSON.stringify(normalizedOrder));
       void sidebarPreferencesService.saveMenuOrder(normalizedOrder, ALL_MENU_IDS, DEFAULT_MENU_ORDER).catch((error) => {
         console.error('Erro ao salvar ordem da sidebar:', error);
       });

@@ -62,7 +62,7 @@ interface ConformidadeTemplate {
   documentos: string[];
 }
 
-const STORAGE_KEY = 'contabil_conformidade_obrigacoes_v1';
+const CONFORMIDADE_TABLE = 'conformidade_obrigacoes';
 const SEED_MES_OFFSETS = [-1, 0, 1];
 
 const REFERENCE_STEPS: ConformidadeReferenceStep[] = [
@@ -74,6 +74,24 @@ const REFERENCE_STEPS: ConformidadeReferenceStep[] = [
 ];
 
 const stepIndexById = new Map<ConformidadeEtapaId, number>(REFERENCE_STEPS.map((step, index) => [step.id, index]));
+const stepIds = new Set(stepIndexById.keys());
+
+type ConformidadeProgressState = {
+  obrigacaoId: string;
+  clienteId: string;
+  etapas: ConformidadeEtapa[];
+  responsavel?: string;
+  atualizadoEm: string;
+};
+
+type ConformidadeProgressDbRow = {
+  obrigacao_id: string;
+  cliente_id: string | null;
+  etapas: unknown;
+  status: ConformidadeStatus | null;
+  responsavel: string | null;
+  atualizado_em: string | null;
+};
 
 const TEMPLATES: ConformidadeTemplate[] = [
   {
@@ -110,7 +128,7 @@ const TEMPLATES: ConformidadeTemplate[] = [
     prazoContratoDias: 3,
     impacto: 5,
     consequencia: 'Repassar atraso ao cliente, com potencial cobrança administrativa e juros.',
-    documentos: ['Ponto', 'Aditivos e recibos', 'Tabela de benefícios'],
+    documentos: ['Ponto', 'Adeditivos e recibos', 'Tabela de benefícios'],
   },
   {
     id: 'documentos-habitec',
@@ -150,72 +168,131 @@ const TEMPLATES: ConformidadeTemplate[] = [
   },
 ];
 
-const readJson = <T,>(key: string, fallback: T): T => {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
+const isMissingConformidadeTableError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  return err.code === '42P01' || String(err.message || '').includes('relation "public.conformidade_obrigacoes" does not exist');
+};
+
+const parseConformidadeEtapa = (raw: unknown): ConformidadeEtapa | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const item = raw as Record<string, unknown>;
+  const id = typeof item.id === 'string' ? item.id : '';
+  if (!stepIds.has(id as ConformidadeEtapaId)) return null;
+
+  return {
+    id: id as ConformidadeEtapaId,
+    label: REFERENCE_STEPS[stepIndexById.get(id as ConformidadeEtapaId) || 0].label,
+    concluida: Boolean(item.concluida),
+    concluidaEm: typeof item.concluidaEm === 'string' ? item.concluidaEm : undefined,
+    responsavel: typeof item.responsavel === 'string' ? item.responsavel : undefined,
+  };
+};
+
+const normalizeConformidadeEtapas = (value: unknown): ConformidadeEtapa[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((step) => parseConformidadeEtapa(step))
+    .filter((step): step is ConformidadeEtapa => !!step);
+};
+
+const parseUuid = (value: string) => {
+  if (!value || typeof value !== 'string') return null;
+  return /^[0-9a-fA-F-]{36}$/.test(value) ? value : null;
+};
+
+const loadProgressFromSupabase = async (): Promise<Map<string, ConformidadeProgressState>> => {
   try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
+    const { data, error } = await supabase
+      .from(CONFORMIDADE_TABLE)
+      .select('obrigacao_id,cliente_id,etapas,status,responsavel,atualizado_em');
+
+    if (error) {
+      if (isMissingConformidadeTableError(error)) return new Map();
+      throw error;
+    }
+
+    if (!Array.isArray(data)) return new Map();
+    const progress = new Map<string, ConformidadeProgressState>();
+    for (const row of data as unknown as ConformidadeProgressDbRow[]) {
+      if (typeof row?.obrigacao_id !== 'string' || !row.obrigacao_id) continue;
+      const etapas = normalizeConformidadeEtapas(row.etapas);
+      progress.set(row.obrigacao_id, {
+        obrigacaoId: row.obrigacao_id,
+        clienteId: row.cliente_id || '',
+        etapas,
+        responsavel: row.responsavel || undefined,
+        atualizadoEm: row.atualizado_em || new Date().toISOString(),
+      });
+    }
+    return progress;
+  } catch (error) {
+    if (isMissingConformidadeTableError(error)) return new Map();
+    console.warn('[conformidadeService] Falha ao carregar progresso da conformidade via Supabase. Seguindo sem cache remoto.', error);
+    return new Map();
   }
 };
 
-const writeJson = <T,>(key: string, value: T) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
+const loadPersistedProgress = async (): Promise<Map<string, ConformidadeProgressState>> => (
+  loadProgressFromSupabase()
+);
 
-const notifyConformidadeChanged = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('conformidade:changed'));
+const persistirProgressoObrigacao = async (obrigacao: ConformidadeObrigacao) => {
+  try {
+    const payload = {
+      empresa_id: parseUuid(obrigacao.clienteId) || obrigacao.clienteId,
+      obrigacao_id: obrigacao.id,
+      cliente_id: parseUuid(obrigacao.clienteId),
+      etapas: obrigacao.etapas,
+      status: obrigacao.status,
+      responsavel: obrigacao.responsavel,
+      atualizado_em: obrigacao.atualizadoEm,
+    };
+
+    const { error } = await supabase
+      .from(CONFORMIDADE_TABLE)
+      .upsert(payload, { onConflict: 'empresa_id,obrigacao_id' });
+
+    if (error) {
+      if (isMissingConformidadeTableError(error)) return;
+      throw error;
+    }
+  } catch (error) {
+    if (isMissingConformidadeTableError(error)) return;
+    console.error('[conformidadeService] Falha ao salvar progresso da conformidade no Supabase.', error);
   }
 };
 
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10);
-
 const toMonthKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-const clampDay = (year: number, month: number, day: number) => {
-  const maxDay = new Date(year, month + 1, 0).getDate();
-  return Math.max(1, Math.min(day, maxDay));
-};
-
-const buildDueDate = (base: Date, monthOffset: number, day: number) => {
-  const year = base.getFullYear();
-  const targetMonth = base.getMonth() + monthOffset;
-  const due = new Date(year, targetMonth, day);
-  const fixedDay = clampDay(due.getFullYear(), due.getMonth(), day);
-  due.setMonth(due.getMonth());
-  due.setDate(fixedDay);
-  return toDateInput(due);
+const diffDays = (dueDateIso: string, reference: Date = new Date()) => {
+  const due = new Date(`${dueDateIso}T00:00:00`);
+  const now = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
+  return Math.round((due.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
 };
 
 const hashSeed = (value: string) => {
-  let valueHash = 0;
-  for (const char of value) {
-    valueHash = (valueHash * 31 + char.charCodeAt(0)) % 99991;
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index);
+    hash &= hash;
   }
-  return valueHash;
+  return hash;
 };
 
-const diffDays = (targetISO: string, base: Date) => {
-  const targetDate = new Date(`${targetISO}T00:00:00`);
-  const baseDate = new Date(base.toISOString().slice(0, 10));
-  const diff = targetDate.getTime() - baseDate.getTime();
-  return Math.floor(diff / (24 * 60 * 60 * 1000));
-};
-
-const calculaPrioridade = (diasRestantes: number, impacto: ConformidadeRegraContrato['impacto']): ConformidadePrioridade => {
-  if (diasRestantes <= 1) return 'vermelho';
-  if (diasRestantes <= 3) return 'amarelo';
-  if (impacto >= 4) return 'amarelo';
+const calculaPrioridade = (diasRestantes: number, impacto: 1 | 2 | 3 | 4 | 5): ConformidadePrioridade => {
+  if (diasRestantes >= 0 && impacto <= 2) return 'verde';
+  if (diasRestantes >= -3 && impacto <= 4) return 'amarelo';
   if (impacto >= 5 && diasRestantes <= 6) return 'vermelho';
-  return 'verde';
+  if (diasRestantes < 0 && impacto >= 4) return 'vermelho';
+  return 'amarelo';
 };
 
 const calculaStatus = (etapas: ConformidadeEtapa[]): ConformidadeStatus => {
-  const concluídas = etapas.filter((etapa) => etapa.concluida).length;
-  if (concluídas === 0) return 'Pendente';
-  if (concluídas === etapas.length) return 'Concluído';
+  const concluidas = etapas.filter((etapa) => etapa.concluida).length;
+  if (concluidas === 0) return 'Pendente';
+  if (concluidas === etapas.length) return 'Concluído';
   return 'Em andamento';
 };
 
@@ -272,6 +349,13 @@ const buildObrigacao = (company: Company, template: ConformidadeTemplate, monthO
   };
 };
 
+const buildDueDate = (base: Date, monthOffset: number, day: number) => {
+  const monthDate = new Date(base.getFullYear(), base.getMonth() + monthOffset, day);
+  const correctedDay = Math.min(day, new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate());
+  monthDate.setDate(correctedDay);
+  return toDateInput(monthDate);
+};
+
 const enrichObrigacao = (raw: ConformidadeObrigacao): ConformidadeObrigacao => {
   const now = new Date();
   const diasRestantes = diffDays(raw.vencimento, now);
@@ -306,11 +390,6 @@ const enrichObrigacao = (raw: ConformidadeObrigacao): ConformidadeObrigacao => {
   };
 };
 
-const loadPersisted = (): ConformidadeObrigacao[] => {
-  const saved = readJson<ConformidadeObrigacao[]>(STORAGE_KEY, []);
-  return saved.map(enrichObrigacao);
-};
-
 const sortObrigacoes = (list: ConformidadeObrigacao[]) => {
   const priorityWeight: Record<ConformidadePrioridade, number> = { verde: 1, amarelo: 2, vermelho: 3 };
   return [...list].sort((a, b) => {
@@ -321,37 +400,53 @@ const sortObrigacoes = (list: ConformidadeObrigacao[]) => {
   });
 };
 
+const applyPersistedProgress = (
+  obrigacao: ConformidadeObrigacao,
+  progress?: ConformidadeProgressState | null,
+) => {
+  if (!progress || progress.etapas.length === 0) return obrigacao;
+  return enrichObrigacao({
+    ...obrigacao,
+    etapas: obrigacao.etapas.map((etapa) => {
+      const persisted = progress.etapas.find((item) => item.id === etapa.id);
+      if (!persisted) return etapa;
+      return {
+        ...etapa,
+        concluida: persisted.concluida,
+        concluidaEm: persisted.concluidaEm,
+        responsavel: persisted.responsavel || etapa.responsavel,
+      };
+    }),
+    atualizadoEm: progress.atualizadoEm || obrigacao.atualizadoEm,
+    responsavel: progress.responsavel || obrigacao.responsavel,
+  });
+};
+
 const loadCompanies = async () => {
   const companies = await gestaoEmpresarialService.getCompanies();
   return companies.filter((company) => company.status === 'Ativa');
 };
 
-const initializeSeed = async () => {
+const buildSeedObrigacoes = async () => {
   const companies = await loadCompanies();
   const now = new Date();
-  const existing = loadPersisted();
-  const existingIds = new Set(existing.map((item) => item.id));
-  const generated: ConformidadeObrigacao[] = [];
   const nowKey = toMonthKey(now);
+  const generated: ConformidadeObrigacao[] = [];
 
   for (const company of companies) {
     for (const template of TEMPLATES) {
       for (const offset of SEED_MES_OFFSETS) {
         const vencimento = buildDueDate(now, offset, template.diaVencimento);
-        if (toMonthKey(new Date(vencimento)) < nowKey && offset < -1) continue;
-        if (toMonthKey(new Date(vencimento)) > nowKey && offset > 1) continue;
+        const vencimentoKey = vencimento.split('-').slice(0, 2).join('-');
+        if (vencimentoKey < nowKey && offset < -1) continue;
+        if (vencimentoKey > nowKey && offset > 1) continue;
         const id = `${company.id}-${template.id}-${toMonthKey(new Date(vencimento))}`;
-        if (!existingIds.has(id)) {
-          generated.push(buildObrigacao(company, template, offset));
-          existingIds.add(id);
-        }
+        generated.push(buildObrigacao(company, template, offset));
       }
     }
   }
 
-  const merged = sortObrigacoes([...existing, ...generated]).map(enrichObrigacao);
-  writeJson(STORAGE_KEY, merged);
-  return merged;
+  return sortObrigacoes(generated);
 };
 
 const loadRpcObrigacoes = async (companyId?: string): Promise<ConformidadeObrigacao[] | null> => {
@@ -366,7 +461,18 @@ const loadRpcObrigacoes = async (companyId?: string): Promise<ConformidadeObriga
   return data.map((item) => enrichObrigacao(item as ConformidadeObrigacao));
 };
 
-const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: ConformidadeEtapaId, checked: boolean, usuario: string) => {
+const getBaseObrigacoes = async (companyId?: string) => {
+  const rpcItems = await loadRpcObrigacoes(companyId);
+  if (rpcItems && rpcItems.length > 0) return rpcItems;
+  return buildSeedObrigacoes();
+};
+
+const applyEtapaProgress = (
+  obrigacao: ConformidadeObrigacao,
+  etapaId: ConformidadeEtapaId,
+  checked: boolean,
+  usuario: string,
+) => {
   const index = stepIndexById.get(etapaId);
   if (index === undefined) return obrigacao;
 
@@ -380,12 +486,7 @@ const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: Conformid
     if (etapaIndex < index) return etapa;
     if (etapaIndex === index) {
       if (!checked) {
-        return {
-          ...etapa,
-          concluida: false,
-          concluidaEm: undefined,
-          responsavel: undefined,
-        };
+        return { ...etapa, concluida: false, concluidaEm: undefined, responsavel: undefined };
       }
 
       return {
@@ -396,7 +497,6 @@ const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: Conformid
       };
     }
 
-    // Se uma etapa anterior é desmarcada, etapas futuras também voltam para pendente.
     if (!checked) {
       return {
         ...etapa,
@@ -409,48 +509,37 @@ const applyEtapaProgress = (obrigacao: ConformidadeObrigacao, etapaId: Conformid
     return etapa;
   });
 
-  const updated: ConformidadeObrigacao = {
+  return enrichObrigacao({
     ...obrigacao,
     etapas,
     atualizadoEm: now.toISOString(),
     status: calculaStatus(etapas),
-  };
-
-  return enrichObrigacao(updated);
+  });
 };
 
 export const conformidadeService = {
   async getObrigacoes(companyId?: string) {
-    try {
-      const rpcItems = await loadRpcObrigacoes(companyId);
-      if (rpcItems && rpcItems.length > 0) {
-        return sortObrigacoes(rpcItems);
-      }
-    } catch {
-      // Mantem fallback local para ambientes sem a RPC aplicada.
-    }
-
-    const persisted = loadPersisted();
-    const items = persisted.length === 0 ? await initializeSeed() : sortObrigacoes(persisted).map(enrichObrigacao);
-    const scoped = companyId ? items.filter((item) => item.clienteId === companyId) : items;
-
-    if (persisted.length > 0) {
-      writeJson(STORAGE_KEY, items);
-    }
-
-    return scoped;
+    const persistedProgress = await loadPersistedProgress();
+    const source = await getBaseObrigacoes(companyId);
+    const merged = sortObrigacoes(source.map((item) => applyPersistedProgress(item, persistedProgress.get(item.id))));
+    return companyId ? merged.filter((item) => item.clienteId === companyId) : merged;
   },
 
   async toggleEtapa(obrigacaoId: string, etapaId: ConformidadeEtapaId, checked: boolean, responsavel: string) {
-    const all = loadPersisted();
+    let all = await getBaseObrigacoes();
+    const persistedProgress = await loadPersistedProgress();
     const next = all.map((obrigacao) => (
       obrigacao.id === obrigacaoId
-        ? applyEtapaProgress(enrichObrigacao(obrigacao), etapaId, checked, responsavel)
-        : enrichObrigacao(obrigacao)
+        ? applyEtapaProgress(applyPersistedProgress(obrigacao, persistedProgress.get(obrigacao.id)), etapaId, checked, responsavel)
+        : obrigacao
     ));
+
     const sorted = sortObrigacoes(next);
-    writeJson(STORAGE_KEY, sorted);
-    notifyConformidadeChanged();
+    const changed = next.find((item) => item.id === obrigacaoId);
+    if (changed) {
+      await persistirProgressoObrigacao(changed);
+    }
+
     return sorted;
   },
 

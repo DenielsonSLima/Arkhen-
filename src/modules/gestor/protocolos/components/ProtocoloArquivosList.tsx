@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ProtocoloEntrega, ProtocoloUpdate } from '../services/protocolosService';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 import './ProtocoloArquivosList.css';
 
 type AbaProtocolo = 'recebidos' | 'enviados' | 'pendencias' | 'historico';
@@ -42,7 +43,7 @@ const getFlowLabel = (origem: ProtocoloEntrega['origemPadrao']) => {
 
 const getCurrentUserName = () => {
   try {
-    const savedProfile = localStorage.getItem('gestor_user_profile');
+    const savedProfile = persistedStorage.getItem('gestor_user_profile');
     if (!savedProfile) return 'Administrador';
     const profile = JSON.parse(savedProfile) as { nome?: unknown };
     return typeof profile.nome === 'string' && profile.nome.trim() ? profile.nome.trim() : 'Administrador';

@@ -4,9 +4,14 @@ import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDo
 import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
 import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/useConfiguracoesRealtime';
+import { usePersistedStorageRealtime } from './modules/gestor/configuracoes/hooks/usePersistedStorageRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
 import { supabase } from './lib/supabase';
 import { loginService } from './modules/public/login/services/loginService';
+import { persistedStorage } from './lib/persistedStorage';
+import { LandingPage } from './modules/public/landing/LandingPage';
+import { DemoWebsite } from './modules/public/demowebsite/DemoWebsite';
+import { navigate } from './lib/navigation';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 
@@ -89,17 +94,36 @@ class GestorErrorBoundary extends Component<GestorErrorBoundaryProps, GestorErro
 }
 
 function App() {
-  const isSharedDocumentRoute = /^(?:\/shared|\/s)(?:\/|$)/.test(window.location.pathname);
-  const isPublicCobrancaRoute = /^\/cobranca(?:\/|$)/.test(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  const isSharedDocumentRoute = /^(?:\/shared|\/s)(?:\/|$)/.test(currentPath);
+  const isPublicCobrancaRoute = /^\/cobranca(?:\/|$)/.test(currentPath);
+  const isLoginOrSignupRoute = currentPath === '/login' || currentPath === '/signup';
+  const isDemoWebsiteRoute = currentPath === '/demo-publico';
 
   const [view, setView] = useState<'login' | 'gestor'>('login');
 
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('pushstate', handleLocationChange);
+    window.addEventListener('replacestate', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('pushstate', handleLocationChange);
+      window.removeEventListener('replacestate', handleLocationChange);
+    };
+  }, []);
+
   useConfiguracoesRealtime(view === 'gestor');
+  usePersistedStorageRealtime(view === 'gestor');
 
   const syncUserProfile = (user: any) => {
     try {
       const metadata = user.user_metadata || {};
-      const saved = localStorage.getItem('gestor_user_profile');
+      const saved = persistedStorage.getItem('gestor_user_profile');
       let localProfile: any = {};
       if (saved) {
         try {
@@ -116,7 +140,7 @@ function App() {
         googleLinked: localProfile.googleLinked || false,
         googleEmail: localProfile.googleEmail || undefined,
       };
-      localStorage.setItem('gestor_user_profile', JSON.stringify(updated));
+      persistedStorage.setItem('gestor_user_profile', JSON.stringify(updated));
       window.dispatchEvent(new Event('profile_updated'));
     } catch (error) {
       console.error('Erro ao sincronizar perfil do usuário localmente:', error);
@@ -131,10 +155,10 @@ function App() {
 
       if (error || !data.session) {
         try {
-          localStorage.removeItem('contabil_auth');
-          localStorage.removeItem('gestor_user_profile');
+          persistedStorage.removeItem('contabil_auth');
+          persistedStorage.removeItem('gestor_user_profile');
         } catch (error) {
-          console.error('Erro ao remover auth do localStorage:', error);
+          console.error('Erro ao remover auth persistido:', error);
         }
         setView('login');
         return;
@@ -147,7 +171,7 @@ function App() {
       } catch (error) {
         console.error('Erro ao finalizar cadastro autenticado:', error);
       }
-      localStorage.setItem('contabil_auth', 'gestor');
+      persistedStorage.setItem('contabil_auth', 'gestor');
       setView('gestor');
     });
 
@@ -157,13 +181,13 @@ function App() {
         void loginService.completeOnboarding({ email: session.user.email || undefined }).catch((error) => {
           console.error('Erro ao finalizar cadastro autenticado:', error);
         });
-        localStorage.setItem('contabil_auth', 'gestor');
+        persistedStorage.setItem('contabil_auth', 'gestor');
         setView('gestor');
       }
 
       if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('contabil_auth');
-        localStorage.removeItem('gestor_user_profile');
+        persistedStorage.removeItem('contabil_auth');
+        persistedStorage.removeItem('gestor_user_profile');
         setView('login');
       }
     });
@@ -182,12 +206,12 @@ function App() {
 
   const handleLoginSuccess = () => {
     internalTabsStore.resetToInicio();
-    localStorage.removeItem('contabil_internal_tabs_state');
+    persistedStorage.removeItem('contabil_internal_tabs_state');
     try {
-      localStorage.setItem('contabil_auth', 'gestor');
+      persistedStorage.setItem('contabil_auth', 'gestor');
       setView('gestor');
     } catch (error) {
-      console.error('Erro ao gravar auth no localStorage:', error);
+      console.error('Erro ao gravar auth persistido:', error);
       setView('gestor');
     }
   };
@@ -203,10 +227,10 @@ function App() {
         console.error('Erro ao realizar logout no Supabase:', error);
       } finally {
         try {
-          localStorage.removeItem('contabil_auth');
-          localStorage.removeItem('gestor_user_profile');
+          persistedStorage.removeItem('contabil_auth');
+          persistedStorage.removeItem('gestor_user_profile');
         } catch (error) {
-          console.error('Erro ao remover auth do localStorage:', error);
+          console.error('Erro ao remover auth persistido:', error);
         }
         setView('login');
       }
@@ -260,10 +284,28 @@ function App() {
     );
   }
 
-  // Apenas a tela de login do gestor está ativa no momento.
+  if (isLoginOrSignupRoute) {
+    return (
+      <div className="animate-page-fade">
+        <LoginPage 
+          onLoginSuccess={handleLoginSuccess} 
+          onBackToLanding={() => navigate('/')} 
+        />
+      </div>
+    );
+  }
+
+  if (isDemoWebsiteRoute) {
+    return (
+      <div className="animate-page-fade">
+        <DemoWebsite />
+      </div>
+    );
+  }
+
   return (
     <div className="animate-page-fade">
-      <LoginPage onLoginSuccess={handleLoginSuccess} />
+      <LandingPage />
     </div>
   );
 }

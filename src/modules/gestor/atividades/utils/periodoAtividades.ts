@@ -1,3 +1,5 @@
+import { persistedStorage } from '../../../../lib/persistedStorage';
+
 export interface PeriodTask {
   id: string;
   tarefa: string;
@@ -20,29 +22,29 @@ const parseJson = <T,>(value: string | null, fallback: T): T => {
   }
 };
 
-const canUseStorage = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const canUseStorage = () => typeof window !== 'undefined';
 
 type PeriodStore = Record<string, Record<string, PeriodTask[]>>;
 type NoteStore = Record<string, Record<string, string>>;
 
 const readPeriodTasksStore = (): PeriodStore => {
   if (!canUseStorage()) return {};
-  return parseJson(localStorage.getItem(TASK_STORAGE_KEY), {} as PeriodStore);
+  return parseJson(persistedStorage.getItem(TASK_STORAGE_KEY), {} as PeriodStore);
 };
 
 const writePeriodTasksStore = (value: PeriodStore) => {
   if (!canUseStorage()) return;
-  localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(value));
+  persistedStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(value));
 };
 
 const readPeriodNoteStore = (): NoteStore => {
   if (!canUseStorage()) return {};
-  return parseJson(localStorage.getItem(NOTE_STORAGE_KEY), {} as NoteStore);
+  return parseJson(persistedStorage.getItem(NOTE_STORAGE_KEY), {} as NoteStore);
 };
 
 const writePeriodNoteStore = (value: NoteStore) => {
   if (!canUseStorage()) return;
-  localStorage.setItem(NOTE_STORAGE_KEY, JSON.stringify(value));
+  persistedStorage.setItem(NOTE_STORAGE_KEY, JSON.stringify(value));
 };
 
 const sanitizePeriodTask = (task: unknown): PeriodTask | null => {

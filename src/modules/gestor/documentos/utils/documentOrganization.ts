@@ -1,4 +1,5 @@
 import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { documentosPreferencesService } from '../services/documentosPreferencesService';
 
 export type DocumentGroupBy = 'none' | 'type' | 'category' | 'folder' | 'company';
 export type DocumentSortBy = 'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'last-opened';
@@ -9,21 +10,90 @@ export interface DocumentGroup {
   documents: CompanyDocument[];
 }
 
-const LAST_ACCESS_KEY = 'documentos_last_access_by_doc';
+type Unsubscribe = () => void;
+let loadedDocumentAccess = false;
+let loadingDocumentAccess: Promise<Record<string, number>> | null = null;
+const documentAccessMap: Record<string, number> = {};
+const documentAccessSubscribers = new Set<() => void>();
+
+const notifyDocumentAccessChanged = () => {
+  documentAccessSubscribers.forEach((listener) => {
+    listener();
+  });
+};
 
 const getAccessMap = (): Record<string, number> => {
-  try {
-    return JSON.parse(localStorage.getItem(LAST_ACCESS_KEY) || '{}') as Record<string, number>;
-  } catch {
-    return {};
+  return { ...documentAccessMap };
+};
+
+const normalizeDocumentAccessMap = (raw: unknown): Record<string, number> => {
+  if (!raw || typeof raw !== 'object') return {};
+  const entries = Object.entries(raw as Record<string, unknown>);
+  const normalized = entries.reduce((acc, [key, value]) => {
+    if (Number.isFinite(Number(value))) {
+      acc[key] = Number(value);
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  return normalized;
+};
+
+const ensureDocumentAccessLoaded = async (): Promise<Record<string, number>> => {
+  if (loadedDocumentAccess) return getAccessMap();
+  if (loadingDocumentAccess) {
+    const loaded = await loadingDocumentAccess;
+    return loaded;
   }
+
+  loadingDocumentAccess = documentosPreferencesService
+    .getDocumentsLastOpenMap()
+    .then((result) => {
+      const normalized = normalizeDocumentAccessMap(result);
+      Object.keys(documentAccessMap).forEach((key) => {
+        delete documentAccessMap[key];
+      });
+      Object.assign(documentAccessMap, normalized);
+      loadedDocumentAccess = true;
+      return getAccessMap();
+    })
+    .finally(() => {
+      loadingDocumentAccess = null;
+      notifyDocumentAccessChanged();
+    });
+
+  return loadingDocumentAccess;
+};
+
+const saveDocumentAccessMap = async (nextMap: Record<string, number>): Promise<void> => {
+  await documentosPreferencesService.setDocumentsLastOpenMap(nextMap);
 };
 
 export const recordDocumentAccess = (documentId: string) => {
-  const accessMap = getAccessMap();
-  accessMap[documentId] = Date.now();
-  localStorage.setItem(LAST_ACCESS_KEY, JSON.stringify(accessMap));
+  if (!documentId) return;
+  void (async () => {
+    const accessMap = await ensureDocumentAccessLoaded();
+    accessMap[documentId] = Date.now();
+    Object.keys(documentAccessMap).forEach((key) => {
+      delete documentAccessMap[key];
+    });
+    Object.assign(documentAccessMap, accessMap);
+    notifyDocumentAccessChanged();
+    await saveDocumentAccessMap({ ...documentAccessMap });
+  })();
 };
+
+export const initDocumentAccessMap = async (): Promise<void> => {
+  await ensureDocumentAccessLoaded();
+};
+
+export const subscribeDocumentAccess = (listener: () => void): Unsubscribe => {
+  documentAccessSubscribers.add(listener);
+  return () => {
+    documentAccessSubscribers.delete(listener);
+  };
+};
+
+export const getDocumentAccessSnapshot = (): Record<string, number> => getAccessMap();
 
 export const getFileTypeLabel = (filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase() || '';

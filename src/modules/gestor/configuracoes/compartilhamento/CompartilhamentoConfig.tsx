@@ -1,30 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Share2, Clock, ShieldAlert, Key, Clipboard, Check, Search, User, FileText, Trash2, Sliders, ToggleLeft, ToggleRight } from 'lucide-react';
 import { SystemQuickModal } from '../../components/SystemQuickModal';
-
-interface LinkCompartilhado {
-  id: string;
-  documento: string;
-  empresa: string;
-  geradoPor: string;
-  dataGeracao: string;
-  tempoLimite: string;
-  dataExpiracao: string;
-  senha?: string;
-  link: string;
-  status: 'Ativo' | 'Expirado';
-}
-
-const TEMPOS_EXPIRACAO = [
-  '10 minutos',
-  '30 minutos',
-  '1 hora',
-  '3 horas',
-  '6 horas',
-  '12 horas',
-  '24 horas',
-  '3 dias'
-];
+import { copyToClipboard } from '../../../../lib/clipboard';
+import {
+  documentShareService,
+  getShareExpirationMinutes,
+  type SharedDocumentLink,
+  SHARE_EXPIRATION_OPTIONS,
+} from '../../documentos/services/documentShareService';
+const TEMPOS_EXPIRACAO = SHARE_EXPIRATION_OPTIONS;
 
 const DOCUMENTO_TIPOS_LIMITADOS = [
   { id: 'dre', nome: 'DRE (Demonstração do Resultado do Exercício)' },
@@ -35,34 +19,18 @@ const DOCUMENTO_TIPOS_LIMITADOS = [
   { id: 'social', nome: 'Contrato Social e Alterações' }
 ];
 
-const DEFAULT_LINKS: LinkCompartilhado[] = [];
-const DEMO_LINK_IDS = ['l1', 'l2', 'l3', 'l4'];
-
 export const CompartilhamentoConfig: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'config' | 'links'>('config');
 
   // Pre-configuration states
-  const [tempoPadrao, setTempoPadrao] = useState(() => {
-    return localStorage.getItem('cfg_share_tempo_padrao') || '3 horas';
-  });
-  const [limitarTipos, setLimitarTipos] = useState<string[]>(() => {
-    const saved = localStorage.getItem('cfg_share_limitar_tipos');
-    return saved ? JSON.parse(saved) : ['dre', 'balanco', 'social'];
-  });
-  const [exigirSenhaPadrao, setExigirSenhaPadrao] = useState(() => {
-    return localStorage.getItem('cfg_share_exigir_senha_padrao') === 'true';
-  });
-  const [prazosExigemSenha, setPrazosExigemSenha] = useState<string[]>(() => {
-    const saved = localStorage.getItem('cfg_share_prazos_exigem_senha');
-    return saved ? JSON.parse(saved) : ['12 horas', '24 horas', '3 dias'];
-  });
+  const [tempoPadrao, setTempoPadrao] = useState('3 horas');
+  const [limitarTipos, setLimitarTipos] = useState<string[]>(['dre', 'balanco', 'social']);
+  const [exigirSenhaPadrao, setExigirSenhaPadrao] = useState(false);
+  const [prazosExigemSenha, setPrazosExigemSenha] = useState<string[]>(['12 horas', '24 horas', '3 dias']);
 
   // Generated links list state
-  const [links, setLinks] = useState<LinkCompartilhado[]>(() => {
-    const saved = localStorage.getItem('cfg_share_links_gerados');
-    if (!saved) return DEFAULT_LINKS;
-    return (JSON.parse(saved) as LinkCompartilhado[]).filter((link) => !DEMO_LINK_IDS.includes(link.id));
-  });
+  const [links, setLinks] = useState<SharedDocumentLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,18 +43,29 @@ export const CompartilhamentoConfig: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [linkToDelete, setLinkToDelete] = useState<string | null>(null);
 
-  // Save Configs to localStorage
   useEffect(() => {
-    localStorage.setItem('cfg_share_tempo_padrao', tempoPadrao);
-    localStorage.setItem('cfg_share_limitar_tipos', JSON.stringify(limitarTipos));
-    localStorage.setItem('cfg_share_exigir_senha_padrao', exigirSenhaPadrao.toString());
-    localStorage.setItem('cfg_share_prazos_exigem_senha', JSON.stringify(prazosExigemSenha));
-  }, [tempoPadrao, limitarTipos, exigirSenhaPadrao, prazosExigemSenha]);
+    let mounted = true;
+    setIsLoading(true);
 
-  // Save Links to localStorage
-  useEffect(() => {
-    localStorage.setItem('cfg_share_links_gerados', JSON.stringify(links));
-  }, [links]);
+    Promise.all([
+      documentShareService.getConfiguracaoCompartilhamento(),
+      documentShareService.list(),
+    ]).then(([config, nextLinks]) => {
+      if (!mounted) return;
+      setTempoPadrao(config.tempoPadrao);
+      setLimitarTipos(config.limitarTipos);
+      setExigirSenhaPadrao(config.exigirSenhaPadrao);
+      setPrazosExigemSenha(config.prazosExigemSenha);
+      setLinks(nextLinks);
+    }).finally(() => {
+      if (!mounted) return;
+      setIsLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleToggleTipo = (tipoId: string) => {
     setLimitarTipos(prev =>
@@ -100,8 +79,8 @@ export const CompartilhamentoConfig: React.FC = () => {
     );
   };
 
-  const handleCopyLink = (id: string, url: string) => {
-    navigator.clipboard.writeText(url);
+  const handleCopyLink = async (id: string, url: string) => {
+    await copyToClipboard(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -110,15 +89,24 @@ export const CompartilhamentoConfig: React.FC = () => {
     setLinkToDelete(id);
   };
 
-  const confirmDeleteLink = () => {
+  const confirmDeleteLink = async () => {
     if (!linkToDelete) return;
-    setLinks(prev => prev.filter(l => l.id !== linkToDelete));
+    const success = await documentShareService.revoke(linkToDelete);
+    const latest = await documentShareService.list();
+    setLinks(latest);
     setLinkToDelete(null);
-    setSuccessMsg('Link de compartilhamento revogado com sucesso!');
+    setSuccessMsg(success ? 'Link de compartilhamento revogado com sucesso!' : 'Falha ao revogar link no servidor.');
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
-  const handleSaveConfigs = () => {
+  const handleSaveConfigs = async () => {
+    await documentShareService.saveConfiguracaoCompartilhamento({
+      tempoPadrao: tempoPadrao,
+      tempoPadraoMinutos: getShareExpirationMinutes(tempoPadrao),
+      limitarTipos,
+      exigirSenhaPadrao,
+      prazosExigemSenha,
+    });
     setSuccessMsg('Pré-configurações de compartilhamento salvas com sucesso!');
     setTimeout(() => setSuccessMsg(null), 3000);
   };
@@ -148,7 +136,14 @@ export const CompartilhamentoConfig: React.FC = () => {
   });
 
   return (
-    <div className="submodule-content-card animate-fade-in">
+    <div className="submodule-content-card animate-fade-in" style={{ opacity: isLoading ? 0.85 : 1 }}>
+      {isLoading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '24px 0', color: '#475569' }}>
+          <div className="loading-spinner" style={{ width: 16, height: 16, borderWidth: '2px' }} />
+          <span style={{ fontSize: '0.82rem' }}>Carregando configurações do compartilhamento...</span>
+        </div>
+      ) : null}
+
       <div className="submodule-card-header flex-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h2>Compartilhamento de Documentos externos</h2>
@@ -166,6 +161,7 @@ export const CompartilhamentoConfig: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('config')}
+            disabled={isLoading}
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
@@ -187,6 +183,7 @@ export const CompartilhamentoConfig: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('links')}
+            disabled={isLoading}
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
@@ -417,6 +414,7 @@ export const CompartilhamentoConfig: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSaveConfigs}
+                disabled={isLoading}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: 'var(--color-gold-primary)',
@@ -425,7 +423,7 @@ export const CompartilhamentoConfig: React.FC = () => {
                   fontWeight: 600,
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
                   boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
                 }}
               >

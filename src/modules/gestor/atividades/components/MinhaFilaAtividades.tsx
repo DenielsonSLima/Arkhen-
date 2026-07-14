@@ -4,6 +4,7 @@ import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { addDaysKey, formatDateBR, todayKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 
 export type MinhaFilaFiltro = 'hoje' | 'semana' | 'mes' | 'atrasadas' | 'internas';
 
@@ -19,7 +20,7 @@ const getUsuarioAtual = () => {
   const fallback = 'Usuario';
   if (typeof window === 'undefined') return fallback;
   try {
-    const profileRaw = window.localStorage.getItem('gestor_user_profile');
+    const profileRaw = persistedStorage.getItem('gestor_user_profile');
     if (!profileRaw) return fallback;
     const profile = JSON.parse(profileRaw);
     return typeof profile?.nome === 'string' && profile.nome.trim().length > 0 ? profile.nome : fallback;

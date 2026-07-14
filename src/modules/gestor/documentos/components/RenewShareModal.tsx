@@ -4,6 +4,7 @@ import {
   DEFAULT_SHARE_PASSWORD,
   formatShareDateTime,
   generateSharePassword,
+  documentShareService,
   parseShareDurationMs,
   SHARE_EXPIRATION_OPTIONS,
 } from '../services/documentShareService';
@@ -29,7 +30,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
   onRenew,
   isRenewing = false,
 }) => {
-  const [tempoLimite, setTempoLimite] = useState(() => localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
+  const [tempoLimite, setTempoLimite] = useState(() => SHARE_EXPIRATION_OPTIONS[2]);
   const [exigirSenha, setExigirSenha] = useState(() => Boolean(senhaAtual || senhaHashAtual));
   const [senha, setSenha] = useState(() => senhaAtual || DEFAULT_SHARE_PASSWORD);
 
@@ -39,9 +40,15 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setTempoLimite(localStorage.getItem('cfg_share_tempo_padrao') || '3 horas');
     setExigirSenha(Boolean(senhaAtual || senhaHashAtual));
     setSenha(senhaAtual || DEFAULT_SHARE_PASSWORD);
+
+    documentShareService.getConfiguracaoCompartilhamento().then((config) => {
+      setTempoLimite(config.tempoPadrao);
+      if (!senhaAtual && !senhaHashAtual) {
+        setExigirSenha(config.exigirSenhaPadrao);
+      }
+    });
   }, [isOpen, senhaAtual, senhaHashAtual]);
 
   if (!isOpen) return null;

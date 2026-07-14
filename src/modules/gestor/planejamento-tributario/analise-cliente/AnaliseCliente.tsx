@@ -6,6 +6,7 @@ import {
   formatPercent,
   rpc_gerarDiagnosticoTributario,
 } from '../services/planejamento.service';
+import { persistedStorage } from '../../../../lib/persistedStorage';
 import {
   AlertTriangle,
   Building2,
@@ -47,7 +48,7 @@ export const AnaliseCliente: React.FC<Props> = ({
   );
 
   const handleSalvarAnalise = () => {
-    localStorage.setItem(`analise-tributaria-${clienteSelecionado.id}`, JSON.stringify({
+    persistedStorage.setItem(`analise-tributaria-${clienteSelecionado.id}`, JSON.stringify({
       clienteId: clienteSelecionado.id,
       clienteNome: clienteSelecionado.nome,
       diagnostico,

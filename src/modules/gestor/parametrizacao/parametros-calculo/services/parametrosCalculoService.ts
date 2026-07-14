@@ -1,3 +1,5 @@
+import { persistedStorage } from '../../../../../lib/persistedStorage';
+
 export interface TipoRescisaoParametro {
   id: string;
   label: string;
@@ -174,31 +176,31 @@ function emitUpdate() {
 
 export const parametrosCalculoService = {
   async getParametros(): Promise<ParametrosCalculo> {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = persistedStorage.getItem(STORAGE_KEY);
     if (data) {
       try {
         const normalized = normalizeParametros(JSON.parse(data) as Partial<ParametrosCalculo>);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        persistedStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
       } catch {
         return DEFAULT_PARAMETROS_CALCULO;
       }
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PARAMETROS_CALCULO));
+    persistedStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PARAMETROS_CALCULO));
     return DEFAULT_PARAMETROS_CALCULO;
   },
 
   async saveParametros(parametros: ParametrosCalculo): Promise<ParametrosCalculo> {
     const normalized = normalizeParametros(parametros);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    persistedStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
     emitUpdate();
     await new Promise((resolve) => setTimeout(resolve, 250));
     return normalized;
   },
 
   async resetParametros(): Promise<ParametrosCalculo> {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PARAMETROS_CALCULO));
+    persistedStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PARAMETROS_CALCULO));
     emitUpdate();
     await new Promise((resolve) => setTimeout(resolve, 250));
     return DEFAULT_PARAMETROS_CALCULO;
