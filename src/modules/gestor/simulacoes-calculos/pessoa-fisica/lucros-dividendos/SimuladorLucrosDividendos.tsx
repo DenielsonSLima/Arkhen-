@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Calculator, CircleDollarSign, ShieldCheck } from 'lucide-react';
 import { CurrencyInput } from '../../../shared/CurrencyInput';
+import { CompetenciaSelect } from '../../../shared/CompetenciaSelect';
 import { formatCurrency } from '../../services/calculos.service';
 import type { LucrosDividendosParams, ResultadoLucrosDividendos } from '../types';
 import '../PessoaFisica.css';
@@ -24,10 +25,7 @@ export const SimuladorLucrosDividendos: React.FC<Props> = ({ params, setParams, 
         <section className="pf-form-section">
           <p className="pf-section-title">Cenário</p>
           <div className="pf-field-grid">
-            <div className="calc-field">
-              <label htmlFor="dividendos-competencia">Competência</label>
-              <input id="dividendos-competencia" type="month" value={params.competencia} onChange={(event) => update('competencia', event.target.value)} />
-            </div>
+            <CompetenciaSelect id="dividendos-competencia" value={params.competencia} onChange={(value) => update('competencia', value)} />
             <div className="calc-field">
               <label htmlFor="dividendos-regime">Regime tributário</label>
               <select id="dividendos-regime" value={params.regimeTributario} onChange={(event) => update('regimeTributario', event.target.value as LucrosDividendosParams['regimeTributario'])}>

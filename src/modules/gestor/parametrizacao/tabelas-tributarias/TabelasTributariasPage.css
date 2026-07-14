@@ -10,9 +10,9 @@
 .tributarias-tabs button { border: 1px solid #dbe2ea; background: #fff; color: #64748b; padding: 7px 12px; border-radius: 999px; cursor: pointer; font-weight: 650; font-size: .76rem; }
 .tributarias-tabs button.active { border-color: #c59235; color: #8a651f; background: #fffaf0; }
 .tributarias-controls { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.tributarias-competencia { display: flex; flex-direction: column; gap: 5px; color: #64748b; font-size: .68rem; font-weight: 750; }
-.tributarias-competencia input { min-height: 36px; border: 1px solid #dbe2ea; border-radius: 8px; background: #fff; color: #0f172a; padding: 6px 9px; font: inherit; font-size: .78rem; }
-.tributarias-competencia input:focus { outline: 3px solid rgba(197, 146, 53, .14); border-color: #c59235; }
+.tributarias-competencia { color: #64748b; font-size: .68rem; font-weight: 750; }
+.tributarias-competencia select { min-height: 36px; border: 1px solid #dbe2ea; border-radius: 8px; background: #fff; color: #0f172a; padding: 6px 9px; font: inherit; font-size: .78rem; }
+.tributarias-competencia select:focus { outline: 3px solid rgba(197, 146, 53, .14); border-color: #c59235; }
 .tributarias-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
 .tributaria-card { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 15px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .tributaria-card-title { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }

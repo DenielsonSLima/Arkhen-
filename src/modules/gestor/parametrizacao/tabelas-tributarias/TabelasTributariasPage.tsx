@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BookOpenCheck, ExternalLink, History, LockKeyhole, RefreshCw } from 'lucide-react';
+import { CompetenciaSelect } from '../../shared/CompetenciaSelect';
+import { formatCompetencia } from '../../shared/dateDisplay';
 import { useTabelasTributarias } from './queries/useTabelasTributarias';
 import './TabelasTributariasPage.css';
 
@@ -54,10 +56,13 @@ export const TabelasTributariasPage: React.FC = () => {
             </button>
           ))}
         </nav>
-        <label className="tributarias-competencia" htmlFor="tributarias-competencia">
-          <span>Competência consultada</span>
-          <input id="tributarias-competencia" type="month" value={competencia} onChange={(event) => setCompetencia(event.target.value)} />
-        </label>
+        <CompetenciaSelect
+          id="tributarias-competencia"
+          className="tributarias-competencia"
+          label="Competência consultada"
+          value={competencia}
+          onChange={setCompetencia}
+        />
       </div>
 
       {query.isLoading && <div className="sub-loading">Carregando tabelas tributárias...</div>}
@@ -74,7 +79,7 @@ export const TabelasTributariasPage: React.FC = () => {
             <div className="tributaria-meta">
               <span><History size={13} /> Versão {parametro.versao}</span>
               <span>Vigência: {formatDate(parametro.vigenciaInicio)} até {formatDate(parametro.vigenciaFim)}</span>
-              {parametro.competencia && <span>Competência: {parametro.competencia}</span>}
+              {parametro.competencia && <span>Competência: {formatCompetencia(parametro.competencia)}</span>}
             </div>
 
             {parametro.faixas?.length > 0 && (

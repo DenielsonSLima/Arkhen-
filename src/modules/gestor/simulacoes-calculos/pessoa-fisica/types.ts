@@ -94,6 +94,9 @@ export interface LucrosDividendosParams {
 }
 
 export interface ResultadoLucrosDividendos {
+  regimeTributario: string;
+  aliquotaCppAplicada: number;
+  cppIncluidaNoDas: boolean;
   proLaboreBruto: number;
   inssSocio: number;
   irrfProLabore: number;
@@ -105,6 +108,15 @@ export interface ResultadoLucrosDividendos {
   liquidoTotalSocio: number;
   custoTotalEmpresa: number;
   rendimentoAnualAcumulado: number;
+  custoEmpresaProlabore: number;
+  lucroDisponivelSocio: number;
+  dividendosSimulados: number;
+  rendaAnualProjetadaInformada: number;
+  aliquotaMinimaAltaRendaIndicativa: number;
+  cenarioAtual: CenarioLucrosDividendos;
+  cenarioAlternativo: CenarioLucrosDividendos;
+  diferencaLiquidoSocio: number;
+  diferencaCustoEmpresa: number;
   lucroDisponivelComprovado: boolean;
   distribuicaoPermitida: boolean;
   alertaAltaRenda: boolean;
@@ -112,4 +124,13 @@ export interface ResultadoLucrosDividendos {
   versaoParametros: string;
   memoriaCalculo: MemoriaCalculoItem[];
   alertas: string[];
+}
+
+export interface CenarioLucrosDividendos {
+  prolabore: number;
+  inss: number;
+  irrf: number;
+  cppEmpresa: number;
+  liquidoSocioComDividendos: number;
+  custoEmpresaProlabore: number;
 }

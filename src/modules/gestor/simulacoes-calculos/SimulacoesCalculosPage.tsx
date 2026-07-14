@@ -131,6 +131,19 @@ const formatCompetencia = (value: string) => {
   return value;
 };
 
+const formatDateBr = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || '');
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value || 'Não informado';
+};
+
+const formatBoolean = (value: boolean) => value ? 'Sim' : 'Não';
+const formatInputCurrency = (value: string) => formatCurrency(parseCurrencyInputValue(value));
+
+interface PdfDetailSection {
+  title: string;
+  rows: Array<{ label: string; value: string }>;
+}
+
 const SYSTEM_NAME = 'Arkhen Gestão Contábil';
 
 const formatGeneratedDateTime = (date: Date) => (
@@ -164,6 +177,24 @@ const encodeBase64Utf8 = (value: string) => {
   return btoa(binary);
 };
 
+const wrapPdfLine = (value: string, maxLength = 88) => {
+  const words = normalizePdfText(value).split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const wrapped: string[] = [];
+  let current = '';
+  words.forEach((word) => {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxLength) {
+      current = candidate;
+      return;
+    }
+    if (current) wrapped.push(current);
+    current = word;
+  });
+  if (current) wrapped.push(current);
+  return wrapped;
+};
+
 const getShareExpiryDate = (value: string, start: Date) => {
   const durations: Record<string, number> = {
     '15m': 15 * 60 * 1000,
@@ -187,18 +218,28 @@ const formatShareExpiryLabel = (value: string) => {
 };
 
 const buildSimplePdfDataUrl = (lines: string[]) => {
-  const safeLines = lines.map((line) => escapePdfText(line)).slice(0, 44);
-  const textCommands = safeLines.map((line, index) => (
-    index === 0 ? `(${line}) Tj` : `T* (${line}) Tj`
-  )).join('\n');
-  const stream = `BT\n/F1 10 Tf\n50 790 Td\n14 TL\n${textCommands}\nET`;
+  const wrappedLines = lines.flatMap((line) => wrapPdfLine(line));
+  const pages = Array.from({ length: Math.max(1, Math.ceil(wrappedLines.length / 44)) }, (_, index) => (
+    wrappedLines.slice(index * 44, (index + 1) * 44).map((line) => escapePdfText(line))
+  ));
+  const pageIds = pages.map((_, index) => 4 + (index * 2));
   const objects = [
     '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
-    '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    `5 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+    `2 0 obj\n<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>\nendobj\n`,
+    '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
   ];
+  pages.forEach((pageLines, index) => {
+    const pageId = pageIds[index];
+    const contentId = pageId + 1;
+    const textCommands = pageLines.map((line, lineIndex) => (
+      lineIndex === 0 ? `(${line}) Tj` : `T* (${line}) Tj`
+    )).join('\n');
+    const stream = `BT\n/F1 9 Tf\n45 797 Td\n16 TL\n${textCommands}\nET`;
+    objects.push(
+      `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`,
+      `${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+    );
+  });
   let pdf = '%PDF-1.4\n';
   const offsets = [0];
   objects.forEach((object) => {
@@ -390,6 +431,271 @@ export const SimulacoesCalculosPage: React.FC = () => {
     }
   };
 
+  const getAdvancedPdfSections = (): PdfDetailSection[] => {
+    const alertRows = (items: string[]) => items.map((item, index) => ({ label: `Alerta ${index + 1}`, value: item }));
+
+    switch (abaAtiva as AbaCalculo) {
+      case 'carne-leao':
+        if (!resultadoCarneLeao) return [];
+        return [
+          {
+            title: 'Dados informados',
+            rows: [
+              { label: 'Competência', value: formatCompetencia(carneLeaoParams.competencia) },
+              { label: 'Tipo de atividade', value: carneLeaoParams.tipoAtividade === 'autonomo' ? 'Trabalho autônomo' : carneLeaoParams.tipoAtividade },
+              { label: 'Rendimentos de pessoa física', value: formatInputCurrency(carneLeaoParams.rendimentosPessoaFisica) },
+              { label: 'Rendimentos do exterior', value: formatInputCurrency(carneLeaoParams.rendimentosExterior) },
+              { label: 'Aluguéis', value: formatInputCurrency(carneLeaoParams.alugueis) },
+              { label: 'Previdência oficial', value: formatInputCurrency(carneLeaoParams.previdenciaOficial) },
+              { label: 'Quantidade de dependentes', value: carneLeaoParams.quantidadeDependentes },
+              { label: 'Pensão alimentícia', value: formatInputCurrency(carneLeaoParams.pensaoAlimenticia) },
+              { label: 'Despesas do Livro Caixa', value: formatInputCurrency(carneLeaoParams.despesasLivroCaixa) },
+              { label: 'Excesso anterior do Livro Caixa', value: formatInputCurrency(carneLeaoParams.excessoLivroCaixaAnterior) },
+              { label: 'Imposto pago no exterior', value: formatInputCurrency(carneLeaoParams.impostoPagoExterior) },
+            ],
+          },
+          {
+            title: 'Resultado e recolhimento',
+            rows: [
+              { label: 'Rendimentos tributáveis', value: formatCurrency(resultadoCarneLeao.rendimentosTributaveis) },
+              { label: 'Deduções admitidas', value: formatCurrency(resultadoCarneLeao.deducoesAdmitidas) },
+              { label: 'Base de cálculo', value: formatCurrency(resultadoCarneLeao.baseCalculo) },
+              { label: 'Imposto pela tabela', value: formatCurrency(resultadoCarneLeao.impostoTabela) },
+              { label: 'Redução aplicada', value: formatCurrency(resultadoCarneLeao.reducaoAplicada) },
+              { label: 'DARF estimado', value: formatCurrency(resultadoCarneLeao.impostoDevido) },
+              { label: 'Código de receita', value: resultadoCarneLeao.codigoReceita },
+              { label: 'Vencimento', value: formatDateBr(resultadoCarneLeao.vencimento) },
+              { label: 'Excesso do Livro Caixa', value: formatCurrency(resultadoCarneLeao.excessoLivroCaixa) },
+            ],
+          },
+          {
+            title: 'Memória de cálculo',
+            rows: resultadoCarneLeao.memoriaCalculo.map((item) => ({
+              label: item.aliquota == null ? item.descricao : `${item.descricao} (${formatPercent(item.aliquota)})`,
+              value: `${formatCurrency(item.valor)}${item.observacao ? ` — ${item.observacao}` : ''}`,
+            })),
+          },
+          ...(resultadoCarneLeao.alertas.length ? [{ title: 'Alertas', rows: alertRows(resultadoCarneLeao.alertas) }] : []),
+          { title: 'Parâmetros utilizados', rows: [{ label: 'Versão tributária', value: resultadoCarneLeao.versaoParametros }] },
+        ];
+      case 'irpf':
+        if (!resultadoIrpf) return [];
+        return [
+          {
+            title: 'Dados informados',
+            rows: [
+              { label: 'Ano-calendário', value: irpfParams.anoCalendario },
+              { label: 'Rendimentos tributáveis', value: formatInputCurrency(irpfParams.rendimentosTributaveis) },
+              { label: 'Rendimentos isentos', value: formatInputCurrency(irpfParams.rendimentosIsentos) },
+              { label: 'Rendimentos exclusivos', value: formatInputCurrency(irpfParams.rendimentosExclusivos) },
+              { label: 'Previdência oficial', value: formatInputCurrency(irpfParams.previdenciaOficial) },
+              { label: 'Dependentes', value: irpfParams.quantidadeDependentes },
+              { label: 'Despesas com saúde', value: formatInputCurrency(irpfParams.despesasSaude) },
+              { label: 'Despesas com educação', value: formatInputCurrency(irpfParams.despesasEducacao) },
+              { label: 'Pensão alimentícia', value: formatInputCurrency(irpfParams.pensaoAlimenticia) },
+              { label: 'PGBL', value: formatInputCurrency(irpfParams.pgbl) },
+              { label: 'Livro Caixa', value: formatInputCurrency(irpfParams.livroCaixa) },
+              { label: 'IRRF pago', value: formatInputCurrency(irpfParams.irrfPago) },
+              { label: 'Carnê-Leão pago', value: formatInputCurrency(irpfParams.carneLeaoPago) },
+              { label: 'Imposto complementar', value: formatInputCurrency(irpfParams.impostoComplementarPago) },
+              { label: 'Imposto pago no exterior', value: formatInputCurrency(irpfParams.impostoPagoExterior) },
+              { label: 'Ganho de capital pago', value: formatInputCurrency(irpfParams.ganhoCapitalPago) },
+            ],
+          },
+          {
+            title: `Modelo legal${resultadoIrpf.modeloRecomendado === 'legal' ? ' — recomendado' : ''}`,
+            rows: [
+              { label: 'Deduções', value: formatCurrency(resultadoIrpf.modeloLegal.totalDeducoes) },
+              { label: 'Base de cálculo', value: formatCurrency(resultadoIrpf.modeloLegal.baseCalculo) },
+              { label: 'Imposto apurado', value: formatCurrency(resultadoIrpf.modeloLegal.impostoApurado) },
+              { label: 'Redução aplicada', value: formatCurrency(resultadoIrpf.modeloLegal.reducaoAplicada) },
+              { label: 'Imposto devido', value: formatCurrency(resultadoIrpf.modeloLegal.impostoDevido) },
+              { label: 'Imposto já pago', value: formatCurrency(resultadoIrpf.modeloLegal.impostoPago) },
+              { label: 'Saldo a pagar', value: formatCurrency(resultadoIrpf.modeloLegal.saldoPagar) },
+              { label: 'Restituição estimada', value: formatCurrency(resultadoIrpf.modeloLegal.restituicaoEstimada) },
+            ],
+          },
+          {
+            title: `Modelo simplificado${resultadoIrpf.modeloRecomendado === 'simplificado' ? ' — recomendado' : ''}`,
+            rows: [
+              { label: 'Deduções', value: formatCurrency(resultadoIrpf.modeloSimplificado.totalDeducoes) },
+              { label: 'Base de cálculo', value: formatCurrency(resultadoIrpf.modeloSimplificado.baseCalculo) },
+              { label: 'Imposto apurado', value: formatCurrency(resultadoIrpf.modeloSimplificado.impostoApurado) },
+              { label: 'Redução aplicada', value: formatCurrency(resultadoIrpf.modeloSimplificado.reducaoAplicada) },
+              { label: 'Imposto devido', value: formatCurrency(resultadoIrpf.modeloSimplificado.impostoDevido) },
+              { label: 'Imposto já pago', value: formatCurrency(resultadoIrpf.modeloSimplificado.impostoPago) },
+              { label: 'Saldo a pagar', value: formatCurrency(resultadoIrpf.modeloSimplificado.saldoPagar) },
+              { label: 'Restituição estimada', value: formatCurrency(resultadoIrpf.modeloSimplificado.restituicaoEstimada) },
+            ],
+          },
+          { title: 'Memória de cálculo', rows: resultadoIrpf.memoriaCalculo.map((item) => ({ label: item.descricao, value: formatCurrency(item.valor) })) },
+          ...(resultadoIrpf.pendenciasDocumentais.length ? [{ title: 'Pendências documentais', rows: resultadoIrpf.pendenciasDocumentais.map((item, index) => ({ label: `Documento ${index + 1}`, value: item })) }] : []),
+          ...(resultadoIrpf.alertas.length ? [{ title: 'Alertas', rows: alertRows(resultadoIrpf.alertas) }] : []),
+          { title: 'Parâmetros utilizados', rows: [{ label: 'Exercício', value: resultadoIrpf.exercicio }, { label: 'Versão tributária', value: resultadoIrpf.versaoParametros }] },
+        ];
+      case 'lucros-dividendos':
+        if (!resultadoLucrosDividendos) return [];
+        return [
+          {
+            title: 'Dados informados',
+            rows: [
+              { label: 'Competência', value: formatCompetencia(lucrosDividendosParams.competencia) },
+              { label: 'Regime tributário', value: lucrosDividendosParams.regimeTributario.replaceAll('_', ' ') },
+              { label: 'CPP informada', value: `${lucrosDividendosParams.aliquotaCpp || '0'}%` },
+              { label: 'Pró-labore atual', value: formatInputCurrency(lucrosDividendosParams.proLabore) },
+              { label: 'Pró-labore alternativo', value: formatInputCurrency(lucrosDividendosParams.proLaboreAlternativo) },
+              { label: 'Pró-labore acumulado', value: formatInputCurrency(lucrosDividendosParams.proLaboreAcumuladoAno) },
+              { label: 'Lucro disponível comprovado', value: formatInputCurrency(lucrosDividendosParams.lucroDisponivelComprovado) },
+              { label: 'Escrituração comprobatória', value: formatBoolean(lucrosDividendosParams.lucroContabilComprovado) },
+              { label: 'Dividendos no mês', value: formatInputCurrency(lucrosDividendosParams.dividendosNoMes) },
+              { label: 'Dividendos acumulados', value: formatInputCurrency(lucrosDividendosParams.dividendosAcumuladosAno) },
+              { label: 'Outros rendimentos', value: formatInputCurrency(lucrosDividendosParams.outrosRendimentosAno) },
+              { label: 'Participação societária', value: `${lucrosDividendosParams.participacaoSocietaria}%` },
+            ],
+          },
+          {
+            title: 'Resultado do cenário',
+            rows: [
+              { label: 'Pró-labore bruto', value: formatCurrency(resultadoLucrosDividendos.proLaboreBruto) },
+              { label: 'INSS do sócio', value: formatCurrency(resultadoLucrosDividendos.inssSocio) },
+              { label: 'IRRF do pró-labore', value: formatCurrency(resultadoLucrosDividendos.irrfProLabore) },
+              { label: 'CPP da empresa', value: formatCurrency(resultadoLucrosDividendos.cppEmpresa) },
+              { label: 'Pró-labore líquido', value: formatCurrency(resultadoLucrosDividendos.proLaboreLiquido) },
+              { label: 'Dividendos brutos', value: formatCurrency(resultadoLucrosDividendos.dividendosBrutos) },
+              { label: 'Retenção sobre dividendos', value: formatCurrency(resultadoLucrosDividendos.retencaoDividendos) },
+              { label: 'Dividendos líquidos', value: formatCurrency(resultadoLucrosDividendos.dividendosLiquidos) },
+              { label: 'Líquido total do sócio', value: formatCurrency(resultadoLucrosDividendos.liquidoTotalSocio) },
+              { label: 'Custo total da empresa', value: formatCurrency(resultadoLucrosDividendos.custoTotalEmpresa) },
+              { label: 'Rendimento anual acumulado', value: formatCurrency(resultadoLucrosDividendos.rendimentoAnualAcumulado) },
+              { label: 'Alíquota mínima de alta renda', value: formatPercent(resultadoLucrosDividendos.aliquotaMinimaAltaRendaIndicativa) },
+              { label: 'Alerta de alta renda', value: resultadoLucrosDividendos.mensagemAltaRenda },
+              { label: 'Distribuição permitida', value: formatBoolean(resultadoLucrosDividendos.distribuicaoPermitida) },
+            ],
+          },
+          {
+            title: 'Comparativo de pró-labore',
+            rows: [
+              { label: 'Líquido do sócio - cenário atual', value: formatCurrency(resultadoLucrosDividendos.cenarioAtual.liquidoSocioComDividendos) },
+              { label: 'Custo da empresa - cenário atual', value: formatCurrency(resultadoLucrosDividendos.cenarioAtual.custoEmpresaProlabore) },
+              { label: 'Líquido do sócio - cenário alternativo', value: formatCurrency(resultadoLucrosDividendos.cenarioAlternativo.liquidoSocioComDividendos) },
+              { label: 'Custo da empresa - cenário alternativo', value: formatCurrency(resultadoLucrosDividendos.cenarioAlternativo.custoEmpresaProlabore) },
+              { label: 'Diferença no líquido do sócio', value: formatCurrency(resultadoLucrosDividendos.diferencaLiquidoSocio) },
+              { label: 'Diferença no custo da empresa', value: formatCurrency(resultadoLucrosDividendos.diferencaCustoEmpresa) },
+            ],
+          },
+          { title: 'Memória de cálculo', rows: resultadoLucrosDividendos.memoriaCalculo.map((item) => ({ label: item.descricao, value: formatCurrency(item.valor) })) },
+          ...(resultadoLucrosDividendos.alertas.length ? [{ title: 'Alertas', rows: alertRows(resultadoLucrosDividendos.alertas) }] : []),
+          { title: 'Parâmetros utilizados', rows: [{ label: 'Versão tributária', value: resultadoLucrosDividendos.versaoParametros }] },
+        ];
+      case 'ganho-capital':
+        if (!resultadoGanhoCapital) return [];
+        return [
+          {
+            title: 'Dados informados',
+            rows: [
+              { label: 'Tipo de bem', value: ganhoCapitalParams.tipoBem.replaceAll('_', ' ') },
+              { label: 'Data de aquisição', value: formatDateBr(ganhoCapitalParams.dataAquisicao) },
+              { label: 'Custo de aquisição', value: formatInputCurrency(ganhoCapitalParams.custoAquisicao) },
+              { label: 'Benfeitorias', value: formatInputCurrency(ganhoCapitalParams.benfeitorias) },
+              { label: 'Valor de venda', value: formatInputCurrency(ganhoCapitalParams.valorVenda) },
+              { label: 'Despesas de alienação', value: formatInputCurrency(ganhoCapitalParams.despesasAlienacao) },
+              { label: 'Data da venda', value: formatDateBr(ganhoCapitalParams.dataVenda) },
+              { label: 'Participação', value: `${ganhoCapitalParams.percentualParticipacao}%` },
+              { label: 'Único imóvel até R$ 440 mil', value: formatBoolean(ganhoCapitalParams.unicoImovelAte440Mil) },
+              { label: 'Sem outra alienação em 5 anos', value: formatBoolean(ganhoCapitalParams.semOutraAlienacaoImovel5Anos) },
+              { label: 'Total de alienações no mês', value: formatInputCurrency(ganhoCapitalParams.totalAlienacoesMesMesmaNatureza) },
+              { label: 'Reinvestimento residencial em 180 dias', value: formatBoolean(ganhoCapitalParams.reinvestimentoImovel180Dias) },
+              { label: 'Data do reinvestimento', value: formatDateBr(ganhoCapitalParams.dataReinvestimento) },
+              { label: 'Valor reinvestido', value: formatInputCurrency(ganhoCapitalParams.valorReinvestido) },
+              { label: 'Venda parcelada', value: formatBoolean(ganhoCapitalParams.vendaParcelada) },
+            ],
+          },
+          ...(ganhoCapitalParams.cronogramaParcelas.length ? [{
+            title: 'Cronograma informado',
+            rows: ganhoCapitalParams.cronogramaParcelas.map((item, index) => ({ label: `Parcela ${index + 1} - ${formatDateBr(item.data)}`, value: formatInputCurrency(item.valor) })),
+          }] : []),
+          {
+            title: 'Resultado da apuração',
+            rows: [
+              { label: 'Custo ajustado', value: formatCurrency(resultadoGanhoCapital.custoAjustado) },
+              { label: 'Ganho bruto', value: formatCurrency(resultadoGanhoCapital.ganhoBruto) },
+              { label: 'Parcela isenta', value: formatCurrency(resultadoGanhoCapital.valorIsento) },
+              { label: 'Base de cálculo', value: formatCurrency(resultadoGanhoCapital.baseCalculo) },
+              { label: 'Alíquota marginal', value: formatPercent(resultadoGanhoCapital.aliquotaMarginal) },
+              { label: 'Alíquota efetiva', value: formatPercent(resultadoGanhoCapital.aliquotaEfetiva) },
+              { label: 'Imposto estimado', value: formatCurrency(resultadoGanhoCapital.impostoEstimado) },
+              { label: 'Código DARF', value: resultadoGanhoCapital.codigoDarf },
+              { label: 'Vencimento estimado', value: formatDateBr(resultadoGanhoCapital.vencimento) },
+              { label: 'Operação isenta', value: formatBoolean(resultadoGanhoCapital.isento) },
+              { label: 'Reinvestimento aplicado', value: formatBoolean(resultadoGanhoCapital.reinvestimento180DiasAplicado) },
+              { label: 'Tratamento da isenção', value: resultadoGanhoCapital.isencaoDescricao },
+            ],
+          },
+          { title: 'Memória de cálculo', rows: resultadoGanhoCapital.memoriaCalculo.map((item) => ({ label: item.descricao, value: item.valor })) },
+          ...(resultadoGanhoCapital.parcelas.length ? [{ title: 'Parcelas', rows: resultadoGanhoCapital.parcelas.map((item) => ({ label: `${item.numero}ª — ${formatDateBr(item.vencimento)}`, value: `${formatCurrency(item.valorRecebido)} / imposto ${formatCurrency(item.impostoEstimado)}` })) }] : []),
+          ...(resultadoGanhoCapital.alertas.length ? [{ title: 'Alertas', rows: alertRows(resultadoGanhoCapital.alertas) }] : []),
+          { title: 'Parâmetros utilizados', rows: [{ label: 'Competência', value: formatCompetencia(resultadoGanhoCapital.competenciaParametros.slice(0, 7)) }, { label: 'Versão tributária', value: resultadoGanhoCapital.versaoParametros }] },
+        ];
+      case 'mei':
+        if (!resultadoMei) return [];
+        return [
+          {
+            title: 'Enquadramento informado',
+            rows: [
+              { label: 'Competência', value: formatCompetencia(meiParams.competencia) },
+              { label: 'Data de abertura', value: formatDateBr(meiParams.dataAbertura) },
+              { label: 'Tipo', value: meiParams.tipoMei === 'caminhoneiro' ? 'MEI Caminhoneiro' : 'MEI' },
+              { label: 'Atividade para o DAS', value: meiParams.atividade.replaceAll('_', ' e ') },
+              { label: 'CNAE', value: meiParams.ocupacaoCodigo || 'Não selecionado' },
+              { label: 'CNAE confirmado no catálogo', value: formatBoolean(resultadoMei.ocupacaoConfirmada) },
+              { label: 'Quantidade de empregados', value: meiParams.quantidadeEmpregados },
+              { label: 'Possui sócio', value: formatBoolean(meiParams.possuiSocio) },
+              { label: 'Possui filial', value: formatBoolean(meiParams.possuiFilial) },
+            ],
+          },
+          {
+            title: 'Receitas mensais',
+            rows: Object.entries(meiParams.receitasMensais).map(([mes, valor]) => ({
+              label: mes === 'marco' ? 'Março' : `${mes.charAt(0).toUpperCase()}${mes.slice(1)}`,
+              value: formatInputCurrency(valor),
+            })),
+          },
+          {
+            title: 'Projeção e permanência',
+            rows: [
+              { label: 'Limite anual', value: formatCurrency(resultadoMei.limiteAnual) },
+              { label: 'Limite proporcional', value: formatCurrency(resultadoMei.limiteProporcional) },
+              { label: 'Receita acumulada', value: formatCurrency(resultadoMei.receitaAcumulada) },
+              { label: 'Receita projetada', value: formatCurrency(resultadoMei.receitaProjetada) },
+              { label: 'Percentual utilizado', value: formatPercent(resultadoMei.percentualUtilizado) },
+              { label: 'Faixa de risco', value: resultadoMei.faixaRiscoDescricao },
+              { label: 'Excesso apurado', value: formatCurrency(resultadoMei.valorExcesso) },
+              { label: 'Receita do mês', value: formatCurrency(resultadoMei.faturamentoMes) },
+              { label: 'Meses no acumulado', value: String(resultadoMei.mesesConsideradosAcumulado) },
+              { label: 'Meses usados no limite', value: String(resultadoMei.mesesConsideradosLimite) },
+              { label: 'DAS mensal estimado', value: formatCurrency(resultadoMei.dasMensalEstimado) },
+              { label: 'Status técnico', value: resultadoMei.status.replaceAll('_', ' ') },
+              { label: 'Possível efeito', value: resultadoMei.desenquadramentoDescricao },
+            ],
+          },
+          { title: 'Memória de cálculo', rows: resultadoMei.memoriaCalculo.map((item) => ({ label: item.descricao, value: item.valor })) },
+          ...(resultadoMei.alertas.length ? [{ title: 'Alertas', rows: alertRows(resultadoMei.alertas) }] : []),
+          { title: 'Parâmetros utilizados', rows: [{ label: 'Competência', value: formatCompetencia(resultadoMei.competenciaParametros.slice(0, 7)) }, { label: 'Versão tributária', value: resultadoMei.versaoParametros }] },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const getPdfDetailLines = () => {
+    if (!abaComHistorico) return getPdfMetricLines();
+    return getAdvancedPdfSections().flatMap((section) => [
+      '',
+      section.title.toUpperCase(),
+      ...section.rows.map((row) => `${row.label}: ${row.value}`),
+    ]);
+  };
+
   const getPdfSummaryLines = (generatedAt: Date) => [
     `${SYSTEM_NAME} - ${title}`,
     `Gerado em: ${formatGeneratedDateTime(generatedAt)}`,
@@ -398,7 +704,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
     '',
     `Modulo: Simulacoes e Calculos`,
     `Calculadora: ${title}`,
-    ...getPdfMetricLines(),
+    ...getPdfDetailLines(),
     '',
     'SIMULACAO GERENCIAL',
     'Este arquivo e uma simulacao gerencial gerada pelo Arkhen Gestao Contabil.',
@@ -562,28 +868,27 @@ export const SimulacoesCalculosPage: React.FC = () => {
     }
 
     if (abaComHistorico) {
-      const metricas = getPdfMetricLines();
+      const sections = getAdvancedPdfSections();
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>
-            RESULTADO DA SIMULAÇÃO
-          </h4>
-          {metricas.length > 0 ? (
-            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <tbody>
-                {metricas.map((linha) => {
-                  const separador = linha.indexOf(':');
-                  const rotulo = separador >= 0 ? linha.slice(0, separador) : linha;
-                  const valor = separador >= 0 ? linha.slice(separador + 1).trim() : '';
-                  return (
-                    <tr key={linha} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <th style={{ padding: '9px 0', fontWeight: 600, color: '#64748b' }}>{rotulo}</th>
-                      <td style={{ padding: '9px 0', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{valor}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {sections.length > 0 ? (
+            sections.map((section) => section.rows.length > 0 && (
+              <section key={section.title} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                <h4 style={{ fontSize: '0.82rem', fontWeight: 750, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: '0 0 4px' }}>
+                  {section.title.toUpperCase()}
+                </h4>
+                <table style={{ width: '100%', fontSize: '0.7rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <tbody>
+                    {section.rows.map((row, index) => (
+                      <tr key={`${section.title}-${row.label}-${index}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <th style={{ width: '44%', padding: '6px 0', verticalAlign: 'top', fontWeight: 600, color: '#64748b' }}>{row.label}</th>
+                        <td style={{ padding: '6px 0 6px 12px', verticalAlign: 'top', textAlign: 'right', fontWeight: 650, color: '#0f172a', overflowWrap: 'anywhere' }}>{row.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ))
           ) : (
             <div style={{ background: '#fff7ed', padding: '14px', borderRadius: '8px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.78rem' }}>
               Aguarde a conclusão da simulação antes de gerar o relatório.
@@ -1368,7 +1673,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
                     color: '#94a3b8'
                   }}>
                     <span>Gerado eletronicamente por {SYSTEM_NAME} em {formatGeneratedDateTime(pdfGeneratedAt)}</span>
-                    <span style={{ fontWeight: 600, color: '#64748b' }}>Página 1 de 1</span>
+                    <span style={{ fontWeight: 600, color: '#64748b' }}>Relatório completo</span>
                   </div>
                 </div>
               </div>

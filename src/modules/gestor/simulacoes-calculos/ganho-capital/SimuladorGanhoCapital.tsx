@@ -9,6 +9,7 @@ import {
   ReceiptText,
 } from 'lucide-react';
 import { CurrencyInput } from '../../shared/CurrencyInput';
+import { formatCompetencia, formatDateBr } from '../../shared/dateDisplay';
 import { formatCurrency } from '../services/calculos.service';
 import type {
   ResultadoSimulacaoGanhoCapital,
@@ -260,7 +261,7 @@ export const SimuladorGanhoCapital: React.FC<SimuladorGanhoCapitalProps> = ({
             </div>
             <div className="ganho-capital-due">
               <CalendarClock size={17} />
-              <div><span>Vencimento estimado</span><strong>{resultado.vencimento}</strong></div>
+              <div><span>Vencimento estimado</span><strong>{formatDateBr(resultado.vencimento)}</strong></div>
             </div>
 
             <div className="ganho-capital-note">
@@ -282,7 +283,7 @@ export const SimuladorGanhoCapital: React.FC<SimuladorGanhoCapitalProps> = ({
                 <strong>Recebimento parcelado</strong>
                 {resultado.parcelas.map((parcela) => (
                   <div key={parcela.numero}>
-                    <span>{parcela.numero}ª · {parcela.vencimento}</span>
+                    <span>{parcela.numero}ª · {formatDateBr(parcela.vencimento)}</span>
                     <b>{formatCurrency(parcela.impostoEstimado)}</b>
                   </div>
                 ))}
@@ -300,7 +301,7 @@ export const SimuladorGanhoCapital: React.FC<SimuladorGanhoCapitalProps> = ({
             <div className="ganho-capital-gcap">
               Resultado preparatório. Confira a operação e faça a apuração oficial no GCAP.
             </div>
-            <small className="ganho-capital-version">Parâmetros: {resultado.competenciaParametros} · {resultado.versaoParametros}</small>
+            <small className="ganho-capital-version">Parâmetros: {formatCompetencia(resultado.competenciaParametros)} · {resultado.versaoParametros}</small>
           </>
         )}
       </section>

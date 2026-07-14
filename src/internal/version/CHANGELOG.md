@@ -1,5 +1,12 @@
 # Registro interno de versões
 
+## Beta 1.007 — 2026-07-14
+
+- O simulador do MEI agora seleciona CNAEs cadastrados na Parametrização e mantém a competência e o ano sincronizados.
+- Competências e vencimentos das novas simulações foram padronizados em português, com seleção separada de mês e ano e datas no formato brasileiro.
+- CNAEs passaram a formar um catálogo padrão classificado por MEI, regimes permitidos, anexos possíveis e fator R; escritórios podem apenas ativar ou desativar itens.
+- Os PDFs das simulações de Pessoa Física, MEI e ganho de capital agora incluem entradas, resultados, memória de cálculo, alertas e parâmetros tributários.
+
 ## Beta 1.006 — 2026-07-14
 
 - Adicionada a categoria Pessoa Física em Simulações, com Carnê-Leão/Livro Caixa, projeção de IRPF, pró-labore, lucros e dividendos e ganho de capital.
