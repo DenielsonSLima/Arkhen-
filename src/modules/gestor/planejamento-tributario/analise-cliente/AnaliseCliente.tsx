@@ -1,12 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import type { ClienteEmpresa } from '../services/planejamento.mock';
+import React, { useState } from 'react';
+import type { ClienteEmpresa } from '../services/planejamento.types';
 import {
   type ComparativoRegimes,
+  type DiagnosticoTributario,
   formatCurrency,
   formatPercent,
-  rpc_gerarDiagnosticoTributario,
 } from '../services/planejamento.service';
-import { persistedStorage } from '../../../../lib/persistedStorage';
 import {
   AlertTriangle,
   Building2,
@@ -24,6 +23,9 @@ interface Props {
   setClienteSelecionadoId: (id: string) => void;
   clienteSelecionado: ClienteEmpresa;
   analise: ComparativoRegimes;
+  diagnostico: DiagnosticoTributario;
+  salvarAnalise: (observacao?: string) => Promise<string>;
+  salvandoAnalise: boolean;
 }
 
 const BARRA_CLS: Record<string, string> = {
@@ -38,23 +40,20 @@ export const AnaliseCliente: React.FC<Props> = ({
   setClienteSelecionadoId,
   clienteSelecionado,
   analise,
+  diagnostico,
+  salvarAnalise,
+  salvandoAnalise,
 }) => {
   const [feedbackAcao, setFeedbackAcao] = useState<string | null>(null);
   const maxImposto = Math.max(...analise.resultados.map((r) => r.impostoAnual), 1);
   const isMudancaSugerida = clienteSelecionado.regimeAtual !== analise.regimeSugerido;
-  const diagnostico = useMemo(
-    () => rpc_gerarDiagnosticoTributario(clienteSelecionado, analise),
-    [clienteSelecionado, analise],
-  );
-
-  const handleSalvarAnalise = () => {
-    persistedStorage.setItem(`analise-tributaria-${clienteSelecionado.id}`, JSON.stringify({
-      clienteId: clienteSelecionado.id,
-      clienteNome: clienteSelecionado.nome,
-      diagnostico,
-      salvoEm: new Date().toISOString(),
-    }));
-    setFeedbackAcao('Análise salva neste dispositivo.');
+  const handleSalvarAnalise = async () => {
+    try {
+      await salvarAnalise(`Análise comparativa: ${diagnostico.regimeAtual} → ${diagnostico.regimeRecomendado}.`);
+      setFeedbackAcao('Análise salva no histórico do escritório.');
+    } catch (error) {
+      setFeedbackAcao(error instanceof Error ? error.message : 'Não foi possível salvar a análise.');
+    }
   };
 
   const handlePrint = (acao: string) => {
@@ -84,9 +83,9 @@ export const AnaliseCliente: React.FC<Props> = ({
             <FileText size={15} />
             Gerar PDF
           </button>
-          <button type="button" onClick={handleSalvarAnalise}>
+          <button type="button" onClick={handleSalvarAnalise} disabled={salvandoAnalise || !clienteSelecionado.id}>
             <Save size={15} />
-            Salvar análise
+            {salvandoAnalise ? 'Salvando...' : 'Salvar análise'}
           </button>
           <button type="button" onClick={() => handlePrint('Enviando análise para impressão.')}>
             <Printer size={15} />

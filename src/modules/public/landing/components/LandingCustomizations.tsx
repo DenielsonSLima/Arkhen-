@@ -29,11 +29,11 @@ export const LandingCustomizations: React.FC = () => {
               </div>
             </div>
             <p className="custom-card-desc">
-              Facilite a comunicação e a entrega de arquivos. Seus clientes contam com um portal dedicado para envio de comprovantes, documentos mensais e recebimento automático de guias tributárias, faturas e certidões com rastro digital.
+              Facilite a comunicação e a entrega de arquivos. Seus clientes podem acessar um portal dedicado para enviar comprovantes e consultar documentos disponibilizados pelo escritório.
             </p>
             <ul className="custom-card-list">
               <li>Upload rápido de comprovantes e documentos fiscais</li>
-              <li>Visualização e download de guias e tributos em tempo real</li>
+              <li>Visualização e download dos arquivos publicados pelo escritório</li>
               <li>Histórico completo de arquivos organizados por competência</li>
             </ul>
           </div>

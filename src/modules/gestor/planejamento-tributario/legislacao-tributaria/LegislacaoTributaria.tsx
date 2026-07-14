@@ -9,7 +9,7 @@ import {
   Lightbulb,
   Search,
 } from 'lucide-react';
-import type { ClienteEmpresa, FaixaSimples } from '../services/planejamento.mock';
+import type { ClienteEmpresa, FaixaSimples } from '../services/planejamento.types';
 import {
   type ConsultaEnquadramentoSimples,
   formatCurrency,

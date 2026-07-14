@@ -10,13 +10,13 @@ interface PillarItem {
 const pillars: PillarItem[] = [
   {
     icon: <ShieldCheck size={36} />,
-    label: 'Isolamento de Dados',
-    desc: 'Arquitetura Multi-Tenant ativa. Cada empresa tem seus dados e obrigações estritamente protegidos no banco de dados por RLS.',
+    label: 'Acesso por Escritório',
+    desc: 'Controles de acesso vinculam usuários ao seu escritório e separam as informações entre empresas.',
   },
   {
     icon: <Cpu size={36} />,
-    label: 'Cálculos Seguros via RPC',
-    desc: 'Todas as simulações matemáticas e cálculos contábeis são executados diretamente no servidor para evitar inconsistências no frontend.',
+    label: 'Regras Centralizadas',
+    desc: 'As simulações utilizam parâmetros mantidos pelo sistema para facilitar a revisão e a atualização das regras de cálculo.',
   },
   {
     icon: <Layers size={36} />,

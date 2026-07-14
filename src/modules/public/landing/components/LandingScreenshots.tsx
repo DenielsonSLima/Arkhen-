@@ -34,26 +34,26 @@ const slides: Slide[] = [
   {
     src: screenProtocolos,
     title: 'Protocolos e Documentos',
-    desc: 'Controle de todas as entregas por empresa, data e competência. 44 entregas monitoradas em tempo real.',
+    desc: 'Controle das entregas por empresa, data e competência, com visão do andamento da rotina.',
     featurePhrase: 'Comprove entregas e obrigações com histórico rastreável e auditado.',
   },
   {
     src: screenFaturamento,
     title: 'Faturamento e Cobranças',
     desc: 'Dashboard de NFS-e emitidas, cobranças geradas e controle de inadimplência com integração Asaas.',
-    featurePhrase: 'Automatize a cobrança de honorários de forma totalmente transparente e segura.',
+    featurePhrase: 'Organize cobranças, recebimentos e honorários em uma visão única.',
   },
   {
     src: screenDocumentos,
     title: 'Biblioteca de Documentos',
     desc: 'Armazene contratos, procurações, certidões e documentos organizados por cliente e categoria.',
-    featurePhrase: 'Acesse e compartilhe arquivos com RLS (Row Level Security) protegendo cada empresa.',
+    featurePhrase: 'Acesse e compartilhe arquivos com permissões vinculadas a cada empresa.',
   },
   {
     src: screenCompartilhar,
     title: 'Compartilhar com Senha',
     desc: 'Gere links seguros protegidos por senha temporária e prazo de expiração configurável.',
-    featurePhrase: 'Segurança absoluta no envio de arquivos sigilosos em conformidade com a LGPD.',
+    featurePhrase: 'Controle o acesso a arquivos com senha e prazo de expiração configurável.',
   },
   {
     src: screenLinkPublico,
@@ -64,8 +64,8 @@ const slides: Slide[] = [
   {
     src: screenSimulacoes,
     title: 'Calculadora de Rescisão',
-    desc: 'Simule rescisões, férias e pró-labore com precisão — todos os cálculos via RPC no servidor.',
-    featurePhrase: 'Cálculos contábeis complexos processados direto no banco de dados, sem erro.',
+    desc: 'Simule rescisões, férias e pró-labore com parâmetros centralizados no sistema.',
+    featurePhrase: 'Compare cenários e revise os resultados antes de orientar o cliente.',
   },
 ];
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { HistoricoPlanejamento } from '../services/planejamento.mock';
+import type { HistoricoPlanejamento } from '../services/planejamento.types';
 import { formatCurrency } from '../services/planejamento.service';
 import { History } from 'lucide-react';
 
