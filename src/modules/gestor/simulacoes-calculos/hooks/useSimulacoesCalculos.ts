@@ -1,21 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  rpc_calcularFolha,
-  rpc_calcularRescisao,
-  rpc_calcularProLabore,
-  rpc_calcularDAS,
-  rpc_calcularPisCofins,
-  rpc_calcularMultaJuros,
-} from '../services/calculos.service';
-import {
-  rpc_calcularFerias,
-  rpc_calcularTempoEmpresa,
-  rpc_calcularEncargosTrabalhistas,
-  rpc_calcularContratacao,
-  rpc_calcularComparativoRegime,
-  rpc_calcularSimulacaoImposto,
-  rpc_calcularCustos,
-} from '../services/calculosNovas.service';
+import { useQuery } from '@tanstack/react-query';
+import { calcularSimulacoesContabeis, EMPTY_RESULTADOS } from '../services/simulacoesRpcService';
 import { formatCurrencyInputValue, parseCurrencyInputValue } from '../../shared/currencyInputUtils';
 import { persistedStorage } from '../../../../lib/persistedStorage';
 import {
@@ -44,7 +29,7 @@ export type AvisoPrevioModo = 'cumprido' | 'descontado' | 'indenizado';
 export type AdicionalTempoServicoTipo = 'trienio' | 'quinquenio' | 'manual';
 
 export function useSimulacoesCalculos() {
-  const status = 'Em desenvolvimento';
+  const status = 'Disponível';
   const [abaAtiva, setAbaAtiva] = useState<AbaCalculo>('folha');
   const [parametrosCalculo, setParametrosCalculo] = useState<ParametrosCalculo>(DEFAULT_PARAMETROS_CALCULO);
   const [tiposEmpresa, setTiposEmpresa] = useState<{ id: string; nome: string; descricao: string; status: string }[]>([]);
@@ -150,43 +135,6 @@ export function useSimulacoesCalculos() {
     salarioComparacao: formatCurrencyInputValue(4200),
     aumentoPercentual: '8',
   });
-  const resultadoFolha = useMemo(() => rpc_calcularFolha({
-    tipoFuncionario: folhaParams.tipoFuncionario,
-    competencia: folhaParams.competencia,
-    regiao: folhaParams.regiao,
-    salarioBruto: parseCurrencyInputValue(folhaParams.salarioBruto),
-    dependentes: parseNumberInput(folhaParams.dependentes),
-    adicionalPericulosidade: parseCurrencyInputValue(folhaParams.adicionalPericulosidade),
-    adicionalNoturnoPercentual: parseNumberInput(folhaParams.adicionalNoturnoPercentual),
-    insalubridadePercentual: parseNumberInput(folhaParams.insalubridadePercentual),
-    adicionalTempoServicoAtivo: folhaParams.adicionalTempoServicoAtivo,
-    adicionalTempoServicoTipo: folhaParams.adicionalTempoServicoTipo,
-    adicionalTempoServicoAnos: parseNumberInput(folhaParams.adicionalTempoServicoAnos),
-    adicionalTempoServicoPercentual: parseNumberInput(folhaParams.adicionalTempoServicoPercentual),
-    adicionalTempoServicoValor: parseCurrencyInputValue(folhaParams.adicionalTempoServicoValor),
-    horasExtras: [
-      { quantidade: parseNumberInput(folhaParams.horasExtras50), valorHora: parseCurrencyInputValue(folhaParams.valorHora50), multiplicador: 1.5 },
-      { quantidade: parseNumberInput(folhaParams.horasExtras100), valorHora: parseCurrencyInputValue(folhaParams.valorHora100), multiplicador: 2 },
-      { quantidade: parseNumberInput(folhaParams.horasExtras150), valorHora: parseCurrencyInputValue(folhaParams.valorHora150), multiplicador: 2.5 },
-      { quantidade: parseNumberInput(folhaParams.horasExtrasDomingo), valorHora: parseCurrencyInputValue(folhaParams.valorHoraDomingo), multiplicador: 2 },
-      { quantidade: parseNumberInput(folhaParams.horasExtrasFeriado), valorHora: parseCurrencyInputValue(folhaParams.valorHoraFeriado), multiplicador: 2 },
-    ],
-    valeTransporteAtivo: folhaParams.valeTransporteAtivo,
-    valorValeTransporte: parseCurrencyInputValue(folhaParams.valorValeTransporte),
-    valeAlimentacaoEmpresa: parseCurrencyInputValue(folhaParams.valeAlimentacaoEmpresa),
-    valeAlimentacaoDesconto: parseCurrencyInputValue(folhaParams.valeAlimentacaoDesconto),
-    planoSaudeEmpresa: parseCurrencyInputValue(folhaParams.planoSaudeEmpresa),
-    planoSaudeDesconto: parseCurrencyInputValue(folhaParams.planoSaudeDesconto),
-    odontologicoEmpresa: parseCurrencyInputValue(folhaParams.odontologicoEmpresa),
-    odontologicoDesconto: parseCurrencyInputValue(folhaParams.odontologicoDesconto),
-    pensaoAlimenticia: parseCurrencyInputValue(folhaParams.pensaoAlimenticia),
-    faltasDias: parseNumberInput(folhaParams.faltasDias),
-    atestadosDias: parseNumberInput(folhaParams.atestadosDias),
-    descontoManualValor: parseCurrencyInputValue(folhaParams.descontoManualValor),
-    adicionalManualValor: parseCurrencyInputValue(folhaParams.adicionalManualValor),
-    salarioComparacao: parseCurrencyInputValue(folhaParams.salarioComparacao),
-    aumentoPercentual: parseNumberInput(folhaParams.aumentoPercentual),
-  }), [folhaParams]);
 
   // ── Rescisão ──────────────────────────────────────────
   const [rescisaoParams, setRescisaoParams] = useState({
@@ -206,30 +154,9 @@ export function useSimulacoesCalculos() {
   const tipoRescisaoSelecionado = useMemo(() => {
     return parametrosCalculo.tiposRescisao.find((tipo) => tipo.id === rescisaoParams.tipo);
   }, [parametrosCalculo.tiposRescisao, rescisaoParams.tipo]);
-  const resultadoRescisao = useMemo(() => rpc_calcularRescisao(
-    rescisaoParams.tipo,
-    parseCurrencyInputValue(rescisaoParams.salario),
-    rescisaoParams.dataAdmissao,
-    rescisaoParams.dataDemissao,
-    parseCurrencyInputValue(rescisaoParams.saldoFGTS),
-    tipoRescisaoSelecionado,
-    rescisaoParams.avisoPrevioModo,
-    parseNumberInput(rescisaoParams.feriasVencidasPeriodos),
-    rescisaoParams.feriasVencidasEmDobro,
-    {
-      ativo: rescisaoParams.adicionalTempoServicoAtivo,
-      tipo: rescisaoParams.adicionalTempoServicoTipo,
-      percentual: parseNumberInput(rescisaoParams.adicionalTempoServicoPercentual),
-      valorManual: parseCurrencyInputValue(rescisaoParams.adicionalTempoServicoValor),
-    },
-  ), [rescisaoParams, tipoRescisaoSelecionado]);
 
   // ── Pró-Labore ────────────────────────────────────────
   const [prolaboreValor, setProlaboreValor] = useState(formatCurrencyInputValue(5000));
-  const resultadoProLabore = useMemo(
-    () => rpc_calcularProLabore(parseCurrencyInputValue(prolaboreValor)),
-    [prolaboreValor],
-  );
 
   // ── DAS ───────────────────────────────────────────────
   const [dasParams, setDasParams] = useState({
@@ -237,12 +164,6 @@ export function useSimulacoesCalculos() {
     faturamento12Meses: formatCurrencyInputValue(980000),
     anexo: 'III',
   });
-  const resultadoDAS = useMemo(() => rpc_calcularDAS(
-    parseCurrencyInputValue(dasParams.faturamentoMensal),
-    parseCurrencyInputValue(dasParams.faturamento12Meses),
-    dasParams.anexo,
-    parametrosCalculo.anexosDas,
-  ), [dasParams, parametrosCalculo.anexosDas]);
 
   // ── PIS/COFINS ────────────────────────────────────────
   const [pisParams, setPisParams] = useState({
@@ -253,12 +174,6 @@ export function useSimulacoesCalculos() {
   const regimePisSelecionado = useMemo(() => {
     return parametrosCalculo.regimesPisCofins.find((regime) => regime.id === pisParams.regime);
   }, [parametrosCalculo.regimesPisCofins, pisParams.regime]);
-  const resultadoPisCofins = useMemo(() => rpc_calcularPisCofins(
-    parseCurrencyInputValue(pisParams.faturamento),
-    pisParams.regime,
-    parseCurrencyInputValue(pisParams.creditosEntrada),
-    regimePisSelecionado,
-  ), [pisParams, regimePisSelecionado]);
 
   // ── Multas ────────────────────────────────────────────
   const [multasParams, setMultasParams] = useState({
@@ -266,11 +181,6 @@ export function useSimulacoesCalculos() {
     dataVencimento: '2026-05-20',
     dataPagamento: new Date().toISOString().split('T')[0],
   });
-  const resultadoMultas = useMemo(() => rpc_calcularMultaJuros(
-    parseCurrencyInputValue(multasParams.valorOriginal),
-    multasParams.dataVencimento,
-    multasParams.dataPagamento,
-  ), [multasParams]);
 
   // ── Férias [NEW] ──────────────────────────────────────
   const [feriasParams, setFeriasParams] = useState({
@@ -280,14 +190,6 @@ export function useSimulacoesCalculos() {
     adiantamento13: false,
     dependentes: '0',
   });
-  const resultadoFerias = useMemo(() => rpc_calcularFerias({
-    salarioBruto: parseCurrencyInputValue(feriasParams.salarioBruto),
-    diasFerias: parseNumberInput(feriasParams.diasFerias),
-    abonoPecuniario: feriasParams.abonoPecuniario,
-    adiantamento13: feriasParams.adiantamento13,
-    dependentes: parseNumberInput(feriasParams.dependentes),
-    regrasGerais: parametrosCalculo.regrasGerais,
-  }), [feriasParams, parametrosCalculo.regrasGerais]);
 
   // ── Tempo Empresa [NEW] ──────────────────────────────
   const [tempoEmpresaParams, setTempoEmpresaParams] = useState({
@@ -295,12 +197,6 @@ export function useSimulacoesCalculos() {
     dataReferencia: new Date().toISOString().split('T')[0],
     salarioBase: formatCurrencyInputValue(3500),
   });
-  const resultadoTempoEmpresa = useMemo(() => rpc_calcularTempoEmpresa({
-    dataAdmissao: tempoEmpresaParams.dataAdmissao,
-    dataReferencia: tempoEmpresaParams.dataReferencia,
-    salarioBase: parseCurrencyInputValue(tempoEmpresaParams.salarioBase),
-    regrasGerais: parametrosCalculo.regrasGerais,
-  }), [tempoEmpresaParams, parametrosCalculo.regrasGerais]);
 
   // ── Encargos Trabalhistas [NEW] ──────────────────────
   const [encargosParams, setEncargosParams] = useState({
@@ -310,14 +206,6 @@ export function useSimulacoesCalculos() {
     fap: '1.0',
     terceiros: '5.8',
   });
-  const resultadoEncargos = useMemo(() => rpc_calcularEncargosTrabalhistas({
-    salarioBruto: parseCurrencyInputValue(encargosParams.salarioBruto),
-    regimeEmpresa: encargosParams.regimeEmpresa,
-    rat: parseNumberInput(encargosParams.rat),
-    fap: parseNumberInput(encargosParams.fap),
-    terceiros: parseNumberInput(encargosParams.terceiros),
-    regrasGerais: parametrosCalculo.regrasGerais,
-  }), [encargosParams, parametrosCalculo.regrasGerais]);
 
   // ── Simulação Contratação [NEW] ──────────────────────
   const [contratacaoParams, setContratacaoParams] = useState({
@@ -326,13 +214,6 @@ export function useSimulacoesCalculos() {
     valeAlimentacao: formatCurrencyInputValue(500),
     planoSaude: formatCurrencyInputValue(300),
   });
-  const resultadoContratacao = useMemo(() => rpc_calcularContratacao({
-    salarioProposto: parseCurrencyInputValue(contratacaoParams.salarioProposto),
-    valeTransporte: parseCurrencyInputValue(contratacaoParams.valeTransporte),
-    valeAlimentacao: parseCurrencyInputValue(contratacaoParams.valeAlimentacao),
-    planoSaude: parseCurrencyInputValue(contratacaoParams.planoSaude),
-    regrasGerais: parametrosCalculo.regrasGerais,
-  }), [contratacaoParams, parametrosCalculo.regrasGerais]);
 
   // ── Comparativo Regime [NEW] ─────────────────────────
   const [comparativoRegimeParams, setComparativoRegimeParams] = useState({
@@ -352,14 +233,6 @@ export function useSimulacoesCalculos() {
     return comparativoRegimeParams.naturezaJuridica || (naturezasJuridicasAtivas[0]?.nome || 'Sociedade Limitada');
   }, [comparativoRegimeParams.naturezaJuridica, naturezasJuridicasAtivas]);
 
-  const resultadoComparativoRegime = useMemo(() => rpc_calcularComparativoRegime({
-    faturamentoAnual: parseCurrencyInputValue(comparativoRegimeParams.faturamentoAnual),
-    comprasInsumosAnual: parseCurrencyInputValue(comparativoRegimeParams.comprasInsumosAnual),
-    folhaAnual: parseCurrencyInputValue(comparativoRegimeParams.folhaAnual),
-    margemLucro: parseNumberInput(comparativoRegimeParams.margemLucro),
-    tipoEmpresa: activeTipoEmpresa,
-    naturezaJuridica: activeNaturezaJuridica,
-  }), [comparativoRegimeParams, activeTipoEmpresa, activeNaturezaJuridica]);
 
   // ── Simulação Imposto [NEW] ──────────────────────────
   const [simulacaoImpostoParams, setSimulacaoImpostoParams] = useState({
@@ -367,11 +240,6 @@ export function useSimulacoesCalculos() {
     tipoAtividade: 'servico',
     aliquotaEstimada: '6.0',
   });
-  const resultadoSimulacaoImposto = useMemo(() => rpc_calcularSimulacaoImposto({
-    faturamentoMensal: parseCurrencyInputValue(simulacaoImpostoParams.faturamentoMensal),
-    tipoAtividade: simulacaoImpostoParams.tipoAtividade,
-    aliquotaEstimada: parseNumberInput(simulacaoImpostoParams.aliquotaEstimada),
-  }), [simulacaoImpostoParams]);
 
   // ── Simulação Custos [NEW] ───────────────────────────
   const [simulacaoCustosParams, setSimulacaoCustosParams] = useState({
@@ -379,14 +247,82 @@ export function useSimulacoesCalculos() {
     custosVariaveisPercentual: '15',
     markupDesejado: '20',
   });
-  const resultadoCustos = useMemo(() => rpc_calcularCustos({
-    custosFixos: parseCurrencyInputValue(simulacaoCustosParams.custosFixos),
-    custosVariaveisPercentual: parseNumberInput(simulacaoCustosParams.custosVariaveisPercentual),
-    markupDesejado: parseNumberInput(simulacaoCustosParams.markupDesejado),
-  }), [simulacaoCustosParams]);
+
+  const solicitacoes = useMemo(() => ({
+    folha: {
+      ...folhaParams,
+      salarioBruto: parseCurrencyInputValue(folhaParams.salarioBruto),
+      dependentes: parseNumberInput(folhaParams.dependentes),
+      adicionalPericulosidade: parseCurrencyInputValue(folhaParams.adicionalPericulosidade),
+      adicionalNoturnoPercentual: parseNumberInput(folhaParams.adicionalNoturnoPercentual),
+      insalubridadePercentual: parseNumberInput(folhaParams.insalubridadePercentual),
+      adicionalTempoServicoAnos: parseNumberInput(folhaParams.adicionalTempoServicoAnos),
+      adicionalTempoServicoPercentual: parseNumberInput(folhaParams.adicionalTempoServicoPercentual),
+      adicionalTempoServicoValor: parseCurrencyInputValue(folhaParams.adicionalTempoServicoValor),
+      horasExtras: [
+        { quantidade: parseNumberInput(folhaParams.horasExtras50), valorHora: parseCurrencyInputValue(folhaParams.valorHora50), multiplicador: 1.5 },
+        { quantidade: parseNumberInput(folhaParams.horasExtras100), valorHora: parseCurrencyInputValue(folhaParams.valorHora100), multiplicador: 2 },
+        { quantidade: parseNumberInput(folhaParams.horasExtras150), valorHora: parseCurrencyInputValue(folhaParams.valorHora150), multiplicador: 2.5 },
+        { quantidade: parseNumberInput(folhaParams.horasExtrasDomingo), valorHora: parseCurrencyInputValue(folhaParams.valorHoraDomingo), multiplicador: 2 },
+        { quantidade: parseNumberInput(folhaParams.horasExtrasFeriado), valorHora: parseCurrencyInputValue(folhaParams.valorHoraFeriado), multiplicador: 2 },
+      ],
+      valorValeTransporte: parseCurrencyInputValue(folhaParams.valorValeTransporte),
+      valeAlimentacaoEmpresa: parseCurrencyInputValue(folhaParams.valeAlimentacaoEmpresa),
+      valeAlimentacaoDesconto: parseCurrencyInputValue(folhaParams.valeAlimentacaoDesconto),
+      planoSaudeEmpresa: parseCurrencyInputValue(folhaParams.planoSaudeEmpresa),
+      planoSaudeDesconto: parseCurrencyInputValue(folhaParams.planoSaudeDesconto),
+      odontologicoEmpresa: parseCurrencyInputValue(folhaParams.odontologicoEmpresa),
+      odontologicoDesconto: parseCurrencyInputValue(folhaParams.odontologicoDesconto),
+      pensaoAlimenticia: parseCurrencyInputValue(folhaParams.pensaoAlimenticia),
+      faltasDias: parseNumberInput(folhaParams.faltasDias), atestadosDias: parseNumberInput(folhaParams.atestadosDias),
+      descontoManualValor: parseCurrencyInputValue(folhaParams.descontoManualValor),
+      adicionalManualValor: parseCurrencyInputValue(folhaParams.adicionalManualValor),
+    },
+    rescisao: {
+      ...rescisaoParams, salario: parseCurrencyInputValue(rescisaoParams.salario),
+      saldoFGTS: parseCurrencyInputValue(rescisaoParams.saldoFGTS),
+      feriasVencidasPeriodos: parseNumberInput(rescisaoParams.feriasVencidasPeriodos),
+      tipoParametro: tipoRescisaoSelecionado,
+      regrasGerais: parametrosCalculo.regrasGerais,
+    },
+    prolabore: { valor: parseCurrencyInputValue(prolaboreValor), regrasGerais: parametrosCalculo.regrasGerais },
+    das: { faturamentoMensal: parseCurrencyInputValue(dasParams.faturamentoMensal), faturamento12Meses: parseCurrencyInputValue(dasParams.faturamento12Meses), anexo: dasParams.anexo },
+    piscofins: { faturamento: parseCurrencyInputValue(pisParams.faturamento), regime: pisParams.regime, creditosEntrada: parseCurrencyInputValue(pisParams.creditosEntrada), regimeConfig: regimePisSelecionado },
+    multas: { valorOriginal: parseCurrencyInputValue(multasParams.valorOriginal), dataVencimento: multasParams.dataVencimento, dataPagamento: multasParams.dataPagamento },
+    ferias: { salarioBruto: parseCurrencyInputValue(feriasParams.salarioBruto), diasFerias: parseNumberInput(feriasParams.diasFerias), abonoPecuniario: feriasParams.abonoPecuniario, adiantamento13: feriasParams.adiantamento13, dependentes: parseNumberInput(feriasParams.dependentes), regrasGerais: parametrosCalculo.regrasGerais },
+    'tempo-empresa': { ...tempoEmpresaParams, salarioBase: parseCurrencyInputValue(tempoEmpresaParams.salarioBase), regrasGerais: parametrosCalculo.regrasGerais },
+    'encargos-trabalhistas': { ...encargosParams, salarioBruto: parseCurrencyInputValue(encargosParams.salarioBruto), rat: parseNumberInput(encargosParams.rat), fap: parseNumberInput(encargosParams.fap), terceiros: parseNumberInput(encargosParams.terceiros), regrasGerais: parametrosCalculo.regrasGerais },
+    'simulacao-contratacao': { salarioProposto: parseCurrencyInputValue(contratacaoParams.salarioProposto), valeTransporte: parseCurrencyInputValue(contratacaoParams.valeTransporte), valeAlimentacao: parseCurrencyInputValue(contratacaoParams.valeAlimentacao), planoSaude: parseCurrencyInputValue(contratacaoParams.planoSaude), regrasGerais: parametrosCalculo.regrasGerais },
+    'comparativo-regime': { faturamentoAnual: parseCurrencyInputValue(comparativoRegimeParams.faturamentoAnual), comprasInsumosAnual: parseCurrencyInputValue(comparativoRegimeParams.comprasInsumosAnual), folhaAnual: parseCurrencyInputValue(comparativoRegimeParams.folhaAnual), margemLucro: parseNumberInput(comparativoRegimeParams.margemLucro) },
+    'simulacao-imposto': { faturamentoMensal: parseCurrencyInputValue(simulacaoImpostoParams.faturamentoMensal), tipoAtividade: simulacaoImpostoParams.tipoAtividade, aliquotaEstimada: parseNumberInput(simulacaoImpostoParams.aliquotaEstimada) },
+    'simulacao-custos': { custosFixos: parseCurrencyInputValue(simulacaoCustosParams.custosFixos), custosVariaveisPercentual: parseNumberInput(simulacaoCustosParams.custosVariaveisPercentual), markupDesejado: parseNumberInput(simulacaoCustosParams.markupDesejado) },
+  }), [folhaParams, rescisaoParams, tipoRescisaoSelecionado, prolaboreValor, dasParams, pisParams,
+    regimePisSelecionado, multasParams, feriasParams, tempoEmpresaParams, encargosParams,
+    contratacaoParams, comparativoRegimeParams,
+    simulacaoImpostoParams, simulacaoCustosParams, parametrosCalculo.regrasGerais]);
+
+  const simulacoesQuery = useQuery({
+    queryKey: ['simulacoes-contabeis', solicitacoes],
+    queryFn: () => calcularSimulacoesContabeis(solicitacoes),
+    placeholderData: (previous) => previous,
+  });
+  const resultados = simulacoesQuery.data ?? EMPTY_RESULTADOS;
+  const resultadoFolha = resultados.folha;
+  const resultadoRescisao = resultados.rescisao;
+  const resultadoProLabore = resultados.prolabore;
+  const resultadoDAS = resultados.das;
+  const resultadoPisCofins = resultados.piscofins;
+  const resultadoMultas = resultados.multas;
+  const resultadoFerias = resultados.ferias;
+  const resultadoTempoEmpresa = resultados['tempo-empresa'];
+  const resultadoEncargos = resultados['encargos-trabalhistas'];
+  const resultadoContratacao = resultados['simulacao-contratacao'];
+  const resultadoComparativoRegime = resultados['comparativo-regime'];
+  const resultadoSimulacaoImposto = resultados['simulacao-imposto'];
+  const resultadoCustos = resultados['simulacao-custos'];
 
   return {
-    status,
+    status: simulacoesQuery.isFetching ? 'Calculando no servidor' : status,
     abaAtiva,
     setAbaAtiva,
     folhaParams, setFolhaParams, resultadoFolha,

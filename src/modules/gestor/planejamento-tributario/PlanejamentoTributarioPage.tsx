@@ -22,7 +22,7 @@ export const PlanejamentoTributarioPage: React.FC = () => {
     comparativo,
     anexosDas,
     clientes, clienteSelecionadoId, setClienteSelecionadoId,
-    clienteSelecionado, analiseCliente,
+    clienteSelecionado, analiseCliente, diagnosticoCliente, salvarAnalise, salvandoAnalise,
     consultaEmpresaId, setConsultaEmpresaId,
     consultaFaturamentoInput, setConsultaFaturamentoInput,
     consultaEnquadramento,
@@ -72,6 +72,9 @@ export const PlanejamentoTributarioPage: React.FC = () => {
           setClienteSelecionadoId={setClienteSelecionadoId}
           clienteSelecionado={clienteSelecionado}
           analise={analiseCliente}
+          diagnostico={diagnosticoCliente}
+          salvarAnalise={salvarAnalise}
+          salvandoAnalise={salvandoAnalise}
         />
       )}
       {abaAtiva === 'legislacao' && (

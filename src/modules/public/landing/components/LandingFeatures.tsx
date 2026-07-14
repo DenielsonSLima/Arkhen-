@@ -18,6 +18,7 @@ export const LandingFeatures: React.FC = () => {
   const [copiedPix, setCopiedPix] = useState(false);
   const [typedPassword, setTypedPassword] = useState('');
   const [passwordUnlocked, setPasswordUnlocked] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const handleCopyPix = () => {
     setCopiedPix(true);
@@ -28,8 +29,9 @@ export const LandingFeatures: React.FC = () => {
     e.preventDefault();
     if (typedPassword.trim() === '123456') {
       setPasswordUnlocked(true);
+      setPasswordError('');
     } else {
-      alert('Senha incorreta! Digite a senha padrão de demonstração: 123456');
+      setPasswordError('Senha incorreta. Use 123456 nesta demonstração.');
     }
   };
 
@@ -38,10 +40,10 @@ export const LandingFeatures: React.FC = () => {
       icon: <CreditCard size={18} />,
       tabLabel: 'Faturamento Asaas',
       title: 'Faturamento de Honorários Contábeis com Asaas',
-      subtitle: 'Automação completa de cobrança via Pix, Boleto e Cartão de Crédito.',
+      subtitle: 'Geração e acompanhamento de cobranças por Pix e boleto.',
       description: (
         <span>
-          Esqueça o controle de cobranças manual. O Arkhen é integrado diretamente ao Asaas, permitindo gerar links de pagamento, emitir boletos registrados e controlar o fluxo de caixa com régua de cobrança automática.
+          O Arkhen integra-se ao Asaas para gerar links de pagamento e boletos e acompanhar o status das cobranças em um painel financeiro.
           <br /><br />
           <strong style={{ color: '#c59235' }}>Atenção:</strong> A conta Asaas possui custos e tarifas operacionais próprias sobre as cobranças liquidadas. Você pode conferir os valores diretamente no site oficial:{' '}
           <a href="https://www.asaas.com" target="_blank" rel="noopener noreferrer" style={{ color: '#c59235', textDecoration: 'underline', fontWeight: 600 }}>
@@ -50,9 +52,9 @@ export const LandingFeatures: React.FC = () => {
         </span>
       ) as any,
       benefits: [
-        'Links de cobrança e boletos gerados e enviados de forma automática.',
-        'Envio de alertas automáticos antes, no dia e após o vencimento.',
-        'Liquidação e conciliação bancária direta sem arquivos de retorno.',
+        'Geração de links de cobrança, Pix e boletos pelo painel.',
+        'Acompanhamento de vencimentos e situações de pagamento.',
+        'Atualização de recebimentos informados pela integração.',
         'Controle total da inadimplência do escritório em um só painel.'
       ],
       visualContent: (
@@ -111,14 +113,14 @@ export const LandingFeatures: React.FC = () => {
     nfse: {
       icon: <Building2 size={18} />,
       tabLabel: 'Emissão de NFS-e',
-      title: 'Emissão Automatizada de NFS-e',
-      subtitle: 'Faturamento integrado às prefeituras locais por meio de homologação API.',
-      description: 'Para emitir Notas Fiscais de Serviço de forma automatizada, o sistema conecta-se diretamente à API da sua prefeitura municipal. Como cada município possui requisitos específicos (certificado A1, chaves de autenticação), nossa equipe técnica auxilia o seu escritório em todo o processo de parametrização e homologação inicial. Consulte a disponibilidade de integração para o seu município antes da ativação.',
+      title: 'Integração de NFS-e sob consulta',
+      subtitle: 'Disponibilidade condicionada ao município e à homologação do provedor local.',
+      description: 'A emissão integrada de NFS-e não está disponível em todas as prefeituras. Cada município adota provedores, credenciais e requisitos próprios. Por isso, a cidade precisa ser consultada e homologada antes da ativação do recurso.',
       benefits: [
-        'Emissão de notas fiscais automática após liquidação de boletos.',
-        'Suporte para homologação e cadastros das APIs municipais de serviço.',
-        'Cálculo e retenção automática de impostos municipais e federais.',
-        'Arquivamento automático dos XMLs e PDFs de NFS-e emitidos.'
+        'Consulta prévia da disponibilidade para o município.',
+        'Apoio na configuração exigida pelo provedor homologado.',
+        'Registro do status das notas processadas pela integração.',
+        'Acesso aos documentos retornados quando o provedor disponibilizar.'
       ],
       visualContent: (
         <div className="widget-nfse-box">
@@ -154,8 +156,8 @@ export const LandingFeatures: React.FC = () => {
       icon: <FolderLock size={18} />,
       tabLabel: 'Arquivos com Senha',
       title: 'Compartilhamento de Documentos com Senha',
-      subtitle: 'Links seguros protegidos por criptografia e controle de validade (LGPD).',
-      description: 'Envie balanços, folhas de pagamento, relatórios fiscais e guias para seus clientes por links externos públicos. Para total segurança e conformidade com a LGPD, o portal exige uma senha exclusiva definida por você.',
+      subtitle: 'Links protegidos por senha e com controle de validade.',
+      description: 'Envie balanços, folhas de pagamento, relatórios fiscais e guias por links externos com senha e data de expiração configuradas pelo escritório.',
       benefits: [
         'Links externos protegidos contra acessos não autorizados.',
         'Configuração de data de expiração para o link expirar sozinho.',
@@ -183,6 +185,9 @@ export const LandingFeatures: React.FC = () => {
               <button type="submit" className="btn-gold" style={{ width: '100%', padding: '8px', fontSize: '0.8rem' }}>
                 Desbloquear Arquivo
               </button>
+              {passwordError && (
+                <p role="alert" style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.7rem' }}>{passwordError}</p>
+              )}
             </form>
           ) : (
             <div style={{ width: '100%', maxWidth: '280px', backgroundColor: '#ffffff', border: '1.5px solid #10b981', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
@@ -204,21 +209,21 @@ export const LandingFeatures: React.FC = () => {
     protocolos: {
       icon: <FileCheck size={18} />,
       tabLabel: 'Protocolos de Entrega',
-      title: 'Protocolos de Entrega Digitais e Auditados',
-      subtitle: 'Carimbo de data, hora e IP do cliente como comprovante com validade jurídica.',
-      description: 'Acabe com o argumento de "não recebi o e-mail da guia". Cada envio gera um rastro completo de visualização e download. Você sabe exatamente o segundo e o dispositivo pelo qual a guia foi baixada.',
+      title: 'Protocolos de Entrega Organizados',
+      subtitle: 'Histórico de publicação para acompanhar cada entrega.',
+      description: 'Organize os documentos publicados para cada cliente e acompanhe as entregas em um só lugar, com data e responsável pelo envio.',
       benefits: [
-        'Notificação em tempo real de visualização e download pelo cliente.',
-        'Registro detalhado de IP, navegador e sistema operacional.',
-        'Histórico completo de auditoria para cada documento compartilhado.',
-        'Emissão de recibos de entrega eletrônicos com valor de protocolo.'
+        'Documentos separados por cliente e competência.',
+        'Data de publicação e responsável pelo envio.',
+        'Links protegidos por senha e prazo configurável.',
+        'Resumo das entregas para controle interno do escritório.'
       ],
       visualContent: (
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ backgroundColor: '#ffffff', padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '8px', fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>
               <span>AÇÃO DO CLIENTE</span>
-              <span>CARIMBO DE DATA/IP</span>
+              <span>DATA</span>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.75rem' }}>
@@ -230,15 +235,15 @@ export const LandingFeatures: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c59235', fontWeight: 600 }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#c59235', display: 'inline-block', flexShrink: 0 }}></span> Aberto por Cliente
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#c59235', display: 'inline-block', flexShrink: 0 }}></span> Link protegido criado
                 </span>
-                <span style={{ color: '#475569' }}>14/07 - 11:05 (IP: 198.24.99.12)</span>
+                <span style={{ color: '#475569' }}>14/07 - 09:31</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#0284c7', fontWeight: 600 }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0284c7', display: 'inline-block', flexShrink: 0 }}></span> Download Executado
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0284c7', display: 'inline-block', flexShrink: 0 }}></span> Entrega registrada
                 </span>
-                <span style={{ color: '#475569' }}>14/07 - 11:06 (Safari - Mac OS)</span>
+                <span style={{ color: '#475569' }}>14/07 - 09:32</span>
               </div>
             </div>
           </div>
@@ -299,7 +304,7 @@ export const LandingFeatures: React.FC = () => {
       icon: <Calendar size={18} />,
       tabLabel: 'Tarefas e Prazos',
       title: 'Gestão Interna de Prazos e Equipes',
-      subtitle: 'Controle tarefas internas e o envio das obrigações acessórias sem erros.',
+      subtitle: 'Controle tarefas internas e acompanhe o envio das obrigações acessórias.',
       description: 'Tenha controle completo sobre a rotina da sua equipe contábil. Defina metas, configure os prazos das obrigações federais, estaduais e municipais e atribua responsáveis com fluxos integrados de revisão.',
       benefits: [
         'Calendário dinâmico de tarefas ordenadas por prioridade.',

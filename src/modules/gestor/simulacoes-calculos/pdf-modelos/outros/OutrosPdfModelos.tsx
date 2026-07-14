@@ -136,13 +136,12 @@ export const FolhaPdfModelo: React.FC<{ params: any; resultado: ResultadoFolha }
 );
 
 export const ProLaborePdfModelo: React.FC<{ valor: string; resultado: ResultadoProLabore }> = ({ valor, resultado }) => {
-  const cpp = resultado.valorProLabore * 0.2;
   return (
     <PdfModel>
       <SummaryCards rows={[
         ['Pró-labore bruto', resultado.valorProLabore],
         ['Líquido do sócio', resultado.liquido, 'good'],
-        ['Custo estimado empresa', resultado.valorProLabore + cpp, 'info'],
+        ['Custo estimado empresa', resultado.custoEmpresa, 'info'],
       ]} />
       <PdfSection title="Base e retenções">
         <InfoGrid rows={[
@@ -152,7 +151,7 @@ export const ProLaborePdfModelo: React.FC<{ valor: string; resultado: ResultadoP
         <MoneyTable rows={[
           ['INSS retido', resultado.inss, 'bad'],
           ['IRRF retido', resultado.irrf, 'bad'],
-          ['CPP estimada 20%', cpp, 'info'],
+          ['CPP estimada', resultado.cpp, 'info'],
         ]} />
       </PdfSection>
     </PdfModel>

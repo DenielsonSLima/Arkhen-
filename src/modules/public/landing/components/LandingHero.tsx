@@ -15,17 +15,17 @@ export const LandingHero: React.FC = () => {
         <div className="hero-content">
           <div className="hero-tag">
             <ShieldCheck size={14} />
-            <span>Ecossistema Contábil Completo com RLS Multi-Tenant</span>
+            <span>Gestão operacional para escritórios contábeis</span>
           </div>
 
           <h1 className="hero-title">
-            A nova era da <br />
-            <span className="highlight-gold">gestão contábil inteligente.</span>
+            Sua operação contábil <br />
+            <span className="highlight-gold">organizada do prazo ao recebimento.</span>
           </h1>
 
           <p className="hero-desc">
-            Organize prazos e obrigações fiscais, fature honorários automaticamente com a integração Asaas
-            e envie protocolos digitais auditados.
+            Centralize clientes, tarefas, fechamentos, documentos, protocolos e cobranças em um só painel,
+            com histórico para acompanhar a rotina da equipe.
           </p>
 
           <div className="hero-actions">
@@ -88,8 +88,8 @@ export const LandingHero: React.FC = () => {
           <div className="hero-float-card hero-float-top">
             <div className="hero-float-dot" style={{ background: '#10b981' }}></div>
             <div>
-              <div className="hero-float-title">NFS-e Emitida</div>
-              <div className="hero-float-sub">Honorários Julho/2026</div>
+              <div className="hero-float-title">Exemplo de NFS-e</div>
+              <div className="hero-float-sub">Disponível em municípios homologados</div>
             </div>
           </div>
 

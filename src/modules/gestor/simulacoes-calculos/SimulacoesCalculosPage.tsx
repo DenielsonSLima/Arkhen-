@@ -557,8 +557,6 @@ export const SimulacoesCalculosPage: React.FC = () => {
         );
 
       case 'prolabore':
-        const estimatedCpp = resultadoProLabore.valorProLabore * 0.20;
-        const estimatedCustoTotal = resultadoProLabore.valorProLabore * 1.20;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>DADOS DO PRÓ-LABORE</h4>
@@ -572,8 +570,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
 
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>Líquido a Receber pelo Sócio:</span><span style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem' }}>{formatCurrency(resultadoProLabore.liquido)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 600, color: '#64748b' }}>Previdência Patronal (CPP 20%):</span><span style={{ fontWeight: 500, color: '#334155' }}>{formatCurrency(estimatedCpp)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}><span style={{ fontWeight: 700, color: '#334155' }}>Custo Total para a Empresa:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1rem' }}>{formatCurrency(estimatedCustoTotal)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 600, color: '#64748b' }}>Previdência Patronal (CPP):</span><span style={{ fontWeight: 500, color: '#334155' }}>{formatCurrency(resultadoProLabore.cpp)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}><span style={{ fontWeight: 700, color: '#334155' }}>Custo Total para a Empresa:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1rem' }}>{formatCurrency(resultadoProLabore.custoEmpresa)}</span></div>
             </div>
           </div>
         );
@@ -593,9 +591,9 @@ export const SimulacoesCalculosPage: React.FC = () => {
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: '12px 0 0 0' }}>DETALHAMENTO DO IMPOSTO DAS</h4>
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Alíquota Nominal da Faixa</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatPercent(resultadoDAS.aliquotaNominal * 100)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Alíquota Nominal da Faixa</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatPercent(resultadoDAS.aliquotaNominal)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Parcela a Deduzir da Faixa</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoDAS.valorDeduzir)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fef3c7' }}><th style={{ padding: '8px', fontWeight: 700, color: '#78350f' }}>Alíquota Efetiva Calculada</th><td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: '#c59235' }}>{formatPercent(resultadoDAS.aliquotaEfetiva * 100)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', background: '#fef3c7' }}><th style={{ padding: '8px', fontWeight: 700, color: '#78350f' }}>Alíquota Efetiva Calculada</th><td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: '#c59235' }}>{formatPercent(resultadoDAS.aliquotaEfetiva)}</td></tr>
               </tbody>
             </table>
 

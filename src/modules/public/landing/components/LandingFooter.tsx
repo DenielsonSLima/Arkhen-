@@ -67,7 +67,7 @@ export const LandingFooter: React.FC = () => {
         {/* Footer Bottom copyright */}
         <div className="footer-bottom">
           <span>&copy; {new Date().getFullYear()} Arkhen Gestão Contábil. Todos os direitos reservados.</span>
-          <span style={{ fontSize: '0.8rem', color: '#666' }}>Desenvolvido com Tecnologia RLS Multi-Tenant</span>
+          <span style={{ fontSize: '0.8rem', color: '#666' }}>Gestão contábil em um só lugar</span>
         </div>
       </div>
     </footer>

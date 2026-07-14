@@ -32,19 +32,19 @@ export const LandingPage: React.FC = () => {
     },
     {
       question: 'Como funciona a emissão de NFS-e e a homologação com a prefeitura?',
-      answer: 'Para emitir Notas Fiscais de Serviço de forma automatizada, o sistema conecta-se diretamente à API da sua prefeitura municipal. Como cada município possui requisitos específicos (certificado A1, chaves de autenticação), nossa equipe técnica auxilia o seu escritório em todo o processo de parametrização e homologação inicial.'
+      answer: 'A integração de NFS-e não está disponível em todos os municípios. A ativação depende do provedor utilizado pela prefeitura, dos requisitos locais e de homologação prévia. Consulte a disponibilidade para a cidade do seu escritório antes da contratação desse recurso.'
     },
     {
       question: 'Como funciona o faturamento integrado ao Asaas?',
-      answer: 'O Arkhen conecta-se à sua conta Asaas via API de forma totalmente segura. Com isso, ao gerar honorários ou cobranças adicionais, o sistema emite boletos e chaves Pix registradas automaticamente, gerenciando réguas de cobrança (WhatsApp/E-mail) e conciliando os recebimentos em tempo real.'
+      answer: 'O Arkhen pode conectar a conta Asaas do escritório para gerar cobranças por Pix e boleto e acompanhar as atualizações de pagamento recebidas pela integração. Tarifas, disponibilidade e regras do serviço seguem as condições do Asaas.'
     },
     {
       question: 'O que é o compartilhamento de documentos com senha?',
-      answer: 'Para garantir conformidade com a LGPD ao enviar arquivos confidenciais (como balanços e folhas de pagamento), você pode gerar links públicos de download protegidos por senha e data de expiração. O cliente só visualiza o documento após digitar a senha cadastrada.'
+      answer: 'Você pode gerar links de download protegidos por senha e com prazo de expiração. O recurso ajuda a controlar o acesso externo a arquivos enviados pelo escritório.'
     },
     {
       question: 'Como funciona o rastro do protocolo eletrônico?',
-      answer: 'Toda guia de imposto ou arquivo publicado no portal gera um rastro digital auditável. O sistema registra o carimbo de data/hora, o IP e o navegador do cliente no momento exato da visualização e do download, servindo como comprovante com validade jurídica de entrega.'
+      answer: 'O sistema mantém um histórico operacional de publicação, visualização e download dos documentos. Esse registro ajuda o escritório a acompanhar a entrega; eventual uso jurídico deve ser avaliado conforme o caso e a orientação profissional adequada.'
     },
     {
       question: 'Meu escritório pode testar gratuitamente?',
@@ -79,7 +79,7 @@ export const LandingPage: React.FC = () => {
       {/* LIGHT — Diferenciais do Arkhen */}
       <LandingStats />
 
-      {/* DARK — Segurança RLS Multi-Tenant */}
+      {/* DARK — Controles de acesso e histórico */}
       <LandingSecurity />
 
       {/* LIGHT — FAQs Accordion (Alternando cores) */}
@@ -157,7 +157,7 @@ export const LandingPage: React.FC = () => {
             <span className="highlight-gold">gestão do seu escritório contábil?</span>
           </h2>
           <p className="cta-desc">
-            Junte-se a centenas de contadores que reduziram a inadimplência, automatizaram o controle de prazos e oferecem uma experiência digital única para seus clientes.
+            Conheça uma forma mais clara de acompanhar prazos, documentos, clientes e cobranças no dia a dia do escritório.
           </p>
           <button
             type="button"

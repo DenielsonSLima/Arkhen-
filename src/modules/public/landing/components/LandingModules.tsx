@@ -27,7 +27,7 @@ const modules: ModuleCard[] = [
   {
     icon: <FileText size={26} />,
     title: 'Protocolos Digitais',
-    desc: 'Rastro auditado de data, hora e IP para cada documento enviado ao cliente. Comprovante jurídico.',
+    desc: 'Histórico de data, hora e acesso para acompanhar a entrega e a visualização de documentos.',
   },
   {
     icon: <Calculator size={26} />,
@@ -37,15 +37,15 @@ const modules: ModuleCard[] = [
   {
     icon: <CreditCard size={26} />,
     title: 'Faturamento Asaas',
-    desc: 'Boletos, Pix e cartão integrados. Régua de cobrança automática por e-mail e WhatsApp.',
+    desc: 'Geração de cobranças por Pix e boleto, acompanhamento de vencimentos e registro de recebimentos.',
     badge: 'Integração Asaas',
     badgeColor: '#c59235',
   },
   {
     icon: <Building2 size={26} />,
     title: 'Emissão de NFS-e',
-    desc: 'Nota Fiscal automática após recebimento, com homologação via API da prefeitura municipal.',
-    badge: 'Homologação Obrigatória',
+    desc: 'Integração disponível somente para municípios e provedores homologados, conforme as regras de cada prefeitura.',
+    badge: 'Consulte seu município',
     badgeColor: '#d97706',
   },
   {
@@ -60,13 +60,13 @@ const modules: ModuleCard[] = [
   },
   {
     icon: <ShieldCheck size={26} />,
-    title: 'Conformidade e RLS',
-    desc: 'Segurança multi-empresa com RLS absoluto. Dados completamente isolados entre escritórios.',
+    title: 'Acesso por Empresa',
+    desc: 'Controles de acesso separam as informações de cada escritório e limitam as operações ao usuário autorizado.',
   },
   {
     icon: <Activity size={26} />,
     title: 'Financeiro',
-    desc: 'Controle de contas a pagar e receber, inadimplência e conciliação bancária integrada.',
+    desc: 'Controle de contas a pagar e receber, lançamentos, saldos e acompanhamento da inadimplência.',
   },
   {
     icon: <Briefcase size={26} />,

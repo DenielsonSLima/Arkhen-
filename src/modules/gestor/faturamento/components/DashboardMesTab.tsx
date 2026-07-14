@@ -67,6 +67,11 @@ export const DashboardMesTab = () => {
           </button>
       </div>
 
+      <div className="faturamento-card" style={{ padding: '12px 16px', color: '#92400e', background: '#fffbeb', borderColor: '#fde68a' }}>
+        A emissão integrada de NFS-e depende da disponibilidade e da homologação do provedor de cada prefeitura.
+        “A emitir” considera apenas clientes com configuração fiscal municipal ativa; notas já emitidas continuam no histórico.
+      </div>
+
       <div className="faturamento-stats-grid">
         {stats.map((stat, idx) => (
           <div key={idx} className="faturamento-stat-card">
