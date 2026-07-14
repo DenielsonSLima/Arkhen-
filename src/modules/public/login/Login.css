@@ -476,6 +476,7 @@
   flex-direction: column;
   gap: 2px;
   text-align: left;
+  flex: 1;
 }
 
 .footer-secure-text strong {
@@ -488,6 +489,20 @@
   font-size: 0.72rem;
   color: var(--color-text-dark-muted);
   line-height: 1.4;
+}
+
+.app-version-badge {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(197, 146, 53, 0.24);
+  border-radius: 999px;
+  color: #8a6a2f;
+  background: rgba(197, 146, 53, 0.06);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* Developer signature */

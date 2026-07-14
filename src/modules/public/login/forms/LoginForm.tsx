@@ -3,6 +3,7 @@ import { Building2, User, Lock, Eye, EyeOff, LogIn, LockKeyhole, Mail, ArrowLeft
 import { useLogin } from '../hooks/useLogin';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
+import { CURRENT_RELEASE } from '../../../../internal/version/release';
 
 interface LoginFormProps {
   loginState: ReturnType<typeof useLogin>;
@@ -291,9 +292,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
         <div className="login-card-footer">
           <LockKeyhole size={18} className="footer-secure-icon" />
           <div className="footer-secure-text">
-            <strong>Ambiente seguro e certificado</strong>
-            <span>Seus dados estão protegidos com criptografia de ponta a ponta.</span>
+            <strong>Acesso protegido</strong>
+            <span>Controles de acesso e permissões por usuário.</span>
           </div>
+          <span className="app-version-badge">{CURRENT_RELEASE.label}</span>
         </div>
       </div>
       <div className="developer-signature">
