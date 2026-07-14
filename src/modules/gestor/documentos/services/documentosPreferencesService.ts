@@ -1,5 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { getCurrentEmpresaId } from '../../parametrizacao/services/parametrizacaoSupabase';
+import type { DocumentCategory } from './documentosService';
 
 const TABLE = 'preferencias_usuario_modulos';
 const MODULO = 'documentos';
@@ -14,7 +15,7 @@ interface PreferenceRow {
 
 type MeusDocumentosPersisted = {
   pastas?: string[];
-  categorias?: unknown;
+  categorias?: DocumentCategory[];
 };
 
 type DrawerStateMap = Record<string, boolean>;

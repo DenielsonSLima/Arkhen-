@@ -1,6 +1,7 @@
 import { gestaoEmpresarialService, type Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import { prazosEntregaService, type ProtocoloOrigemPadrao, type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
-import { protocolosCatalogoService, type EntregaModelo, type ProtocoloTipoConfig } from './protocolosCatalogoService';
+import { prazosEntregaService, type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
+import { protocolosCatalogoService, type ProtocoloTipoConfig, type ProtocoloOrigemPadrao } from './protocolosCatalogoService';
+import type { EntregaModelo } from '../protocolosCatalogo';
 import { supabase } from '../../../../lib/supabase';
 
 export type { EntregaModelo } from '../protocolosCatalogo';

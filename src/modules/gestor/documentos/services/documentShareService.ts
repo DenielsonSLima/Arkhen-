@@ -1,5 +1,8 @@
 import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { supabase } from '../../../../lib/supabase';
+import { hashSharePassword } from '../utils/shareCrypto';
+
+export { hashSharePassword };
 
 export interface SharedDocumentLink {
   id: string;
@@ -92,7 +95,7 @@ const normalizeShareConfig = (input: ShareConfiguration | undefined): ShareConfi
 
   const tempo = getTempoPadraoLabelFromMinutes(input.tempoPadraoMinutos);
   return {
-    tempoPadrao: SHARE_EXPIRATION_OPTIONS.includes(tempo) ? tempo : DEFAULT_SHARE_CONFIGURATION.tempoPadrao,
+    tempoPadrao: (SHARE_EXPIRATION_OPTIONS as readonly string[]).includes(tempo) ? tempo : DEFAULT_SHARE_CONFIGURATION.tempoPadrao,
     tempoPadraoMinutos: Number.isFinite(input.tempoPadraoMinutos) ? Math.max(1, Math.floor(input.tempoPadraoMinutos)) : DEFAULT_SHARE_CONFIGURATION.tempoPadraoMinutos,
     limitarTipos: Array.isArray(input.limitarTipos) ? input.limitarTipos : DEFAULT_SHARE_CONFIGURATION.limitarTipos,
     exigirSenhaPadrao: Boolean(input.exigirSenhaPadrao),
@@ -254,8 +257,6 @@ const parseLocalizedDateTime = (value: string) => {
 
   return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
 };
-
-export { hashSharePassword } from '../utils/shareCrypto';
 
 const buildPublicLink = (shareGroupId: string) => `${window.location.origin}/s/${shareGroupId}`;
 
