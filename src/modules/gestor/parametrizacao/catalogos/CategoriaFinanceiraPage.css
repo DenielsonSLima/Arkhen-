@@ -1,0 +1,470 @@
+.categoria-financeira-primary-button,
+.categoria-financeira-secondary-button,
+.categoria-financeira-icon-button,
+.categoria-financeira-modal-close {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.categoria-financeira-primary-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #dda93f 0%, #bd8422 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(189, 132, 34, 0.2);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.categoria-financeira-primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 10px 24px rgba(189, 132, 34, 0.27);
+}
+
+.categoria-financeira-primary-button:focus-visible,
+.categoria-financeira-secondary-button:focus-visible,
+.categoria-financeira-icon-button:focus-visible,
+.categoria-financeira-modal-close:focus-visible {
+  outline: 3px solid rgba(197, 146, 53, 0.28);
+  outline-offset: 2px;
+}
+
+.categoria-financeira-primary-button:disabled,
+.categoria-financeira-secondary-button:disabled,
+.categoria-financeira-icon-button:disabled,
+.categoria-financeira-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.categoria-financeira-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.categoria-financeira-column {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #dfe6ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.categoria-financeira-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #d5dee9;
+}
+
+.categoria-financeira-column-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 850;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.categoria-financeira-count {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e3eaf2;
+  color: #526174;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.categoria-financeira-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.categoria-financeira-item {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 14px 14px 16px;
+  border: 1px solid #dfe6ee;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.035);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.categoria-financeira-item:hover {
+  border-color: rgba(197, 146, 53, 0.38);
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.07);
+}
+
+.categoria-financeira-item-content {
+  min-width: 0;
+}
+
+.categoria-financeira-item-content > strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.categoria-financeira-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.categoria-financeira-status,
+.categoria-financeira-system-badge {
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.categoria-financeira-status.is-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.categoria-financeira-status.is-inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.categoria-financeira-system-badge {
+  background: #eaf2ff;
+  color: #245dcc;
+}
+
+.categoria-financeira-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.categoria-financeira-icon-button,
+.categoria-financeira-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dbe3ec;
+  background: #f8fafc;
+  color: #64748b;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.categoria-financeira-icon-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.categoria-financeira-icon-button:hover:not(:disabled) {
+  border-color: rgba(197, 146, 53, 0.48);
+  background: rgba(197, 146, 53, 0.09);
+  color: #9b681b;
+}
+
+.categoria-financeira-icon-button .is-active {
+  color: #10a36c;
+}
+
+.categoria-financeira-empty {
+  padding: 30px 20px;
+  border: 1px dashed #d5dee9;
+  border-radius: 9px;
+  color: #7b8a9c;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.categoria-financeira-page-error {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff6f6;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.categoria-financeira-page-error > span {
+  flex: 1;
+}
+
+.categoria-financeira-page-error > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.categoria-financeira-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(5px);
+  animation: categoria-financeira-backdrop-in 180ms ease-out;
+}
+
+.categoria-financeira-modal {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  border: 1px solid rgba(197, 146, 53, 0.3);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
+  animation: categoria-financeira-modal-in 190ms ease-out;
+}
+
+.categoria-financeira-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 24px 19px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.categoria-financeira-modal-heading {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.categoria-financeira-modal-icon {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(197, 146, 53, 0.24);
+  border-radius: 9px;
+  background: rgba(197, 146, 53, 0.1);
+  color: #b47b1f;
+}
+
+.categoria-financeira-modal-heading h3 {
+  margin: 1px 0 0;
+  color: #182235;
+  font-size: 1.08rem;
+  font-weight: 850;
+}
+
+.categoria-financeira-modal-heading p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.categoria-financeira-modal-close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+}
+
+.categoria-financeira-modal-close:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #eef2f6;
+  color: #1e293b;
+}
+
+.categoria-financeira-form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  padding: 22px 24px 24px;
+}
+
+.categoria-financeira-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.categoria-financeira-form-field label {
+  color: #475569;
+  font-size: 0.77rem;
+  font-weight: 800;
+}
+
+.categoria-financeira-form-field input,
+.categoria-financeira-form-field select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  background: #ffffff;
+  color: #162033;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 0.86rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.categoria-financeira-form-field input::placeholder {
+  color: #9aa7b6;
+}
+
+.categoria-financeira-form-field input:focus,
+.categoria-financeira-form-field select:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.14);
+}
+
+.categoria-financeira-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff6f6;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.categoria-financeira-form-error svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.categoria-financeira-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 5px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1f5;
+}
+
+.categoria-financeira-secondary-button {
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #536174;
+  padding: 10px 17px;
+  font-size: 0.83rem;
+  font-weight: 800;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.categoria-financeira-secondary-button:hover:not(:disabled) {
+  border-color: #aebac8;
+  background: #f5f7fa;
+}
+
+@keyframes categoria-financeira-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes categoria-financeira-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 980px) {
+  .categoria-financeira-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .parametrizacao-page .submodule-card-header.flex-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .parametrizacao-page .submodule-card-header .categoria-financeira-primary-button {
+    width: 100%;
+  }
+
+  .categoria-financeira-column {
+    padding: 14px;
+  }
+
+  .categoria-financeira-modal-backdrop {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .categoria-financeira-modal {
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+
+  .categoria-financeira-modal-header,
+  .categoria-financeira-form {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .categoria-financeira-modal-icon {
+    display: none;
+  }
+
+  .categoria-financeira-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .categoria-financeira-modal-actions button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoria-financeira-modal-backdrop,
+  .categoria-financeira-modal {
+    animation: none;
+  }
+}

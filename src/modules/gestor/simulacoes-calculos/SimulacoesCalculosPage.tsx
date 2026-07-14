@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, FileX2, Briefcase, Receipt, FileText, AlertTriangle, Calculator,
   Calendar, History, Landmark, UserCheck, Percent, DollarSign,
-  Download, Share2, Trash2, X, Clock, Check, Copy, FileDown
+  Download, Share2, Trash2, X, Clock, Check, Copy, FileDown, ReceiptText
 } from 'lucide-react';
 import { SystemQuickModal } from '../components/SystemQuickModal';
 import { useSimulacoesCalculos, type AbaCalculo } from './hooks/useSimulacoesCalculos';
+import { useSimulacoesAvancadas } from './hooks/useSimulacoesAvancadas';
 import { SimuladorFolha } from './folha/SimuladorFolha';
 import { SimuladorRescisao } from './rescisao/SimuladorRescisao';
 import { SimuladorProLabore } from './prolabore/SimuladorProLabore';
@@ -21,6 +22,9 @@ import { SimuladorContratacao } from './simulacao-contratacao/SimuladorContratac
 import { SimuladorComparativoRegime } from './comparativo-regime/SimuladorComparativoRegime';
 import { SimuladorImposto } from './simulacao-imposto/SimuladorImposto';
 import { SimuladorCustos } from './simulacao-custos/SimuladorCustos';
+import { SimuladorCarneLeao, SimuladorIrpf, SimuladorLucrosDividendos } from './pessoa-fisica';
+import { SimuladorGanhoCapital } from './ganho-capital';
+import { SimuladorMei } from './mei';
 
 import { empresaService } from '../configuracoes/empresa/services/empresaService';
 import { marcaDaguaService } from '../configuracoes/marca-dagua/services/marcaDaguaService';
@@ -68,6 +72,14 @@ const FISCAL_NAV: NavItem[] = [
   { id: 'piscofins', label: 'PIS / COFINS', icon: <FileText size={15} />, desc: 'Débito e crédito' },
   { id: 'comparativo-regime', label: 'Regimes Tributários', icon: <Landmark size={15} />, desc: 'Simples vs LP vs LR' },
   { id: 'simulacao-imposto', label: 'Simular Impostos', icon: <Percent size={15} />, desc: 'Alíquotas e faturamento' },
+  { id: 'mei', label: 'MEI', icon: <Receipt size={15} />, desc: 'Limite e enquadramento' },
+];
+
+const PESSOA_FISICA_NAV: NavItem[] = [
+  { id: 'carne-leao', label: 'Carnê-Leão', icon: <ReceiptText size={15} />, desc: 'Livro Caixa e DARF mensal' },
+  { id: 'irpf', label: 'Projeção de IRPF', icon: <Landmark size={15} />, desc: 'Legal vs simplificado' },
+  { id: 'lucros-dividendos', label: 'Lucros e Dividendos', icon: <Briefcase size={15} />, desc: 'Pró-labore e distribuição' },
+  { id: 'ganho-capital', label: 'Ganho de Capital', icon: <DollarSign size={15} />, desc: 'Bens, isenções e imposto' },
 ];
 
 const PAGE_TITLES: Record<AbaCalculo, { title: string; desc: string }> = {
@@ -84,6 +96,11 @@ const PAGE_TITLES: Record<AbaCalculo, { title: string; desc: string }> = {
   'comparativo-regime': { title: 'Comparativo de Regimes Tributários', desc: 'Projete impostos e escolha entre Simples Nacional, Lucro Presumido e Lucro Real.' },
   'simulacao-imposto': { title: 'Simulação Mensal de Impostos', desc: 'Estime a carga tributária do faturamento de acordo com a atividade.' },
   'simulacao-custos': { title: 'Análise de Custos e Break-even', desc: 'Determine o ponto de equilíbrio operacional e metas de faturamento.' },
+  'carne-leao': { title: 'Carnê-Leão e Livro Caixa', desc: 'Projete o recolhimento mensal com deduções e regras da competência.' },
+  irpf: { title: 'Projeção de IRPF', desc: 'Compare os modelos legal e simplificado com parâmetros anuais versionados.' },
+  'lucros-dividendos': { title: 'Pró-labore, Lucros e Dividendos', desc: 'Compare remuneração e distribuição com as regras vigentes.' },
+  'ganho-capital': { title: 'Ganho de Capital', desc: 'Apure uma estimativa por bem, isenções e forma de recebimento.' },
+  mei: { title: 'Projeção e Enquadramento do MEI', desc: 'Acompanhe limite proporcional, excesso e condições de permanência.' },
 };
 
 const formatCnpj = (value: string) => {
@@ -221,6 +238,17 @@ export const SimulacoesCalculosPage: React.FC = () => {
     activeNaturezaJuridica,
   } = useSimulacoesCalculos();
 
+  const {
+    carneLeaoParams, setCarneLeaoParams, resultadoCarneLeao,
+    irpfParams, setIrpfParams, resultadoIrpf,
+    lucrosDividendosParams, setLucrosDividendosParams, resultadoLucrosDividendos,
+    ganhoCapitalParams, setGanhoCapitalParams, resultadoGanhoCapital,
+    meiParams, setMeiParams, resultadoMei,
+    salvarHistorico, salvandoHistorico, historicoSalvo, erroHistorico, erroSimulacao,
+  } = useSimulacoesAvancadas(abaAtiva);
+
+  const abaComHistorico = ['carne-leao', 'irpf', 'lucros-dividendos', 'ganho-capital', 'mei'].includes(abaAtiva);
+
   const { title, desc } = PAGE_TITLES[abaAtiva];
 
   // Estados do Modal de PDF e exportação
@@ -245,7 +273,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
   }, []);
 
   const getPdfMetricLines = () => {
-    switch (abaAtiva) {
+    switch (abaAtiva as AbaCalculo) {
       case 'folha':
         return [
           `Salario liquido estimado: ${formatCurrency(resultadoFolha.salarioLiquido)}`,
@@ -304,7 +332,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
         return [
           `Total a pagar: ${formatCurrency(resultadoMultas.totalPagar)}`,
           `Dias de atraso: ${resultadoMultas.diasAtraso}`,
-          `Acrescimos: ${formatCurrency(resultadoMultas.multaValor + resultadoMultas.jurosValor)}`,
+          `Multa: ${formatCurrency(resultadoMultas.multaValor)}`,
+          `Juros: ${formatCurrency(resultadoMultas.jurosValor)}`,
         ];
       case 'comparativo-regime':
         return [
@@ -325,6 +354,37 @@ export const SimulacoesCalculosPage: React.FC = () => {
           `Faturamento alvo: ${formatCurrency(resultadoCustos.faturamentoAlvo)}`,
           `Lucro estimado: ${formatCurrency(resultadoCustos.lucroEstimado)}`,
         ];
+      case 'carne-leao':
+        return resultadoCarneLeao ? [
+          `DARF estimado: ${formatCurrency(resultadoCarneLeao.impostoDevido)}`,
+          `Base de calculo: ${formatCurrency(resultadoCarneLeao.baseCalculo)}`,
+          `Codigo de receita: ${resultadoCarneLeao.codigoReceita}`,
+        ] : [];
+      case 'irpf':
+        return resultadoIrpf ? [
+          `Modelo recomendado: ${resultadoIrpf.modeloRecomendado}`,
+          `Saldo no modelo legal: ${formatCurrency(resultadoIrpf.modeloLegal.saldoPagar)}`,
+          `Saldo no modelo simplificado: ${formatCurrency(resultadoIrpf.modeloSimplificado.saldoPagar)}`,
+          `Exercicio: ${resultadoIrpf.exercicio}`,
+        ] : [];
+      case 'lucros-dividendos':
+        return resultadoLucrosDividendos ? [
+          `Liquido total do socio: ${formatCurrency(resultadoLucrosDividendos.liquidoTotalSocio)}`,
+          `Retencao sobre dividendos: ${formatCurrency(resultadoLucrosDividendos.retencaoDividendos)}`,
+          `Custo total da empresa: ${formatCurrency(resultadoLucrosDividendos.custoTotalEmpresa)}`,
+        ] : [];
+      case 'ganho-capital':
+        return resultadoGanhoCapital ? [
+          `Ganho bruto: ${formatCurrency(resultadoGanhoCapital.ganhoBruto)}`,
+          `Imposto estimado: ${formatCurrency(resultadoGanhoCapital.impostoEstimado)}`,
+          `Aliquota efetiva: ${formatPercent(resultadoGanhoCapital.aliquotaEfetiva)}`,
+        ] : [];
+      case 'mei':
+        return resultadoMei ? [
+          `Receita acumulada: ${formatCurrency(resultadoMei.receitaAcumulada)}`,
+          `Limite proporcional: ${formatCurrency(resultadoMei.limiteProporcional)}`,
+          `Situacao: ${resultadoMei.faixaRiscoDescricao}`,
+        ] : [];
       default:
         return [];
     }
@@ -501,7 +561,42 @@ export const SimulacoesCalculosPage: React.FC = () => {
       return <CustosPdfModelo params={simulacaoCustosParams} resultado={resultadoCustos} />;
     }
 
-    switch (abaAtiva) {
+    if (abaComHistorico) {
+      const metricas = getPdfMetricLines();
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>
+            RESULTADO DA SIMULAÇÃO
+          </h4>
+          {metricas.length > 0 ? (
+            <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <tbody>
+                {metricas.map((linha) => {
+                  const separador = linha.indexOf(':');
+                  const rotulo = separador >= 0 ? linha.slice(0, separador) : linha;
+                  const valor = separador >= 0 ? linha.slice(separador + 1).trim() : '';
+                  return (
+                    <tr key={linha} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <th style={{ padding: '9px 0', fontWeight: 600, color: '#64748b' }}>{rotulo}</th>
+                      <td style={{ padding: '9px 0', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{valor}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ background: '#fff7ed', padding: '14px', borderRadius: '8px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.78rem' }}>
+              Aguarde a conclusão da simulação antes de gerar o relatório.
+            </div>
+          )}
+          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.75rem', lineHeight: 1.5 }}>
+            Resultado estimado com os parâmetros tributários vigentes para a competência informada. Confira documentos e obrigações oficiais antes de qualquer apuração ou transmissão.
+          </div>
+        </div>
+      );
+    }
+
+    switch (abaAtiva as AbaCalculo) {
       case 'folha':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -621,8 +716,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
                 <tr style={{ borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}><th style={{ padding: '6px 8px', fontWeight: 700, color: '#475569' }}>Imposto</th><th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Débito</th><th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Créditos</th><th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>Saldo a Pagar</th></tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '8px', fontWeight: 500, color: '#334155' }}>PIS</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoPIS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoPIS - resultadoPisCofins.saldoPIS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>{formatCurrency(resultadoPisCofins.saldoPIS)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '8px', fontWeight: 500, color: '#334155' }}>COFINS</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoCOFINS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoCOFINS - resultadoPisCofins.saldoCOFINS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>{formatCurrency(resultadoPisCofins.saldoCOFINS)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '8px', fontWeight: 500, color: '#334155' }}>PIS</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoPIS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>Consolidado abaixo</td><td style={{ padding: '8px', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>{formatCurrency(resultadoPisCofins.saldoPIS)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><td style={{ padding: '8px', fontWeight: 500, color: '#334155' }}>COFINS</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.debitoCOFINS)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#334155' }}>{formatCurrency(resultadoPisCofins.creditosApurados)}</td><td style={{ padding: '8px', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>{formatCurrency(resultadoPisCofins.saldoCOFINS)}</td></tr>
               </tbody>
             </table>
 
@@ -715,7 +810,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão de 13º Salário</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisao13)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão de Férias (+ 1/3)</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisaoFerias + resultadoTempoEmpresa.provisaoTerco)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão de Férias</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisaoFerias)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão do terço</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisaoTerco)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>FGTS Acumulado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.fgtsAcumulado)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Multa FGTS Projetada</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#ef4444' }}>{formatCurrency(resultadoTempoEmpresa.multaFgtsProjetada)}</td></tr>
               </tbody>
@@ -728,7 +824,6 @@ export const SimulacoesCalculosPage: React.FC = () => {
         );
 
       case 'encargos-trabalhistas':
-        const totalMensalComEncargos = parseCurrencyInputValue(encargosParams.salarioBruto) + resultadoEncargos.totalEncargosValor;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>PARÂMETROS DA EMPRESA</h4>
@@ -753,20 +848,20 @@ export const SimulacoesCalculosPage: React.FC = () => {
 
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 600, color: '#64748b' }}>Total de Encargos ({resultadoEncargos.totalPercentual.toFixed(2)}%):</span><span style={{ fontWeight: 600, color: '#334155' }}>{formatCurrency(resultadoEncargos.totalEncargosValor)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}><span style={{ fontWeight: 700, color: '#334155' }}>Custo Mensal Consolidado:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1rem' }}>{formatCurrency(totalMensalComEncargos)}</span></div>
             </div>
           </div>
         );
 
       case 'simulacao-contratacao':
-        const diffCltPj = resultadoContratacao.custoCltMensal - resultadoContratacao.custoPjMensal;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>CUSTOS PROPOSTOS E BENEFÍCIOS</h4>
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Salário Bruto Proposto</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(parseCurrencyInputValue(contratacaoParams.salarioProposto))}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Benefícios (VT/VR/Saúde)</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(parseCurrencyInputValue(contratacaoParams.valeTransporte) + parseCurrencyInputValue(contratacaoParams.valeAlimentacao) + parseCurrencyInputValue(contratacaoParams.planoSaude))}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Vale-transporte informado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(parseCurrencyInputValue(contratacaoParams.valeTransporte))}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Vale-alimentação informado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(parseCurrencyInputValue(contratacaoParams.valeAlimentacao))}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Plano de saúde informado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(parseCurrencyInputValue(contratacaoParams.planoSaude))}</td></tr>
               </tbody>
             </table>
 
@@ -780,7 +875,6 @@ export const SimulacoesCalculosPage: React.FC = () => {
             </table>
 
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>Diferencial CLT vs PJ:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1.1rem' }}>{formatCurrency(diffCltPj)} / mês</span></div>
             </div>
           </div>
         );
@@ -814,7 +908,6 @@ export const SimulacoesCalculosPage: React.FC = () => {
         );
 
       case 'simulacao-imposto':
-        const faturamentoLiquido = parseCurrencyInputValue(simulacaoImpostoParams.faturamentoMensal) - resultadoSimulacaoImposto.impostoTotal;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>DETALHES DO FATURAMENTO MENSAL</h4>
@@ -830,14 +923,12 @@ export const SimulacoesCalculosPage: React.FC = () => {
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Imposto Total Mensal</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700, color: '#ef4444' }}>{formatCurrency(resultadoSimulacaoImposto.impostoTotal)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Faturamento Líquido Mensal</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{formatCurrency(faturamentoLiquido)}</td></tr>
               </tbody>
             </table>
           </div>
         );
 
       case 'simulacao-custos':
-        const faturamentoMinimoDiario = resultadoCustos.pontoEquilibrio / 30;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: 0 }}>DETALHES DE GASTOS OPERACIONAIS</h4>
@@ -853,7 +944,6 @@ export const SimulacoesCalculosPage: React.FC = () => {
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Margem de Contribuição</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{formatPercent(resultadoCustos.margemContribuicaoPercentual)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Faturamento Mínimo Diário (Est.)</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(faturamentoMinimoDiario)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Markup Desejado Aplicado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{simulacaoCustosParams.markupDesejado}%</td></tr>
               </tbody>
             </table>
@@ -916,6 +1006,32 @@ export const SimulacoesCalculosPage: React.FC = () => {
           </div>
         </div>
 
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px 14px', lineHeight: '1.3' }}>
+            Pessoa Física
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {PESSOA_FISICA_NAV.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setAbaAtiva(item.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 14px',
+                  border: 'none', background: abaAtiva === item.id ? '#f1f5f9' : 'transparent',
+                  color: abaAtiva === item.id ? '#0f172a' : '#64748b',
+                  fontWeight: abaAtiva === item.id ? 600 : 500,
+                  fontSize: '0.80rem', cursor: 'pointer', textAlign: 'left',
+                  borderRadius: '16px 0 0 16px', borderRight: abaAtiva === item.id ? '3px solid #c59235' : '3px solid transparent',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span style={{ color: abaAtiva === item.id ? '#c59235' : '#94a3b8', display: 'flex' }}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <h3 style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px 14px', lineHeight: '1.3' }}>
             Fiscais &<br/>Planejamento
@@ -952,6 +1068,12 @@ export const SimulacoesCalculosPage: React.FC = () => {
             </h2>
             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0 0 0' }}>{desc}</p>
           </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {abaComHistorico && (
+            <button className="btn-cancel" onClick={() => salvarHistorico()} disabled={salvandoHistorico}>
+              <History size={16} /> {salvandoHistorico ? 'Salvando...' : historicoSalvo ? 'Salvo no histórico' : 'Salvar histórico'}
+            </button>
+          )}
           <button
             onClick={handleOpenPdfModal}
             style={{
@@ -981,7 +1103,11 @@ export const SimulacoesCalculosPage: React.FC = () => {
             <FileDown size={16} />
             Exportar PDF
           </button>
+          </div>
         </div>
+
+        {erroSimulacao && <div className="error-banner" role="alert">Não foi possível calcular esta simulação: {erroSimulacao}</div>}
+        {erroHistorico && <div className="error-banner" role="alert">{erroHistorico}</div>}
 
         <div key={abaAtiva} style={{ animation: 'fadeInTab 0.22s ease' }}>
           {abaAtiva === 'folha' && (
@@ -1069,6 +1195,21 @@ export const SimulacoesCalculosPage: React.FC = () => {
               markupDesejado={simulacaoCustosParams.markupDesejado} setMarkupDesejado={(v) => setSimulacaoCustosParams({...simulacaoCustosParams, markupDesejado: v})}
               resultado={resultadoCustos}
             />
+          )}
+          {abaAtiva === 'carne-leao' && (
+            <SimuladorCarneLeao params={carneLeaoParams} setParams={setCarneLeaoParams} resultado={resultadoCarneLeao} />
+          )}
+          {abaAtiva === 'irpf' && (
+            <SimuladorIrpf params={irpfParams} setParams={setIrpfParams} resultado={resultadoIrpf} />
+          )}
+          {abaAtiva === 'lucros-dividendos' && (
+            <SimuladorLucrosDividendos params={lucrosDividendosParams} setParams={setLucrosDividendosParams} resultado={resultadoLucrosDividendos} />
+          )}
+          {abaAtiva === 'ganho-capital' && (
+            <SimuladorGanhoCapital params={ganhoCapitalParams} setParams={setGanhoCapitalParams} resultado={resultadoGanhoCapital} />
+          )}
+          {abaAtiva === 'mei' && (
+            <SimuladorMei params={meiParams} setParams={setMeiParams} resultado={resultadoMei} />
           )}
         </div>
 

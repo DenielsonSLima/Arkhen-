@@ -1,0 +1,142 @@
+.pf-form-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+.pf-form-section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.pf-section-title {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.pf-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+
+.pf-result-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #eef1f5;
+}
+
+.pf-result-section h4 {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.pf-status-note,
+.pf-alert-list,
+.pf-memory-list {
+  border-radius: 9px;
+  padding: 11px 13px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.pf-status-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.pf-status-note.warning {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.pf-status-note.success {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.pf-alert-list,
+.pf-memory-list {
+  margin: 0;
+  list-style: none;
+}
+
+.pf-alert-list {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.pf-alert-list li + li,
+.pf-memory-list li + li {
+  margin-top: 6px;
+}
+
+.pf-memory-list {
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.pf-memory-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pf-version {
+  margin-top: 12px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  text-align: right;
+}
+
+.pf-model-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: #fafbfc;
+}
+
+.pf-model-card.recommended {
+  border-color: rgba(197, 146, 53, 0.5);
+  background: rgba(197, 146, 53, 0.06);
+}
+
+.pf-model-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pf-model-badge {
+  color: #9a6d1f;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .pf-field-grid {
+    grid-template-columns: 1fr;
+  }
+}
