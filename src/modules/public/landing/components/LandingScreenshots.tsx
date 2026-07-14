@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Play, X } from 'lucide-react';
 
 import screenDashboard from '../assets/screen-dashboard.png';
@@ -73,6 +74,7 @@ export const LandingScreenshots: React.FC = () => {
   const [autoplayActive, setAutoplayActive] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const autoplayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lightboxCloseRef = useRef<HTMLButtonElement>(null);
 
   const prev = () => {
     setCurrent((c) => (c === 0 ? slides.length - 1 : c - 1));
@@ -108,6 +110,51 @@ export const LandingScreenshots: React.FC = () => {
       }
     };
   }, [autoplayActive]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+
+    const scrollY = window.scrollY;
+    const previousActiveElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    const previousBodyStyles = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLightboxOpen(false);
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        lightboxCloseRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    const focusFrame = window.requestAnimationFrame(() => lightboxCloseRef.current?.focus());
+
+    return () => {
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      document.body.style.overflow = previousBodyStyles.overflow;
+      document.body.style.position = previousBodyStyles.position;
+      document.body.style.top = previousBodyStyles.top;
+      document.body.style.width = previousBodyStyles.width;
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.scrollTo(0, scrollY);
+      previousActiveElement?.focus();
+    };
+  }, [lightboxOpen]);
 
   const slide = slides[current];
 
@@ -153,13 +200,18 @@ export const LandingScreenshots: React.FC = () => {
 
           {/* Screenshot display */}
           <div className="browser-screenshot-area">
-            <img
-              src={slide.src}
-              alt={slide.title}
-              className="browser-screenshot-img"
+            <button
+              type="button"
+              className="browser-screenshot-trigger"
               onClick={() => setLightboxOpen(true)}
-              style={{ cursor: 'zoom-in' }}
-            />
+              aria-label={`Ampliar imagem: ${slide.title}`}
+            >
+              <img
+                src={slide.src}
+                alt={slide.title}
+                className="browser-screenshot-img"
+              />
+            </button>
 
             {/* Navigation Arrows */}
             <button type="button" className="screenshot-arrow screenshot-arrow-left" onClick={prev}>
@@ -194,15 +246,20 @@ export const LandingScreenshots: React.FC = () => {
       </div>
 
       {/* Lightbox Modal */}
-      {lightboxOpen && (
+      {lightboxOpen && createPortal(
         <div 
           className="screenshot-lightbox" 
           onClick={() => setLightboxOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Visualização ampliada: ${slide.title}`}
         >
           <button 
+            ref={lightboxCloseRef}
             type="button" 
             className="lightbox-close" 
             onClick={() => setLightboxOpen(false)}
+            aria-label="Fechar visualização ampliada"
           >
             <X size={28} />
           </button>
@@ -211,11 +268,13 @@ export const LandingScreenshots: React.FC = () => {
             alt={slide.title} 
             className="lightbox-image" 
             onClick={(e) => e.stopPropagation()} 
+            draggable={false}
           />
           <div className="lightbox-caption">
             <strong>{slide.title}</strong> — {slide.desc}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </section>
   );
