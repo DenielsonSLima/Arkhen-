@@ -29,6 +29,7 @@ import { RegimesTributariosPage } from '../parametrizacao/regimes/RegimesTributa
 import { CnaePage } from '../parametrizacao/cnae/CnaePage';
 import { RegrasApuracaoPage } from '../parametrizacao/regras/RegrasApuracaoPage';
 import { ParametrosCalculoPage } from '../parametrizacao/parametros-calculo/ParametrosCalculoPage';
+import { TabelasTributariasPage } from '../parametrizacao/tabelas-tributarias/TabelasTributariasPage';
 import { PrazosEntregaPage } from '../parametrizacao/prazos-entrega/PrazosEntregaPage';
 import { ProtocolosTiposPage } from '../parametrizacao/protocolos/ProtocolosTiposPage';
 import { ParametrizacaoPlaceholderPage } from '../parametrizacao/catalogos/ParametrizacaoPlaceholderPage';
@@ -458,6 +459,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     { id: 'parametrizacao-cnae', label: 'CNAE' },
     { id: 'parametrizacao-regras', label: 'Impostos' },
     { id: 'parametrizacao-parametros-calculo', label: 'Parâmetros de Cálculo' },
+    { id: 'parametrizacao-tabelas-tributarias', label: 'Tabelas Tributárias' },
     { id: 'parametrizacao-prazos-entrega', label: 'Obrigações' },
     { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },
     { id: 'parametrizacao-pastas-padrao', label: 'Pastas Padrão' },
@@ -614,6 +616,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         return <PastasPadraoPage />;
       case 'parametrizacao-parametros-calculo':
         return <ParametrosCalculoPage />;
+      case 'parametrizacao-tabelas-tributarias':
+        return <TabelasTributariasPage />;
       case 'parametrizacao-prazos-entrega':
         return <PrazosEntregaPage />;
       case 'parametrizacao-protocolos':

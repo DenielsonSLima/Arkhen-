@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Database, Plus, Search, Edit3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { AlertCircle, Database, Plus, Search, Edit3, ToggleLeft, ToggleRight, X } from 'lucide-react';
 import {
   categoriaFinanceiraKeys,
   categoriaFinanceiraService,
   type CategoriaFinanceira,
 } from '../services/categoriaFinanceiraService';
 import './ParametrizacaoPlaceholder.css';
+import './CategoriaFinanceiraPage.css';
 
 export const CategoriaFinanceiraPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -18,7 +20,7 @@ export const CategoriaFinanceiraPage: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const categories = query.data || [];
+  const categories = useMemo(() => query.data ?? [], [query.data]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoriaFinanceira | null>(null);
@@ -27,6 +29,7 @@ export const CategoriaFinanceiraPage: React.FC = () => {
   const [nome, setNome] = useState('');
   const [tipoDespesa, setTipoDespesa] = useState<'fixa' | 'variavel'>('fixa');
   const [error, setError] = useState('');
+  const [pageError, setPageError] = useState('');
 
   // Mutations
   const saveMutation = useMutation({
@@ -45,6 +48,25 @@ export const CategoriaFinanceiraPage: React.FC = () => {
       categoriaFinanceiraService.setStatus(id, ativa),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: categoriaFinanceiraKeys.all }),
   });
+
+  useEffect(() => {
+    if (!showModal) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !saveMutation.isPending) {
+        setShowModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showModal, saveMutation.isPending]);
 
   // Filters
   const filtered = useMemo(() => {
@@ -93,11 +115,16 @@ export const CategoriaFinanceiraPage: React.FC = () => {
   };
 
   const handleToggleStatus = async (item: CategoriaFinanceira) => {
+    setPageError('');
     try {
       await toggleMutation.mutateAsync({ id: item.id, ativa: item.status !== 'Ativa' });
     } catch (err: any) {
-      setError(err.message || 'Erro ao atualizar status.');
+      setPageError(err.message || 'Erro ao atualizar status.');
     }
+  };
+
+  const handleCloseModal = () => {
+    if (!saveMutation.isPending) setShowModal(false);
   };
 
   return (
@@ -114,7 +141,7 @@ export const CategoriaFinanceiraPage: React.FC = () => {
               <p>Gerencie as classificações de despesas fixas e variáveis para controle e lançamento do Contas a Pagar.</p>
             </div>
           </div>
-          <button className="btn-parametrizacao-add" onClick={() => handleOpenAdd('fixa')}>
+          <button type="button" className="categoria-financeira-primary-button" onClick={() => handleOpenAdd('fixa')}>
             <Plus size={16} />
             Nova Categoria
           </button>
@@ -133,122 +160,141 @@ export const CategoriaFinanceiraPage: React.FC = () => {
           </div>
         </div>
 
+        {(query.isError || pageError) && (
+          <div className="categoria-financeira-page-error" role="alert">
+            <AlertCircle size={18} />
+            <span>{pageError || (query.error instanceof Error ? query.error.message : 'Não foi possível carregar as categorias financeiras.')}</span>
+            {pageError && <button type="button" onClick={() => setPageError('')} aria-label="Fechar aviso"><X size={16} /></button>}
+          </div>
+        )}
+
         {/* Two Columns Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '16px' }}>
+        <div className="categoria-financeira-grid">
           
           {/* Column 1: Fixed */}
-          <div style={{ background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #cbd5e1', paddingBottom: '8px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Despesas Fixas</h3>
-              <span style={{ fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '99px', fontWeight: 700, color: '#475569' }}>
+          <section className="categoria-financeira-column" aria-labelledby="categorias-fixas-title">
+            <div className="categoria-financeira-column-header">
+              <h3 id="categorias-fixas-title">Despesas Fixas</h3>
+              <span className="categoria-financeira-count">
                 {fixedCategories.length} {fixedCategories.length === 1 ? 'categoria' : 'categorias'}
               </span>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="categoria-financeira-list">
               {fixedCategories.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '24px', color: '#94a3b8', fontSize: '0.85rem' }}>Nenhuma categoria fixa cadastrada.</div>
+                <div className="categoria-financeira-empty">Nenhuma categoria fixa cadastrada.</div>
               )}
               {fixedCategories.map((c) => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{c.nome}</strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: c.status === 'Ativa' ? '#dcfce7' : '#f1f5f9', color: c.status === 'Ativa' ? '#15803d' : '#475569' }}>
+                <article key={c.id} className="categoria-financeira-item">
+                  <div className="categoria-financeira-item-content">
+                    <strong>{c.nome}</strong>
+                    <div className="categoria-financeira-badges">
+                      <span className={`categoria-financeira-status ${c.status === 'Ativa' ? 'is-active' : 'is-inactive'}`}>
                         {c.status}
                       </span>
                       {c.sistema && (
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8' }}>
+                        <span className="categoria-financeira-system-badge">
                           Padrão
                         </span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="icon-action-btn" onClick={() => handleOpenEdit(c)} title="Editar">
+                  <div className="categoria-financeira-actions">
+                    <button type="button" className="categoria-financeira-icon-button" onClick={() => handleOpenEdit(c)} title={`Editar ${c.nome}`} aria-label={`Editar ${c.nome}`}>
                       <Edit3 size={15} />
                     </button>
                     {!c.sistema && (
-                      <button className="icon-action-btn" onClick={() => handleToggleStatus(c)} title={c.status === 'Ativa' ? 'Inativar' : 'Ativar'}>
-                        {c.status === 'Ativa' ? <ToggleRight size={20} color="#10b981" /> : <ToggleLeft size={20} color="#94a3b8" />}
+                      <button type="button" className="categoria-financeira-icon-button" onClick={() => handleToggleStatus(c)} title={c.status === 'Ativa' ? `Inativar ${c.nome}` : `Ativar ${c.nome}`} aria-label={c.status === 'Ativa' ? `Inativar ${c.nome}` : `Ativar ${c.nome}`} disabled={toggleMutation.isPending}>
+                        {c.status === 'Ativa' ? <ToggleRight size={20} className="is-active" /> : <ToggleLeft size={20} />}
                       </button>
                     )}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
-          </div>
+          </section>
 
           {/* Column 2: Variable */}
-          <div style={{ background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid #cbd5e1', paddingBottom: '8px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Despesas Variáveis</h3>
-              <span style={{ fontSize: '0.75rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '99px', fontWeight: 700, color: '#475569' }}>
+          <section className="categoria-financeira-column" aria-labelledby="categorias-variaveis-title">
+            <div className="categoria-financeira-column-header">
+              <h3 id="categorias-variaveis-title">Despesas Variáveis</h3>
+              <span className="categoria-financeira-count">
                 {variableCategories.length} {variableCategories.length === 1 ? 'categoria' : 'categorias'}
               </span>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="categoria-financeira-list">
               {variableCategories.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '24px', color: '#94a3b8', fontSize: '0.85rem' }}>Nenhuma categoria variável cadastrada.</div>
+                <div className="categoria-financeira-empty">Nenhuma categoria variável cadastrada.</div>
               )}
               {variableCategories.map((c) => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{c.nome}</strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: c.status === 'Ativa' ? '#dcfce7' : '#f1f5f9', color: c.status === 'Ativa' ? '#15803d' : '#475569' }}>
+                <article key={c.id} className="categoria-financeira-item">
+                  <div className="categoria-financeira-item-content">
+                    <strong>{c.nome}</strong>
+                    <div className="categoria-financeira-badges">
+                      <span className={`categoria-financeira-status ${c.status === 'Ativa' ? 'is-active' : 'is-inactive'}`}>
                         {c.status}
                       </span>
                       {c.sistema && (
-                        <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8' }}>
+                        <span className="categoria-financeira-system-badge">
                           Padrão
                         </span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="icon-action-btn" onClick={() => handleOpenEdit(c)} title="Editar">
+                  <div className="categoria-financeira-actions">
+                    <button type="button" className="categoria-financeira-icon-button" onClick={() => handleOpenEdit(c)} title={`Editar ${c.nome}`} aria-label={`Editar ${c.nome}`}>
                       <Edit3 size={15} />
                     </button>
                     {!c.sistema && (
-                      <button className="icon-action-btn" onClick={() => handleToggleStatus(c)} title={c.status === 'Ativa' ? 'Inativar' : 'Ativar'}>
-                        {c.status === 'Ativa' ? <ToggleRight size={20} color="#10b981" /> : <ToggleLeft size={20} color="#94a3b8" />}
+                      <button type="button" className="categoria-financeira-icon-button" onClick={() => handleToggleStatus(c)} title={c.status === 'Ativa' ? `Inativar ${c.nome}` : `Ativar ${c.nome}`} aria-label={c.status === 'Ativa' ? `Inativar ${c.nome}` : `Ativar ${c.nome}`} disabled={toggleMutation.isPending}>
+                        {c.status === 'Ativa' ? <ToggleRight size={20} className="is-active" /> : <ToggleLeft size={20} />}
                       </button>
                     )}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
-          </div>
+          </section>
 
         </div>
       </div>
 
       {/* Modal Add/Edit */}
-      {showModal && (
-        <div className="parametrizacao-modal-backdrop">
-          <div className="parametrizacao-modal-container" style={{ maxWidth: '480px' }}>
-            <div className="parametrizacao-modal-header">
-              <Database size={20} style={{ color: 'var(--color-gold-primary)' }} />
-              <h3>{editingCategory ? 'Editar Categoria' : 'Nova Categoria Financeira'}</h3>
+      {showModal && createPortal(
+        <div className="categoria-financeira-modal-backdrop" onMouseDown={handleCloseModal}>
+          <section className="categoria-financeira-modal" role="dialog" aria-modal="true" aria-labelledby="categoria-financeira-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="categoria-financeira-modal-header">
+              <div className="categoria-financeira-modal-heading">
+                <span className="categoria-financeira-modal-icon"><Database size={21} /></span>
+                <div>
+                  <h3 id="categoria-financeira-modal-title">{editingCategory ? 'Editar categoria' : 'Nova categoria financeira'}</h3>
+                  <p>{editingCategory ? 'Atualize a identificação e o tipo da categoria.' : 'Cadastre uma classificação para organizar o Contas a Pagar.'}</p>
+                </div>
+              </div>
+              <button type="button" className="categoria-financeira-modal-close" onClick={handleCloseModal} aria-label="Fechar formulário" disabled={saveMutation.isPending}>
+                <X size={19} />
+              </button>
             </div>
-            
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-              <div className="form-field">
-                <label>Nome da Categoria</label>
+
+            <form onSubmit={handleSave} className="categoria-financeira-form">
+              <div className="categoria-financeira-form-field">
+                <label htmlFor="categoria-financeira-nome">Nome da categoria</label>
                 <input
+                  id="categoria-financeira-nome"
                   type="text"
                   required
                   placeholder="Ex: Aluguel de Equipamentos"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
+                  autoFocus
                 />
               </div>
 
-              <div className="form-field">
-                <label>Tipo de Despesa</label>
-                <select 
+              <div className="categoria-financeira-form-field">
+                <label htmlFor="categoria-financeira-tipo">Tipo de despesa</label>
+                <select
+                  id="categoria-financeira-tipo"
                   value={tipoDespesa} 
                   onChange={(e) => setTipoDespesa(e.target.value as 'fixa' | 'variavel')}
                 >
@@ -258,22 +304,24 @@ export const CategoriaFinanceiraPage: React.FC = () => {
               </div>
 
               {error && (
-                <div style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {error}
+                <div className="categoria-financeira-form-error" role="alert">
+                  <AlertCircle size={17} /> <span>{error}</span>
                 </div>
               )}
 
-              <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-                <button type="button" className="btn-modal secondary" onClick={() => setShowModal(false)}>
+              <div className="categoria-financeira-modal-actions">
+                <button type="button" className="categoria-financeira-secondary-button" onClick={handleCloseModal} disabled={saveMutation.isPending}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-modal" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+                <button type="submit" className="categoria-financeira-primary-button" disabled={saveMutation.isPending}>
+                  {!saveMutation.isPending && <Plus size={17} />}
+                  {saveMutation.isPending ? 'Salvando...' : editingCategory ? 'Salvar alterações' : 'Criar categoria'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          </section>
+        </div>,
+        document.body,
       )}
     </div>
   );

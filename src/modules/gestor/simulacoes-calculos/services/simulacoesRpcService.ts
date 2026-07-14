@@ -24,6 +24,33 @@ export interface ResultadosSimulacoes {
   'simulacao-custos': ResultadoCustos;
 }
 
+export interface SimulacaoEnvelope<T> {
+  tipo: string;
+  competencia: string;
+  versoesParametros: Array<{ codigo: string; versao: string | number }>;
+  resultado: T;
+  memoriaCalculo: Array<{ descricao: string; base?: number; aliquota?: number | null; valor: number }>;
+  alertas: string[];
+  estimativa: boolean;
+  historicoId?: string;
+}
+
+const RPC_POR_SIMULACAO: Record<keyof ResultadosSimulacoes, string> = {
+  folha: 'simular_folha',
+  rescisao: 'simular_rescisao',
+  prolabore: 'simular_prolabore',
+  das: 'simular_das',
+  piscofins: 'simular_pis_cofins',
+  multas: 'simular_multas',
+  ferias: 'simular_ferias',
+  'tempo-empresa': 'simular_tempo_empresa',
+  'encargos-trabalhistas': 'simular_encargos_trabalhistas',
+  'simulacao-contratacao': 'simular_contratacao',
+  'comparativo-regime': 'simular_comparativo_regime',
+  'simulacao-imposto': 'simular_imposto_estimado',
+  'simulacao-custos': 'simular_custos',
+};
+
 export const EMPTY_RESULTADOS: ResultadosSimulacoes = {
   folha: {
     salarioBruto: 0, totalVencimentos: 0, descontosFuncionario: 0, encargosEmpresa: 0,
@@ -60,4 +87,13 @@ export async function calcularSimulacoesContabeis(
   });
   if (error) throw new Error(`Erro ao calcular simulações: ${error.message}`);
   return data as ResultadosSimulacoes;
+}
+
+export async function calcularSimulacaoContabil<K extends keyof ResultadosSimulacoes>(
+  tipo: K,
+  parametros: Record<string, unknown>,
+): Promise<SimulacaoEnvelope<ResultadosSimulacoes[K]>> {
+  const { data, error } = await supabase.rpc(RPC_POR_SIMULACAO[tipo], { p: parametros });
+  if (error) throw new Error(`Erro ao calcular ${tipo}: ${error.message}`);
+  return data as SimulacaoEnvelope<ResultadosSimulacoes[K]>;
 }

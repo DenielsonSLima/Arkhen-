@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { calcularSimulacoesContabeis, EMPTY_RESULTADOS } from '../services/simulacoesRpcService';
+import { calcularSimulacaoContabil, EMPTY_RESULTADOS, type ResultadosSimulacoes } from '../services/simulacoesRpcService';
 import { formatCurrencyInputValue, parseCurrencyInputValue } from '../../shared/currencyInputUtils';
 import { persistedStorage } from '../../../../lib/persistedStorage';
 import {
@@ -10,7 +10,7 @@ import {
   type ParametrosCalculo,
 } from '../../parametrizacao/parametros-calculo/services/parametrosCalculoService';
 
-export type AbaCalculo =
+export type AbaCalculoExistente =
   | 'folha'
   | 'rescisao'
   | 'prolabore'
@@ -24,6 +24,13 @@ export type AbaCalculo =
   | 'comparativo-regime'
   | 'simulacao-imposto'
   | 'simulacao-custos';
+
+export type AbaCalculo = AbaCalculoExistente
+  | 'carne-leao'
+  | 'irpf'
+  | 'lucros-dividendos'
+  | 'ganho-capital'
+  | 'mei';
 
 export type AvisoPrevioModo = 'cumprido' | 'descontado' | 'indenizado';
 export type AdicionalTempoServicoTipo = 'trienio' | 'quinquenio' | 'manual';
@@ -301,12 +308,16 @@ export function useSimulacoesCalculos() {
     contratacaoParams, comparativoRegimeParams,
     simulacaoImpostoParams, simulacaoCustosParams, parametrosCalculo.regrasGerais]);
 
+  const abaExistente = isAbaExistente(abaAtiva) ? abaAtiva : null;
   const simulacoesQuery = useQuery({
-    queryKey: ['simulacoes-contabeis', solicitacoes],
-    queryFn: () => calcularSimulacoesContabeis(solicitacoes),
-    placeholderData: (previous) => previous,
+    queryKey: ['simulacao-contabil', abaExistente, abaExistente ? solicitacoes[abaExistente] : null],
+    queryFn: () => calcularSimulacaoContabil(abaExistente!, solicitacoes[abaExistente!]),
+    enabled: abaExistente !== null,
   });
-  const resultados = simulacoesQuery.data ?? EMPTY_RESULTADOS;
+  const resultados = {
+    ...EMPTY_RESULTADOS,
+    ...(simulacoesQuery.data && abaExistente ? { [abaExistente]: simulacoesQuery.data.resultado } : {}),
+  } as ResultadosSimulacoes;
   const resultadoFolha = resultados.folha;
   const resultadoRescisao = resultados.rescisao;
   const resultadoProLabore = resultados.prolabore;
@@ -348,6 +359,10 @@ export function useSimulacoesCalculos() {
     activeTipoEmpresa,
     activeNaturezaJuridica,
   };
+}
+
+function isAbaExistente(value: AbaCalculo): value is AbaCalculoExistente {
+  return !['carne-leao', 'irpf', 'lucros-dividendos', 'ganho-capital', 'mei'].includes(value);
 }
 
 function parseNumberInput(value: string): number {

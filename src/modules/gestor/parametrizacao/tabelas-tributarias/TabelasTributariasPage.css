@@ -1,0 +1,38 @@
+.tabelas-tributarias-page { display: flex; flex-direction: column; gap: 18px; }
+.tributarias-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.tributarias-header h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #0f172a; }
+.tributarias-header h2 svg { color: #c59235; }
+.tributarias-header p { margin: 5px 0 0; color: #64748b; font-size: .86rem; }
+.tributarias-notice { display: flex; gap: 12px; align-items: center; border: 1px solid #ead6aa; background: #fffbeb; color: #805d1f; border-radius: 12px; padding: 12px 14px; }
+.tributarias-notice div { display: flex; flex-direction: column; gap: 2px; }
+.tributarias-notice span { color: #8a6a2f; font-size: .76rem; }
+.tributarias-tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+.tributarias-tabs button { border: 1px solid #dbe2ea; background: #fff; color: #64748b; padding: 7px 12px; border-radius: 999px; cursor: pointer; font-weight: 650; font-size: .76rem; }
+.tributarias-tabs button.active { border-color: #c59235; color: #8a651f; background: #fffaf0; }
+.tributarias-controls { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.tributarias-competencia { display: flex; flex-direction: column; gap: 5px; color: #64748b; font-size: .68rem; font-weight: 750; }
+.tributarias-competencia input { min-height: 36px; border: 1px solid #dbe2ea; border-radius: 8px; background: #fff; color: #0f172a; padding: 6px 9px; font: inherit; font-size: .78rem; }
+.tributarias-competencia input:focus { outline: 3px solid rgba(197, 146, 53, .14); border-color: #c59235; }
+.tributarias-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+.tributaria-card { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 15px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tributaria-card-title { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.tributaria-card-title h3 { margin: 4px 0 0; color: #0f172a; font-size: .98rem; }
+.tributaria-code { color: #c59235; font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.tributaria-origin { border-radius: 999px; padding: 4px 8px; font-size: .62rem; font-weight: 800; }
+.tributaria-origin.oficial { color: #166534; background: #dcfce7; }
+.tributaria-origin.escritorio { color: #1d4ed8; background: #dbeafe; }
+.tributaria-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; color: #64748b; font-size: .7rem; }
+.tributaria-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.tributaria-table-wrap { overflow-x: auto; }
+.tributaria-table { width: 100%; border-collapse: collapse; font-size: .7rem; }
+.tributaria-table th, .tributaria-table td { padding: 6px; border-bottom: 1px solid #f1f5f9; text-align: right; }
+.tributaria-table th:first-child, .tributaria-table td:first-child { text-align: left; }
+.tributaria-table th { color: #64748b; background: #f8fafc; }
+.tributaria-config { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.tributaria-config div { background: #f8fafc; border-radius: 8px; padding: 7px; min-width: 0; }
+.tributaria-config dt { color: #64748b; font-size: .62rem; text-transform: capitalize; }
+.tributaria-config dd { margin: 2px 0 0; color: #0f172a; font-size: .74rem; font-weight: 750; overflow-wrap: anywhere; }
+.tributaria-card footer { margin-top: auto; border-top: 1px solid #f1f5f9; padding-top: 9px; display: flex; justify-content: space-between; gap: 10px; color: #64748b; font-size: .65rem; }
+.tributaria-card footer a { display: inline-flex; align-items: center; gap: 3px; color: #a57521; font-weight: 700; }
+.tributarias-empty { padding: 28px; text-align: center; color: #64748b; border: 1px dashed #cbd5e1; border-radius: 12px; }
+@media (max-width: 720px) { .tributarias-header { flex-direction: column; } .tributarias-grid { grid-template-columns: 1fr; } }
