@@ -1,6 +1,10 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Calculator, FileText, Gauge, Store } from 'lucide-react';
 import { CurrencyInput } from '../../shared/CurrencyInput';
+import { CompetenciaSelect } from '../../shared/CompetenciaSelect';
+import { formatCompetencia } from '../../shared/dateDisplay';
+import { cnaeCatalogQueryKey, parametrizacaoService } from '../../parametrizacao/services/parametrizacaoService';
 import { formatCurrency } from '../services/calculos.service';
 import type {
   FaixaRiscoMei,
@@ -42,8 +46,24 @@ const RISCO_CLASS: Record<FaixaRiscoMei, string> = {
 const formatPercent = (value: number) => `${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
 
 export const SimuladorMei: React.FC<SimuladorMeiProps> = ({ params, setParams, resultado }) => {
+  const cnaesQuery = useQuery({
+    queryKey: cnaeCatalogQueryKey(false),
+    queryFn: () => parametrizacaoService.getCnaes(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const updateParam = <K extends keyof SimulacaoMeiParams>(key: K, value: SimulacaoMeiParams[K]) =>
     setParams({ ...params, [key]: value });
+
+  const updateCompetencia = (competencia: string) => setParams({
+    ...params,
+    competencia,
+    ano: competencia.slice(0, 4),
+  });
+
+  const cnaesElegiveis = (cnaesQuery.data ?? []).filter((cnae) => (
+    cnae.meiPermitido && cnae.meiTipo === params.tipoMei
+  ));
 
   const updateReceita = (mes: keyof ReceitasMensaisMei, value: string) =>
     updateParam('receitasMensais', { ...params.receitasMensais, [mes]: value });
@@ -55,26 +75,12 @@ export const SimuladorMei: React.FC<SimuladorMeiProps> = ({ params, setParams, r
           <h3><Store size={18} color="#c59235" />Enquadramento do MEI</h3>
 
           <div className="mei-grid mei-grid--two">
-            <div className="calc-field">
-              <label htmlFor="mei-competencia">Competência de referência</label>
-              <input
-                id="mei-competencia"
-                type="month"
-                value={params.competencia}
-                onChange={(event) => updateParam('competencia', event.target.value)}
-              />
-            </div>
-            <div className="calc-field">
-              <label htmlFor="mei-ano">Ano da simulação</label>
-              <input
-                id="mei-ano"
-                type="number"
-                min="2000"
-                max="2100"
-                value={params.ano}
-                onChange={(event) => updateParam('ano', event.target.value)}
-              />
-            </div>
+            <CompetenciaSelect
+              id="mei-competencia"
+              label="Competência de referência"
+              value={params.competencia}
+              onChange={updateCompetencia}
+            />
             <div className="calc-field">
               <label htmlFor="mei-abertura">Data de abertura</label>
               <input
@@ -89,7 +95,7 @@ export const SimuladorMei: React.FC<SimuladorMeiProps> = ({ params, setParams, r
               <select
                 id="mei-tipo"
                 value={params.tipoMei}
-                onChange={(event) => updateParam('tipoMei', event.target.value as SimulacaoMeiParams['tipoMei'])}
+                onChange={(event) => setParams({ ...params, tipoMei: event.target.value as SimulacaoMeiParams['tipoMei'], ocupacaoCodigo: '' })}
               >
                 <option value="normal">MEI</option>
                 <option value="caminhoneiro">MEI Caminhoneiro</option>
@@ -143,14 +149,23 @@ export const SimuladorMei: React.FC<SimuladorMeiProps> = ({ params, setParams, r
               <small>O servidor valida o limite permitido para a competência.</small>
             </div>
             <div className="calc-field">
-              <label htmlFor="mei-ocupacao">Código da ocupação ou CNAE</label>
-              <input
+              <label htmlFor="mei-ocupacao">CNAE cadastrado</label>
+              <select
                 id="mei-ocupacao"
                 value={params.ocupacaoCodigo}
-                placeholder="Ex.: 8599-6/04"
                 onChange={(event) => updateParam('ocupacaoCodigo', event.target.value)}
-              />
-              <small>A permissão é conferida na tabela tributária versionada.</small>
+                disabled={cnaesQuery.isLoading || cnaesQuery.isError}
+              >
+                <option value="">
+                  {cnaesQuery.isLoading ? 'Carregando CNAEs...' : 'Selecione um CNAE parametrizado'}
+                </option>
+                {cnaesElegiveis.map((cnae) => (
+                  <option key={cnae.id} value={cnae.codigo}>{cnae.codigo} — {cnae.descricao}</option>
+                ))}
+              </select>
+              {cnaesQuery.isError
+                ? <small className="mei-field-error">Não foi possível carregar os CNAEs cadastrados.</small>
+                : <small>{cnaesElegiveis.length ? 'A lista mostra somente CNAEs ativos e permitidos para o tipo de MEI selecionado.' : 'Nenhum CNAE elegível está ativo para este tipo de MEI.'}</small>}
             </div>
             <label className="calc-check-row">
               <input
@@ -229,7 +244,7 @@ export const SimuladorMei: React.FC<SimuladorMeiProps> = ({ params, setParams, r
               </div>
             )}
 
-            <small className="mei-version">Parâmetros: {resultado.competenciaParametros} · {resultado.versaoParametros}</small>
+            <small className="mei-version">Parâmetros: {formatCompetencia(resultado.competenciaParametros)} · {resultado.versaoParametros}</small>
           </>
         )}
       </section>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { AlertTriangle, BookOpen, Calculator, ReceiptText } from 'lucide-react';
 import { CurrencyInput } from '../../../shared/CurrencyInput';
+import { CompetenciaSelect } from '../../../shared/CompetenciaSelect';
+import { formatDateBr } from '../../../shared/dateDisplay';
 import { formatCurrency, formatPercent } from '../../services/calculos.service';
 import type { CarneLeaoParams, ResultadoCarneLeao } from '../types';
 import '../PessoaFisica.css';
@@ -24,10 +26,7 @@ export const SimuladorCarneLeao: React.FC<Props> = ({ params, setParams, resulta
         <section className="pf-form-section">
           <p className="pf-section-title">Competência e atividade</p>
           <div className="pf-field-grid">
-            <div className="calc-field">
-              <label htmlFor="carne-competencia">Competência</label>
-              <input id="carne-competencia" type="month" value={params.competencia} onChange={(event) => update('competencia', event.target.value)} />
-            </div>
+            <CompetenciaSelect id="carne-competencia" value={params.competencia} onChange={(value) => update('competencia', value)} />
             <div className="calc-field">
               <label htmlFor="carne-atividade">Tipo de atividade</label>
               <select id="carne-atividade" value={params.tipoAtividade} onChange={(event) => update('tipoAtividade', event.target.value)}>
@@ -81,7 +80,7 @@ export const SimuladorCarneLeao: React.FC<Props> = ({ params, setParams, resulta
             <div className="pf-result-section">
               <h4>Recolhimento</h4>
               <div className="resultado-row"><span className="r-label">Código de receita</span><span className="r-valor">{resultado.codigoReceita}</span></div>
-              <div className="resultado-row"><span className="r-label">Vencimento</span><span className="r-valor">{resultado.vencimento}</span></div>
+              <div className="resultado-row"><span className="r-label">Vencimento</span><span className="r-valor">{formatDateBr(resultado.vencimento)}</span></div>
               <ResultRow label="Excesso de Livro Caixa" value={resultado.excessoLivroCaixa} />
             </div>
 

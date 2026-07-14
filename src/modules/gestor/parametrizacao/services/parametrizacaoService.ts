@@ -9,6 +9,18 @@ export interface Cnae {
   simplesAnexo: 'Anexo I' | 'Anexo II' | 'Anexo III' | 'Anexo IV' | 'Anexo V' | 'N/A';
   presuncaoIrpj: number;
   presuncaoCsll: number;
+  ativo: boolean;
+  meiPermitido: boolean;
+  meiTipo: 'normal' | 'caminhoneiro' | 'nao_aplicavel';
+  meiOcupacoes: string[];
+  regimesPermitidos: Array<'mei' | 'simples_nacional' | 'lucro_presumido' | 'lucro_real'>;
+  anexosSimples: Array<'Anexo I' | 'Anexo II' | 'Anexo III' | 'Anexo IV' | 'Anexo V'>;
+  sujeitoFatorR: boolean;
+  padraoSistema: boolean;
+  observacoes: string;
+  fonteCnaeUrl: string;
+  fonteTributariaUrl: string;
+  classificacaoRevisadaEm: string;
 }
 
 export interface RegraImposto {
@@ -42,6 +54,18 @@ type CnaeRow = {
   simples_anexo: Cnae['simplesAnexo'];
   presuncao_irpj: number | string;
   presuncao_csll: number | string;
+  ativo: boolean;
+  mei_permitido: boolean;
+  mei_tipo: Cnae['meiTipo'];
+  mei_ocupacoes: string[];
+  regimes_permitidos: Cnae['regimesPermitidos'];
+  anexos_simples: Cnae['anexosSimples'];
+  sujeito_fator_r: boolean;
+  padrao_sistema: boolean;
+  observacoes: string;
+  fonte_cnae_url: string;
+  fonte_tributaria_url: string;
+  classificacao_revisada_em: string;
 };
 
 type RegraImpostoRow = {
@@ -69,6 +93,10 @@ type RegraCnabRow = {
 
 const toNumber = (value: number | string | null | undefined) => Number(value ?? 0);
 
+export const cnaeCatalogQueryKey = (includeInactive: boolean) => [
+  'parametrizacao', 'cnaes', 'catalogo', includeInactive ? 'todos' : 'ativos',
+] as const;
+
 const mapCnae = (row: CnaeRow): Cnae => ({
   id: row.id,
   codigo: row.codigo,
@@ -77,6 +105,18 @@ const mapCnae = (row: CnaeRow): Cnae => ({
   simplesAnexo: row.simples_anexo,
   presuncaoIrpj: toNumber(row.presuncao_irpj),
   presuncaoCsll: toNumber(row.presuncao_csll),
+  ativo: row.ativo,
+  meiPermitido: row.mei_permitido,
+  meiTipo: row.mei_tipo,
+  meiOcupacoes: row.mei_ocupacoes ?? [],
+  regimesPermitidos: row.regimes_permitidos ?? [],
+  anexosSimples: row.anexos_simples ?? [],
+  sujeitoFatorR: row.sujeito_fator_r,
+  padraoSistema: row.padrao_sistema,
+  observacoes: row.observacoes ?? '',
+  fonteCnaeUrl: row.fonte_cnae_url,
+  fonteTributariaUrl: row.fonte_tributaria_url,
+  classificacaoRevisadaEm: row.classificacao_revisada_em,
 });
 
 const mapRegraImposto = (row: RegraImpostoRow): RegraImposto => ({
@@ -105,15 +145,27 @@ const mapRegraCnab = (row: RegraCnabRow): RegraCnab => ({
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 export const parametrizacaoService = {
-  async getCnaes(): Promise<Cnae[]> {
-    const { data, error } = await supabase
+  async getCnaes(options?: { includeInactive?: boolean }): Promise<Cnae[]> {
+    let query = supabase
       .from('parametrizacao_cnaes')
-      .select('id,codigo,descricao,simples_nacional,simples_anexo,presuncao_irpj,presuncao_csll')
-      .eq('ativo', true)
+      .select('id,codigo,descricao,simples_nacional,simples_anexo,presuncao_irpj,presuncao_csll,ativo,mei_permitido,mei_tipo,mei_ocupacoes,regimes_permitidos,anexos_simples,sujeito_fator_r,padrao_sistema,observacoes,fonte_cnae_url,fonte_tributaria_url,classificacao_revisada_em')
       .order('codigo', { ascending: true });
+
+    if (!options?.includeInactive) query = query.eq('ativo', true);
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return (data ?? []).map((row) => mapCnae(row as CnaeRow));
+  },
+
+  async toggleCnaeAtivo(id: string, ativo: boolean): Promise<boolean> {
+    const { error } = await supabase
+      .from('parametrizacao_cnaes')
+      .update({ ativo })
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   },
 
   async saveCnae(cnae: Cnae): Promise<Cnae> {

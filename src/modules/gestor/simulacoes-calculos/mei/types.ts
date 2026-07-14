@@ -36,6 +36,17 @@ export interface MemoriaCalculoMei {
 }
 
 export interface ResultadoSimulacaoMei {
+  tipoMei: TipoMei;
+  atividade: SimulacaoMeiParams['atividade'];
+  ocupacaoCodigo: string | null;
+  ocupacaoConfirmada: boolean;
+  quantidadeEmpregados: number;
+  possuiSocio: boolean;
+  possuiFilial: boolean;
+  mesesConsideradosAcumulado: number;
+  mesesConsideradosLimite: number;
+  faturamentoAcumulado: number;
+  faturamentoMes: number;
   limiteAnual: number;
   limiteProporcional: number;
   receitaAcumulada: number;
@@ -45,6 +56,8 @@ export interface ResultadoSimulacaoMei {
   faixaRiscoDescricao: string;
   valorExcesso: number;
   desenquadramentoDescricao: string;
+  status: string;
+  dasMensalEstimado: number;
   competenciaParametros: string;
   versaoParametros: string;
   memoriaCalculo: MemoriaCalculoMei[];

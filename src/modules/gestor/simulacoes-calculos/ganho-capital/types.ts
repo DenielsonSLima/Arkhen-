@@ -26,24 +26,39 @@ export interface ItemMemoriaGanhoCapital {
 
 export interface ParcelaGanhoCapital {
   numero: number;
+  data?: string;
   vencimento: string;
   valorRecebido: number;
   impostoEstimado: number;
 }
 
 export interface ResultadoSimulacaoGanhoCapital {
+  valorVenda: number;
+  valorVendaCorrespondenteParticipacao: number;
+  valoresJaProporcionais: boolean;
+  percentualPropriedade: number;
   custoAjustado: number;
+  totalAlienacoesMesMesmaNatureza: number;
   ganhoBruto: number;
+  ganhoCapital: number;
   valorIsento: number;
+  parcelaIsenta: number;
   baseCalculo: number;
+  ganhoTributavel: number;
   aliquotaMarginal: number;
   aliquotaEfetiva: number;
   impostoEstimado: number;
   vencimento: string;
   isencaoDescricao: string;
+  isento: boolean;
+  motivoIsencao: string;
+  codigoDarf: string;
+  dataReinvestimento: string | null;
+  reinvestimento180DiasAplicado: boolean;
   competenciaParametros: string;
   versaoParametros: string;
   memoriaCalculo: ItemMemoriaGanhoCapital[];
   parcelas: ParcelaGanhoCapital[];
+  cronogramaParcelas: ParcelaGanhoCapital[];
   alertas: string[];
 }

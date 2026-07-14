@@ -1,0 +1,51 @@
+.competencia-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.competencia-field .competencia-label {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.competencia-field .sr-only {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.competencia-selects {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(88px, 0.75fr);
+  gap: 10px;
+}
+
+.competencia-selects select {
+  min-width: 0;
+  width: 100%;
+}
+
+.tributarias-competencia.competencia-field {
+  margin-bottom: 0;
+  min-width: 250px;
+}
+
+.tributarias-competencia .competencia-selects select {
+  min-height: 36px;
+}
+
+@media (max-width: 520px) {
+  .competencia-selects {
+    grid-template-columns: 1fr;
+  }
+
+  .tributarias-competencia.competencia-field {
+    min-width: 100%;
+  }
+}
