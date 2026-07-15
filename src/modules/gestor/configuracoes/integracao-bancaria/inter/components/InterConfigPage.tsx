@@ -30,6 +30,10 @@ const getErrorMessage = (error: unknown, fallback: string) => (
   error instanceof Error && error.message ? error.message : fallback
 );
 
+const isInconclusiveConnection = (error: unknown) => (
+  error instanceof Error && /não respondeu|inconclusiv|temporariamente indisponível/i.test(error.message)
+);
+
 export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<InterTab>('credenciais');
   const [toast, setToast] = useState<SystemToastData | null>(null);
@@ -71,7 +75,12 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
       const result = await inter.testConnection();
       notify(result.ok ? 'success' : 'error', result.ok ? 'Conexão validada' : 'Falha no teste de conexão', result.message);
     } catch (error) {
-      notify('error', 'Falha no teste de conexão', getErrorMessage(error, 'Não foi possível validar a comunicação com o Banco Inter.'));
+      const inconclusive = isInconclusiveConnection(error);
+      notify(
+        inconclusive ? 'info' : 'error',
+        inconclusive ? 'Teste inconclusivo' : 'Falha no teste de conexão',
+        getErrorMessage(error, 'Não foi possível validar a comunicação com o Banco Inter.'),
+      );
     }
   };
 
@@ -143,7 +152,11 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
           </nav>
 
           {inter.connectionResult && <div className={`bank-feedback ${inter.connectionResult.ok ? 'bank-feedback--success' : 'bank-feedback--error'}`}>{inter.connectionResult.message}</div>}
-          {inter.connectionError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.connectionError, 'O teste de conexão falhou.')}</div>}
+          {inter.connectionError && (
+            <div className={`bank-feedback ${isInconclusiveConnection(inter.connectionError) ? 'bank-feedback--warning' : 'bank-feedback--error'}`}>
+              {getErrorMessage(inter.connectionError, 'O teste de conexão falhou.')}
+            </div>
+          )}
           {inter.webhookResult && <div className={`bank-feedback ${inter.webhookResult.ok ? 'bank-feedback--success' : 'bank-feedback--error'}`}>{inter.webhookResult.message}</div>}
           {inter.webhookError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.webhookError, 'Não foi possível registrar o webhook.')}</div>}
 
