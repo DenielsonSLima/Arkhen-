@@ -119,6 +119,9 @@ const toEnvironmentPayload = (config: InterEnvironmentConfig) => ({
   clientSecret: cleanSecret(config.clientSecret),
   certificadoPem: config.certificatePem.trim(),
   chavePrivadaPem: config.privateKeyPem.trim(),
+  clearClientSecret: config.clearClientSecret,
+  clearCertificate: config.clearCertificate,
+  clearPrivateKey: config.clearPrivateKey,
   contaCorrente: '',
   chavePix: config.chavePix.trim(),
 });

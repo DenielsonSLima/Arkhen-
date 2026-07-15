@@ -1,0 +1,71 @@
+.system-toast {
+  align-items: flex-start;
+  animation: system-toast-in 220ms ease-out both;
+  background: #111827;
+  border: 1px solid rgba(197, 146, 53, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 20px 52px rgba(15, 23, 42, 0.3);
+  color: #fff;
+  display: grid;
+  gap: 11px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  top: max(18px, env(safe-area-inset-top));
+  width: min(410px, calc(100vw - 32px));
+  z-index: 12000;
+}
+
+.system-toast__icon {
+  align-items: center;
+  background: rgba(217, 164, 65, 0.14);
+  border-radius: 8px;
+  color: #e2b354;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.system-toast--error { border-color: rgba(248, 113, 113, 0.58); }
+.system-toast--error .system-toast__icon { background: rgba(239, 68, 68, 0.14); color: #f87171; }
+.system-toast--info .system-toast__icon { background: rgba(96, 165, 250, 0.14); color: #93c5fd; }
+
+.system-toast__content { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding-top: 1px; }
+.system-toast__content strong { color: #fff; font-size: .88rem; line-height: 1.35; }
+.system-toast__content > span { color: #cbd5e1; font-size: .78rem; line-height: 1.45; overflow-wrap: anywhere; }
+
+.system-toast__close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 30px;
+}
+.system-toast__close:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.system-toast__close:focus-visible { box-shadow: 0 0 0 2px #d9a441; outline: 0; }
+
+@keyframes system-toast-in {
+  from { opacity: 0; transform: translate3d(14px, -8px, 0) scale(.98); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@media (max-width: 600px) {
+  .system-toast {
+    right: max(12px, env(safe-area-inset-right));
+    top: max(12px, env(safe-area-inset-top));
+    width: calc(100vw - 24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-toast { animation: none; }
+}
