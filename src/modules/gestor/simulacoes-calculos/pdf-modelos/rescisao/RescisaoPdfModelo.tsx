@@ -100,7 +100,6 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
   const salarioInformado = parseCurrencyInputValue(params.salario);
   const saldoFgts = parseCurrencyInputValue(params.saldoFGTS);
   const periodosVencidos = Number(params.feriasVencidasPeriodos || 0);
-  const totalDescontos = resultado.inssRescisao + resultado.irrfRescisao + resultado.avisoPrevioDesconto;
   const adicionalTempoDescricao = params.adicionalTempoServicoAtivo
     ? params.adicionalTempoServicoTipo === 'manual'
       ? `${adicionalTempoLabels[params.adicionalTempoServicoTipo]}: ${formatCurrency(parseCurrencyInputValue(params.adicionalTempoServicoValor))}`
@@ -121,7 +120,7 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
         </div>
         <div style={{ border: '1px solid #fee2e2', borderRadius: '12px', padding: '13px 14px', background: '#fffafa' }}>
           <div style={{ color: '#991b1b', fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase' }}>Descontos</div>
-          <div style={{ color: '#ef4444', fontSize: '0.94rem', fontWeight: 900, marginTop: '5px' }}>{formatCurrency(totalDescontos)}</div>
+          <div style={{ color: '#ef4444', fontSize: '0.94rem', fontWeight: 900, marginTop: '5px' }}>{formatCurrency(resultado.totalDescontos)}</div>
         </div>
       </div>
 

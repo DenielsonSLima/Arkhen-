@@ -65,7 +65,7 @@ type ProtocoloStatusDbRow = {
 };
 
 type ProtocoloConfigRow = {
-  empresa_id: string;
+  cliente_id: string;
   configs: unknown;
 };
 
@@ -77,7 +77,10 @@ const ALLOWED_PERIODICIDADES = new Set<TipoFechamentoEntrega>(['mensal', 'quinze
 const isMissingProtocolosTableError = (error: unknown): boolean => {
   if (!error || typeof error !== 'object') return false;
   const err = error as { code?: string; message?: string };
-  return err.code === '42P01' || String(err.message || '').includes('relation "public.protocolos_entregas" does not exist');
+  return err.code === '42P01'
+    || err.code === 'PGRST205'
+    || String(err.message || '').includes('does not exist')
+    || String(err.message || '').includes('Could not find the table');
 };
 
 const isConfigMismatch = (value: ProtocoloEmpresaConfig[] | undefined, catalogo: ProtocoloTipoConfig[]) => {
@@ -137,18 +140,15 @@ const mapConfigFromDb = (companyId: string, catalogo: ProtocoloTipoConfig[], raw
 const persistirConfigEmpresa = async (companyId: string, configs: ProtocoloEmpresaConfig[]) => {
   try {
     const payload = {
-      empresa_id: companyId,
+      cliente_id: companyId,
       configs,
     };
 
     const { error } = await supabase
       .from(PROTOCOLOS_CONFIG_TABLE)
-      .upsert(payload, { onConflict: 'empresa_id' });
+      .upsert(payload, { onConflict: 'empresa_id,cliente_id', defaultToNull: false });
 
-    if (error) {
-      if (isMissingProtocolosTableError(error)) return;
-      throw error;
-    }
+    if (error) throw error;
   } catch (error) {
     console.error('[protocolosService] Erro ao persistir configuração de protocolos por empresa:', error);
     throw error;
@@ -180,18 +180,18 @@ const loadEntregasEmpresaConfig = async (companyId: string): Promise<ProtocoloEm
     const { data, error } = await supabase
       .from(PROTOCOLOS_CONFIG_TABLE)
       .select('configs')
-      .eq('empresa_id', companyId)
+      .eq('cliente_id', companyId)
       .maybeSingle();
 
     if (error) {
-      if (error.code === '42P01') return null;
+      if (isMissingProtocolosTableError(error)) return null;
       throw error;
     }
 
     if (!data) return [];
     return (data as ProtocoloConfigRow).configs as ProtocoloEmpresaConfig[];
   } catch (error) {
-    if ((error as { code?: string } | null)?.code === '42P01') return null;
+    if (isMissingProtocolosTableError(error)) return null;
     console.warn('[protocolosService] Erro ao carregar configuração de protocolos por empresa. Usando padrão do catálogo.', error);
     return null;
   }
@@ -290,28 +290,22 @@ const mergePersistedState = (item: ProtocoloEntrega, persisted?: ProtocoloStatus
 };
 
 const persistirProtocolo = async (protocolo: ProtocoloEntrega) => {
-  try {
-    const payload = {
-      id: protocolo.id,
-      empresa_id: protocolo.empresaId,
-      entrega_id: protocolo.entregaId,
-      competencia: protocolo.competencia,
-      periodo_referencia: protocolo.periodoReferencia,
-      status: protocolo.status,
-      recebido_em: protocolo.recebidoEm || null,
-      concluido_por: protocolo.concluidoPor || null,
-      anotacoes_list: protocolo.anotacoesList || [],
-      atualizado_em: protocolo.atualizadoEm || new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from(PROTOCOLOS_TABLE)
-      .upsert(payload, { onConflict: 'id' });
-    if (error && isMissingProtocolosTableError(error)) return;
-    if (error) throw error;
-  } catch (error) {
-    if (isMissingProtocolosTableError(error)) return;
-    throw error;
-  }
+  const payload = {
+    id: protocolo.id,
+    cliente_id: protocolo.empresaId,
+    entrega_id: protocolo.entregaId,
+    competencia: protocolo.competencia,
+    periodo_referencia: protocolo.periodoReferencia,
+    status: protocolo.status,
+    recebido_em: protocolo.recebidoEm || null,
+    concluido_por: protocolo.concluidoPor || null,
+    anotacoes_list: protocolo.anotacoesList || [],
+    atualizado_em: protocolo.atualizadoEm || new Date().toISOString(),
+  };
+  const { error } = await supabase
+    .from(PROTOCOLOS_TABLE)
+    .upsert(payload, { onConflict: 'id', defaultToNull: false });
+  if (error) throw error;
 };
 
 const getEntregasEmpresaConfig = async (company: Company): Promise<ProtocoloEmpresaConfig[]> => {

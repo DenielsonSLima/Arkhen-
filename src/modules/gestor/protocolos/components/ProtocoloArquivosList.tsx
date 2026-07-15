@@ -18,7 +18,7 @@ type AbaProtocolo = 'recebidos' | 'enviados' | 'pendencias' | 'historico';
 interface ProtocoloArquivosListProps {
   items: ProtocoloEntrega[];
   formatDate: (value: string) => string;
-  onUpdateProtocolo: (id: string, updates: ProtocoloUpdate) => void;
+  onUpdateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<void>;
 }
 
 const ABA_CONFIG: { key: AbaProtocolo; label: string; icon: React.ElementType }[] = [
@@ -60,6 +60,8 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const [activeTab, setActiveTab] = useState<AbaProtocolo>('pendencias');
   const [previewFile, setPreviewFile] = useState<ProtocoloEntrega | null>(null);
   const [novaAnotacao, setNovaAnotacao] = useState('');
+  const [updatingId, setUpdatingId] = useState('');
+  const [operationError, setOperationError] = useState('');
 
   const hasGlobalItems = items.length > 0;
 
@@ -83,18 +85,27 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
   const displayedItems = tabItems[activeTab] || [];
 
-  const handleStatusToggle = (item: ProtocoloEntrega) => {
+  const handleStatusToggle = async (item: ProtocoloEntrega) => {
     const newStatus = item.status === 'Concluído' ? 'Pendente' : 'Concluído';
     const updates: ProtocoloUpdate = newStatus === 'Concluído'
       ? { status: newStatus, recebidoEm: item.recebidoEm || new Date().toISOString(), concluidoPor: item.concluidoPor || getCurrentUserName() }
       : { status: newStatus, recebidoEm: '', concluidoPor: '' };
-    onUpdateProtocolo(item.id, updates);
-    if (previewFile?.id === item.id) {
-      setPreviewFile({ ...previewFile, ...updates });
+    setUpdatingId(item.id);
+    setOperationError('');
+    try {
+      await onUpdateProtocolo(item.id, updates);
+      if (previewFile?.id === item.id) {
+        setPreviewFile({ ...previewFile, ...updates });
+      }
+    } catch (error) {
+      console.error('Falha ao atualizar protocolo.', error);
+      setOperationError('Não foi possível atualizar o protocolo. Tente novamente.');
+    } finally {
+      setUpdatingId('');
     }
   };
 
-  const handleAddAnotacao = () => {
+  const handleAddAnotacao = async () => {
     if (!previewFile || !novaAnotacao.trim()) return;
 
     const newAnotacao = {
@@ -111,9 +122,18 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
     const updatedAnotacoes = [...(previewFile.anotacoesList || []), newAnotacao];
 
-    onUpdateProtocolo(previewFile.id, { anotacoesList: updatedAnotacoes });
-    setPreviewFile({ ...previewFile, anotacoesList: updatedAnotacoes });
-    setNovaAnotacao('');
+    setUpdatingId(previewFile.id);
+    setOperationError('');
+    try {
+      await onUpdateProtocolo(previewFile.id, { anotacoesList: updatedAnotacoes });
+      setPreviewFile({ ...previewFile, anotacoesList: updatedAnotacoes });
+      setNovaAnotacao('');
+    } catch (error) {
+      console.error('Falha ao adicionar anotação ao protocolo.', error);
+      setOperationError('Não foi possível salvar a anotação. Tente novamente.');
+    } finally {
+      setUpdatingId('');
+    }
   };
 
   const getShortDate = (dateStr?: string) => {
@@ -130,6 +150,12 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
   return (
     <div className="protocolo-files-workspace">
+      {operationError ? (
+        <div className="protocolo-operation-error" role="alert">
+          <span>{operationError}</span>
+          <button type="button" onClick={() => setOperationError('')} aria-label="Fechar mensagem"><X size={14} /></button>
+        </div>
+      ) : null}
       <div className={`protocolo-files-layout ${hasGlobalItems ? 'has-preview' : ''}`}>
         <div className="protocolo-files-browser">
           <div className="protocolo-files-table-shell">
@@ -223,6 +249,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                         <div className="protocolo-file-actions">
                           <button
                             type="button"
+                            disabled={updatingId === item.id}
                             title="Anotações"
                             onClick={(event) => {
                               event.stopPropagation();
@@ -235,6 +262,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                           <button
                             type="button"
                             className={item.status === 'Concluído' ? 'danger' : 'approve'}
+                            disabled={updatingId === item.id}
                             title={item.status === 'Concluído' ? 'Reabrir protocolo' : 'Concluir protocolo'}
                             onClick={(event) => {
                               event.stopPropagation();
@@ -294,6 +322,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                   <button
                     type="button"
                     className={previewFile.status === 'Concluído' ? 'reject' : 'approve'}
+                    disabled={updatingId === previewFile.id}
                     onClick={() => handleStatusToggle(previewFile)}
                   >
                     {previewFile.status === 'Concluído' ? <X size={15} /> : <CheckCircle2 size={15} />}
@@ -326,7 +355,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                 <button
                   className="add-anotacao-btn"
                   onClick={handleAddAnotacao}
-                  disabled={!novaAnotacao.trim()}
+                  disabled={!novaAnotacao.trim() || updatingId === previewFile.id}
                 >
                   <Plus size={14} /> Adicionar
                 </button>

@@ -32,7 +32,7 @@ export interface ResultadoRescisao {
   decimoTerceiroProporcional: number; feriasProporcionais: number; adicionalFerias: number;
   feriasVencidas: number; adicionalFeriasVencidas: number; avisoPrevio: number;
   avisoPrevioDesconto: number; multaFGTS: number; totalBruto: number; inssRescisao: number;
-  irrfRescisao: number; totalLiquido: number;
+  irrfRescisao: number; totalDescontos: number; totalLiquido: number;
 }
 
 export interface ResultadoProLabore { valorProLabore: number; inss: number; irrf: number; liquido: number; cpp: number; custoEmpresa: number; }

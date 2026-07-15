@@ -30,6 +30,14 @@ import { empresaService } from '../configuracoes/empresa/services/empresaService
 import { marcaDaguaService } from '../configuracoes/marca-dagua/services/marcaDaguaService';
 import { parseCurrencyInputValue } from '../shared/currencyInputUtils';
 import { formatCurrency, formatPercent } from './services/calculos.service';
+import { buildLegacyPdfSections } from './pdf/buildLegacyPdfSections';
+import {
+  generateSimulationPdf,
+  imageUrlToDataUrl,
+  pdfBytesToDataUrl,
+} from './pdf/generateSimulationPdf';
+import { SimulationPdfPreview } from './pdf/SimulationPdfPreview';
+import type { SimulationPdfSection } from './pdf/simulationPdfTypes';
 import {
   ComparativoRegimePdfModelo,
   ContratacaoPdfModelo,
@@ -156,18 +164,6 @@ const formatGeneratedDateTime = (date: Date) => (
   })
 );
 
-const normalizePdfText = (value: string) => (
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[–—]/g, '-')
-    .replace(/[^\x20-\x7E]/g, '')
-);
-
-const escapePdfText = (value: string) => normalizePdfText(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-
-const encodeBase64Ascii = (value: string) => btoa(value);
-
 const encodeBase64Utf8 = (value: string) => {
   const bytes = new TextEncoder().encode(value);
   let binary = '';
@@ -175,24 +171,6 @@ const encodeBase64Utf8 = (value: string) => {
     binary += String.fromCharCode(byte);
   });
   return btoa(binary);
-};
-
-const wrapPdfLine = (value: string, maxLength = 88) => {
-  const words = normalizePdfText(value).split(/\s+/).filter(Boolean);
-  if (!words.length) return [''];
-  const wrapped: string[] = [];
-  let current = '';
-  words.forEach((word) => {
-    const candidate = current ? `${current} ${word}` : word;
-    if (candidate.length <= maxLength) {
-      current = candidate;
-      return;
-    }
-    if (current) wrapped.push(current);
-    current = word;
-  });
-  if (current) wrapped.push(current);
-  return wrapped;
 };
 
 const getShareExpiryDate = (value: string, start: Date) => {
@@ -215,44 +193,6 @@ const formatShareExpiryLabel = (value: string) => {
     never: 'Sem expiração',
   };
   return labels[value] || value;
-};
-
-const buildSimplePdfDataUrl = (lines: string[]) => {
-  const wrappedLines = lines.flatMap((line) => wrapPdfLine(line));
-  const pages = Array.from({ length: Math.max(1, Math.ceil(wrappedLines.length / 44)) }, (_, index) => (
-    wrappedLines.slice(index * 44, (index + 1) * 44).map((line) => escapePdfText(line))
-  ));
-  const pageIds = pages.map((_, index) => 4 + (index * 2));
-  const objects = [
-    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-    `2 0 obj\n<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>\nendobj\n`,
-    '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-  ];
-  pages.forEach((pageLines, index) => {
-    const pageId = pageIds[index];
-    const contentId = pageId + 1;
-    const textCommands = pageLines.map((line, lineIndex) => (
-      lineIndex === 0 ? `(${line}) Tj` : `T* (${line}) Tj`
-    )).join('\n');
-    const stream = `BT\n/F1 9 Tf\n45 797 Td\n16 TL\n${textCommands}\nET`;
-    objects.push(
-      `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`,
-      `${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
-    );
-  });
-  let pdf = '%PDF-1.4\n';
-  const offsets = [0];
-  objects.forEach((object) => {
-    offsets.push(pdf.length);
-    pdf += object;
-  });
-  const xrefStart = pdf.length;
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  offsets.slice(1).forEach((offset) => {
-    pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
-  });
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-  return `data:application/pdf;base64,${encodeBase64Ascii(pdf)}`;
 };
 
 export const SimulacoesCalculosPage: React.FC = () => {
@@ -307,6 +247,10 @@ export const SimulacoesCalculosPage: React.FC = () => {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [pdfGeneratedAt, setPdfGeneratedAt] = useState(() => new Date());
   const [shareNotice, setShareNotice] = useState('');
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [pdfPageCount, setPdfPageCount] = useState(0);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState('');
 
   useEffect(() => {
     empresaService.getDadosEmpresa().then(setEmpresa).catch(console.error);
@@ -704,29 +648,75 @@ export const SimulacoesCalculosPage: React.FC = () => {
     }
   };
 
-  const getPdfDetailLines = () => {
-    if (!abaComHistorico) return getPdfMetricLines();
-    return getAdvancedPdfSections().flatMap((section) => [
-      '',
-      section.title.toUpperCase(),
-      ...section.rows.map((row) => `${row.label}: ${row.value}`),
-    ]);
+  const getLegacyPdfData = () => {
+    switch (abaAtiva as AbaCalculo) {
+      case 'folha': return { params: folhaParams, resultado: resultadoFolha };
+      case 'rescisao': return { params: rescisaoParams, resultado: resultadoRescisao };
+      case 'prolabore': return { valor: prolaboreValor, resultado: resultadoProLabore };
+      case 'ferias': return { params: feriasParams, resultado: resultadoFerias };
+      case 'tempo-empresa': return { params: tempoEmpresaParams, resultado: resultadoTempoEmpresa };
+      case 'encargos-trabalhistas': return { params: encargosParams, resultado: resultadoEncargos };
+      case 'simulacao-contratacao': return { params: contratacaoParams, resultado: resultadoContratacao };
+      case 'das': return { params: dasParams, resultado: resultadoDAS };
+      case 'piscofins': return { params: pisParams, resultado: resultadoPisCofins };
+      case 'multas': return { params: multasParams, resultado: resultadoMultas };
+      case 'comparativo-regime': return { params: comparativoRegimeParams, resultado: resultadoComparativoRegime };
+      case 'simulacao-imposto': return { params: simulacaoImpostoParams, resultado: resultadoSimulacaoImposto };
+      case 'simulacao-custos': return { params: simulacaoCustosParams, resultado: resultadoCustos };
+      default: return {};
+    }
   };
 
-  const getPdfSummaryLines = (generatedAt: Date) => [
-    `${SYSTEM_NAME} - ${title}`,
-    `Gerado em: ${formatGeneratedDateTime(generatedAt)}`,
-    `Empresa emissora: ${empresa?.razaoSocial || empresa?.nomeFantasia || SYSTEM_NAME}`,
-    `CNPJ: ${empresa?.cnpj || 'Nao informado'}`,
-    '',
-    `Modulo: Simulacoes e Calculos`,
-    `Calculadora: ${title}`,
-    ...getPdfDetailLines(),
-    '',
-    'SIMULACAO GERENCIAL',
-    'Este arquivo e uma simulacao gerencial gerada pelo Arkhen Gestao Contabil.',
-    'Os valores podem sofrer variacoes conforme dados oficiais, CCT/ACT, tabelas vigentes e conferencia final.',
-  ].filter(Boolean);
+  const getCurrentPdfSections = (): SimulationPdfSection[] => {
+    const sections = abaComHistorico
+      ? getAdvancedPdfSections()
+      : buildLegacyPdfSections(abaAtiva, getLegacyPdfData());
+    if (sections.length) return sections;
+    return [{
+      title: 'Resumo da simulação',
+      rows: getPdfMetricLines().map((value, index) => ({ label: `Item ${index + 1}`, value })),
+    }];
+  };
+
+  const createCurrentPdf = async (generatedAt: Date) => {
+    const watermarkUrl = marcaDagua?.fileUrlRetrato || marcaDagua?.fileUrl || marcaDagua?.fileUrlPaisagem;
+    const [logoDataUrl, watermarkDataUrl] = await Promise.all([
+      imageUrlToDataUrl(empresa?.logoUrl),
+      marcaDagua?.habilitado ? imageUrlToDataUrl(watermarkUrl) : Promise.resolve(null),
+    ]);
+    return generateSimulationPdf({
+      title,
+      generatedAt,
+      company: { ...empresa, logoDataUrl },
+      sections: getCurrentPdfSections(),
+      watermark: {
+        enabled: Boolean(marcaDagua?.habilitado && watermarkDataUrl),
+        dataUrl: watermarkDataUrl,
+        opacity: marcaDagua?.opacidadeRetrato ?? marcaDagua?.opacidade ?? 10,
+        size: marcaDagua?.tamanhoRetrato ?? marcaDagua?.tamanho ?? 35,
+        position: marcaDagua?.posicaoRetrato ?? marcaDagua?.posicao ?? 'centro',
+      },
+    });
+  };
+
+  const preparePdf = async (generatedAt: Date) => {
+    setPdfLoading(true);
+    setPdfError('');
+    setPdfBytes(null);
+    setPdfPageCount(0);
+    try {
+      const generated = await createCurrentPdf(generatedAt);
+      setPdfBytes(generated.bytes);
+      setPdfPageCount(generated.pageCount);
+      return generated.bytes;
+    } catch (error) {
+      console.error('Erro ao gerar relatório PDF.', error);
+      setPdfError('Não foi possível gerar o relatório. Revise os dados e tente novamente.');
+      return null;
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const handleOpenPdfModal = () => {
     const now = new Date();
@@ -735,14 +725,16 @@ export const SimulacoesCalculosPage: React.FC = () => {
     setShareNotice('');
     setIsSharing(false);
     setIsPdfModalOpen(true);
+    void preparePdf(now);
   };
 
-  const handleGenerateShareLink = () => {
+  const handleGenerateShareLink = async () => {
     const now = new Date();
+    const bytes = pdfBytes || await preparePdf(now);
+    if (!bytes) return;
     const randomId = `${abaAtiva}_${Math.random().toString(36).substring(2, 10)}`;
     const durationLabel = formatShareExpiryLabel(shareExpires);
     const expiresAt = getShareExpiryDate(shareExpires, now);
-    const pdfDataUrl = buildSimplePdfDataUrl(getPdfSummaryLines(now));
     const payload = {
       id: randomId,
       documento: `Simulacao_${abaAtiva}_${now.toISOString().slice(0, 10)}.pdf`,
@@ -750,7 +742,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
       tempoLimite: durationLabel,
       dataGeracao: formatGeneratedDateTime(now),
       dataExpiracao: formatGeneratedDateTime(expiresAt),
-      arquivoUrl: pdfDataUrl,
+      arquivoUrl: pdfBytesToDataUrl(bytes),
     };
     const encodedPayload = encodeURIComponent(encodeBase64Utf8(JSON.stringify(payload)));
     const link = `${window.location.origin}/shared/d/${randomId}#${encodedPayload}`;
@@ -770,59 +762,20 @@ export const SimulacoesCalculosPage: React.FC = () => {
   const handleDownloadPdf = async () => {
     setDownloadState('generating');
     const docName = `Simulacao_${abaAtiva}_Arkhen.pdf`;
-    const downloadFallbackPdf = () => {
-      const url = buildSimplePdfDataUrl(getPdfSummaryLines(pdfGeneratedAt));
+    try {
+      const bytes = pdfBytes || await preparePdf(pdfGeneratedAt);
+      if (!bytes) return;
+      const url = URL.createObjectURL(new Blob([bytes.slice()], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
       link.download = docName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    };
-
-    try {
-      const element = document.getElementById('simulation-pdf-document');
-      if (!element) {
-        downloadFallbackPdf();
-        return;
-      }
-
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf'),
-      ]);
-
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#ffffff',
-        height: element.scrollHeight,
-        scale: 2,
-        useCORS: true,
-        width: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        windowWidth: element.scrollWidth,
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pageWidth) / canvas.width;
-      let remainingHeight = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
-      remainingHeight -= pageHeight;
-
-      while (remainingHeight > 8) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
-        remainingHeight -= pageHeight;
-      }
-
-      pdf.save(docName);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
     } catch (error) {
-      console.error('Erro ao gerar PDF visual, usando fallback textual.', error);
-      downloadFallbackPdf();
+      console.error('Erro ao baixar PDF.', error);
+      setPdfError('Não foi possível baixar o relatório. Tente gerar novamente.');
     } finally {
       setDownloadState('done');
       setTimeout(() => setDownloadState('idle'), 2000);
@@ -1545,7 +1498,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
               
               {/* Painel Esquerdo: Visualização do PDF gerado com Cabeçalho e Marca D'água */}
               <div className="simulation-export-preview">
-              <div id="simulation-pdf-document" className="simulation-pdf-page">
+              <SimulationPdfPreview bytes={pdfBytes} loading={pdfLoading} error={pdfError} />
+              <div id="simulation-pdf-document" className="simulation-pdf-page simulation-pdf-page--legacy">
                 
                 {/* Marca d'água Configurada */}
                 {marcaDagua?.habilitado && (marcaDagua.fileUrlRetrato || marcaDagua.fileUrlPaisagem || marcaDagua.fileUrl) && (() => {
@@ -1731,7 +1685,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
                   </div>
 
                   <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: '1.4', marginBottom: '24px' }}>
-                    Escolha uma das ações abaixo para gerenciar o relatório gerado. Você pode baixar em PDF, excluir do histórico temporário, ou criar um link de visualização para o cliente.
+                    Prévia fiel do arquivo com {pdfPageCount || '…'} página(s) A4. O conteúdo baixado usa texto selecionável para copiar e pesquisar.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
