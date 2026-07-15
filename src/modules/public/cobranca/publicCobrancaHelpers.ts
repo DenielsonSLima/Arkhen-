@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase';
+import { supabase, supabaseProjectUrl } from '../../../lib/supabase';
 
 export interface PublicCobrancaPayload {
   id: string;
@@ -12,6 +12,7 @@ export interface PublicCobrancaPayload {
   paymentLink: string;
   bankSlipLink: string;
   pixCopyPaste?: string;
+  bankProvider?: 'asaas' | 'inter';
   clienteNome: string;
   clienteCnpj?: string;
   clienteEmail?: string;
@@ -60,7 +61,14 @@ export const fetchPublicCobranca = async (publicToken: string): Promise<PublicCo
   });
 
   if (error) throw error;
-  return (data || null) as PublicCobrancaPayload | null;
+  const payload = (data || null) as PublicCobrancaPayload | null;
+  if (!payload) return null;
+  if (payload.bankProvider === 'inter' && payload.publicToken && payload.meioPagamento !== 'Pix' && !payload.isExpired) {
+    const documentUrl = `${supabaseProjectUrl.replace(/\/$/, '')}/functions/v1/inter-charge-document/${payload.publicToken}`;
+    payload.paymentLink ||= documentUrl;
+    payload.bankSlipLink ||= documentUrl;
+  }
+  return payload;
 };
 
 export const formatPublicCobrancaCurrency = (value: number) => (

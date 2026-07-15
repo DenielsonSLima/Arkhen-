@@ -1,4 +1,4 @@
-export type BankGatewayId = 'asaas';
+export type BankGatewayId = 'asaas' | 'inter';
 export type BankEnvironment = 'producao' | 'homologacao';
 
 export interface BankGatewayModule {
@@ -55,6 +55,40 @@ export const bankGateways: BankGatewayDefinition[] = [
         id: 'webhook',
         label: 'Webhook',
         description: 'Eventos, token de validação e idempotência.',
+        status: 'ready',
+      },
+    ],
+  },
+  {
+    id: 'inter',
+    name: 'Banco Inter',
+    tagline: 'Boletos, Pix e webhooks com autenticação por certificado.',
+    logo: '/integrations/banks/inter-empresas-logo.svg',
+    status: 'available',
+    environments: ['producao', 'homologacao'],
+    modules: [
+      {
+        id: 'credenciais',
+        label: 'Credenciais',
+        description: 'Client ID, segredo, conta corrente e certificado mTLS.',
+        status: 'ready',
+      },
+      {
+        id: 'boleto',
+        label: 'Boleto',
+        description: 'Cobranças bancárias com código de barras e Pix integrado.',
+        status: 'ready',
+      },
+      {
+        id: 'pix',
+        label: 'Pix',
+        description: 'Recebimentos por Pix e conciliação de pagamentos.',
+        status: 'ready',
+      },
+      {
+        id: 'webhook',
+        label: 'Webhook',
+        description: 'Notificações assíncronas com processamento idempotente.',
         status: 'ready',
       },
     ],

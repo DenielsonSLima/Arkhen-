@@ -123,6 +123,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { error: providerError } = await supabase.rpc(
+      'validar_provedor_bancario_ativo',
+      { p_user_id: userId, p_provedor: 'asaas' },
+    );
+    if (providerError) {
+      throw new Error(
+        'O Asaas não está selecionado como banco padrão. Selecione-o em Integração Bancária ou use o fluxo do Banco Inter.',
+      );
+    }
+
     const { data: prepared, error: prepareError } = await supabase.rpc('preparar_cobranca_asaas', {
       p_user_id: userId,
       p_payload: payload,

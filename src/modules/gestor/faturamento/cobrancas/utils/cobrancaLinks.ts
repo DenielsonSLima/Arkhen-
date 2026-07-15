@@ -86,6 +86,8 @@ const readPayloadText = (payload: unknown, paths: string[][]) => {
 };
 
 export const getCobrancaPixCopyPaste = (item: CobrancaFinanceira) => readPayloadText(item.asaasPayload, [
+  ['pixCopiaECola'],
+  ['pix', 'pixCopiaECola'],
   ['pixQrCode', 'payload'],
   ['pixQrCode', 'copyPaste'],
   ['pixQrCode', 'copyPasteCode'],
@@ -163,7 +165,7 @@ export const encodePublicCobrancaPayload = (payload: PublicCobrancaPayload) => (
 export const getPublicCobrancaLink = (item: CobrancaFinanceira, cliente?: Company) => {
   if (typeof window === 'undefined') return '';
   const payload = buildPublicCobrancaPayload(item, cliente);
-  if (!payload.paymentLink || !item.publicToken) return '';
+  if ((!payload.paymentLink && !payload.pixCopyPaste) || !item.publicToken) return '';
   return `${window.location.origin}/cobranca/${item.publicToken}`;
 };
 
