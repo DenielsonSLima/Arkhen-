@@ -1,0 +1,61 @@
+@media (min-width: 769px) {
+  .gestor-sidebar {
+    padding: 18px 10px 12px;
+    width: 255px;
+  }
+
+  .sidebar-brand {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .sidebar-logo {
+    height: 36px;
+    width: 36px;
+  }
+
+  .sidebar-menu { gap: 1px; }
+
+  .menu-action-row,
+  .submenu-action-row { gap: 2px; }
+
+  .menu-collapsible-container { gap: 1px; }
+
+  .menu-btn {
+    gap: 9px;
+    padding: 7px 8px;
+  }
+
+  .sidebar-drag-handle { padding: 6px 0 6px 2px; }
+
+  .sidebar-open-tab-btn {
+    height: 24px;
+    width: 24px;
+  }
+
+  .menu-open-tab-btn,
+  .submenu-open-tab-btn { flex-basis: 24px; }
+
+  .submenu-open-tab-btn {
+    height: 24px;
+    width: 24px;
+  }
+
+  .sidebar-footer {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .sidebar-profile {
+    border-radius: 10px;
+    gap: 9px;
+    padding: 9px;
+  }
+
+  .profile-avatar {
+    height: 36px;
+    width: 36px;
+  }
+
+  .sidebar-logout-btn { padding: 6px; }
+}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   MessageSquareQuote,
   AlertTriangle,
@@ -12,20 +12,19 @@ import {
   Users,
   Settings,
 } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import officeBackground from '../../../assets/office-scene-meeting.png';
-import { getEventosPorIntervalo, getEventoOrigemConfig, type Evento } from '../agenda/services/agenda.service';
+import { getEventoOrigemConfig } from '../agenda/services/agenda.service';
 import {
   formatDateBR,
-  rotinasAtividadesService,
   todayKey,
   type FrequenciaAtividade,
   type TarefaGestor,
 } from '../atividades/services/rotinasAtividadesService';
 import { useInicio } from './hooks/useInicio';
+import { useInicioBootstrap } from './hooks/useInicioBootstrap';
 import type { VencimentoAlerta } from './services/inicioService';
-import { frasesMotivacionais, getMensagemInspiradoraDoDia, type FraseMotivacional } from './services/motivationalPhrases';
+import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
 import './InicioPage.css';
 
 const alertasPadrao: VencimentoAlerta[] = [];
@@ -60,73 +59,13 @@ const getAlertaTexto = (alerta: VencimentoAlerta) => {
 
 const isDone = (tarefa: TarefaGestor) => tarefa.status === 'Concluída';
 
-export const InicioPage: React.FC = () => {
+type InicioPageProps = {
+  onInitialReady?: () => void;
+};
+
+export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   const { stats, vencimentosProximos, isLoading } = useInicio();
-  const [tarefasWorkspace, setTarefasWorkspace] = useState<TarefaGestor[]>([]);
-  const [eventosAgenda, setEventosAgenda] = useState<Evento[]>([]);
-  const [showConfigNotice, setShowConfigNotice] = useState(false);
-  const [noticeType, setNoticeType] = useState<'address' | 'watermark' | null>(null);
   const { openTab } = useInternalTabs();
-
-  useEffect(() => {
-    let active = true;
-    const checkCompanyDetails = async () => {
-      try {
-        // 1. Check company address completeness
-        const { data: companyData } = await supabase
-          .from('configuracoes_empresa')
-          .select('endereco, cep')
-          .maybeSingle();
-
-        let addressIncomplete = true;
-        if (companyData) {
-          const lowerEndereco = (companyData.endereco || '').toLowerCase();
-          addressIncomplete = 
-            !companyData.endereco || 
-            lowerEndereco.includes('ficticia') || 
-            lowerEndereco.includes('fictícia') ||
-            !companyData.cep || 
-            companyData.cep === '49000-000';
-        }
-
-        if (addressIncomplete) {
-          if (active) {
-            setNoticeType('address');
-            setShowConfigNotice(true);
-          }
-          return;
-        }
-
-        // 2. Address is complete, now check watermarks
-        const { data: watermarkData } = await supabase
-          .from('configuracoes_marca_dagua')
-          .select('file_url_paisagem, file_url_retrato')
-          .maybeSingle();
-
-        let watermarksIncomplete = true;
-        if (watermarkData) {
-          watermarksIncomplete = !watermarkData.file_url_paisagem || !watermarkData.file_url_retrato;
-        }
-
-        if (active) {
-          if (watermarksIncomplete) {
-            setNoticeType('watermark');
-            setShowConfigNotice(true);
-          } else {
-            setShowConfigNotice(false);
-            setNoticeType(null);
-          }
-        }
-      } catch (err) {
-        console.error('Erro ao verificar dados da empresa e marca dágua:', err);
-      }
-    };
-
-    checkCompanyDetails();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const hoje = todayKey();
   const fimSemana = addDays(hoje, 6);
@@ -136,57 +75,18 @@ export const InicioPage: React.FC = () => {
     () => frasesMotivacionais[(getDayOfYear(hoje) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length],
     [hoje],
   );
-  const [fraseMotivacional, setFraseMotivacional] = useState<FraseMotivacional>(fraseMotivacionalFallback);
-
-  useEffect(() => {
-    let active = true;
-
-    setFraseMotivacional(fraseMotivacionalFallback);
-    getMensagemInspiradoraDoDia(hoje)
-      .then((frase) => {
-        if (active && frase) setFraseMotivacional(frase);
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar mensagem inspiradora:', error);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [fraseMotivacionalFallback, hoje]);
-
-  useEffect(() => {
-    let mounted = true;
-    rotinasAtividadesService.getWorkspace()
-      .then((workspace) => {
-        if (mounted) setTarefasWorkspace(workspace.tarefas);
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar atividades do início:', error);
-        if (mounted) setTarefasWorkspace([]);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    const now = new Date();
-    getEventosPorIntervalo(now.getFullYear(), now.getMonth(), 2)
-      .then((eventos) => {
-        if (mounted) setEventosAgenda(eventos);
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar agenda do início:', error);
-        if (mounted) setEventosAgenda([]);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const {
+    tarefasWorkspace,
+    eventosAgenda,
+    showConfigNotice,
+    noticeType,
+    fraseMotivacional,
+  } = useInicioBootstrap({
+    hoje,
+    fraseFallback: fraseMotivacionalFallback,
+    dashboardReady: !isLoading,
+    onReady: onInitialReady,
+  });
 
   const agendaResumo = useMemo(() => {
     const eventos = eventosAgenda
@@ -247,8 +147,12 @@ export const InicioPage: React.FC = () => {
     };
   }, [hoje, tarefasWorkspace]);
 
-  if (isLoading || !stats) {
+  if (isLoading) {
     return <div className="inicio-loading">Carregando painel contábil...</div>;
+  }
+
+  if (!stats) {
+    return <div className="inicio-loading">Não foi possível carregar o painel contábil.</div>;
   }
 
   return (

@@ -25,6 +25,8 @@ import { ModulosSistemaConfig } from './modulos-sistema/ModulosSistemaConfig';
 
 import './Configuracoes.css';
 
+const ACTIVE_CONFIG_SUBTAB_KEY = 'contabil_config_active_subtab';
+
 interface ConfigError {
   hasError: boolean;
   message: string;
@@ -80,8 +82,13 @@ export const ConfiguracoesPage: React.FC = () => {
       sessionStorage.removeItem('contabil_config_initial_subtab');
       return initial;
     }
-    return null;
+    return sessionStorage.getItem(ACTIVE_CONFIG_SUBTAB_KEY);
   });
+
+  useEffect(() => {
+    if (activeSubTab) sessionStorage.setItem(ACTIVE_CONFIG_SUBTAB_KEY, activeSubTab);
+    else sessionStorage.removeItem(ACTIVE_CONFIG_SUBTAB_KEY);
+  }, [activeSubTab]);
 
   useEffect(() => {
     const handleOpenSubTab = (event: Event) => {

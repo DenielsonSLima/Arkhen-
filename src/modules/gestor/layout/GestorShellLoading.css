@@ -1,0 +1,127 @@
+.gestor-shell-loading {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(197, 146, 53, 0.1), transparent 32%),
+    #121212;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 24px;
+  position: relative;
+  width: 100%;
+}
+
+.gestor-shell-loading--overlay {
+  inset: 0;
+  position: fixed;
+  z-index: 10000;
+}
+
+.gestor-shell-loading__glow {
+  background: rgba(197, 146, 53, 0.12);
+  border-radius: 50%;
+  filter: blur(60px);
+  height: 260px;
+  position: absolute;
+  width: 260px;
+}
+
+.gestor-shell-loading__card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  text-align: center;
+}
+
+.gestor-shell-loading__brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.gestor-shell-loading__brand div {
+  display: flex;
+  flex-direction: column;
+}
+
+.gestor-shell-loading__brand strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+}
+
+.gestor-shell-loading__brand span {
+  color: var(--color-gold-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.gestor-shell-loading__logo {
+  height: 48px;
+  object-fit: contain;
+  width: 48px;
+}
+
+.gestor-shell-loading__spinner {
+  animation: gestor-shell-spin 0.85s linear infinite;
+  color: var(--color-gold-light);
+  margin-bottom: 16px;
+}
+
+.gestor-shell-loading__status-icon {
+  color: var(--color-gold-light);
+  margin-bottom: 16px;
+}
+
+.gestor-shell-loading p {
+  color: #f5f5f5;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.gestor-shell-loading small {
+  color: #8f8f8f;
+  font-size: 0.72rem;
+  margin-top: 5px;
+}
+
+.gestor-shell-loading__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.gestor-shell-loading button {
+  background: var(--color-gold-gradient);
+  border: 0;
+  border-radius: 8px;
+  color: #17120a;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: 9px 16px;
+}
+
+.gestor-shell-loading button.secondary {
+  background: transparent;
+  border: 1px solid rgba(197, 146, 53, 0.46);
+  color: #d9d9d9;
+}
+
+.gestor-shell-loading button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+@keyframes gestor-shell-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gestor-shell-loading__spinner { animation-duration: 1.8s; }
+}

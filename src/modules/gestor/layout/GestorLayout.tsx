@@ -12,10 +12,12 @@ import { TAB_INFOS } from './gestorTabMetadata';
 import { GestorHeader } from './GestorHeader';
 import { GestorModuleContent } from './GestorModuleContent';
 import { GestorSidebar } from './GestorSidebar';
+import { GestorShellLoading } from './GestorShellLoading';
 import { useGestorGlobalSearch, type GlobalSearchResult } from './hooks/useGestorGlobalSearch';
 import './GestorLayout.css';
 import './GestorLayoutFixes.css';
 import './GestorModuleTabs.css';
+import './GestorSidebarCompact.css';
 
 interface GestorLayoutProps {
   onLogout: () => void;
@@ -46,7 +48,10 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const modulesQuery = useModulosSistemaQuery();
   const modulesReady = modulesQuery.isSuccess;
   const [moduleContexts, setModuleContexts] = useState<Record<string, InternalTabContext>>({});
+  const [moduleContextVersions, setModuleContextVersions] = useState<Record<string, number>>({});
+  const [visitedBaseModuleIds, setVisitedBaseModuleIds] = useState<string[]>(['inicio']);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [initialContentReady, setInitialContentReady] = useState(false);
   const [userProfile, setUserProfile] = useState(readUserProfile);
   const contentViewportRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +80,11 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     () => visibleTabs.find((tab) => tab.id === activeTabId),
     [activeTabId, visibleTabs],
   );
+  const mountedBaseModuleIds = useMemo(() => {
+    const mounted = visitedBaseModuleIds.filter((id) => isRouteEnabled(id, enabledModuleIds));
+    if (!activeVisibleTab && !mounted.includes(activeModuleId)) mounted.push(activeModuleId);
+    return mounted;
+  }, [activeModuleId, activeVisibleTab, enabledModuleIds, visitedBaseModuleIds]);
 
   const resetContentScroll = useCallback(() => {
     const viewport = contentViewportRef.current;
@@ -110,6 +120,13 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   }, [activateModule, closeTab, enabledModuleIds, modulesReady, requestedModuleId, tabs]);
 
   useEffect(() => {
+    if (!modulesReady || activeVisibleTab) return;
+    setVisitedBaseModuleIds((current) => (
+      current.includes(activeModuleId) ? current : [...current, activeModuleId]
+    ));
+  }, [activeModuleId, activeVisibleTab, modulesReady]);
+
+  useEffect(() => {
     const baseTitle = 'Arkhen Gestão Contábil';
     if (activeOpenedTab && isRouteEnabled(activeOpenedTab.moduleId, enabledModuleIds)) {
       document.title = `${activeOpenedTab.title} | ${baseTitle}`;
@@ -136,6 +153,12 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     window.addEventListener('gestor:reset-scroll', resetContentScroll);
     return () => window.removeEventListener('gestor:reset-scroll', resetContentScroll);
   }, [resetContentScroll]);
+
+  useEffect(() => {
+    if (!modulesReady || initialContentReady) return undefined;
+    const timer = window.setTimeout(() => setInitialContentReady(true), 15_000);
+    return () => window.clearTimeout(timer);
+  }, [initialContentReady, modulesReady]);
 
   const navigate = (id: string) => {
     if (!modulesReady || !isRouteEnabled(id, enabledModuleIds)) return;
@@ -176,7 +199,13 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       sessionStorage.setItem('contabil_config_initial_subtab', result.configSubTab);
       window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: result.configSubTab } }));
     }
-    if (result.context) handleModuleContextChange(result.moduleId, result.context);
+    if (result.context) {
+      handleModuleContextChange(result.moduleId, result.context);
+      setModuleContextVersions((current) => ({
+        ...current,
+        [result.moduleId]: (current[result.moduleId] || 0) + 1,
+      }));
+    }
     navigate(result.moduleId);
     globalSearch.setTerm('');
     globalSearch.setFocused(false);
@@ -200,16 +229,42 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     avatar: userProfile.avatar,
   }), [userProfile]);
 
-  const renderContent = (id: string, workspaceId = id, context?: InternalTabContext) => (
+  const handleInitialContentReady = useCallback(() => {
+    setInitialContentReady(true);
+  }, []);
+
+  const renderContent = (
+    id: string,
+    workspaceId = id,
+    context?: InternalTabContext,
+    contextVersion = 0,
+  ) => (
     <GestorModuleContent
+      key={`${workspaceId}:${contextVersion}`}
       id={id}
       workspaceId={workspaceId}
       initialContext={context}
       activeModuleId={activeModuleId}
       updateTabContext={updateTabContext}
       onModuleContextChange={handleModuleContextChange}
+      onInitialReady={id === 'inicio' && workspaceId === 'inicio' ? handleInitialContentReady : undefined}
     />
   );
+
+  if (modulesQuery.isPending || (modulesQuery.isError && modulesQuery.isFetching)) {
+    return <GestorShellLoading message="Identificando os módulos disponíveis..." />;
+  }
+
+  if (modulesQuery.isError) {
+    return (
+      <GestorShellLoading
+        error
+        message="Não foi possível identificar os módulos do sistema."
+        onExit={onLogout}
+        onRetry={() => { void modulesQuery.refetch(); }}
+      />
+    );
+  }
 
   return (
     <div className="gestor-panel-container">
@@ -240,14 +295,25 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         />
         {modulesReady && <InternalTabBar />}
         <main ref={contentViewportRef} className="gestor-content-viewport" style={{ position: 'relative' }}>
-          <div
-            data-active-module-panel={!activeVisibleTab ? 'true' : undefined}
-            style={{ display: activeVisibleTab ? 'none' : 'block', height: '100%' }}
-          >
-            <ModuleRenderErrorBoundary key={activeModuleId} moduleName={activeModuleId} onReset={() => activateModule('inicio')}>
-              {renderContent(activeModuleId, activeModuleId, moduleContexts[activeModuleId])}
-            </ModuleRenderErrorBoundary>
-          </div>
+          {mountedBaseModuleIds.map((moduleId) => {
+            const isActive = !activeVisibleTab && activeModuleId === moduleId;
+            return (
+              <div
+                key={moduleId}
+                data-active-module-panel={isActive ? 'true' : undefined}
+                style={{ display: isActive ? 'block' : 'none', height: '100%' }}
+              >
+                <ModuleRenderErrorBoundary moduleName={moduleId} onReset={() => activateModule('inicio')}>
+                  {renderContent(
+                    moduleId,
+                    moduleId,
+                    moduleContexts[moduleId],
+                    moduleContextVersions[moduleId],
+                  )}
+                </ModuleRenderErrorBoundary>
+              </div>
+            );
+          })}
           {visibleTabs.map((tab) => (
             <div
               key={tab.id}
@@ -274,6 +340,9 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         </div>
       )}
       <FloatingCalculator userId={currentUser.id} openInternalChatsCount={0} />
+      {!initialContentReady ? (
+        <GestorShellLoading overlay message="Preparando o painel inicial..." />
+      ) : null}
     </div>
   );
 };
