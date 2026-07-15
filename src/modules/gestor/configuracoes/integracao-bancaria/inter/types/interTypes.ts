@@ -10,6 +10,8 @@ export interface InterEnvironmentConfig {
   certificatePem: string;
   certificateConfigured: boolean;
   certificateFileName: string;
+  certificateValidFrom: string;
+  certificateValidUntil: string;
   privateKeyPem: string;
   privateKeyConfigured: boolean;
   privateKeyFileName: string;
@@ -34,4 +36,7 @@ export interface InterConnectionResult {
   ok: boolean;
   message: string;
   checkedAt?: string;
+  certificateValidFrom?: string;
+  certificateValidUntil?: string;
+  certificateDaysRemaining?: number;
 }
