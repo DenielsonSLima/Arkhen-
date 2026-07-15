@@ -260,7 +260,7 @@ interface DetailProps {
   items: ProtocoloEntrega[];
   allCompanyItems: ProtocoloEntrega[];
   onBack: () => void;
-  updateProtocolo: (id: string, updates: ProtocoloUpdate) => void;
+  updateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<void>;
 }
 
 const EmpresaProtocolosDetail: React.FC<DetailProps> = ({

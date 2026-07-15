@@ -1,5 +1,14 @@
 # Registro interno de versões
 
+## Beta 1.008 — 2026-07-14
+
+- O exportador de simulações passou a gerar PDF A4 nativo, com texto selecionável, margens fixas, quebras por linha/seção e cabeçalho e rodapé em todas as páginas.
+- A pré-visualização agora renderiza as páginas reais do PDF, separadas e numeradas, sem esticar relatórios longos em uma folha contínua.
+- Protocolos passaram a persistir conclusão, reabertura e anotações nas tabelas corretas do Supabase.
+- A persistência de Protocolos agora separa o escritório autenticado do cliente atendido e aplica RLS aos dois vínculos.
+- Falhas ao atualizar um protocolo agora são exibidas na própria tela e não geram rejeições silenciosas.
+- O total de descontos da rescisão passou a vir calculado pela RPC e é apenas apresentado no relatório.
+
 ## Beta 1.007 — 2026-07-14
 
 - O simulador do MEI agora seleciona CNAEs cadastrados na Parametrização e mantém a competência e o ano sincronizados.

@@ -3,6 +3,26 @@
   flex-direction: column;
   gap: 12px;
 }
+.protocolo-operation-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff7f7;
+  color: #991b1b;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.protocolo-operation-error button {
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
 .protocolo-files-toolbar {
   display: flex;
   align-items: center;

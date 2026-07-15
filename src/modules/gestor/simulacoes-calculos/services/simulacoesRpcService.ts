@@ -65,7 +65,7 @@ export const EMPTY_RESULTADOS: ResultadosSimulacoes = {
   rescisao: { tipo: '', salarioBaseCalculo: 0, adicionalTempoServico: 0, saldoSalario: 0,
     decimoTerceiroProporcional: 0, feriasProporcionais: 0, adicionalFerias: 0, feriasVencidas: 0,
     adicionalFeriasVencidas: 0, avisoPrevio: 0, avisoPrevioDesconto: 0, multaFGTS: 0,
-    totalBruto: 0, inssRescisao: 0, irrfRescisao: 0, totalLiquido: 0 },
+    totalBruto: 0, inssRescisao: 0, irrfRescisao: 0, totalDescontos: 0, totalLiquido: 0 },
   prolabore: { valorProLabore: 0, inss: 0, irrf: 0, liquido: 0, cpp: 0, custoEmpresa: 0 },
   das: { faturamento12Meses: 0, faixaNumero: 0, aliquotaNominal: 0, aliquotaEfetiva: 0, valorDAS: 0, valorDeduzir: 0 },
   piscofins: { regime: '', faturamento: 0, creditosApurados: 0, debitoPIS: 0, debitoCOFINS: 0, saldoPIS: 0, saldoCOFINS: 0, totalPagar: 0 },
