@@ -1,11 +1,12 @@
 import React from 'react';
-import { FileKey2, KeyRound } from 'lucide-react';
+import { FileKey2, KeyRound, X } from 'lucide-react';
 import type { InterEnvironmentConfig } from '../../types/interTypes';
 import { InterSectionCard } from '../InterSectionCard';
 
 interface InterCredentialsSectionProps {
   config: InterEnvironmentConfig;
   onPatch: (changes: Partial<InterEnvironmentConfig>) => void;
+  onNotify: (type: 'success' | 'error' | 'info', title: string, message: string) => void;
 }
 
 const readTextFile = async (file: File | undefined, onRead: (content: string) => void) => {
@@ -19,7 +20,7 @@ const ConfiguredBadge: React.FC<{ configured: boolean }> = ({ configured }) => (
   </span>
 );
 
-export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = ({ config, onPatch }) => (
+export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = ({ config, onPatch, onNotify }) => (
   <InterSectionCard
     title="Credenciais e certificado mTLS"
     description="Dados obtidos no Internet Banking do Inter. Os segredos não serão exibidos novamente."
@@ -51,6 +52,27 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
 
     <div className="inter-upload-grid">
       <label className="inter-upload-card">
+        {(config.certificateConfigured || config.certificatePem) && (
+          <button
+            type="button"
+            className="inter-upload-remove"
+            aria-label="Remover certificado público"
+            title="Remover certificado"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onPatch({
+                certificatePem: '',
+                certificateFileName: '',
+                certificateConfigured: false,
+                clearCertificate: true,
+              });
+              onNotify('info', 'Certificado marcado para remoção', 'Clique em Salvar Banco Inter para concluir a exclusão com segurança.');
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
         <FileKey2 size={22} />
         <span><strong>Certificado público</strong><small>{config.certificateFileName || 'Arquivo .crt ou .pem'}</small></span>
         <input
@@ -58,16 +80,43 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
           accept=".crt,.pem,application/x-pem-file"
           onChange={(event) => {
             const file = event.target.files?.[0];
+            if (!file) return;
+            event.currentTarget.value = '';
             void readTextFile(file, (content) => onPatch({
               certificatePem: content,
-              certificateFileName: file?.name || '',
+              certificateFileName: file.name,
               clearCertificate: false,
-            }));
+            })).then(() => {
+              onNotify('success', 'Certificado carregado', `O arquivo “${file.name}” está pronto. Clique em Salvar Banco Inter para armazená-lo com segurança.`);
+            }).catch(() => {
+              onNotify('error', 'Falha ao carregar certificado', 'Não foi possível ler o arquivo selecionado. Verifique o formato e tente novamente.');
+            });
           }}
         />
         <ConfiguredBadge configured={config.certificateConfigured} />
       </label>
       <label className="inter-upload-card">
+        {(config.privateKeyConfigured || config.privateKeyPem) && (
+          <button
+            type="button"
+            className="inter-upload-remove"
+            aria-label="Remover chave privada"
+            title="Remover chave privada"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onPatch({
+                privateKeyPem: '',
+                privateKeyFileName: '',
+                privateKeyConfigured: false,
+                clearPrivateKey: true,
+              });
+              onNotify('info', 'Chave privada marcada para remoção', 'Clique em Salvar Banco Inter para concluir a exclusão com segurança.');
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
         <KeyRound size={22} />
         <span><strong>Chave privada</strong><small>{config.privateKeyFileName || 'Arquivo .key ou .pem'}</small></span>
         <input
@@ -75,11 +124,17 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
           accept=".key,.pem,application/x-pem-file"
           onChange={(event) => {
             const file = event.target.files?.[0];
+            if (!file) return;
+            event.currentTarget.value = '';
             void readTextFile(file, (content) => onPatch({
               privateKeyPem: content,
-              privateKeyFileName: file?.name || '',
+              privateKeyFileName: file.name,
               clearPrivateKey: false,
-            }));
+            })).then(() => {
+              onNotify('success', 'Chave privada carregada', `O arquivo “${file.name}” está pronto. Clique em Salvar Banco Inter para armazená-lo com segurança.`);
+            }).catch(() => {
+              onNotify('error', 'Falha ao carregar chave privada', 'Não foi possível ler o arquivo selecionado. Verifique o formato e tente novamente.');
+            });
           }}
         />
         <ConfiguredBadge configured={config.privateKeyConfigured} />

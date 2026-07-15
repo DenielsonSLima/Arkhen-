@@ -1,5 +1,6 @@
-import React, { useState, type FormEvent } from 'react';
+import React, { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, KeyRound, Landmark, Loader2, PlugZap, QrCode, ReceiptText, Save, ShieldCheck, Webhook } from 'lucide-react';
+import { SystemToast, type SystemToastData, type SystemToastType } from '../../../../components/SystemToast';
 import type { BankEnvironment } from '../../gateway/bankGateway';
 import { useInterIntegration } from '../queries/useInterIntegration';
 import { InterBoletoSection } from './sections/InterBoletoSection';
@@ -31,11 +32,56 @@ const getErrorMessage = (error: unknown, fallback: string) => (
 
 export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<InterTab>('credenciais');
+  const [toast, setToast] = useState<SystemToastData | null>(null);
   const inter = useInterIntegration();
 
-  const handleSubmit = (event: FormEvent) => {
+  const notify = useCallback((type: SystemToastType, title: string, message: string) => {
+    setToast({ id: Date.now(), type, title, message });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    void inter.save();
+    const removingCertificate = Boolean(inter.activeConfig?.clearCertificate);
+    const removingPrivateKey = Boolean(inter.activeConfig?.clearPrivateKey);
+    try {
+      await inter.save();
+      if (removingCertificate || removingPrivateKey) {
+        const removed = removingCertificate && removingPrivateKey
+          ? 'Certificado e chave privada removidos com sucesso.'
+          : removingCertificate
+            ? 'Certificado removido com sucesso.'
+            : 'Chave privada removida com sucesso.';
+        notify('success', 'Credencial removida', `${removed} A configuração do ambiente foi atualizada.`);
+      } else {
+        notify('success', 'Arquivo salvo com sucesso', 'Certificado, chave privada e credenciais foram armazenados com segurança. Faça o teste de conexão para concluir a validação.');
+      }
+    } catch (error) {
+      notify('error', 'Não foi possível salvar', getErrorMessage(error, 'Revise os dados informados e tente novamente.'));
+    }
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      const result = await inter.testConnection();
+      notify(result.ok ? 'success' : 'error', result.ok ? 'Conexão validada' : 'Falha no teste de conexão', result.message);
+    } catch (error) {
+      notify('error', 'Falha no teste de conexão', getErrorMessage(error, 'Não foi possível validar a comunicação com o Banco Inter.'));
+    }
+  };
+
+  const handleConfigureWebhook = async () => {
+    try {
+      const result = await inter.configureWebhook();
+      notify(result.ok ? 'success' : 'error', result.ok ? 'Webhook configurado' : 'Falha ao configurar webhook', result.message);
+    } catch (error) {
+      notify('error', 'Falha ao configurar webhook', getErrorMessage(error, 'Não foi possível registrar o webhook no Banco Inter.'));
+    }
   };
 
   if (inter.isLoading) return <div className="submodule-content-card"><div className="sub-loading">Carregando integração Banco Inter...</div></div>;
@@ -96,14 +142,12 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
             ))}
           </nav>
 
-          {inter.isSaved && <div className="bank-feedback bank-feedback--success">Configuração salva. A integração permanece em validação até o teste de conexão.</div>}
-          {inter.saveError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.saveError, 'Não foi possível salvar a integração.')}</div>}
           {inter.connectionResult && <div className={`bank-feedback ${inter.connectionResult.ok ? 'bank-feedback--success' : 'bank-feedback--error'}`}>{inter.connectionResult.message}</div>}
           {inter.connectionError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.connectionError, 'O teste de conexão falhou.')}</div>}
           {inter.webhookResult && <div className={`bank-feedback ${inter.webhookResult.ok ? 'bank-feedback--success' : 'bank-feedback--error'}`}>{inter.webhookResult.message}</div>}
           {inter.webhookError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.webhookError, 'Não foi possível registrar o webhook.')}</div>}
 
-          {activeTab === 'credenciais' && <InterCredentialsSection config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
+          {activeTab === 'credenciais' && <InterCredentialsSection config={inter.activeConfig} onPatch={inter.patchEnvironment} onNotify={notify} />}
           {activeTab === 'boleto' && <InterBoletoSection config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
           {activeTab === 'pix' && <InterPixSection config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
           {activeTab === 'webhook' && (
@@ -111,7 +155,7 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
               config={inter.activeConfig}
               onPatch={inter.patchEnvironment}
               isConfiguring={inter.isConfiguringWebhook}
-              onConfigure={() => void inter.configureWebhook()}
+              onConfigure={() => void handleConfigureWebhook()}
             />
           )}
 
@@ -121,7 +165,7 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
           </div>
 
           <div className="form-actions-row inter-actions">
-            <button type="button" className="bank-secondary-button" disabled={inter.isTesting || inter.isSaving} onClick={() => void inter.testConnection()}>
+            <button type="button" className="bank-secondary-button" disabled={inter.isTesting || inter.isSaving} onClick={() => void handleTestConnection()}>
               {inter.isTesting ? <Loader2 size={16} className="bank-spin" /> : <PlugZap size={16} />}
               {inter.isTesting ? 'Testando...' : 'Testar conexão'}
             </button>
@@ -132,6 +176,8 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
           </div>
         </form>
       )}
+
+      <SystemToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };
