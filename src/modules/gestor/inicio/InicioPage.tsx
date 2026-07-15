@@ -45,6 +45,12 @@ const addDays = (dateKey: string, amount: number) => {
   return date.toISOString().split('T')[0];
 };
 
+const getDayOfYear = (dateKey: string) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  const start = new Date(date.getFullYear(), 0, 0);
+  return Math.floor((date.getTime() - start.getTime()) / 86400000);
+};
+
 const getAlertaTexto = (alerta: VencimentoAlerta) => {
   if (alerta.diasRestantes < 0) return 'Vencido';
   if (alerta.diasRestantes === 0) return 'Vence hoje';
@@ -66,10 +72,7 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   const alertasCriticos = vencimentosProximos.length > 0 ? vencimentosProximos.slice(0, 4) : alertasPadrao;
 
   const fraseMotivacionalFallback: FraseMotivacional = useMemo(
-    () => frasesMotivacionais[
-      (Math.floor(Math.random() * frasesMotivacionais.length) + hoje.charCodeAt(hoje.length - 1))
-        % frasesMotivacionais.length
-    ],
+    () => frasesMotivacionais[(getDayOfYear(hoje) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length],
     [hoje],
   );
   const {
