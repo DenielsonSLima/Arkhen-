@@ -5,6 +5,10 @@ import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 import { isXmlDocument, XmlFiscalViewer } from '../../documentos/xml/XmlFiscalViewer';
 import { documentosService } from '../../documentos/services/documentosService';
 import { renderAsync } from 'docx-preview';
+import {
+  TextDocumentViewer,
+} from '../../../../components/document-viewer/TextDocumentViewer';
+import { isTextPreviewableFilename } from '../../../../components/document-viewer/textDocumentFormats';
 
 interface DocumentQuickPreviewProps {
   document: CompanyDocument;
@@ -28,7 +32,8 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
   const isDocx = extension === 'docx';
   const isSpreadsheet = ['xls', 'xlsx'].includes(extension);
   const isPresentation = ['ppt', 'pptx'].includes(extension);
-  const isTextDocument = ['doc', 'txt'].includes(extension);
+  const isTextDocument = extension === 'doc';
+  const isReadableText = isTextPreviewableFilename(doc.nome);
   const isXml = isXmlDocument(doc);
 
   useEffect(() => {
@@ -280,6 +285,16 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
 
     if (isXml) {
       return <XmlFiscalViewer document={{ ...doc, url: accessUrl }} />;
+    }
+
+    if (isReadableText) {
+      return (
+        <TextDocumentViewer
+          sourceUrl={accessUrl}
+          fileName={doc.nome}
+          sizeBytes={doc.tamanhoBytes}
+        />
+      );
     }
 
     return renderUnavailableContent();

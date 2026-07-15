@@ -178,8 +178,9 @@ const getFileMeta = (filename: string) => {
     if (['pptx', 'ppt'].includes(ext)) return { label: 'Slides', icon: Presentation, color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' };
     if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) return { label: 'Imagem', icon: ImageIcon, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' };
     if (ext === 'xml') return { label: 'XML', icon: FileCode2, color: '#c59235', bg: '#fffbeb', border: '#fde68a' };
-    if (ext === 'ofx') return { label: 'OFX', icon: CreditCard, color: '#0f172a', bg: '#f8fafc', border: '#cbd5e1' };
-    if (ext === 'txt') return { label: 'Texto', icon: FileCode2, color: '#475569', bg: '#f8fafc', border: '#cbd5e1' };
+    if (['ofx', 'qif'].includes(ext)) return { label: ext.toUpperCase(), icon: CreditCard, color: '#0f172a', bg: '#f8fafc', border: '#cbd5e1' };
+    if (['rem', 'ret', 'cnab'].includes(ext)) return { label: ext.toUpperCase(), icon: CreditCard, color: '#8a5c18', bg: '#fffbeb', border: '#fde68a' };
+    if (['txt', 'csv', 'efd', 'ecd', 'ecf', 'log'].includes(ext)) return { label: ext.toUpperCase(), icon: FileCode2, color: '#475569', bg: '#f8fafc', border: '#cbd5e1' };
   return { label: ext ? ext.toUpperCase() : 'Arquivo', icon: FileText, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
 };
 

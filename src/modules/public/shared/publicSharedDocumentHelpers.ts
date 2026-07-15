@@ -4,6 +4,7 @@ import {
   parseLegacySharedPayload,
 } from '../../gestor/documentos/services/documentShareService';
 import { supabase } from '../../../lib/supabase';
+import { isTextPreviewableFilename } from '../../../components/document-viewer/textDocumentFormats';
 import type { PublicSharedDocumentPayload, SharedDocumentForPublicView } from './types';
 
 const tryDecodeLegacyPayload = (value: string) => {
@@ -192,6 +193,7 @@ export const getDocumentMode = (filename: string) => {
   const extension = filename.split('.').pop()?.toLowerCase().trim() || '';
   if (extension === 'pdf') return 'pdf';
   if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff'].includes(extension)) return 'image';
+  if (isTextPreviewableFilename(filename)) return 'text';
   return 'generic';
 };
 

@@ -102,8 +102,9 @@ export const getFileTypeLabel = (filename: string) => {
   if (['xls', 'xlsx'].includes(ext)) return 'Planilhas';
   if (['ppt', 'pptx'].includes(ext)) return 'Apresentações';
   if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) return 'Imagens';
-  if (ext === 'ofx') return 'OFX';
-  if (ext === 'txt') return 'Textos';
+  if (['ofx', 'qif'].includes(ext)) return 'Extratos bancários';
+  if (['rem', 'ret', 'cnab'].includes(ext)) return 'Arquivos CNAB';
+  if (['txt', 'csv', 'efd', 'ecd', 'ecf', 'log'].includes(ext)) return 'Textos e SPED';
   return ext ? ext.toUpperCase() : 'Outros arquivos';
 };
 

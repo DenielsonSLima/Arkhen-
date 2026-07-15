@@ -1,5 +1,12 @@
 # Registro interno de versões
 
+## Beta 1.009 — 2026-07-14
+
+- Arquivos TXT, CSV, OFX, QIF, CNAB, SPED e formatos contábeis equivalentes agora podem ser lidos e copiados dentro do sistema.
+- O visualizador reconhece UTF-8, UTF-16 e Windows-1252, cobrindo extratos e arquivos bancários legados sem alterar o conteúdo original.
+- Links públicos compartilhados também passaram a exibir arquivos de texto e extratos compatíveis.
+- A aba Todos os Documentos agora diferencia arquivos pessoais dos vinculados a empresas, evitando a impressão de que arquivos pessoais desapareceram das pastas empresariais.
+
 ## Beta 1.008 — 2026-07-14
 
 - O exportador de simulações passou a gerar PDF A4 nativo, com texto selecionável, margens fixas, quebras por linha/seção e cabeçalho e rodapé em todas as páginas.
