@@ -78,6 +78,13 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
           queryClient.invalidateQueries({ queryKey: configuracoesKeys.modulosSistema() });
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'configuracoes_integracao_bancaria' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.integracaoBancaria() });
+        },
+      )
       .subscribe();
 
     return () => {

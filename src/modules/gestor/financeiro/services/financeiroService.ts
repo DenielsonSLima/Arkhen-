@@ -1,4 +1,4 @@
-import { supabase } from '../../../../lib/supabase';
+import { supabase, supabaseProjectUrl } from '../../../../lib/supabase';
 
 export interface ContratoFinanceiro {
   id: string;
@@ -34,6 +34,9 @@ export interface CobrancaFinanceira {
   asaasStatus?: string;
   asaasAmbiente?: string;
   asaasPayload?: Record<string, unknown>;
+  bankProvider?: 'asaas' | 'inter';
+  bankExternalId?: string;
+  pixCopyPaste?: string;
   dataPagamento?: string;
   dataCancelamento?: string;
   createdAt: string;
@@ -137,6 +140,17 @@ interface CobrancaRow {
   data_cancelamento: string | null;
   created_at: string;
   updated_at: string;
+  financeiro_cobrancas_integracoes?: CobrancaIntegracaoRow[];
+}
+
+interface CobrancaIntegracaoRow {
+  provedor: 'asaas' | 'inter';
+  external_id: string | null;
+  tipo: string;
+  boleto_url: string | null;
+  pix_copia_cola: string | null;
+  pix_qr_code: string | null;
+  payload: Record<string, unknown> | null;
 }
 
 interface LancamentoRow {
@@ -195,7 +209,17 @@ const fromContratoRow = (row: ContratoRow): ContratoFinanceiro => ({
   updatedAt: row.updated_at,
 });
 
-const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
+const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
+  const integration = row.financeiro_cobrancas_integracoes?.[0];
+  const interDocumentUrl = integration?.provedor === 'inter' && row.public_token && integration.tipo !== 'pix'
+    ? `${supabaseProjectUrl.replace(/\/$/, '')}/functions/v1/inter-charge-document/${row.public_token}`
+    : undefined;
+  const integrationPayload = integration?.payload || undefined;
+  const pixCopyPaste = integration?.pix_copia_cola || undefined;
+  const mergedPayload = integrationPayload || pixCopyPaste
+    ? { ...(row.asaas_payload || {}), ...(integrationPayload || {}), ...(pixCopyPaste ? { pixQrCode: { payload: pixCopyPaste } } : {}) }
+    : row.asaas_payload || undefined;
+  return ({
   id: row.id,
   publicToken: row.public_token || undefined,
   empresaId: row.empresa_id,
@@ -209,18 +233,22 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => ({
   meioPagamento: row.meio_pagamento,
   asaasCobrancaId: row.asaas_cobranca_id || undefined,
   asaasNfseId: row.asaas_nfse_id || undefined,
-  asaasBoletoUrl: row.asaas_boleto_url || undefined,
-  asaasInvoiceUrl: row.asaas_invoice_url || undefined,
-  asaasBankSlipUrl: row.asaas_bank_slip_url || undefined,
+  asaasBoletoUrl: row.asaas_boleto_url || integration?.boleto_url || interDocumentUrl,
+  asaasInvoiceUrl: row.asaas_invoice_url || integration?.boleto_url || interDocumentUrl,
+  asaasBankSlipUrl: row.asaas_bank_slip_url || interDocumentUrl,
   asaasBillingType: row.asaas_billing_type || undefined,
   asaasStatus: row.asaas_status || undefined,
   asaasAmbiente: row.asaas_ambiente || undefined,
-  asaasPayload: row.asaas_payload || undefined,
+  asaasPayload: mergedPayload,
+  bankProvider: integration?.provedor,
+  bankExternalId: integration?.external_id || undefined,
+  pixCopyPaste,
   dataPagamento: row.data_pagamento || undefined,
   dataCancelamento: row.data_cancelamento || undefined,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-});
+  });
+};
 
 const fromLancamentoRow = (row: LancamentoRow): LancamentoFinanceiro => ({
   id: row.id,
@@ -319,7 +347,7 @@ export const financeiroService = {
   async getCobranças(): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at')
+      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,external_id,tipo,boleto_url,pix_copia_cola,pix_qr_code,payload)')
       .order('data_vencimento', { ascending: false });
 
     if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
@@ -463,7 +491,7 @@ export const financeiroService = {
     multaPercentual?: number;
     mensagemBoleto?: string;
   }): Promise<CobrancaFinanceira> {
-    const { data, error } = await supabase.functions.invoke('asaas-create-payment', {
+    const { data, error } = await supabase.functions.invoke('bank-create-charge', {
       body: {
         cliente_empresa_id: dados.clienteEmpresaId,
         contrato_id: dados.contratoId || '',
@@ -477,12 +505,15 @@ export const financeiroService = {
         multa_percentual: dados.multaPercentual || 0,
         mensagem_boleto: dados.mensagemBoleto || '',
         external_reference: dados.contratoId || '',
+        request_id: crypto.randomUUID(),
       },
     });
 
-    if (error) throw new Error(`Erro ao gerar cobrança Asaas: ${error.message}`);
-    if (!data?.ok) throw new Error(data?.error || 'Erro ao gerar cobrança Asaas.');
+    if (error) throw new Error(`Erro ao gerar cobrança bancária: ${error.message}`);
+    if (!data?.ok) throw new Error(data?.error || 'Erro ao gerar cobrança bancária.');
 
-    return fromCobrancaRow(data.cobranca as CobrancaRow);
+    const row = data.cobranca as CobrancaRow;
+    if (data.integracao) row.financeiro_cobrancas_integracoes = [data.integracao as CobrancaIntegracaoRow];
+    return fromCobrancaRow(row);
   },
 };
