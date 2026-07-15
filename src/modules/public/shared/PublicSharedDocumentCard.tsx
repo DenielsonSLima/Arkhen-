@@ -28,6 +28,7 @@ interface PublicSharedDocumentCardProps {
 const fallbackLabelByMode = {
   pdf: 'PDF',
   image: 'Imagem',
+  text: 'Texto / extrato',
   generic: 'Arquivo',
 };
 

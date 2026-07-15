@@ -43,6 +43,11 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
   const [previewDoc, setPreviewDoc] = useState<CompanyDocument | null>(null);
 
   const viewMode = initialViewMode;
+  const personalDocumentCount = meusDocs.documentos?.length || 0;
+  const companyDocumentCount = companies.reduce(
+    (total, company) => total + (company.documentos?.length || 0),
+    0,
+  );
 
   // Consolidated documents unifier
   const allDocuments = useMemo(() => {
@@ -113,6 +118,17 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
 
   return (
     <div className="animate-fade-in" style={{ padding: '4px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px', padding: '10px 12px', border: '1px solid #dbe3ed', borderRadius: '10px', background: '#f8fafc' }}>
+        <div>
+          <strong style={{ display: 'block', color: '#1e293b', fontSize: '0.76rem' }}>Origem dos arquivos</strong>
+          <span style={{ color: '#64748b', fontSize: '0.69rem' }}>Arquivos pessoais não aparecem dentro das pastas das empresas.</span>
+        </div>
+        <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.68rem', fontWeight: 800 }}>{personalDocumentCount} pessoais</span>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.68rem', fontWeight: 800 }}>{companyDocumentCount} de empresas</span>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', fontSize: '0.68rem', fontWeight: 800 }}>{allDocuments.length} no total</span>
+        </div>
+      </div>
       
       {/* Top search & selectors row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>

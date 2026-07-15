@@ -1,11 +1,12 @@
 import React from 'react';
 import { Loader2, FileText, ShieldOff } from 'lucide-react';
 import type { SharedDocumentForPublicView } from '../types';
+import { TextDocumentViewer } from '../../../../components/document-viewer/TextDocumentViewer';
 
 interface SharedDocumentViewerProps {
   activeDocument: SharedDocumentForPublicView | null;
   activePreviewUrl: string | null;
-  activeMode: 'pdf' | 'image' | 'generic';
+  activeMode: 'pdf' | 'image' | 'text' | 'generic';
   activePreviewUnavailable: boolean;
   isAccessBlocked?: boolean;
   onPreviewError: () => void;
@@ -75,6 +76,14 @@ export const SharedDocumentViewer: React.FC<SharedDocumentViewerProps> = ({
               alt={activeDocument?.documento || 'Visualizador de Imagem'}
               onError={onPreviewError}
               style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#f8fafc', display: 'block' }}
+            />
+          ) : null}
+
+          {activeMode === 'text' && activePreviewUrl && activeDocument ? (
+            <TextDocumentViewer
+              sourceUrl={activePreviewUrl}
+              fileName={activeDocument.documento}
+              sizeBytes={activeDocument.tamanho_bytes}
             />
           ) : null}
 
