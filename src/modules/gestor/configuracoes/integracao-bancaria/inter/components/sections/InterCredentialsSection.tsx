@@ -47,16 +47,6 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
         />
         <ConfiguredBadge configured={config.clientSecretConfigured} />
       </label>
-      <label className="inter-field">
-        <span>Conta corrente</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={config.contaCorrente}
-          placeholder="Somente números"
-          onChange={(event) => onPatch({ contaCorrente: event.target.value })}
-        />
-      </label>
     </div>
 
     <div className="inter-upload-grid">

@@ -165,7 +165,7 @@ export const interApiRequest = async (
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token.accessToken}`,
-      "x-conta-corrente": account,
+      ...(account ? { "x-conta-corrente": account } : {}),
       ...options.headers,
     },
     body: options.body,

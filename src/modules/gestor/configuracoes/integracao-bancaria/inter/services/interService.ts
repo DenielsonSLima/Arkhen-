@@ -70,7 +70,9 @@ const normalizeEnvironment = (value: unknown, fallback: InterEnvironmentConfig):
     privateKeyPem: '',
     privateKeyConfigured: asBoolean(read(row, 'privateKeyConfigured', 'chavePrivadaConfigurada', 'chave_privada_configurada', 'private_key_configured')),
     privateKeyFileName: asString(read(row, 'privateKeyFileName', 'nome_chave_privada', 'private_key_file_name')),
-    contaCorrente: asString(read(row, 'contaCorrente', 'conta_corrente')),
+    // O Banco Inter exige x-conta-corrente apenas para aplicacoes vinculadas
+    // a mais de uma conta. A configuracao padrao nao solicita esse dado.
+    contaCorrente: '',
     chavePix: asString(read(row, 'chavePix', 'chave_pix')),
     clearClientSecret: false,
     clearCertificate: false,
@@ -117,7 +119,7 @@ const toEnvironmentPayload = (config: InterEnvironmentConfig) => ({
   clientSecret: cleanSecret(config.clientSecret),
   certificadoPem: config.certificatePem.trim(),
   chavePrivadaPem: config.privateKeyPem.trim(),
-  contaCorrente: config.contaCorrente.replace(/\D/g, ''),
+  contaCorrente: '',
   chavePix: config.chavePix.trim(),
 });
 
