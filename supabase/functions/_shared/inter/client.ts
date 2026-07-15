@@ -67,7 +67,7 @@ const fetchWithTimeout = async (
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new InterApiError(
-        "Tempo limite ao conectar com o Banco Inter.",
+        "O servidor do Banco Inter não respondeu dentro do prazo. O certificado foi lido, mas a autenticação OAuth ficou inconclusiva. Tente novamente mais tarde.",
         504,
       );
     }

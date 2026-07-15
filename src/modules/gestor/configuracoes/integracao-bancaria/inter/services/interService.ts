@@ -20,6 +20,29 @@ const read = (record: Record<string, unknown>, ...keys: string[]) => {
 const asString = (value: unknown) => typeof value === 'string' ? value : '';
 const asBoolean = (value: unknown, fallback = false) => typeof value === 'boolean' ? value : fallback;
 
+const readFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const errorRecord = asRecord(error);
+  const context = errorRecord.context;
+  if (context instanceof Response) {
+    try {
+      const payload = asRecord(await context.clone().json());
+      const serverMessage = asString(payload.message ?? payload.error ?? payload.erro);
+      if (serverMessage) return serverMessage;
+    } catch {
+      // A resposta sem JSON nao deve substituir uma mensagem segura para o usuario.
+    }
+  }
+
+  const directMessage = asString(errorRecord.message);
+  return directMessage && !/non-2xx status code/i.test(directMessage)
+    ? directMessage
+    : fallback;
+};
+
+const throwFunctionError = async (error: unknown, fallback: string): Promise<never> => {
+  throw new Error(await readFunctionErrorMessage(error, fallback));
+};
+
 const defaultEnvironment = (): InterEnvironmentConfig => ({
   clientId: '',
   clientIdConfigured: false,
@@ -160,7 +183,12 @@ export const interService = {
     const { data, error } = await supabase.functions.invoke('inter-test-connection', {
       body: { action: 'teste', environment },
     });
-    if (error) throw error;
+    if (error) {
+      await throwFunctionError(
+        error,
+        'Não foi possível concluir o teste com o Banco Inter. Tente novamente em alguns minutos.',
+      );
+    }
     const result = asRecord(data);
     return {
       ok: Boolean(result.ok ?? result.success),
@@ -178,7 +206,12 @@ export const interService = {
     const { data, error } = await supabase.functions.invoke('inter-test-connection', {
       body: { action: 'configurar_webhook', environment },
     });
-    if (error) throw error;
+    if (error) {
+      await throwFunctionError(
+        error,
+        'Não foi possível registrar o webhook no Banco Inter. Tente novamente em alguns minutos.',
+      );
+    }
     const result = asRecord(data);
     return {
       ok: Boolean(result.ok ?? result.success),

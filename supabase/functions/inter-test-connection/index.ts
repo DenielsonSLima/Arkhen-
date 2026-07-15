@@ -256,6 +256,8 @@ Deno.serve(async (req) => {
     const message = error instanceof Error
       ? error.message
       : "Falha ao testar o Banco Inter.";
+    const inconclusive = error instanceof InterApiError &&
+      [502, 503, 504].includes(error.status);
     if (requestData.acao === "teste") {
       await supabase.rpc("registrar_inter_teste_conexao", {
         p_user_id: userId,
@@ -263,12 +265,21 @@ Deno.serve(async (req) => {
         p_resultado: {
           ok: false,
           erro: message,
+          inconclusivo: inconclusive,
           testadoEm: new Date().toISOString(),
           ...(certificateMetadata || {}),
         },
       });
     }
-    return jsonResponse({ ok: false, error: message }, status);
+    return jsonResponse({
+      ok: false,
+      error: message,
+      inconclusivo: inconclusive,
+      code: inconclusive
+        ? "inter_temporariamente_indisponivel"
+        : "inter_validacao_falhou",
+      ...(certificateMetadata || {}),
+    }, status);
   } finally {
     mtlsClient?.close();
   }

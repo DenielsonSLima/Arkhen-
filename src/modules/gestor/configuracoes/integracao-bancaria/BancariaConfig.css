@@ -105,6 +105,7 @@
 .bank-summary__details .btn-save-settings { align-self: center; white-space: nowrap; }
 .bank-feedback { border-radius: 10px; font-size: .82rem; font-weight: 750; margin-bottom: 16px; padding: 12px 14px; }
 .bank-feedback--success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.bank-feedback--warning { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
 .bank-feedback--error { background: #fff1f2; border: 1px solid #fecaca; color: #991b1b; }
 .bank-empty { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; color: #64748b; padding: 28px; text-align: center; }
 .bank-info-box, .inter-security-note {
