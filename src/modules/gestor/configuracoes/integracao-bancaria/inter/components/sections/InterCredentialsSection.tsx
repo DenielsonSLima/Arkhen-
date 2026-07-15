@@ -14,14 +14,25 @@ const readTextFile = async (file: File | undefined, onRead: (content: string) =>
   onRead(await file.text());
 };
 
-const ConfiguredBadge: React.FC<{ configured: boolean }> = ({ configured }) => (
-  <span className={`inter-secret-status ${configured ? 'is-configured' : ''}`}>
-    {configured ? 'Armazenado com segurança' : 'Ainda não configurado'}
+type CredentialState = 'configured' | 'pending' | 'missing';
+
+const getCredentialState = (configured: boolean, pendingValue: string) => (
+  pendingValue.trim() ? 'pending' : configured ? 'configured' : 'missing'
+);
+
+const CredentialBadge: React.FC<{ state: CredentialState }> = ({ state }) => (
+  <span className={`inter-secret-status is-${state}`}>
+    {state === 'configured' ? 'Armazenado com segurança' : state === 'pending' ? 'Pronto para salvar' : 'Ainda não configurado'}
   </span>
 );
 
-export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = ({ config, onPatch, onNotify }) => (
-  <InterSectionCard
+export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = ({ config, onPatch, onNotify }) => {
+  const clientIdState = getCredentialState(config.clientIdConfigured, config.clientId);
+  const clientSecretState = getCredentialState(config.clientSecretConfigured, config.clientSecret);
+  const certificateState = getCredentialState(config.certificateConfigured, config.certificatePem);
+  const privateKeyState = getCredentialState(config.privateKeyConfigured, config.privateKeyPem);
+
+  return <InterSectionCard
     title="Credenciais e certificado mTLS"
     description="Dados obtidos no Internet Banking do Inter. Os segredos não serão exibidos novamente."
     icon={<KeyRound size={20} />}
@@ -31,27 +42,32 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
         <span>Client ID</span>
         <input
           type="text"
+          className={`is-${clientIdState}`}
           value={config.clientId}
           autoComplete="off"
-          placeholder={config.clientIdConfigured ? 'Client ID configurado' : 'Informe o Client ID'}
+          placeholder={clientIdState === 'configured' ? '••••••••••••••••' : ''}
+          aria-invalid={clientIdState === 'missing'}
           onChange={(event) => onPatch({ clientId: event.target.value })}
         />
+        <CredentialBadge state={clientIdState} />
       </label>
       <label className="inter-field">
         <span>Client Secret</span>
         <input
           type="password"
+          className={`is-${clientSecretState}`}
           value={config.clientSecret}
           autoComplete="new-password"
-          placeholder={config.clientSecretConfigured ? '••••••••••••••••' : 'Informe o Client Secret'}
+          placeholder={clientSecretState === 'configured' ? '••••••••••••••••' : ''}
+          aria-invalid={clientSecretState === 'missing'}
           onChange={(event) => onPatch({ clientSecret: event.target.value, clearClientSecret: false })}
         />
-        <ConfiguredBadge configured={config.clientSecretConfigured} />
+        <CredentialBadge state={clientSecretState} />
       </label>
     </div>
 
     <div className="inter-upload-grid">
-      <label className="inter-upload-card">
+      <label className={`inter-upload-card is-${certificateState}`}>
         {(config.certificateConfigured || config.certificatePem) && (
           <button
             type="button"
@@ -93,9 +109,9 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
             });
           }}
         />
-        <ConfiguredBadge configured={config.certificateConfigured} />
+        <CredentialBadge state={certificateState} />
       </label>
-      <label className="inter-upload-card">
+      <label className={`inter-upload-card is-${privateKeyState}`}>
         {(config.privateKeyConfigured || config.privateKeyPem) && (
           <button
             type="button"
@@ -137,9 +153,9 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
             });
           }}
         />
-        <ConfiguredBadge configured={config.privateKeyConfigured} />
+        <CredentialBadge state={privateKeyState} />
       </label>
     </div>
 
-  </InterSectionCard>
-);
+  </InterSectionCard>;
+};

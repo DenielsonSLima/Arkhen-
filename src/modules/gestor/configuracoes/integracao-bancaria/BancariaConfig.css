@@ -139,12 +139,23 @@
 .inter-field { color: #334155; display: flex; flex-direction: column; font-size: .84rem; font-weight: 800; gap: 9px; }
 .inter-field input { background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; color: #0f172a; font: inherit; font-size: .9rem; min-height: 48px; outline: 0; padding: 11px 13px; }
 .inter-field input:focus { border-color: #d29b32; box-shadow: 0 0 0 3px rgba(197, 146, 53, .12); }
+.inter-field input.is-configured { background: #f0fdf4; border-color: #4ade80; color: #166534; }
+.inter-field input.is-configured::placeholder { color: #15803d; font-weight: 900; letter-spacing: 3px; opacity: 1; }
+.inter-field input.is-configured:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .14); }
+.inter-field input.is-pending { background: #fffbeb; border-color: #fbbf24; }
+.inter-field input.is-missing { background: #fff; border-color: #ef4444; }
+.inter-field input.is-missing:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(239, 68, 68, .13); }
 .inter-field input[readonly] { background: #f8fafc; color: #64748b; }
 .inter-field small { color: #64748b; font-size: .7rem; font-weight: 500; }
 .inter-field--full { width: 100%; }
 .inter-upload-grid { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .inter-upload-card { align-items: center; background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 11px; color: #b57d1b; cursor: pointer; display: grid; gap: 6px 14px; grid-template-columns: auto 1fr; min-height: 112px; padding: 18px 52px 18px 18px; position: relative; }
 .inter-upload-card:hover { background: #fffaf0; border-color: #d29b32; }
+.inter-upload-card.is-configured { background: #f0fdf4; border-color: #4ade80; }
+.inter-upload-card.is-configured:hover { background: #ecfdf5; border-color: #22c55e; }
+.inter-upload-card.is-pending { background: #fffbeb; border-color: #fbbf24; }
+.inter-upload-card.is-missing { background: #fff; border-color: #ef4444; }
+.inter-upload-card.is-missing:hover { background: #fff7f7; border-color: #dc2626; }
 .inter-upload-card span { min-width: 0; }
 .inter-upload-card strong { color: #0f172a; display: block; font-size: .88rem; }
 .inter-upload-card small { color: #64748b; display: block; font-size: .76rem; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -153,8 +164,10 @@
 .inter-upload-remove { align-items: center; background: #fff; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626; cursor: pointer; display: inline-flex; height: 30px; justify-content: center; padding: 0; position: absolute; right: 12px; top: 12px; width: 30px; z-index: 2; }
 .inter-upload-remove:hover { background: #fff1f2; border-color: #fca5a5; }
 .inter-upload-remove:focus-visible { box-shadow: 0 0 0 3px rgba(220, 38, 38, .16); outline: 0; }
-.inter-secret-status { color: #9a6b16; font-size: .74rem; font-weight: 800; }
+.inter-secret-status { color: #dc2626; font-size: .74rem; font-weight: 800; }
 .inter-secret-status.is-configured { color: #047857; }
+.inter-secret-status.is-pending { color: #a16207; }
+.inter-secret-status.is-missing { color: #dc2626; }
 .inter-clear-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .inter-clear-grid label { align-items: center; color: #64748b; display: flex; font-size: .7rem; gap: 7px; }
 .inter-switch-row { align-items: center; display: grid; gap: 14px; grid-template-columns: 1fr auto; position: relative; }
