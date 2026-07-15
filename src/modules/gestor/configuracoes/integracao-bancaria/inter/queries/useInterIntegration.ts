@@ -22,7 +22,10 @@ export const useInterIntegration = () => {
   });
   const testMutation = useMutation({
     mutationFn: interService.testConnection,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.integracaoBancaria() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.inter() });
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.integracaoBancaria() });
+    },
   });
   const webhookMutation = useMutation({
     mutationFn: interService.configureWebhook,

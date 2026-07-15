@@ -148,10 +148,11 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
           {inter.webhookError && <div className="bank-feedback bank-feedback--error">{getErrorMessage(inter.webhookError, 'Não foi possível registrar o webhook.')}</div>}
 
           {activeTab === 'credenciais' && <InterCredentialsSection config={inter.activeConfig} onPatch={inter.patchEnvironment} onNotify={notify} />}
-          {activeTab === 'boleto' && <InterBoletoSection config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
-          {activeTab === 'pix' && <InterPixSection config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
+          {activeTab === 'boleto' && <InterBoletoSection environment={inter.activeEnvironment} config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
+          {activeTab === 'pix' && <InterPixSection environment={inter.activeEnvironment} config={inter.activeConfig} onPatch={inter.patchEnvironment} />}
           {activeTab === 'webhook' && (
             <InterWebhookSection
+              environment={inter.activeEnvironment}
               config={inter.activeConfig}
               onPatch={inter.patchEnvironment}
               isConfiguring={inter.isConfiguringWebhook}
@@ -167,7 +168,11 @@ export const InterConfigPage: React.FC<InterConfigPageProps> = ({ onBack }) => {
           <div className="form-actions-row inter-actions">
             <button type="button" className="bank-secondary-button" disabled={inter.isTesting || inter.isSaving} onClick={() => void handleTestConnection()}>
               {inter.isTesting ? <Loader2 size={16} className="bank-spin" /> : <PlugZap size={16} />}
-              {inter.isTesting ? 'Testando...' : 'Testar conexão'}
+              {inter.isTesting
+                ? 'Validando...'
+                : inter.activeEnvironment === 'homologacao'
+                  ? 'Validar credenciais Sandbox'
+                  : 'Testar conexão de produção'}
             </button>
             <button type="submit" className="btn-save-settings" disabled={inter.isSaving || inter.isTesting}>
               {inter.isSaving ? <Loader2 size={16} className="bank-spin" /> : <Save size={16} />}

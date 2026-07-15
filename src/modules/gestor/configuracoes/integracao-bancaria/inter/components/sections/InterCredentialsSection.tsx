@@ -15,6 +15,7 @@ const readTextFile = async (file: File | undefined, onRead: (content: string) =>
 };
 
 type CredentialState = 'configured' | 'pending' | 'missing';
+type CertificateValidityState = 'valid' | 'expiring' | 'expired' | 'unknown';
 
 const getCredentialState = (configured: boolean, pendingValue: string) => (
   pendingValue.trim() ? 'pending' : configured ? 'configured' : 'missing'
@@ -26,11 +27,42 @@ const CredentialBadge: React.FC<{ state: CredentialState }> = ({ state }) => (
   </span>
 );
 
+const formatCertificateDate = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Maceio' }).format(date);
+};
+
+const getCertificateValidity = (value: string): { state: CertificateValidityState; label: string } => {
+  if (!value) {
+    return { state: 'unknown', label: 'Validade disponível após validar as credenciais' };
+  }
+  const expiration = new Date(value);
+  if (Number.isNaN(expiration.getTime())) {
+    return { state: 'unknown', label: 'Validade disponível após validar as credenciais' };
+  }
+  const daysRemaining = Math.ceil((expiration.getTime() - Date.now()) / 86_400_000);
+  const formatted = formatCertificateDate(value);
+  if (daysRemaining < 0) return { state: 'expired', label: `Expirado em ${formatted}` };
+  if (daysRemaining <= 30) {
+    return {
+      state: 'expiring',
+      label: `Válido até ${formatted} · ${daysRemaining === 0 ? 'vence hoje' : `${daysRemaining} dia${daysRemaining === 1 ? '' : 's'} restante${daysRemaining === 1 ? '' : 's'}`}`,
+    };
+  }
+  return { state: 'valid', label: `Válido até ${formatted} · ${daysRemaining} dias restantes` };
+};
+
 export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = ({ config, onPatch, onNotify }) => {
   const clientIdState = getCredentialState(config.clientIdConfigured, config.clientId);
   const clientSecretState = getCredentialState(config.clientSecretConfigured, config.clientSecret);
   const certificateState = getCredentialState(config.certificateConfigured, config.certificatePem);
   const privateKeyState = getCredentialState(config.privateKeyConfigured, config.privateKeyPem);
+  const certificateValidity = getCertificateValidity(config.certificateValidUntil);
+  const certificateCardState = certificateState === 'configured' && certificateValidity.state !== 'unknown'
+    ? `${certificateState} is-${certificateValidity.state}`
+    : certificateState;
 
   return <InterSectionCard
     title="Credenciais e certificado mTLS"
@@ -67,7 +99,7 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
     </div>
 
     <div className="inter-upload-grid">
-      <label className={`inter-upload-card is-${certificateState}`}>
+      <label className={`inter-upload-card is-${certificateCardState}`}>
         {(config.certificateConfigured || config.certificatePem) && (
           <button
             type="button"
@@ -110,6 +142,11 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
           }}
         />
         <CredentialBadge state={certificateState} />
+        {certificateState === 'configured' && (
+          <span className={`inter-certificate-validity is-${certificateValidity.state}`}>
+            {certificateValidity.label}
+          </span>
+        )}
       </label>
       <label className={`inter-upload-card is-${privateKeyState}`}>
         {(config.privateKeyConfigured || config.privateKeyPem) && (

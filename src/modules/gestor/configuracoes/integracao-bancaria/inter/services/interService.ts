@@ -28,6 +28,8 @@ const defaultEnvironment = (): InterEnvironmentConfig => ({
   certificatePem: '',
   certificateConfigured: false,
   certificateFileName: '',
+  certificateValidFrom: '',
+  certificateValidUntil: '',
   privateKeyPem: '',
   privateKeyConfigured: false,
   privateKeyFileName: '',
@@ -67,6 +69,8 @@ const normalizeEnvironment = (value: unknown, fallback: InterEnvironmentConfig):
     certificatePem: '',
     certificateConfigured: asBoolean(read(row, 'certificateConfigured', 'certificadoConfigurado', 'certificado_configurado', 'certificate_configured')),
     certificateFileName: asString(read(row, 'certificateFileName', 'nome_certificado', 'certificate_file_name')),
+    certificateValidFrom: asString(read(row, 'certificateValidFrom', 'certificadoValidoDe', 'certificado_valido_de')),
+    certificateValidUntil: asString(read(row, 'certificateValidUntil', 'certificadoValidoAte', 'certificado_valido_ate')),
     privateKeyPem: '',
     privateKeyConfigured: asBoolean(read(row, 'privateKeyConfigured', 'chavePrivadaConfigurada', 'chave_privada_configurada', 'private_key_configured')),
     privateKeyFileName: asString(read(row, 'privateKeyFileName', 'nome_chave_privada', 'private_key_file_name')),
@@ -162,6 +166,11 @@ export const interService = {
       ok: Boolean(result.ok ?? result.success),
       message: asString(result.message ?? result.error ?? result.erro) || 'Conexão validada pelo Banco Inter.',
       checkedAt: asString(result.checkedAt ?? result.checked_at ?? result.testadoEm) || undefined,
+      certificateValidFrom: asString(result.certificateValidFrom ?? result.certificadoValidoDe) || undefined,
+      certificateValidUntil: asString(result.certificateValidUntil ?? result.certificadoValidoAte) || undefined,
+      certificateDaysRemaining: typeof (result.certificateDaysRemaining ?? result.certificadoDiasRestantes) === 'number'
+        ? Number(result.certificateDaysRemaining ?? result.certificadoDiasRestantes)
+        : undefined,
     };
   },
 

@@ -36,10 +36,14 @@ export interface InterConnectionResult {
   ok: boolean;
   ambiente: InterEnvironment;
   autenticacao: "validada";
-  api: "validada";
+  api: "oauth_validado" | "validada";
   modulos: InterModules;
   scopes: string[];
   testadoEm: string;
+  message: string;
+  certificateValidFrom: string;
+  certificateValidUntil: string;
+  certificateDaysRemaining: number;
 }
 
 export interface InterWebhookEvent extends Record<string, unknown> {

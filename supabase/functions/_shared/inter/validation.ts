@@ -165,11 +165,5 @@ export const parsePreparedConfig = (value: unknown): InterPreparedConfig => {
     );
   }
 
-  if (
-    !config.modulos.boleto && !config.modulos.pix && !config.modulos.webhook
-  ) {
-    throw new Error("Ative ao menos um modulo do Banco Inter antes do teste.");
-  }
-
   return config;
 };
