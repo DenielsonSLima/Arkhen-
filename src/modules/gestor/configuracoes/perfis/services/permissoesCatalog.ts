@@ -22,6 +22,8 @@ export const permissoesCatalog: PermissaoCatalogItem[] = [
   { chave: 'protocolos:manage', nome: 'Gerenciar protocolos', grupo: 'Protocolos' },
   { chave: 'conformidade:view', nome: 'Ver conformidade', grupo: 'Conformidade' },
   { chave: 'simulacoes:view', nome: 'Ver simulacoes', grupo: 'Simulacoes' },
+  { chave: 'reforma-tributaria:view', nome: 'Ver Reforma Tributária', grupo: 'Reforma Tributária' },
+  { chave: 'reforma-tributaria:manage', nome: 'Gerenciar Reforma Tributária', grupo: 'Reforma Tributária' },
   { chave: 'faturamento:view', nome: 'Ver faturamento', grupo: 'Financeiro' },
   { chave: 'faturamento:manage', nome: 'Gerenciar faturamento', grupo: 'Financeiro' },
   { chave: 'financeiro:view', nome: 'Ver financeiro', grupo: 'Financeiro' },

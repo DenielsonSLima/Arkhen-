@@ -12,6 +12,7 @@ import { persistedStorage } from './lib/persistedStorage';
 import { LandingPage } from './modules/public/landing/LandingPage';
 import { DemoWebsite } from './modules/public/demowebsite/DemoWebsite';
 import { navigate } from './lib/navigation';
+import { queryClient } from './lib/queryClient';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 
@@ -154,6 +155,7 @@ function App() {
       if (!mounted) return;
 
       if (error || !data.session) {
+        queryClient.clear();
         try {
           persistedStorage.removeItem('contabil_auth');
           persistedStorage.removeItem('gestor_user_profile');
@@ -164,10 +166,21 @@ function App() {
         return;
       }
 
-      syncUserProfile(data.session.user);
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (!mounted) return;
+      if (userError || !userData.user) {
+        await supabase.auth.signOut({ scope: 'local' });
+        queryClient.clear();
+        persistedStorage.removeItem('contabil_auth');
+        persistedStorage.removeItem('gestor_user_profile');
+        setView('login');
+        return;
+      }
+
+      syncUserProfile(userData.user);
 
       try {
-        await loginService.completeOnboarding({ email: data.session.user.email || undefined });
+        await loginService.completeOnboarding({ email: userData.user.email || undefined });
       } catch (error) {
         console.error('Erro ao finalizar cadastro autenticado:', error);
       }
@@ -177,6 +190,7 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        queryClient.clear();
         syncUserProfile(session.user);
         void loginService.completeOnboarding({ email: session.user.email || undefined }).catch((error) => {
           console.error('Erro ao finalizar cadastro autenticado:', error);
@@ -186,6 +200,7 @@ function App() {
       }
 
       if (event === 'SIGNED_OUT') {
+        queryClient.clear();
         persistedStorage.removeItem('contabil_auth');
         persistedStorage.removeItem('gestor_user_profile');
         setView('login');
@@ -205,6 +220,7 @@ function App() {
   }, [view]);
 
   const handleLoginSuccess = () => {
+    queryClient.clear();
     internalTabsStore.resetToInicio();
     persistedStorage.removeItem('contabil_internal_tabs_state');
     try {
@@ -226,6 +242,7 @@ function App() {
       } catch (error) {
         console.error('Erro ao realizar logout no Supabase:', error);
       } finally {
+        queryClient.clear();
         try {
           persistedStorage.removeItem('contabil_auth');
           persistedStorage.removeItem('gestor_user_profile');

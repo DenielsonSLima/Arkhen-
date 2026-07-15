@@ -113,15 +113,16 @@ const getBrowserLegacyKeys = (): string[] => {
 
 const getContext = async (): Promise<StorageContext | null> => {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user?.id) return null;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) return null;
 
     const { data, error } = await supabase.rpc('current_empresa_id');
     if (error || !data) return null;
 
     return {
       empresa_id: String(data),
-      user_id: userData.user.id,
+      user_id: userId,
     };
   } catch {
     return null;
@@ -279,7 +280,3 @@ export const persistedStorage = {
     await ensureInitialized();
   },
 };
-
-if (typeof window !== 'undefined') {
-  void ensureInitialized();
-}

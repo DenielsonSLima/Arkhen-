@@ -65,7 +65,13 @@
 
 /* Sidebar Drag-and-Drop Enhancements */
 .sidebar-drag-handle {
+  align-items: center;
+  color: rgba(255, 255, 255, 0.25);
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
   opacity: 0.15;
+  padding: 8px 2px 8px 6px;
   transition: opacity 0.2s ease, color 0.2s ease;
 }
 

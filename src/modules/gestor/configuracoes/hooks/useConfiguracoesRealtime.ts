@@ -9,8 +9,11 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
   useEffect(() => {
     if (!enabled) return;
 
+    const channelId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('configuracoes-realtime')
+      .channel(`configuracoes-realtime-${channelId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'configuracoes_empresa' },
@@ -66,6 +69,13 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
         { event: '*', schema: 'public', table: 'configuracoes_eventos_logs' },
         () => {
           queryClient.invalidateQueries({ queryKey: configuracoesKeys.logsEventos() });
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'configuracoes_modulos_sistema' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: configuracoesKeys.modulosSistema() });
         },
       )
       .subscribe();
