@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode, type ErrorInfo, Component } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type ErrorInfo, Component } from 'react';
 import { LoginPage } from './modules/public/login/LoginPage';
 import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
 import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
+import { GestorShellLoading } from './modules/gestor/layout/GestorShellLoading';
 import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/useConfiguracoesRealtime';
 import { usePersistedStorageRealtime } from './modules/gestor/configuracoes/hooks/usePersistedStorageRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
@@ -102,7 +103,13 @@ function App() {
   const isLoginOrSignupRoute = currentPath === '/login' || currentPath === '/signup';
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
 
-  const [view, setView] = useState<'login' | 'gestor'>('login');
+  const [view, setView] = useState<'loading' | 'login' | 'gestor'>('loading');
+  const viewRef = useRef(view);
+  const authenticatedUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     const handleLocationChange = () => {
@@ -151,10 +158,11 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data, error }) => {
+    void supabase.auth.getSession().then(async ({ data, error }) => {
       if (!mounted) return;
 
       if (error || !data.session) {
+        authenticatedUserIdRef.current = null;
         queryClient.clear();
         try {
           persistedStorage.removeItem('contabil_auth');
@@ -162,9 +170,12 @@ function App() {
         } catch (error) {
           console.error('Erro ao remover auth persistido:', error);
         }
+        viewRef.current = 'login';
         setView('login');
         return;
       }
+
+      authenticatedUserIdRef.current = data.session.user.id;
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!mounted) return;
@@ -173,6 +184,7 @@ function App() {
         queryClient.clear();
         persistedStorage.removeItem('contabil_auth');
         persistedStorage.removeItem('gestor_user_profile');
+        viewRef.current = 'login';
         setView('login');
         return;
       }
@@ -185,24 +197,45 @@ function App() {
         console.error('Erro ao finalizar cadastro autenticado:', error);
       }
       persistedStorage.setItem('contabil_auth', 'gestor');
+      viewRef.current = 'gestor';
       setView('gestor');
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('Erro ao validar a sessão inicial:', error);
+      queryClient.clear();
+      try {
+        persistedStorage.removeItem('contabil_auth');
+        persistedStorage.removeItem('gestor_user_profile');
+      } catch (storageError) {
+        console.error('Erro ao limpar autenticação local:', storageError);
+      }
+      viewRef.current = 'login';
+      setView('login');
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        const isSameAuthenticatedSession = authenticatedUserIdRef.current === session.user.id;
+        authenticatedUserIdRef.current = session.user.id;
+        if (isSameAuthenticatedSession && viewRef.current === 'gestor') return;
+
         queryClient.clear();
         syncUserProfile(session.user);
         void loginService.completeOnboarding({ email: session.user.email || undefined }).catch((error) => {
           console.error('Erro ao finalizar cadastro autenticado:', error);
         });
         persistedStorage.setItem('contabil_auth', 'gestor');
+        viewRef.current = 'gestor';
         setView('gestor');
       }
 
       if (event === 'SIGNED_OUT') {
+        authenticatedUserIdRef.current = null;
         queryClient.clear();
         persistedStorage.removeItem('contabil_auth');
         persistedStorage.removeItem('gestor_user_profile');
+        sessionStorage.removeItem('contabil_config_active_subtab');
+        viewRef.current = 'login';
         setView('login');
       }
     });
@@ -223,11 +256,14 @@ function App() {
     queryClient.clear();
     internalTabsStore.resetToInicio();
     persistedStorage.removeItem('contabil_internal_tabs_state');
+    sessionStorage.removeItem('contabil_config_active_subtab');
     try {
       persistedStorage.setItem('contabil_auth', 'gestor');
+      viewRef.current = 'gestor';
       setView('gestor');
     } catch (error) {
       console.error('Erro ao gravar auth persistido:', error);
+      viewRef.current = 'gestor';
       setView('gestor');
     }
   };
@@ -243,12 +279,15 @@ function App() {
         console.error('Erro ao realizar logout no Supabase:', error);
       } finally {
         queryClient.clear();
+        authenticatedUserIdRef.current = null;
         try {
           persistedStorage.removeItem('contabil_auth');
           persistedStorage.removeItem('gestor_user_profile');
+          sessionStorage.removeItem('contabil_config_active_subtab');
         } catch (error) {
           console.error('Erro ao remover auth persistido:', error);
         }
+        viewRef.current = 'login';
         setView('login');
       }
     })();
@@ -289,6 +328,10 @@ function App() {
         <PublicCobrancaPage />
       </div>
     );
+  }
+
+  if (view === 'loading') {
+    return <GestorShellLoading message="Validando seu acesso..." />;
   }
 
   if (view === 'gestor') {
