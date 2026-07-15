@@ -159,7 +159,7 @@ export const parsePreparedConfig = (value: unknown): InterPreparedConfig => {
     throw new Error("Chave privada PEM invalida.");
   }
 
-  if (!/^[1-9][0-9]*$/.test(config.contaCorrente)) {
+  if (config.contaCorrente && !/^[1-9][0-9]*$/.test(config.contaCorrente)) {
     throw new Error(
       "Conta corrente invalida. Informe somente numeros, sem zero a esquerda.",
     );
