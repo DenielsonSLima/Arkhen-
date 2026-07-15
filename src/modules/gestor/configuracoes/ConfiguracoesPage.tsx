@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Building2, Users, Activity, History, CreditCard, FileText, ArrowLeft,
-  UserCheck, Landmark, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2
+  UserCheck, Landmark, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2, Boxes
 } from 'lucide-react';
 
 // Import submodules
@@ -21,6 +21,7 @@ import { PermissoesConfig } from './permissoes/PermissoesConfig';
 import { MeuPerfilConfig } from './meu-perfil/MeuPerfilConfig';
 import { CompartilhamentoConfig } from './compartilhamento/CompartilhamentoConfig';
 import { VisualizadoresXmlConfig } from './visualizadores-xml/VisualizadoresXmlConfig';
+import { ModulosSistemaConfig } from './modulos-sistema/ModulosSistemaConfig';
 
 import './Configuracoes.css';
 
@@ -126,6 +127,12 @@ export const ConfiguracoesPage: React.FC = () => {
       icon: <FolderLock size={28} />,
     },
     {
+      id: 'modulos-sistema',
+      title: 'Módulos do Sistema',
+      desc: 'Ative ou desative funcionalidades para toda a equipe do escritório.',
+      icon: <Boxes size={28} />,
+    },
+    {
       id: 'contadores',
       title: 'Contadores Responsáveis',
       desc: 'Cadastre os contadores do escritório e defina quem assina os relatórios.',
@@ -229,6 +236,8 @@ export const ConfiguracoesPage: React.FC = () => {
         return <VisualizadoresXmlConfig />;
       case 'compartilhamento':
         return <CompartilhamentoConfig />;
+      case 'modulos-sistema':
+        return <ModulosSistemaConfig />;
       default:
         return (
           <div className="submodule-content-card">

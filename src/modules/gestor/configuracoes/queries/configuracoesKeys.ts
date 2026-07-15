@@ -11,4 +11,5 @@ export const configuracoesKeys = {
   logsEventos: () => [...configuracoesKeys.all, 'logs-eventos'] as const,
   integracaoBancaria: () => [...configuracoesKeys.all, 'integracao-bancaria'] as const,
   asaas: () => [...configuracoesKeys.integracaoBancaria(), 'asaas'] as const,
+  modulosSistema: () => [...configuracoesKeys.all, 'modulos-sistema'] as const,
 };

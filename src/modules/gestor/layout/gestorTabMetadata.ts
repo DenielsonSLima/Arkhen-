@@ -32,6 +32,7 @@ export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   'gestao-empresarial': { title: 'Gestão Empresarial', iconName: 'Briefcase' },
   'planejamento-tributario': { title: 'Planejamento Tributário', iconName: 'Percent' },
   'simulacoes-calculos': { title: 'Simulações e Cálculos', iconName: 'Calculator' },
+  'reforma-tributaria': { title: 'Reforma Tributária', iconName: 'Scale' },
   agenda: { title: 'Agenda', iconName: 'CalendarDays' },
   conformidade: { title: 'Conformidade', iconName: 'ShieldCheck' },
   protocolos: { title: 'Protocolos e Documentos', iconName: 'FileCheck' },
