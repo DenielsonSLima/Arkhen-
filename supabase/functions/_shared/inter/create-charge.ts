@@ -107,16 +107,20 @@ export const createInterCharge = async (
     let detailPayload: Record<string, unknown> = {};
     for (const delay of [0, 300, 900]) {
       if (delay) await wait(delay);
-      const detailResponse = await interApiRequest(
-        getBolePixDetailUrl(endpoints, externalId),
-        token,
-        config.contaCorrente,
-        client,
-        { acceptedStatuses: [200, 404] },
-      );
-      if (detailResponse.status === 200) {
-        detailPayload = await readProviderJson(detailResponse);
-        break;
+      try {
+        const detailResponse = await interApiRequest(
+          getBolePixDetailUrl(endpoints, externalId),
+          token,
+          config.contaCorrente,
+          client,
+          { acceptedStatuses: [200, 404] },
+        );
+        if (detailResponse.status === 200) {
+          detailPayload = await readProviderJson(detailResponse);
+          break;
+        }
+      } catch {
+        // A cobranca ja foi criada. A consulta de detalhes e apenas enriquecimento.
       }
     }
     const providerPayload = { ...creationPayload, ...detailPayload };

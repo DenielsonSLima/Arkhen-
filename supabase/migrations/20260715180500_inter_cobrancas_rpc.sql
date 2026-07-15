@@ -160,7 +160,10 @@ BEGIN
     THEN RAISE EXCEPTION 'Documento do cliente incompleto.'; END IF;
   IF v_contrato_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.financeiro_configuracoes f
     WHERE f.id = v_contrato_id AND f.empresa_id = v_empresa_id) THEN RAISE EXCEPTION 'Recorrencia fora do tenant.'; END IF;
-  v_env := public.normalize_inter_environment(v_integracao.configuracao->>'activeEnvironment');
+  IF lower(coalesce(p_payload->>'ambiente', '')) NOT IN ('producao', 'homologacao') THEN
+    RAISE EXCEPTION 'Ambiente efetivo da cobranca Inter invalido.';
+  END IF;
+  v_env := public.normalize_inter_environment(p_payload->>'ambiente');
   v_external_id := coalesce(NULLIF(p_payload->>'external_id',''), NULLIF(p_payload->>'externalId',''),
     NULLIF(v_response->>'codigoSolicitacao',''), NULLIF(v_response->>'id',''), NULLIF(v_response->>'txid',''));
   IF v_external_id IS NULL THEN RAISE EXCEPTION 'Resposta Inter sem identificador externo.'; END IF;
