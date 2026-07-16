@@ -38,6 +38,8 @@ const toDate = (value: string) => {
   return new Date(y, m - 1, d);
 };
 
+const emptyCobrancas: CobrancaFinanceira[] = [];
+
 export const HistoricoFinanceiroTab = () => {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -63,7 +65,7 @@ export const HistoricoFinanceiroTab = () => {
     return map;
   }, [clientesQuery.data]);
 
-  const dados = cobrancasQuery.data || [];
+  const dados = cobrancasQuery.data || emptyCobrancas;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -219,8 +221,27 @@ export const HistoricoFinanceiroTab = () => {
   };
 
   const isLoading = cobrancasQuery.isLoading || clientesQuery.isLoading;
+  const loadError = [cobrancasQuery.error, clientesQuery.error]
+    .find((error): error is Error => error instanceof Error);
 
   if (isLoading) return <div className="sub-loading">Carregando cobranças...</div>;
+
+  if (loadError) {
+    return (
+      <div className="fat-fin-empty-state" role="alert">
+        <AlertCircle size={36} style={{ color: '#ef4444', marginBottom: '8px' }} />
+        <strong>Não foi possível carregar as cobranças</strong>
+        <span>{loadError.message}</span>
+        <button
+          type="button"
+          className="faturamento-btn-primary"
+          onClick={() => void Promise.all([cobrancasQuery.refetch(), clientesQuery.refetch()])}
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

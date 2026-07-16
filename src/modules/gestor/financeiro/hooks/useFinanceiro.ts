@@ -66,6 +66,13 @@ export const useFinanceiro = () => {
   const lancamentos = lancamentosQuery.data || emptyLancamentos;
   const companies = (companiesQuery.data || emptyCompanies) as Company[];
   const stats = statsQuery.data || emptyStats;
+  const loadError = [
+    contratosQuery.error,
+    cobrancasQuery.error,
+    lancamentosQuery.error,
+    statsQuery.error,
+    companiesQuery.error,
+  ].find((error): error is Error => error instanceof Error) || null;
 
   const [activeTab, setActiveTab] = useState<'contratos' | 'cobranças'>('cobranças');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -273,6 +280,16 @@ export const useFinanceiro = () => {
     }
   };
 
+  const retryLoad = async () => {
+    await Promise.all([
+      contratosQuery.refetch(),
+      cobrancasQuery.refetch(),
+      lancamentosQuery.refetch(),
+      statsQuery.refetch(),
+      companiesQuery.refetch(),
+    ]);
+  };
+
   return {
     contratos,
     cobranças,
@@ -286,6 +303,8 @@ export const useFinanceiro = () => {
     companies,
     stats,
     companyMap,
+    loadError,
+    retryLoad,
     activeTab,
     setActiveTab,
     isLoading: contratosQuery.isLoading || cobrancasQuery.isLoading || lancamentosQuery.isLoading || statsQuery.isLoading || companiesQuery.isLoading,

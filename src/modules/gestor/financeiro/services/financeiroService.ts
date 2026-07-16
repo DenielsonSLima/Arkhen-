@@ -64,7 +64,6 @@ interface CobrancaIntegracaoRow {
   boleto_url: string | null;
   pix_copia_cola: string | null;
   pix_qr_code: string | null;
-  payload: Record<string, unknown> | null;
 }
 
 interface LancamentoRow {
@@ -128,10 +127,9 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
   const interDocumentUrl = integration?.provedor === 'inter' && row.public_token && integration.tipo !== 'pix'
     ? `${supabaseProjectUrl.replace(/\/$/, '')}/functions/v1/inter-charge-document/${row.public_token}`
     : undefined;
-  const integrationPayload = integration?.payload || undefined;
   const pixCopyPaste = integration?.pix_copia_cola || undefined;
-  const mergedPayload = integrationPayload || pixCopyPaste
-    ? { ...(row.asaas_payload || {}), ...(integrationPayload || {}), ...(pixCopyPaste ? { pixQrCode: { payload: pixCopyPaste } } : {}) }
+  const mergedPayload = pixCopyPaste
+    ? { ...(row.asaas_payload || {}), pixQrCode: { payload: pixCopyPaste } }
     : row.asaas_payload || undefined;
   return ({
   id: row.id,
@@ -261,7 +259,7 @@ export const financeiroService = {
   async getCobranças(): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,external_id,tipo,boleto_url,pix_copia_cola,pix_qr_code,payload)')
+      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,external_id,tipo,boleto_url,pix_copia_cola,pix_qr_code)')
       .order('data_vencimento', { ascending: false });
 
     if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
