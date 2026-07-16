@@ -1,8 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
+  AlertCircle,
   ArrowDownCircle,
   ArrowUpCircle,
   Banknote,
+  RefreshCw,
   Receipt,
 } from 'lucide-react';
 import { useFinanceiro } from './hooks/useFinanceiro';
@@ -38,6 +40,8 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
     stats,
     companyMap,
     isLoading,
+    loadError,
+    retryLoad,
     lancamentos,
     contasPagar,
     handleCreateLancamento,
@@ -74,6 +78,20 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
 
   const renderContent = () => {
     if (isLoading) return <div className="sub-loading">Carregando controle financeiro...</div>;
+
+    if (loadError) {
+      return (
+        <div className="financeiro-empty-state-box" role="alert">
+          <AlertCircle size={36} style={{ color: '#ef4444', marginBottom: '8px' }} />
+          <strong>Não foi possível carregar os dados financeiros</strong>
+          <span>{loadError.message}</span>
+          <button type="button" className="financeiro-dropdown-btn" onClick={() => void retryLoad()}>
+            <RefreshCw size={15} />
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
 
     if (activeTab === 'receber') {
       return (

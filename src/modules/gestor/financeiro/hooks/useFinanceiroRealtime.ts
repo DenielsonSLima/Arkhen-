@@ -18,16 +18,21 @@ export const useFinanceiroRealtime = (enabled = true) => {
       queryClient.invalidateQueries({ queryKey: faturamentoKeys.all });
     };
 
+    // O cliente Realtime reutiliza canais com o mesmo tópico. Como Financeiro e
+    // Faturamento podem permanecer montados ao mesmo tempo (e o StrictMode
+    // remonta effects em desenvolvimento), cada assinatura precisa de um tópico
+    // próprio para não tentar adicionar callbacks em um canal já inscrito.
     const channel = supabase
-      .channel('financeiro-realtime')
+      .channel(`financeiro-realtime-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_configuracoes' }, invalidateFinanceiro)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas' }, invalidateFinanceiro)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas_integracoes' }, invalidateFinanceiro)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_lancamentos' }, invalidateFinanceiro)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_contas_bancarias' }, invalidateFinanceiro)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 };
