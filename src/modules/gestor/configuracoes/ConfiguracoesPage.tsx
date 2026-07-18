@@ -47,7 +47,6 @@ const CONFIG_CARD_PERMISSIONS: Record<string, string[]> = {
   'api-status': ['configuracoes:manage'],
   'logs-eventos': ['configuracoes:manage'],
 };
-
 interface ConfigError {
   hasError: boolean;
   message: string;
