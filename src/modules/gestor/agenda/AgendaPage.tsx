@@ -50,7 +50,9 @@ export const AgendaPage: React.FC = () => {
   }, [agendaToast]);
 
   useEffect(() => {
-    if (abaAgenda === 'padroes' && !agenda.podeGerenciarPadroes) setAbaAgenda('calendario');
+    if ((abaAgenda === 'padroes' || abaAgenda === 'equipe') && !agenda.podeGerenciarPadroes) {
+      setAbaAgenda('calendario');
+    }
   }, [abaAgenda, agenda.podeGerenciarPadroes]);
 
   const funcionariosFiltro = useMemo(() => {
@@ -198,6 +200,7 @@ export const AgendaPage: React.FC = () => {
             onGerenciarTipos={() => setModalGerenciarTipoAberto(true)}
             onGerenciarCategorias={() => setModalGerenciarCategoriaAberto(true)}
             onGerenciarCores={() => setModalCorResponsavelAberto(true)}
+            podeGerenciar={agenda.podeGerenciarPadroes}
           />
           {abaAgenda === 'equipe' ? (
             <AgendaEquipeTable
@@ -206,6 +209,7 @@ export const AgendaPage: React.FC = () => {
               categoriasEvento={agenda.categoriasEvento}
               onEdit={abrirOrigemEvento}
               onDeleteRequest={setEventoParaExcluir}
+              onToggleComplete={agenda.handleToggleConcluido}
             />
           ) : (
             <>
@@ -227,6 +231,7 @@ export const AgendaPage: React.FC = () => {
                 formattedSelectedDate={formattedSelectedDate}
                 onEdit={abrirOrigemEvento}
                 onDeleteRequest={setEventoParaExcluir}
+                onToggleComplete={agenda.handleToggleConcluido}
               />
             </>
           )}

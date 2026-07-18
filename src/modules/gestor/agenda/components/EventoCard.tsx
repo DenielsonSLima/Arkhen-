@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Building2, UserRound, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { Clock, Building2, UserRound, Pencil, Trash2, ExternalLink, CheckCircle2, RotateCcw } from 'lucide-react';
 import { getEventoCategoriaConfig, getEventoOrigem, getEventoOrigemConfig, type Evento } from '../services/agenda.service';
 
 interface EventoCardProps {
@@ -7,9 +7,10 @@ interface EventoCardProps {
   onEdit: (evento: Evento) => void;
   onDelete?: (eventoId: string) => void;
   onDeleteRequest?: (evento: Evento) => void;
+  onToggleComplete?: (eventoId: string) => void;
 }
 
-export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete, onDeleteRequest }) => {
+export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete, onDeleteRequest, onToggleComplete }) => {
   const config = getEventoCategoriaConfig(evento) || { label: 'Evento', cor: '#64748b', corFundo: '#f1f5f9' };
   const origem = getEventoOrigemConfig(evento);
   const isManual = getEventoOrigem(evento) === 'manual';
@@ -62,6 +63,17 @@ export const EventoCard: React.FC<EventoCardProps> = ({ evento, onEdit, onDelete
         )}
       </div>
       <div className="evento-acoes" onClick={(event) => event.stopPropagation()}>
+        {isManual && onToggleComplete ? (
+          <button
+            type="button"
+            className="evento-acao-btn"
+            onClick={() => onToggleComplete(evento.id)}
+            title={evento.concluido ? 'Reabrir evento' : 'Marcar como concluído'}
+            aria-label={evento.concluido ? 'Reabrir evento' : 'Marcar como concluído'}
+          >
+            {evento.concluido ? <RotateCcw size={13} /> : <CheckCircle2 size={13} />}
+          </button>
+        ) : null}
         <button
           type="button"
           className="evento-acao-btn"

@@ -4,6 +4,8 @@ import {
   CalendarDays,
   ChevronDown,
   ExternalLink,
+  CheckCircle2,
+  RotateCcw,
   Pencil,
   Trash2,
   UserRound,
@@ -23,6 +25,7 @@ interface AgendaEquipeTableProps {
   categoriasEvento: CategoriaEventoConfig[];
   onEdit: (evento: Evento) => void;
   onDeleteRequest: (evento: Evento) => void;
+  onToggleComplete: (eventoId: string) => void;
 }
 
 interface GrupoFuncionario {
@@ -41,6 +44,7 @@ export const AgendaEquipeTable: React.FC<AgendaEquipeTableProps> = ({
   categoriasEvento,
   onEdit,
   onDeleteRequest,
+  onToggleComplete,
 }) => {
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
 
@@ -140,6 +144,7 @@ export const AgendaEquipeTable: React.FC<AgendaEquipeTableProps> = ({
                           categoriasEvento={categoriasEvento}
                           onEdit={onEdit}
                           onDeleteRequest={onDeleteRequest}
+                          onToggleComplete={onToggleComplete}
                         />
                       ))}
                     </tbody>
@@ -159,7 +164,8 @@ const AgendaEquipeRow: React.FC<{
   categoriasEvento: CategoriaEventoConfig[];
   onEdit: (evento: Evento) => void;
   onDeleteRequest: (evento: Evento) => void;
-}> = ({ evento, categoriasEvento, onEdit, onDeleteRequest }) => {
+  onToggleComplete: (eventoId: string) => void;
+}> = ({ evento, categoriasEvento, onEdit, onDeleteRequest, onToggleComplete }) => {
   const categoria = getEventoCategoriaConfig(evento, categoriasEvento);
   const origem = getEventoOrigemConfig(evento);
   const isManual = getEventoOrigem(evento) === 'manual';
@@ -195,12 +201,23 @@ const AgendaEquipeRow: React.FC<{
       </td>
       <td>
         <div className="agenda-equipe-actions">
+          {isManual && (
+            <button
+              type="button"
+              onClick={() => onToggleComplete(evento.id)}
+              title={evento.concluido ? 'Reabrir evento' : 'Marcar como concluído'}
+            >
+              {evento.concluido ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
+            </button>
+          )}
           <button type="button" onClick={() => onEdit(evento)} title={isManual ? 'Editar evento' : 'Abrir origem'}>
             {isManual ? <Pencil size={14} /> : <ExternalLink size={14} />}
           </button>
-          <button type="button" className="danger" onClick={() => onDeleteRequest(evento)} title="Remover evento">
-            <Trash2 size={14} />
-          </button>
+          {isManual && (
+            <button type="button" className="danger" onClick={() => onDeleteRequest(evento)} title="Remover evento">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </td>
     </tr>

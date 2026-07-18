@@ -12,7 +12,7 @@ import { TaskInspector } from './gerir-equipe/TaskInspector';
 import { TaskSummaryCards } from './gerir-equipe/TaskSummaryCards';
 import { UserCardsGrid } from './gerir-equipe/UserCardsGrid';
 import { UserHeader } from './gerir-equipe/UserHeader';
-import type { AbaGerirEquipeProps, PeriodoFiltro } from './gerir-equipe/types';
+import type { AbaGerirEquipeProps, PeriodoFiltro, UsuarioEquipe } from './gerir-equipe/types';
 import {
   getTaskSummary,
   getUserStats,
@@ -24,8 +24,8 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   companyGroups = [],
   handleToggleStep,
 }) => {
-  const { rotinas, tarefas, saveRotina, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const { rotinas, tarefas, usuarios, saveRotina, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('semana');
   const [dataBase, setDataBase] = useState(todayKey());
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -40,15 +40,29 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   };
 
   const responsaveis = useMemo(() => {
-    const nomes = new Set<string>();
+    const mapa = new Map<string, UsuarioEquipe>();
+    usuarios.forEach((usuario) => mapa.set(`config:${usuario.configUsuarioId}`, {
+      id: `config:${usuario.configUsuarioId}`,
+      nome: usuario.nome,
+      configUsuarioId: usuario.configUsuarioId,
+      userId: usuario.userId,
+    }));
     tarefas.forEach((tarefa) => {
-      if (tarefa.responsavel) nomes.add(tarefa.responsavel);
+      if (!tarefa.responsavel || tarefa.responsavelConfigUsuarioId) return;
+      mapa.set(`nome:${tarefa.responsavel}`, { id: `nome:${tarefa.responsavel}`, nome: tarefa.responsavel });
     });
     companyGroups.forEach((group) => {
-      if (group.responsavel) nomes.add(group.responsavel);
+      if (!group.responsavel) return;
+      const jaExiste = Array.from(mapa.values()).some((usuario) => usuario.nome === group.responsavel);
+      if (!jaExiste) mapa.set(`nome:${group.responsavel}`, { id: `nome:${group.responsavel}`, nome: group.responsavel });
     });
-    return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [companyGroups, tarefas]);
+    return Array.from(mapa.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [companyGroups, tarefas, usuarios]);
+
+  const selectedUser = useMemo(
+    () => responsaveis.find((usuario) => usuario.id === selectedUserId) || null,
+    [responsaveis, selectedUserId],
+  );
 
   const userStats = useMemo(
     () => getUserStats(responsaveis, tarefas, companyGroups),
@@ -58,13 +72,18 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   const filteredTasks = useMemo(() => {
     if (!selectedUser || periodo === 'empresas') return [];
     return tarefas
-      .filter((tarefa) => tarefa.responsavel === selectedUser && isTaskInPeriod(tarefa, periodo, dataBase))
+      .filter((tarefa) => {
+        const pertenceAoUsuario = selectedUser.configUsuarioId
+          ? tarefa.responsavelConfigUsuarioId === selectedUser.configUsuarioId
+          : !tarefa.responsavelConfigUsuarioId && tarefa.responsavel === selectedUser.nome;
+        return pertenceAoUsuario && isTaskInPeriod(tarefa, periodo, dataBase);
+      })
       .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
   }, [dataBase, periodo, selectedUser, tarefas]);
 
   const userCompanyGroups = useMemo(() => {
     if (!selectedUser) return [];
-    return companyGroups.filter((group) => group.responsavel === selectedUser);
+    return companyGroups.filter((group) => group.responsavel === selectedUser.nome);
   }, [companyGroups, selectedUser]);
 
   const selectedTask = useMemo(() => {
@@ -96,7 +115,9 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
     saveRotina({
       ...rotina,
       id: `rotina-vinculada-${Date.now()}`,
-      responsavel: selectedUser,
+      responsavel: selectedUser.nome,
+      responsavelUserId: selectedUser.userId,
+      responsavelConfigUsuarioId: selectedUser.configUsuarioId,
       proximaExecucao: todayKey(),
       incluirFinaisDeSemana,
       ativa: true,
@@ -110,8 +131,10 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
       ...dados,
       id: `task-manual-${Date.now()}`,
       frequencia: 'Única',
-      responsavel: selectedUser,
-      cliente: 'Escritório',
+      responsavel: selectedUser.nome,
+      responsavelUserId: selectedUser.userId,
+      responsavelConfigUsuarioId: selectedUser.configUsuarioId,
+      cliente: dados.cliente || 'Escritório',
       origem: 'Gestor',
       status: 'Pendente',
       checklist: dados.checklist.map((item: string) => ({ titulo: item, concluida: false })),
@@ -130,8 +153,8 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
     return (
       <UserCardsGrid
         users={userStats}
-        onSelectUser={(nome) => {
-          setSelectedUser(nome);
+        onSelectUser={(id) => {
+          setSelectedUserId(id);
           resetSelection();
         }}
       />
@@ -141,8 +164,8 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserHeader
-        selectedUser={selectedUser}
-        onBack={() => setSelectedUser(null)}
+        selectedUser={selectedUser.nome}
+        onBack={() => setSelectedUserId(null)}
         onNovaAtividade={() => setModalNovaTarefaAberto(true)}
         onVincularRotina={() => setModalVincularAberto(true)}
       />
@@ -187,13 +210,13 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
         onClose={() => setModalVincularAberto(false)}
         rotinas={rotinas.filter((rotina) => rotina.ativa)}
         onVincular={handleVincularRotina}
-        usuarioNome={selectedUser}
+        usuarioNome={selectedUser.nome}
       />
       <ModalNovaTarefa
         aberto={modalNovaTarefaAberto}
         onClose={() => setModalNovaTarefaAberto(false)}
         onSalvar={handleCriarTarefaManual}
-        usuarioNome={selectedUser}
+        usuarioNome={selectedUser.nome}
       />
     </div>
   );

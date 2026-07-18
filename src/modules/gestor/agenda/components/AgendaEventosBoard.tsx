@@ -29,6 +29,7 @@ interface AgendaEventosBoardProps {
   formattedSelectedDate: string;
   onEdit: (evento: Evento) => void;
   onDeleteRequest: (evento: Evento) => void;
+  onToggleComplete: (eventoId: string) => void;
 }
 
 export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
@@ -37,6 +38,7 @@ export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
   formattedSelectedDate,
   onEdit,
   onDeleteRequest,
+  onToggleComplete,
 }) => (
   <div className="agenda-body agenda-body-eventos">
     <div className="agenda-painel agenda-origem-grid">
@@ -46,10 +48,10 @@ export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
           <span>Eventos manuais</span>
         </div>
         <AgendaSubsection title={formattedSelectedDate || 'Dia selecionado'}>
-          <AgendaEventosList eventos={eventosPorOrigem.manualDia} vazio="Nenhum evento manual neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.manualDia} vazio="Nenhum evento manual neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
         <AgendaSubsection title="Próximos eventos">
-          <AgendaEventosList eventos={eventosPorOrigem.manualProximos} vazio="Nenhum evento manual futuro." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.manualProximos} vazio="Nenhum evento manual futuro." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
         <AgendaSubsection title="Calendário oficial">
           <AgendaEventosList
@@ -57,6 +59,7 @@ export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
             vazio={eventosPorOrigem.calendarioDia.length ? 'Nenhuma data oficial neste dia.' : 'Nenhuma data oficial futura.'}
             onEdit={onEdit}
             onDeleteRequest={onDeleteRequest}
+            onToggleComplete={onToggleComplete}
           />
         </AgendaSubsection>
       </div>
@@ -67,10 +70,10 @@ export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
           <span>Obrigação fiscal</span>
         </div>
         <AgendaSubsection title={formattedSelectedDate || 'Dia selecionado'}>
-          <AgendaEventosList eventos={eventosPorOrigem.prazosDia} vazio="Nenhum prazo fiscal neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.prazosDia} vazio="Nenhum prazo fiscal neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
         <AgendaSubsection title="Próximos prazos">
-          <AgendaEventosList eventos={eventosPorOrigem.prazosProximos} vazio="Nenhum prazo fiscal futuro." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.prazosProximos} vazio="Nenhum prazo fiscal futuro." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
       </div>
 
@@ -80,10 +83,10 @@ export const AgendaEventosBoard: React.FC<AgendaEventosBoardProps> = ({
           <span>Integração operacional</span>
         </div>
         <AgendaSubsection title={formattedSelectedDate || 'Dia selecionado'}>
-          <AgendaEventosList eventos={eventosPorOrigem.atividadesDia} vazio="Nenhuma tarefa de atividade neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.atividadesDia} vazio="Nenhuma tarefa de atividade neste dia." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
         <AgendaSubsection title="Próximas tarefas">
-          <AgendaEventosList eventos={eventosPorOrigem.atividadesProximas} vazio="Nenhuma tarefa de atividade futura." onEdit={onEdit} onDeleteRequest={onDeleteRequest} />
+          <AgendaEventosList eventos={eventosPorOrigem.atividadesProximas} vazio="Nenhuma tarefa de atividade futura." onEdit={onEdit} onDeleteRequest={onDeleteRequest} onToggleComplete={onToggleComplete} />
         </AgendaSubsection>
         {vencimentos.length > 0 && (
           <AgendaSubsection title="Docs & certificados">

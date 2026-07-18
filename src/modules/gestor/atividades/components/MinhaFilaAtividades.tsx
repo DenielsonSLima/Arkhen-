@@ -4,7 +4,6 @@ import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { addDaysKey, formatDateBR, todayKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
-import { persistedStorage } from '../../../../lib/persistedStorage';
 
 export type MinhaFilaFiltro = 'hoje' | 'semana' | 'mes' | 'atrasadas' | 'internas';
 
@@ -15,19 +14,6 @@ const FILTROS: Array<{ id: MinhaFilaFiltro; label: string }> = [
   { id: 'atrasadas', label: 'Atrasadas' },
   { id: 'internas', label: 'Internas' },
 ];
-
-const getUsuarioAtual = () => {
-  const fallback = 'Usuario';
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const profileRaw = persistedStorage.getItem('gestor_user_profile');
-    if (!profileRaw) return fallback;
-    const profile = JSON.parse(profileRaw);
-    return typeof profile?.nome === 'string' && profile.nome.trim().length > 0 ? profile.nome : fallback;
-  } catch {
-    return fallback;
-  }
-};
 
 const getMonday = (dateKey: string) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -78,14 +64,14 @@ const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
 };
 
 export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> = ({ initialFilter = 'hoje' }) => {
-  const { tarefas, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
+  const { tarefas, usuarioAtual, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [referenceDate, setReferenceDate] = useState(todayKey());
-  const usuarioLogado = getUsuarioAtual();
+  const usuarioLogado = usuarioAtual?.nome || 'Usuário';
 
   const handlePrevPeriod = () => {
     if (activeFilter === 'hoje') {
@@ -158,6 +144,8 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
       id: `task-usuario-${Date.now()}`,
       frequencia: 'Única',
       responsavel: usuarioLogado,
+      responsavelUserId: usuarioAtual?.userId,
+      responsavelConfigUsuarioId: usuarioAtual?.configUsuarioId,
       cliente: dados.cliente || 'Escritório',
       origem: 'Usuario',
       status: 'Pendente',

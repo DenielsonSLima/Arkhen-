@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Building2, Users, Activity, History, CreditCard, FileText, ArrowLeft,
   UserCheck, Landmark, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2, Boxes
@@ -22,10 +23,30 @@ import { MeuPerfilConfig } from './meu-perfil/MeuPerfilConfig';
 import { CompartilhamentoConfig } from './compartilhamento/CompartilhamentoConfig';
 import { VisualizadoresXmlConfig } from './visualizadores-xml/VisualizadoresXmlConfig';
 import { ModulosSistemaConfig } from './modulos-sistema/ModulosSistemaConfig';
+import { supabase } from '../../../lib/supabase';
 
 import './Configuracoes.css';
 
 const ACTIVE_CONFIG_SUBTAB_KEY = 'contabil_config_active_subtab';
+
+const CONFIG_CARD_PERMISSIONS: Record<string, string[]> = {
+  'meu-perfil': ['meu-perfil:manage'],
+  empresa: ['configuracoes:view', 'configuracoes:manage'],
+  usuarios: ['usuarios:manage'],
+  perfis: ['perfis:manage'],
+  permissoes: ['perfis:manage'],
+  'modulos-sistema': ['configuracoes:manage'],
+  contadores: ['configuracoes:view', 'configuracoes:manage'],
+  compartilhamento: ['documentos:manage'],
+  'marca-dagua': ['documentos:manage'],
+  'contas-bancarias': ['contas-bancarias:manage'],
+  'integracao-bancaria': ['integracao-bancaria:manage'],
+  'integracao-fiscal': ['integracao-fiscal:manage'],
+  'visualizadores-xml': ['integracao-fiscal:manage'],
+  'calculator-prefs': ['configuracoes:view'],
+  'api-status': ['configuracoes:manage'],
+  'logs-eventos': ['configuracoes:manage'],
+};
 
 interface ConfigError {
   hasError: boolean;
@@ -76,6 +97,27 @@ class ConfigSubmoduleErrorBoundary extends React.Component<
 }
 
 export const ConfiguracoesPage: React.FC = () => {
+  const permissaoConfigQuery = useQuery({
+    queryKey: ['configuracoes', 'permissoes-atuais'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('current_user_permissions');
+      if (error) throw error;
+      return Array.isArray(data) ? data as string[] : [];
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
+  });
+  const permissoesAtuais = useMemo(
+    () => permissaoConfigQuery.data || [],
+    [permissaoConfigQuery.data],
+  );
+  const podeAcessarCard = useCallback((cardId: string) => {
+    if (cardId === 'meu-perfil') return true;
+    if (permissaoConfigQuery.isFetching || permissaoConfigQuery.isError) return false;
+    if (permissoesAtuais.includes('*')) return true;
+    return (CONFIG_CARD_PERMISSIONS[cardId] || []).some((permissao) => permissoesAtuais.includes(permissao));
+  }, [permissaoConfigQuery.isError, permissaoConfigQuery.isFetching, permissoesAtuais]);
   const [activeSubTab, setActiveSubTab] = useState<string | null>(() => {
     const initial = sessionStorage.getItem('contabil_config_initial_subtab');
     if (initial) {
@@ -89,6 +131,12 @@ export const ConfiguracoesPage: React.FC = () => {
     if (activeSubTab) sessionStorage.setItem(ACTIVE_CONFIG_SUBTAB_KEY, activeSubTab);
     else sessionStorage.removeItem(ACTIVE_CONFIG_SUBTAB_KEY);
   }, [activeSubTab]);
+
+  useEffect(() => {
+    if (activeSubTab && !podeAcessarCard(activeSubTab)) {
+      setActiveSubTab('meu-perfil');
+    }
+  }, [activeSubTab, podeAcessarCard]);
 
   useEffect(() => {
     const handleOpenSubTab = (event: Event) => {
@@ -208,8 +256,12 @@ export const ConfiguracoesPage: React.FC = () => {
       icon: <History size={28} />,
     },
   ];
+  const cardsVisiveis = cards.filter((card) => podeAcessarCard(card.id));
 
   const renderActiveSubModule = () => {
+    if (activeSubTab && !podeAcessarCard(activeSubTab)) {
+      return <MeuPerfilConfig />;
+    }
     switch (activeSubTab) {
       case 'meu-perfil':
         return <MeuPerfilConfig />;
@@ -284,7 +336,7 @@ export const ConfiguracoesPage: React.FC = () => {
 
           {/* Cards Grid */}
           <div className="config-cards-grid animate-slide-up">
-            {cards.map((card) => (
+            {cardsVisiveis.map((card) => (
               <button
                 type="button"
                 className="config-sub-card"

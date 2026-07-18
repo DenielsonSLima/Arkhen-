@@ -23,14 +23,16 @@ export const AgendaModuleTabs: React.FC<AgendaModuleTabsProps> = ({
       <CalendarDays size={15} />
       Calendário
     </button>
-    <button
-      type="button"
-      className={abaAtual === 'equipe' ? 'active' : ''}
-      onClick={() => onChange('equipe')}
-    >
-      <UsersRound size={15} />
-      Equipe
-    </button>
+    {podeGerenciarPadroes && (
+      <button
+        type="button"
+        className={abaAtual === 'equipe' ? 'active' : ''}
+        onClick={() => onChange('equipe')}
+      >
+        <UsersRound size={15} />
+        Equipe
+      </button>
+    )}
     {podeGerenciarPadroes && (
       <button
         type="button"

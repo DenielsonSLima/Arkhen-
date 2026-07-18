@@ -1,7 +1,7 @@
 import { addDaysKey, todayKey, type TarefaGestor } from '../../services/rotinasAtividadesService';
 import type { CompanyActivityGroup } from '../../hooks/useAtividades';
 import { AVATARES_USUARIOS, PERFIS_USUARIOS } from './config';
-import type { PeriodoFiltro, TaskSummary, UserStats } from './types';
+import type { PeriodoFiltro, TaskSummary, UserStats, UsuarioEquipe } from './types';
 
 export const getPct = (done: number, total: number) => (total > 0 ? Math.round((done / total) * 100) : 0);
 
@@ -34,12 +34,16 @@ export const isTaskInPeriod = (task: TarefaGestor, periodo: PeriodoFiltro, dataB
 };
 
 export const getUserStats = (
-  responsaveis: string[],
+  responsaveis: UsuarioEquipe[],
   tarefas: TarefaGestor[],
   companyGroups: CompanyActivityGroup[],
-): UserStats[] => responsaveis.map((nome) => {
-  const userTasks = tarefas.filter((tarefa) => tarefa.responsavel === nome);
-  const groups = companyGroups.filter((group) => group.responsavel === nome);
+): UserStats[] => responsaveis.map((usuario) => {
+  const userTasks = tarefas.filter((tarefa) => (
+    usuario.configUsuarioId
+      ? tarefa.responsavelConfigUsuarioId === usuario.configUsuarioId
+      : !tarefa.responsavelConfigUsuarioId && tarefa.responsavel === usuario.nome
+  ));
+  const groups = companyGroups.filter((group) => group.responsavel === usuario.nome);
   const pendentes = userTasks.filter((tarefa) => tarefa.status !== 'Concluída').length;
   const atrasadas = userTasks.filter((tarefa) => tarefa.status !== 'Concluída' && tarefa.vencimento < todayKey()).length;
   const totalEmpresa = groups.reduce((acc, group) => acc + group.atividades.length, 0);
@@ -49,9 +53,10 @@ export const getUserStats = (
   const doneTasks = userTasks.filter((tarefa) => tarefa.status === 'Concluída').length;
 
   return {
-    nome,
-    perfil: PERFIS_USUARIOS[nome] || 'Colaborador',
-    avatar: AVATARES_USUARIOS[nome] || 'U',
+    id: usuario.id,
+    nome: usuario.nome,
+    perfil: PERFIS_USUARIOS[usuario.nome] || 'Colaborador',
+    avatar: AVATARES_USUARIOS[usuario.nome] || 'U',
     total: userTasks.length + totalEmpresa,
     progresso: getPct(doneTasks + doneEmpresa, userTasks.length + totalEmpresa),
     pendentes,

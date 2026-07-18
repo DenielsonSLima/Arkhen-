@@ -7,6 +7,7 @@ import { AtividadeDetailView } from './components/AtividadeDetailView';
 import { AtividadesControle } from './components/AtividadesControle';
 import { useAtividades } from './hooks/useAtividades';
 import { useAtividadesRealtime } from './hooks/useAtividadesRealtime';
+import { useAtividadesWorkspace } from './hooks/useAtividadesWorkspace';
 import './Atividades.css';
 import './AtividadesRedesign.css';
 
@@ -45,7 +46,11 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   initialCompetencia,
 }) => {
   const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
-  const activeView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
+  const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
+  const { podeGerenciar, isLoadingPermissoes } = useAtividadesWorkspace();
+  const activeView: AtividadesView = !isLoadingPermissoes && !podeGerenciar && requestedView !== 'minha-fila'
+    ? 'minha-fila'
+    : requestedView;
   const currentInfo = VIEW_INFO[activeView];
   const queueFilter = initialQueueFilter || normalized.filter || 'hoje';
 

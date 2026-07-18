@@ -3,11 +3,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getEventosPorIntervalo,
   getCategoriasEventoConfig,
+  getEmpresasAgenda,
   getTiposEventoConfig,
   getResponsaveisAgendaConfig,
+  getUsuarioAgendaAtual,
   adicionarEvento,
   editarEvento,
   removerEvento,
+  toggleConcluido,
   salvarCategoriasEventoConfig,
   salvarTiposEventoConfig,
   salvarResponsaveisAgendaConfig,
@@ -24,18 +27,22 @@ import type { UsuarioAgenda } from '../services/agenda.defaults';
 
 export type FiltroEvento = string[];
 
-const HIERARQUIA_PERFIL: Record<UsuarioAgenda['perfil'], number> = {
+const HIERARQUIA_PERFIL: Record<string, number> = {
   Administrador: 5,
   Gestor: 4,
   'Contador Pleno': 3,
   Assistente: 2,
   Estagiário: 1,
+  'Analista Fiscal': 3,
+  Financeiro: 2,
+  Funcionário: 1,
+  'Cliente Externo': 0,
 };
 
 const usuarioFallback: UsuarioAgenda = {
   id: '',
   nome: '',
-  perfil: 'Administrador',
+  perfil: 'Funcionário',
   status: 'Ativo',
   cor: '#64748b',
   ativo: true,
@@ -47,6 +54,8 @@ export const agendaKeys = {
   tipos: () => [...agendaKeys.all, 'tipos'] as const,
   categorias: () => [...agendaKeys.all, 'categorias'] as const,
   responsaveis: () => [...agendaKeys.all, 'responsaveis'] as const,
+  usuarioAtual: () => [...agendaKeys.all, 'usuario-atual'] as const,
+  empresas: () => [...agendaKeys.all, 'empresas'] as const,
   permissoes: () => [...agendaKeys.all, 'permissoes'] as const,
   padroes: () => [...agendaKeys.all, 'padroes'] as const,
 };
@@ -86,6 +95,18 @@ export function useAgenda() {
   const responsaveisQuery = useQuery({
     queryKey: agendaKeys.responsaveis(),
     queryFn: getResponsaveisAgendaConfig,
+    staleTime: 30_000,
+  });
+
+  const usuarioAtualQuery = useQuery({
+    queryKey: agendaKeys.usuarioAtual(),
+    queryFn: getUsuarioAgendaAtual,
+    staleTime: 30_000,
+  });
+
+  const empresasQuery = useQuery({
+    queryKey: agendaKeys.empresas(),
+    queryFn: getEmpresasAgenda,
     staleTime: 30_000,
   });
 
@@ -130,6 +151,11 @@ export function useAgenda() {
     onSuccess: invalidateAgenda,
   });
 
+  const concluirEventoMutation = useMutation({
+    mutationFn: (id: string) => toggleConcluido(id),
+    onSuccess: invalidateAgenda,
+  });
+
   const salvarTiposMutation = useMutation({
     mutationFn: (proximos: TipoEventoConfig[]) => salvarTiposEventoConfig(proximos),
     onSuccess: (normalizados) => {
@@ -162,17 +188,17 @@ export function useAgenda() {
     },
   });
 
-  const usuariosAgenda = responsaveisQuery.data || [];
+  const usuariosAgenda = useMemo(() => responsaveisQuery.data || [], [responsaveisQuery.data]);
   const tiposEvento = tiposQuery.data || [];
   const categoriasEvento = categoriasQuery.data || [];
   const agendaPadroes = padroesQuery.data || [];
   const podeGerenciarPadroes = Boolean(permissoesQuery.data);
-  const todosEventos = eventosQuery.data || [];
-  const eventosTrimestre = eventosTrimestreQuery.data || [];
-  const usuarioAtual = usuariosAgenda[0] || usuarioFallback;
+  const todosEventos = useMemo(() => eventosQuery.data || [], [eventosQuery.data]);
+  const eventosTrimestre = useMemo(() => eventosTrimestreQuery.data || [], [eventosTrimestreQuery.data]);
+  const usuarioAtual = usuarioAtualQuery.data || usuarioFallback;
 
   const usuariosAtribuiveis = useMemo(() => {
-    const hierarquiaAtual = HIERARQUIA_PERFIL[usuarioAtual.perfil] || 5;
+    const hierarquiaAtual = HIERARQUIA_PERFIL[usuarioAtual.perfil] ?? 0;
     return usuariosAgenda.filter((usuario) => (
       usuario.status === 'Ativo' &&
       usuario.ativo &&
@@ -213,12 +239,13 @@ export function useAgenda() {
 
   const empresas = useMemo(() => {
     const map = new Map<string, { id: string; nome: string }>();
+    (empresasQuery.data || []).forEach((empresa) => map.set(empresa.id, empresa));
     eventosFiltrados.forEach((evento) => {
       const id = evento.empresaId || evento.empresaNome;
       if (id && evento.empresaNome) map.set(id, { id, nome: evento.empresaNome });
     });
     return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  }, [eventosFiltrados]);
+  }, [empresasQuery.data, eventosFiltrados]);
 
   const navegarMes = useCallback((direcao: 1 | -1) => {
     setDiaSelecionado(null);
@@ -258,6 +285,10 @@ export function useAgenda() {
   ) => {
     excluirEventoMutation.mutate(id, options);
   }, [excluirEventoMutation]);
+
+  const handleToggleConcluido = useCallback((id: string) => {
+    concluirEventoMutation.mutate(id);
+  }, [concluirEventoMutation]);
 
   const handleAbrirNovoEvento = useCallback((data?: string) => {
     setEventoEditando(null);
@@ -329,6 +360,7 @@ export function useAgenda() {
     eventoEditando,
     handleSalvarEvento,
     handleExcluirEvento,
+    handleToggleConcluido,
     handleAbrirNovoEvento,
     handleAbrirEdicao,
     empresas,
