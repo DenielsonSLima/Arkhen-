@@ -9,6 +9,7 @@ export interface AbaGerirEquipeProps {
 }
 
 export interface UserStats {
+  id: string;
   nome: string;
   perfil: string;
   avatar: string;
@@ -16,6 +17,13 @@ export interface UserStats {
   progresso: number;
   pendentes: number;
   atrasadas: number;
+}
+
+export interface UsuarioEquipe {
+  id: string;
+  nome: string;
+  configUsuarioId?: string;
+  userId?: string;
 }
 
 export interface TaskSummary {

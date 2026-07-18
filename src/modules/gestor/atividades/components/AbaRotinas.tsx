@@ -27,7 +27,7 @@ const blankRotina = (): RotinaAtividade => ({
 type FiltroRotinaTab = 'todas' | 'diarias' | 'semanais' | 'mensais' | 'empresa';
 
 export const AbaRotinas: React.FC = () => {
-  const { rotinas, saveRotina, deleteRotina } = useAtividadesWorkspace();
+  const { rotinas, usuarios, saveRotina, deleteRotina } = useAtividadesWorkspace();
   const [form, setForm] = useState<RotinaAtividade>(blankRotina());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FiltroRotinaTab>('todas');
@@ -50,6 +50,7 @@ export const AbaRotinas: React.FC = () => {
     const checklist = form.checklist.map((item) => item.trim()).filter(Boolean);
     saveRotina({
       ...form,
+      responsavelUserId: usuarios.find((usuario) => usuario.configUsuarioId === form.responsavelConfigUsuarioId)?.userId,
       id: form.id || `rotina-${Date.now()}`,
       checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
       intervaloDias: form.frequencia === 'Personalizada' ? Math.max(1, form.intervaloDias) : form.intervaloDias,
@@ -266,12 +267,24 @@ export const AbaRotinas: React.FC = () => {
               <div style={rowStyle}>
                 <div style={{ ...fieldStyle, flex: 1 }}>
                   <label style={labelStyle}>Responsável Padrão</label>
-                  <input
-                    value={form.responsavel}
-                    onChange={(e) => setForm({ ...form, responsavel: e.target.value })}
-                    placeholder="Nome do responsável"
-                    style={inputStyle}
-                  />
+                  <select
+                    value={form.responsavelConfigUsuarioId || ''}
+                    onChange={(e) => {
+                      const usuario = usuarios.find((item) => item.configUsuarioId === e.target.value);
+                      setForm({
+                        ...form,
+                        responsavel: usuario?.nome || '',
+                        responsavelUserId: usuario?.userId,
+                        responsavelConfigUsuarioId: usuario?.configUsuarioId,
+                      });
+                    }}
+                    style={selectStyle}
+                  >
+                    <option value="">Selecione</option>
+                    {usuarios.map((usuario) => (
+                      <option key={usuario.configUsuarioId} value={usuario.configUsuarioId}>{usuario.nome}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={{ ...fieldStyle, flex: 1 }}>
                   <label style={labelStyle}>Cliente / Vínculo</label>

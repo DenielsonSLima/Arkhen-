@@ -27,8 +27,10 @@ export interface Evento {
 
 export interface UsuarioAgenda {
   id: string;
+  userId?: string;
+  configUsuarioId?: string;
   nome: string;
-  perfil: 'Administrador' | 'Gestor' | 'Contador Pleno' | 'Assistente' | 'Estagiário';
+  perfil: string;
   status: 'Ativo' | 'Inativo' | 'Pendente';
   cor: string;
   ativo: boolean;
@@ -37,7 +39,7 @@ export interface UsuarioAgenda {
 export const USUARIO_ATUAL_AGENDA: UsuarioAgenda = {
   id: '',
   nome: '',
-  perfil: 'Administrador',
+  perfil: 'Funcionário',
   status: 'Ativo',
   cor: '#64748b',
   ativo: true,

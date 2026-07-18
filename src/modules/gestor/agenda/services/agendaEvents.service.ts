@@ -76,6 +76,7 @@ export function getEventoOrigemConfig(evento: Pick<Evento, 'id' | 'tipo'>) {
 
 export async function getEventosPorIntervalo(anoInicio: number, mesInicio: number, meses = 1): Promise<Evento[]> {
   const range = dateRange(anoInicio, mesInicio, meses);
+  const empresaId = await getCurrentEmpresaId();
   const [
     { data: eventosData, error: eventosError },
     { data: tarefasData, error: tarefasError },
@@ -84,6 +85,7 @@ export async function getEventosPorIntervalo(anoInicio: number, mesInicio: numbe
     supabase
       .from('agenda_eventos')
       .select('id,titulo,descricao,tipo,categoria,origem,status,data_inicio,responsavel_id,cliente_id,metadados')
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .gte('data_inicio', range.inicio)
       .lt('data_inicio', range.fim)
@@ -91,6 +93,7 @@ export async function getEventosPorIntervalo(anoInicio: number, mesInicio: numbe
     supabase
       .from('atividades_tarefas')
       .select('id,titulo,cliente_nome,responsavel_nome,prioridade,status,vencimento,checklist,notas,observacao_falta')
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .gte('vencimento', range.inicioDia)
       .lt('vencimento', range.fimDia)
@@ -147,20 +150,57 @@ export async function editarEvento(id: string, dados: Partial<Evento>): Promise<
     throw new Error('Abra esta tarefa em Atividades para alterar prazo, status ou responsável.');
   }
 
-  const payload: Record<string, any> = {};
+  const empresaId = await getCurrentEmpresaId();
+  const { data: atual, error: atualError } = await supabase
+    .from('agenda_eventos')
+    .select('data_inicio,metadados')
+    .eq('id', id)
+    .eq('empresa_id', empresaId)
+    .maybeSingle();
+
+  if (atualError) throw atualError;
+  if (!atual) return null;
+
+  const payload: Record<string, unknown> = {};
   if (dados.titulo !== undefined) payload.titulo = dados.titulo;
   if (dados.descricao !== undefined) payload.descricao = dados.descricao;
   if (dados.tipo !== undefined) payload.tipo = dados.tipo;
   if (dados.categoriaId !== undefined) payload.categoria = dados.categoriaId;
   if (dados.concluido !== undefined) payload.status = dados.concluido ? 'concluido' : 'agendado';
-  if (dados.data !== undefined || dados.hora !== undefined) {
-    payload.data_inicio = `${dados.data || new Date().toISOString().slice(0, 10)}T${dados.hora || '00:00'}:00`;
+  if (dados.responsavelId !== undefined) {
+    payload.responsavel_id = isUuid(dados.responsavelId) ? dados.responsavelId : null;
   }
+  if (dados.empresaId !== undefined) {
+    payload.cliente_id = isUuid(dados.empresaId) ? dados.empresaId : null;
+  }
+  if (dados.data !== undefined || dados.hora !== undefined) {
+    const dataAtual = atual.data_inicio.slice(0, 10);
+    const horaAtual = new Date(atual.data_inicio).toISOString().slice(11, 16);
+    const horaDestino = dados.hora !== undefined ? (dados.hora || '00:00') : horaAtual;
+    payload.data_inicio = `${dados.data || dataAtual}T${horaDestino}:00`;
+  }
+
+  const metadadosAtuais = (atual.metadados || {}) as Record<string, unknown>;
+  payload.metadados = {
+    ...metadadosAtuais,
+    ...(dados.empresaNome !== undefined ? { empresaNome: dados.empresaNome || null } : {}),
+    ...(dados.responsavelNome !== undefined ? { responsavelNome: dados.responsavelNome || null } : {}),
+    ...(dados.responsavelPerfil !== undefined ? { responsavelPerfil: dados.responsavelPerfil || null } : {}),
+    ...(dados.criadoPorId !== undefined ? { criadoPorId: dados.criadoPorId || null } : {}),
+    ...(dados.criadoPorNome !== undefined ? { criadoPorNome: dados.criadoPorNome || null } : {}),
+    ...(dados.recorrente !== undefined ? { recorrente: dados.recorrente } : {}),
+    ...(dados.recorrente === false
+      ? { periodoRecorrencia: null }
+      : dados.periodoRecorrencia !== undefined
+        ? { periodoRecorrencia: dados.periodoRecorrencia || null }
+        : {}),
+  };
 
   const { data, error } = await supabase
     .from('agenda_eventos')
     .update(payload)
     .eq('id', id)
+    .eq('empresa_id', empresaId)
     .select('id,titulo,descricao,tipo,categoria,origem,status,data_inicio,responsavel_id,cliente_id,metadados')
     .maybeSingle();
 
@@ -173,7 +213,12 @@ export async function removerEvento(id: string): Promise<void> {
     throw new Error('Tarefas operacionais só podem ser excluídas pelo módulo Atividades.');
   }
 
-  const { error } = await supabase.from('agenda_eventos').delete().eq('id', id);
+  const empresaId = await getCurrentEmpresaId();
+  const { error } = await supabase
+    .from('agenda_eventos')
+    .delete()
+    .eq('id', id)
+    .eq('empresa_id', empresaId);
   if (error) throw error;
 }
 
@@ -182,12 +227,19 @@ export async function toggleConcluido(id: string): Promise<void> {
     throw new Error('Abra esta tarefa em Atividades para concluir ou reabrir.');
   }
 
-  const { data, error } = await supabase.from('agenda_eventos').select('status').eq('id', id).maybeSingle();
+  const empresaId = await getCurrentEmpresaId();
+  const { data, error } = await supabase
+    .from('agenda_eventos')
+    .select('status')
+    .eq('id', id)
+    .eq('empresa_id', empresaId)
+    .maybeSingle();
   if (error) throw error;
   const isDone = data?.status === 'concluido';
   const { error: updateError } = await supabase
     .from('agenda_eventos')
     .update({ status: isDone ? 'agendado' : 'concluido' })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('empresa_id', empresaId);
   if (updateError) throw updateError;
 }

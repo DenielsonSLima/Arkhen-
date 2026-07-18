@@ -68,6 +68,8 @@ export interface AtividadeTarefaRow {
 
 export interface ResponsavelRow {
   id: string;
+  user_id: string | null;
+  config_usuario_id: string | null;
   nome: string;
   perfil: UsuarioAgenda['perfil'] | string;
   status: UsuarioAgenda['status'] | string;

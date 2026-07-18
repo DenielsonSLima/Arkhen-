@@ -3,7 +3,7 @@ import type { UserStats } from './types';
 import { styles } from './styles';
 
 interface UserCardsGridProps {
-  onSelectUser: (nome: string) => void;
+  onSelectUser: (id: string) => void;
   users: UserStats[];
 }
 
@@ -11,7 +11,7 @@ export const UserCardsGrid: React.FC<UserCardsGridProps> = ({ onSelectUser, user
   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
     <div style={styles.grid}>
       {users.map((user) => (
-        <div key={user.nome} style={styles.userCard}>
+        <div key={user.id} style={styles.userCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={styles.avatar}>{user.avatar}</div>
             <div>
@@ -42,7 +42,7 @@ export const UserCardsGrid: React.FC<UserCardsGridProps> = ({ onSelectUser, user
             </div>
           </div>
 
-          <button onClick={() => onSelectUser(user.nome)} style={styles.manageBtn} type="button">
+          <button onClick={() => onSelectUser(user.id)} style={styles.manageBtn} type="button">
             Fiscalizar Atividades
           </button>
         </div>

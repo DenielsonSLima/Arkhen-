@@ -61,6 +61,8 @@ export const toConfig = (row: ConfigRow): EventoConfigItem => ({
 
 export const toResponsavel = (row: ResponsavelRow): UsuarioAgenda => ({
   id: row.id,
+  userId: row.user_id || undefined,
+  configUsuarioId: row.config_usuario_id || undefined,
   nome: row.nome,
   perfil: (row.perfil || 'Assistente') as UsuarioAgenda['perfil'],
   status: (row.status || 'Ativo') as UsuarioAgenda['status'],

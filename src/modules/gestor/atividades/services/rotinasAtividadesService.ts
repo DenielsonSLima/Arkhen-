@@ -13,6 +13,8 @@ export interface RotinaAtividade {
   frequencia: FrequenciaAtividade;
   intervaloDias: number;
   responsavel: string;
+  responsavelUserId?: string;
+  responsavelConfigUsuarioId?: string;
   cliente: string;
   proximaExecucao: string;
   prioridade: PrioridadeAtividade;
@@ -29,6 +31,8 @@ export interface TarefaGestor {
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade | 'Única';
   responsavel: string;
+  responsavelUserId?: string;
+  responsavelConfigUsuarioId?: string;
   cliente: string;
   vencimento: string;
   prioridade: PrioridadeAtividade;
@@ -46,6 +50,12 @@ export interface TarefaGestor {
   observacaoBloqueio?: string;
 }
 
+export interface UsuarioAtividade {
+  configUsuarioId: string;
+  userId?: string;
+  nome: string;
+}
+
 interface RotinaAtividadeRow {
   id: string;
   nome: string;
@@ -53,6 +63,8 @@ interface RotinaAtividadeRow {
   frequencia: FrequenciaAtividade | null;
   intervalo_dias: number | null;
   responsavel_nome: string | null;
+  responsavel_user_id: string | null;
+  responsavel_config_usuario_id: string | null;
   cliente_nome: string | null;
   proxima_execucao: string | null;
   prioridade: PrioridadeAtividade | null;
@@ -69,6 +81,8 @@ interface TarefaGestorRow {
   categoria: CategoriaAtividade | null;
   frequencia: FrequenciaAtividade | 'Única' | null;
   responsavel_nome: string | null;
+  responsavel_user_id: string | null;
+  responsavel_config_usuario_id: string | null;
   cliente_nome: string | null;
   vencimento: string | null;
   prioridade: PrioridadeAtividade | null;
@@ -110,6 +124,8 @@ const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
   frequencia: row.frequencia || 'Personalizada',
   intervaloDias: Number(row.intervalo_dias || 1),
   responsavel: row.responsavel_nome || '',
+  responsavelUserId: row.responsavel_user_id || undefined,
+  responsavelConfigUsuarioId: row.responsavel_config_usuario_id || undefined,
   cliente: row.cliente_nome || 'Escritório',
   proximaExecucao: row.proxima_execucao || todayKey(),
   prioridade: row.prioridade || 'Média',
@@ -126,6 +142,8 @@ const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   categoria: row.categoria || 'Cliente',
   frequencia: row.frequencia || 'Única',
   responsavel: row.responsavel_nome || '',
+  responsavelUserId: row.responsavel_user_id || undefined,
+  responsavelConfigUsuarioId: row.responsavel_config_usuario_id || undefined,
   cliente: row.cliente_nome || 'Escritório',
   vencimento: row.vencimento || todayKey(),
   prioridade: row.prioridade || 'Média',
@@ -138,26 +156,75 @@ const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
 });
 
 export const rotinasAtividadesService = {
+  async getPodeGerenciar() {
+    const empresaId = await getCurrentEmpresaId();
+    const { data, error } = await supabase.rpc('current_user_has_permission', {
+      p_empresa_id: empresaId,
+      p_permission: 'atividades:manage',
+    });
+    if (error) throw error;
+    return Boolean(data);
+  },
+
   async getWorkspace() {
-    const [{ data: rotinasData, error: rotinasError }, { data: tarefasData, error: tarefasError }] = await Promise.all([
+    const empresaId = await getCurrentEmpresaId();
+    const [
+      { data: rotinasData, error: rotinasError },
+      { data: tarefasData, error: tarefasError },
+      { data: usuariosData, error: usuariosError },
+    ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
-        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .eq('empresa_id', empresaId)
         .eq('ativa', true)
         .order('proxima_execucao', { ascending: true }),
       supabase
         .from('atividades_tarefas')
-        .select('id,rotina_id,titulo,categoria,frequencia,responsavel_nome,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta')
+        .select('id,rotina_id,titulo,categoria,frequencia,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta')
+        .eq('empresa_id', empresaId)
         .eq('ativo', true)
         .order('vencimento', { ascending: true }),
+      supabase
+        .from('configuracoes_usuarios')
+        .select('id,auth_user_id,nome,perfil_id')
+        .eq('empresa_id', empresaId)
+        .eq('status', 'Ativo')
+        .order('nome', { ascending: true }),
     ]);
 
     if (rotinasError) throw rotinasError;
     if (tarefasError) throw tarefasError;
+    if (usuariosError) throw usuariosError;
+
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    const usuariosMap = new Map<string, UsuarioAtividade & { perfilVinculado: boolean }>();
+    (usuariosData || []).forEach((usuario) => {
+      const userId = usuario.auth_user_id as string | null;
+      const key = userId ? `auth:${userId}` : `config:${usuario.id}`;
+      const atual = usuariosMap.get(key);
+      const perfilVinculado = Boolean(usuario.perfil_id);
+      if (!atual || (!atual.perfilVinculado && perfilVinculado)) {
+        usuariosMap.set(key, {
+          configUsuarioId: usuario.id,
+          userId: userId || undefined,
+          nome: usuario.nome,
+          perfilVinculado,
+        });
+      }
+    });
+    const usuarios: UsuarioAtividade[] = Array.from(usuariosMap.values()).map(({ configUsuarioId, userId, nome }) => ({
+      configUsuarioId,
+      userId,
+      nome,
+    }));
 
     return {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
+      usuarios,
+      usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
     };
   },
 
@@ -170,6 +237,10 @@ export const rotinasAtividadesService = {
       frequencia: rotina.frequencia,
       intervalo_dias: rotina.intervaloDias,
       responsavel_nome: rotina.responsavel || null,
+      responsavel_user_id: isUuid(rotina.responsavelUserId) ? rotina.responsavelUserId : null,
+      responsavel_config_usuario_id: isUuid(rotina.responsavelConfigUsuarioId)
+        ? rotina.responsavelConfigUsuarioId
+        : null,
       cliente_nome: rotina.cliente || 'Escritório',
       proxima_execucao: rotina.proximaExecucao || todayKey(),
       prioridade: rotina.prioridade,
@@ -180,7 +251,7 @@ export const rotinasAtividadesService = {
     };
 
     const request = isUuid(rotina.id)
-      ? supabase.from('atividades_rotinas').update(payload).eq('id', rotina.id)
+      ? supabase.from('atividades_rotinas').update(payload).eq('id', rotina.id).eq('empresa_id', empresaId)
       : supabase.from('atividades_rotinas').insert(payload);
 
     const { error } = await request;
@@ -190,13 +261,20 @@ export const rotinasAtividadesService = {
 
   async deleteRotina(id: string) {
     if (!isUuid(id)) return this.getWorkspace();
-    const { error } = await supabase.from('atividades_rotinas').update({ ativa: false }).eq('id', id);
+    const empresaId = await getCurrentEmpresaId();
+    const { error } = await supabase.from('atividades_rotinas').update({ ativa: false }).eq('id', id).eq('empresa_id', empresaId);
     if (error) throw error;
     return this.getWorkspace();
   },
 
   async saveTarefa(tarefa: TarefaGestor) {
     const empresaId = await getCurrentEmpresaId();
+    let responsavelUserId = tarefa.responsavelUserId;
+    if (!isUuid(responsavelUserId) && tarefa.origem === 'Usuario') {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      responsavelUserId = authData.user?.id;
+    }
     const payload = {
       empresa_id: empresaId,
       rotina_id: isUuid(tarefa.rotinaId) ? tarefa.rotinaId : null,
@@ -204,6 +282,10 @@ export const rotinasAtividadesService = {
       categoria: tarefa.categoria,
       frequencia: tarefa.frequencia || 'Única',
       responsavel_nome: tarefa.responsavel || null,
+      responsavel_user_id: isUuid(responsavelUserId) ? responsavelUserId : null,
+      responsavel_config_usuario_id: isUuid(tarefa.responsavelConfigUsuarioId)
+        ? tarefa.responsavelConfigUsuarioId
+        : null,
       cliente_nome: tarefa.cliente || 'Escritório',
       vencimento: tarefa.vencimento || todayKey(),
       prioridade: tarefa.prioridade,
@@ -217,7 +299,7 @@ export const rotinasAtividadesService = {
     };
 
     const request = isUuid(tarefa.id)
-      ? supabase.from('atividades_tarefas').update(payload).eq('id', tarefa.id)
+      ? supabase.from('atividades_tarefas').update(payload).eq('id', tarefa.id).eq('empresa_id', empresaId)
       : supabase.from('atividades_tarefas').insert(payload);
 
     const { error } = await request;
@@ -227,7 +309,8 @@ export const rotinasAtividadesService = {
 
   async deleteTarefa(id: string) {
     if (!isUuid(id)) return this.getWorkspace();
-    const { error } = await supabase.from('atividades_tarefas').update({ ativo: false }).eq('id', id);
+    const empresaId = await getCurrentEmpresaId();
+    const { error } = await supabase.from('atividades_tarefas').update({ ativo: false }).eq('id', id).eq('empresa_id', empresaId);
     if (error) throw error;
     return this.getWorkspace();
   },

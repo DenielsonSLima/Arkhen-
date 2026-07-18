@@ -9,6 +9,7 @@ import {
 export const atividadesKeys = {
   all: ['atividades'] as const,
   workspace: () => [...atividadesKeys.all, 'workspace'] as const,
+  permissoes: () => [...atividadesKeys.all, 'permissoes'] as const,
 };
 
 export const useAtividadesWorkspace = () => {
@@ -17,6 +18,11 @@ export const useAtividadesWorkspace = () => {
     queryKey: atividadesKeys.workspace(),
     queryFn: () => rotinasAtividadesService.getWorkspace(),
     staleTime: 30_000,
+  });
+  const permissoesQuery = useQuery({
+    queryKey: atividadesKeys.permissoes(),
+    queryFn: () => rotinasAtividadesService.getPodeGerenciar(),
+    staleTime: 60_000,
   });
 
   const invalidateWorkspace = () => {
@@ -43,7 +49,7 @@ export const useAtividadesWorkspace = () => {
     onSuccess: invalidateWorkspace,
   });
 
-  const workspace = workspaceQuery.data || { rotinas: [], tarefas: [] };
+  const workspace = workspaceQuery.data || { rotinas: [], tarefas: [], usuarios: [], usuarioAtual: null };
 
   const actions = useMemo(() => ({
     saveRotina: (rotina: RotinaAtividade) => saveRotinaMutation.mutate(rotina),
@@ -73,6 +79,10 @@ export const useAtividadesWorkspace = () => {
   return {
     rotinas: workspace.rotinas,
     tarefas: workspace.tarefas,
+    usuarios: workspace.usuarios,
+    usuarioAtual: workspace.usuarioAtual,
+    podeGerenciar: Boolean(permissoesQuery.data),
+    isLoadingPermissoes: permissoesQuery.isLoading,
     isLoading: workspaceQuery.isLoading,
     ...actions,
     isSaving: saveTarefaMutation.isPending || saveRotinaMutation.isPending,

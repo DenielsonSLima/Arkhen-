@@ -34,6 +34,7 @@ interface AgendaFiltersPanelProps {
   onGerenciarTipos: () => void;
   onGerenciarCategorias: () => void;
   onGerenciarCores: () => void;
+  podeGerenciar: boolean;
 }
 
 export const AgendaFiltersPanel: React.FC<AgendaFiltersPanelProps> = ({
@@ -63,6 +64,7 @@ export const AgendaFiltersPanel: React.FC<AgendaFiltersPanelProps> = ({
   onGerenciarTipos,
   onGerenciarCategorias,
   onGerenciarCores,
+  podeGerenciar,
 }) => {
   const hasFiltrosAtivos = filtro.length > 0
     || categoriaFiltro.length > 0
@@ -126,7 +128,7 @@ export const AgendaFiltersPanel: React.FC<AgendaFiltersPanelProps> = ({
           icon={<UserRound size={14} />}
           value={funcionarioFiltro}
           onChange={onSetFuncionarioFiltro}
-          action={<button type="button" className="agenda-filter-inline-btn" onClick={onGerenciarCores}><Palette size={12} /> Cores</button>}
+          action={podeGerenciar ? <button type="button" className="agenda-filter-inline-btn" onClick={onGerenciarCores}><Palette size={12} /> Cores</button> : undefined}
         >
           <option value="todos">Todos</option>
           {funcionariosFiltro.map((funcionario) => <option key={funcionario.id} value={funcionario.id}>{funcionario.nome}</option>)}
@@ -135,10 +137,10 @@ export const AgendaFiltersPanel: React.FC<AgendaFiltersPanelProps> = ({
         <FilterDropdown
           label="Tipo"
           icon={<CalendarRange size={14} />}
-          actionLabel="Gerenciar"
+          actionLabel={podeGerenciar ? 'Gerenciar' : undefined}
           open={filtroTipoAberto}
           selectedLabel={nomeTiposSelecionados}
-          onAction={onGerenciarTipos}
+          onAction={podeGerenciar ? onGerenciarTipos : undefined}
           onToggle={() => onSetFiltroTipoAberto((aberto) => !aberto)}
         >
           <DropdownItem checked={filtro.length === 0} label="Todos" color="#64748b" onChange={onLimparFiltroTipo} />
@@ -156,10 +158,10 @@ export const AgendaFiltersPanel: React.FC<AgendaFiltersPanelProps> = ({
         <FilterDropdown
           label="Categorias"
           icon={<Tags size={14} />}
-          actionLabel="Gerenciar"
+          actionLabel={podeGerenciar ? 'Gerenciar' : undefined}
           open={filtroCategoriaAberto}
           selectedLabel={nomeCategoriasSelecionadas}
-          onAction={onGerenciarCategorias}
+          onAction={podeGerenciar ? onGerenciarCategorias : undefined}
           onToggle={() => onSetFiltroCategoriaAberto((aberto) => !aberto)}
           className="agenda-filter-group-categorias"
         >
@@ -201,12 +203,12 @@ const FilterSelect: React.FC<FilterSelectProps> = ({ label, icon, value, childre
 interface FilterDropdownProps {
   label: string;
   icon: React.ReactNode;
-  actionLabel: string;
+  actionLabel?: string;
   selectedLabel: string;
   open: boolean;
   children: React.ReactNode;
   className?: string;
-  onAction: () => void;
+  onAction?: () => void;
   onToggle: () => void;
 }
 
@@ -224,7 +226,9 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   <div className={`agenda-filter-group ${className}`}>
     <div className="agenda-filter-header-row">
       <span className="agenda-filter-label">{icon}{label}</span>
-      <button type="button" className="agenda-filter-inline-btn" onClick={onAction}><Settings2 size={12} /> {actionLabel}</button>
+      {onAction && actionLabel
+        ? <button type="button" className="agenda-filter-inline-btn" onClick={onAction}><Settings2 size={12} /> {actionLabel}</button>
+        : <span className="agenda-filter-action-spacer" />}
     </div>
     <div className="agenda-filter-list">
       <button type="button" className={`agenda-filter-list-toggle ${open ? 'open' : ''}`} onClick={onToggle}>

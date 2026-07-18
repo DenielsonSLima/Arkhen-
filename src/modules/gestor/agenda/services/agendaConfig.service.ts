@@ -27,9 +27,11 @@ export const CATEGORIAS_EVENTO: CategoriaEventoConfig[] = [];
 export const TIPO_EVENTO_CONFIG: Record<string, { label: string; cor: string; corFundo: string }> = {};
 
 export async function getTiposEventoConfig(): Promise<TipoEventoConfig[]> {
+  const empresaId = await getCurrentEmpresaId();
   const { data, error } = await supabase
     .from('agenda_tipos_evento')
     .select('id,codigo,label,cor,cor_fundo,ativo')
+    .eq('empresa_id', empresaId)
     .eq('ativo', true)
     .order('ordem', { ascending: true });
 
@@ -57,9 +59,11 @@ export async function salvarTiposEventoConfig(itens: TipoEventoConfig[]): Promis
 }
 
 export async function getCategoriasEventoConfig(): Promise<CategoriaEventoConfig[]> {
+  const empresaId = await getCurrentEmpresaId();
   const { data, error } = await supabase
     .from('agenda_categorias_evento')
     .select('id,codigo,label,cor,cor_fundo,ativo')
+    .eq('empresa_id', empresaId)
     .eq('ativo', true)
     .order('ordem', { ascending: true });
 
@@ -87,9 +91,11 @@ export async function salvarCategoriasEventoConfig(itens: CategoriaEventoConfig[
 }
 
 export async function getResponsaveisAgendaConfig(): Promise<UsuarioAgenda[]> {
+  const empresaId = await getCurrentEmpresaId();
   const { data, error } = await supabase
     .from('agenda_responsaveis')
-    .select('id,nome,perfil,status,cor,ativo')
+    .select('id,user_id,config_usuario_id,nome,perfil,status,cor,ativo')
+    .eq('empresa_id', empresaId)
     .eq('ativo', true)
     .order('ordem', { ascending: true });
 
@@ -97,11 +103,43 @@ export async function getResponsaveisAgendaConfig(): Promise<UsuarioAgenda[]> {
   return ((data || []) as ResponsavelRow[]).map(toResponsavel);
 }
 
+export async function getUsuarioAgendaAtual(): Promise<UsuarioAgenda | null> {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) return null;
+  const empresaId = await getCurrentEmpresaId();
+
+  const { data, error } = await supabase
+    .from('agenda_responsaveis')
+    .select('id,user_id,config_usuario_id,nome,perfil,status,cor,ativo')
+    .eq('empresa_id', empresaId)
+    .eq('user_id', authData.user.id)
+    .eq('ativo', true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? toResponsavel(data as ResponsavelRow) : null;
+}
+
+export async function getEmpresasAgenda(): Promise<Array<{ id: string; nome: string }>> {
+  const empresaId = await getCurrentEmpresaId();
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('id,nome')
+    .eq('empresa_id', empresaId)
+    .order('nome', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map((cliente) => ({ id: cliente.id, nome: cliente.nome }));
+}
+
 export async function salvarResponsaveisAgendaConfig(itens: UsuarioAgenda[]): Promise<UsuarioAgenda[]> {
   const empresaId = await getCurrentEmpresaId();
   const payload = itens.map((item, index) => ({
     id: isUuid(item.id) ? item.id : undefined,
     empresa_id: empresaId,
+    user_id: isUuid(item.userId) ? item.userId : null,
+    config_usuario_id: isUuid(item.configUsuarioId) ? item.configUsuarioId : null,
     nome: item.nome,
     perfil: item.perfil,
     status: item.status,

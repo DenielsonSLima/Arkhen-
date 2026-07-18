@@ -3,22 +3,6 @@ import { CheckCircle2, Circle, Clock, ChevronLeft, ChevronRight, Plus, Trash2 } 
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { formatDateBR, todayKey, addDaysKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
-import { persistedStorage } from '../../../../lib/persistedStorage';
-
-const getUsuarioAtual = () => {
-  const fallback = 'Usuario';
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const profileRaw = persistedStorage.getItem('gestor_user_profile');
-    if (!profileRaw) return fallback;
-    const profile = JSON.parse(profileRaw);
-    return typeof profile?.nome === 'string' && profile.nome.trim().length > 0
-      ? profile.nome
-      : fallback;
-  } catch {
-    return fallback;
-  }
-};
 
 interface AbaMinhasAtividadesProps {
   initialPeriodo?: 'dia' | 'semana' | 'mes';
@@ -31,6 +15,7 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
 }) => {
   const {
     tarefas,
+    usuarioAtual,
     updateTarefa,
     toggleChecklist,
     saveTarefaAsync,
@@ -39,7 +24,7 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
   const [dataBase, setDataBase] = useState(todayKey());
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
-  const usuarioLogado = getUsuarioAtual();
+  const usuarioLogado = usuarioAtual?.nome || 'Usuário';
   const tarefaPadraoFrequencia: TarefaGestor['frequencia'] = initialPeriodo === 'dia'
     ? 'Diária'
     : initialPeriodo === 'semana'
@@ -103,7 +88,9 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
       id: `task-usuario-${Date.now()}`,
       frequencia: tarefaPadraoFrequencia,
       responsavel: usuarioLogado,
-      cliente: 'Escritório',
+      responsavelUserId: usuarioAtual?.userId,
+      responsavelConfigUsuarioId: usuarioAtual?.configUsuarioId,
+      cliente: dados.cliente || 'Escritório',
       origem: 'Usuario',
       status: 'Pendente',
       checklist: dados.checklist.map((item: string) => ({ titulo: item, concluida: false })),

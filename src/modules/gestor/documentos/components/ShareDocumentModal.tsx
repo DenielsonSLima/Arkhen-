@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clipboard, Key, Link2, Share2, Timer, X } from 'lucide-react';
 import { copyToClipboard } from '../../../../lib/clipboard';
 import {
-  DEFAULT_SHARE_PASSWORD,
   documentShareService,
   formatShareDateTime,
   generateSharePassword,
@@ -27,7 +26,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 }) => {
   const [tempoLimite, setTempoLimite] = useState<string>(SHARE_EXPIRATION_OPTIONS[2]);
   const [exigirSenha, setExigirSenha] = useState(false);
-  const [senha, setSenha] = useState(() => DEFAULT_SHARE_PASSWORD);
+  const [senha, setSenha] = useState(() => generateSharePassword());
   const [createdLinks, setCreatedLinks] = useState<SharedDocumentLink[]>([]);
   const [copied, setCopied] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
@@ -55,7 +54,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
       setTempoLimite(config.tempoPadrao);
       setExigirSenha(config.exigirSenhaPadrao);
     });
-    setSenha(DEFAULT_SHARE_PASSWORD);
+    setSenha(generateSharePassword());
     setCreatedLinks([]);
     setCopied(false);
     setCopiedLinkId(null);

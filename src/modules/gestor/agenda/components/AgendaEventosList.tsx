@@ -7,6 +7,7 @@ interface AgendaEventosListProps {
   vazio: string;
   onEdit: (evento: Evento) => void;
   onDeleteRequest: (evento: Evento) => void;
+  onToggleComplete: (eventoId: string) => void;
 }
 
 export const AgendaEventosList: React.FC<AgendaEventosListProps> = ({
@@ -14,6 +15,7 @@ export const AgendaEventosList: React.FC<AgendaEventosListProps> = ({
   vazio,
   onEdit,
   onDeleteRequest,
+  onToggleComplete,
 }) => (
   eventos.length === 0 ? (
     <div className="sem-eventos">{vazio}</div>
@@ -25,6 +27,7 @@ export const AgendaEventosList: React.FC<AgendaEventosListProps> = ({
           evento={evento}
           onEdit={onEdit}
           onDeleteRequest={getEventoOrigem(evento) === 'manual' ? onDeleteRequest : undefined}
+          onToggleComplete={getEventoOrigem(evento) === 'manual' ? onToggleComplete : undefined}
         />
       ))}
     </div>

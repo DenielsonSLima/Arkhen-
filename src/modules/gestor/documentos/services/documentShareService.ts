@@ -105,9 +105,8 @@ const normalizeShareConfig = (input: ShareConfiguration | undefined): ShareConfi
 
 const DEMO_LINK_IDS = ['l1', 'l2', 'l3', 'l4'];
 const SHARE_TABLE = 'documentos_compartilhamentos';
-export const DEFAULT_SHARE_PASSWORD = 'ARKH-1876-SEC';
 
-const SHARED_LINK_MIN_COLUMNS = 'id,documento_nome,empresa_nome,gerado_por,documento_id,tempo_limite,expires_at,status,created_at,senha_hash,senha_visualizacao';
+const SHARED_LINK_MIN_COLUMNS = 'id,documento_nome,empresa_nome,gerado_por,documento_id,tempo_limite,expires_at,status,created_at,senha_hash';
 const SHARED_LINK_COLUMNS_WITH_GROUP = `${SHARED_LINK_MIN_COLUMNS},share_group_id`;
 
 interface SharedDocumentRow {
@@ -122,7 +121,6 @@ interface SharedDocumentRow {
   status: 'Ativo' | 'Expirado';
   created_at: string;
   senha_hash?: string | null;
-  senha_visualizacao?: string | null;
 }
 
 interface ShareConfiguracaoRow {
@@ -274,7 +272,6 @@ const mapRowToLink = (row: SharedDocumentRow): SharedDocumentLink => ({
   dataExpiracaoIso: row.expires_at,
   status: row.status,
   senhaHash: row.senha_hash || undefined,
-  senha: row.senha_visualizacao || undefined,
   link: buildPublicLink((row.share_group_id || row.id)),
 });
 
@@ -287,7 +284,9 @@ const getCurrentEmpresaId = async (): Promise<string | null> => {
 };
 
 export const generateSharePassword = () => (
-  `ARKH-${Math.floor(1000 + Math.random() * 9000)}-SEC`
+  `ARKH-${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => (
+    byte.toString(16).padStart(2, '0')
+  )).join('')}`
 );
 
 export const documentShareService = {
@@ -450,7 +449,7 @@ export const documentShareService = {
     const now = new Date();
     const durationMs = parseShareDurationMs(input.tempoLimite);
     const expiresAt = new Date(now.getTime() + durationMs);
-    const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
+    const senha = input.exigirSenha ? (input.senha?.trim() || generateSharePassword()) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : undefined;
     const shareGroupId = makeId();
 
@@ -513,7 +512,6 @@ export const documentShareService = {
       if (empresaId) row.empresa_id = empresaId;
       if (shareGroupId) row.share_group_id = shareGroupId;
       if (senhaHash) row.senha_hash = senhaHash;
-      if (senha) row.senha_visualizacao = senha;
 
       return row;
     });
@@ -552,7 +550,7 @@ export const documentShareService = {
   async renew(targetId: string, input: { tempoLimite: string; exigirSenha: boolean; senha?: string }) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + parseShareDurationMs(input.tempoLimite));
-    const senha = input.exigirSenha ? (input.senha?.trim() || DEFAULT_SHARE_PASSWORD) : undefined;
+    const senha = input.exigirSenha ? (input.senha?.trim() || generateSharePassword()) : undefined;
     const senhaHash = senha ? await hashSharePassword(senha) : null;
 
     const updatePayload = {
@@ -560,7 +558,6 @@ export const documentShareService = {
       expires_at: expiresAt.toISOString(),
       status: 'Ativo' as const,
       senha_hash: senhaHash,
-      senha_visualizacao: senha || null,
     };
 
     let { error } = await supabase

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Key, RotateCcw, Timer, X } from 'lucide-react';
 import {
-  DEFAULT_SHARE_PASSWORD,
   formatShareDateTime,
   generateSharePassword,
   documentShareService,
@@ -32,7 +31,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
 }) => {
   const [tempoLimite, setTempoLimite] = useState<string>(() => SHARE_EXPIRATION_OPTIONS[2]);
   const [exigirSenha, setExigirSenha] = useState(() => Boolean(senhaAtual || senhaHashAtual));
-  const [senha, setSenha] = useState(() => senhaAtual || DEFAULT_SHARE_PASSWORD);
+  const [senha, setSenha] = useState(() => senhaAtual || generateSharePassword());
 
   const expirationPreview = useMemo(() => (
     formatShareDateTime(new Date(Date.now() + parseShareDurationMs(tempoLimite)))
@@ -41,7 +40,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setExigirSenha(Boolean(senhaAtual || senhaHashAtual));
-    setSenha(senhaAtual || DEFAULT_SHARE_PASSWORD);
+    setSenha(senhaAtual || generateSharePassword());
 
     documentShareService.getConfiguracaoCompartilhamento().then((config) => {
       setTempoLimite(config.tempoPadrao);
