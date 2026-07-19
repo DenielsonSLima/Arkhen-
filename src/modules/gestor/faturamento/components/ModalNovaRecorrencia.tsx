@@ -13,6 +13,7 @@ import {
   parseCurrencyInput,
   parsePercentInput,
 } from './billingFormUtils';
+import { formatLocalISODate } from '../utils/dateUtils';
 
 interface ModalNovaRecorrenciaProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
     const today = new Date();
     const due = new Date(today.getFullYear(), today.getMonth(), Math.min(Math.max(day, 1), 28));
     if (due < today) due.setMonth(due.getMonth() + 1);
-    return due.toISOString().slice(0, 10);
+    return formatLocalISODate(due);
   };
 
   const resetForm = () => {

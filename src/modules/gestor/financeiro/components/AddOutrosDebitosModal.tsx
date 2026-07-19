@@ -27,6 +27,7 @@ export const AddOutrosDebitosModal: React.FC<AddOutrosDebitosModalProps> = ({
   const [valor, setValor] = useState(0);
   const [valorStr, setValorStr] = useState('R$ 0,00');
   const [contaBancariaId, setContaBancariaId] = useState('');
+  const [formError, setFormError] = useState('');
 
   // Clean form when opening
   useEffect(() => {
@@ -37,6 +38,7 @@ export const AddOutrosDebitosModal: React.FC<AddOutrosDebitosModalProps> = ({
       setValor(0);
       setValorStr('R$ 0,00');
       setContaBancariaId('');
+      setFormError('');
     }
   }, [isOpen]);
 
@@ -57,12 +59,13 @@ export const AddOutrosDebitosModal: React.FC<AddOutrosDebitosModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (valor <= 0) {
-      alert('Favor preencher o valor do lançamento.');
+      setFormError('Favor preencher o valor do lançamento.');
       return;
     }
     if (!contaBancariaId) {
-      alert('Favor selecionar a conta bancária.');
+      setFormError('Favor selecionar a conta bancária.');
       return;
     }
 
@@ -175,6 +178,7 @@ export const AddOutrosDebitosModal: React.FC<AddOutrosDebitosModalProps> = ({
           </div>
 
           {/* Footer Actions */}
+          {formError && <div className="financeiro-form-error" role="alert" style={{ gridColumn: '1 / -1' }}>{formError}</div>}
           <div className="faturamento-modal-actions" style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #cbd5e1', paddingTop: '16px', background: 'transparent' }}>
             <button type="button" onClick={onClose} disabled={isLoading} style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#64748b', cursor: 'pointer', height: '40px', padding: '0 18px', borderRadius: '6px', fontWeight: 700 }}>
               Cancelar

@@ -99,3 +99,25 @@ export interface DashboardStats {
   receitasPorParceiro: FinanceiroBreakdown[];
   despesasPorCategoria: FinanceiroBreakdown[];
 }
+
+export type TransferenciaFinanceiraInput = {
+  idempotencyKey: string;
+  contaOrigemId: string;
+  contaDestinoId: string;
+  valor: number;
+  data: string;
+  descricao: string;
+};
+
+export type ContasPagarParceladasInput = {
+  idempotencyKey: string;
+  tipoDespesa: 'fixa' | 'variavel';
+  descricao: string;
+  categoria: string;
+  valorTotal: number;
+  dataCompetencia: string;
+  dataVencimento: string;
+  status: 'Pendente' | 'Pago';
+  contaBancariaId?: string;
+  numeroParcelas: number;
+};

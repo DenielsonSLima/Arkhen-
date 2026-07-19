@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { agendaKeys } from './useAgenda';
 
 export const useAgendaRealtime = (enabled = true) => {
@@ -10,7 +11,7 @@ export const useAgendaRealtime = (enabled = true) => {
     if (!enabled) return;
 
     const channel = supabase
-      .channel('agenda-realtime')
+      .channel(createRealtimeChannelName('agenda-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, () => {
         queryClient.invalidateQueries({ queryKey: agendaKeys.all });
       })
@@ -32,7 +33,7 @@ export const useAgendaRealtime = (enabled = true) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 };

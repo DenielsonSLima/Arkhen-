@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useContasBancariasQuery } from '../../configuracoes/contas-bancarias/queries/useContasBancariasQueries';
 import { categoriaFinanceiraService } from '../../parametrizacao/services/categoriaFinanceiraService';
+import type { ContasPagarParceladasInput } from '../services/financeiroService';
 import { Plus, Loader2, CalendarDays, FileText, DollarSign, Tag, Landmark, Sparkles, X } from 'lucide-react';
+import { createRuntimeId } from '../../../../lib/realtimeChannel';
 import '../../faturamento/Faturamento.css';
 import './AddContasAPagarModal.css';
 
@@ -26,6 +28,7 @@ type AddContasAPagarModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (dados: any) => Promise<void>;
+  onSubmitParcelado: (dados: ContasPagarParceladasInput) => Promise<void>;
   isLoading: boolean;
 };
 
@@ -33,6 +36,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onSubmitParcelado,
   isLoading,
 }) => {
   const queryClient = useQueryClient();
@@ -44,9 +48,11 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
     queryFn: categoriaFinanceiraService.getAll,
   });
 
-  const dbCategories = categoriesQuery.data || [];
   // Merge or fallback to ensure we always have active categories to select from!
-  const categories = dbCategories.length > 0 ? dbCategories : LOCAL_DEFAULT_CATEGORIAS;
+  const categories = useMemo(() => {
+    const dbCategories = categoriesQuery.data || [];
+    return dbCategories.length > 0 ? dbCategories : LOCAL_DEFAULT_CATEGORIAS;
+  }, [categoriesQuery.data]);
 
   // Form State
   const [tipoDespesa, setTipoDespesa] = useState<'fixa' | 'variavel'>('fixa');
@@ -68,9 +74,14 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [inlineCategoryError, setInlineCategoryError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [idempotencyKey] = useState(() => createRuntimeId('installments'));
 
   // Auto-select first matching category when list or type changes
-  const filteredCategories = categories.filter(c => c.tipoDespesa === tipoDespesa);
+  const filteredCategories = useMemo(
+    () => categories.filter((category) => category.tipoDespesa === tipoDespesa),
+    [categories, tipoDespesa],
+  );
 
   useEffect(() => {
     if (filteredCategories.length > 0) {
@@ -78,7 +89,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
     } else {
       setCategoria('');
     }
-  }, [tipoDespesa, categoriesQuery.data]);
+  }, [filteredCategories]);
 
   // Clean form when opening
   useEffect(() => {
@@ -96,6 +107,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
       setShowInlineCategoryForm(false);
       setNewCategoryName('');
       setInlineCategoryError('');
+      setFormError('');
     }
   }, [isOpen]);
 
@@ -112,12 +124,6 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
     const numericValue = cents / 100;
     setValorTotal(numericValue);
     setValorTotalStr(formatCurrencyValue(numericValue));
-  };
-
-  const addMonths = (dateStr: string, months: number): string => {
-    const date = new Date(dateStr + 'T12:00:00'); // avoid timezone shifts
-    date.setMonth(date.getMonth() + months);
-    return date.toISOString().slice(0, 10);
   };
 
   // Inline Category Submit
@@ -145,49 +151,44 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (valorTotal <= 0) {
-      alert('Favor preencher o valor do lançamento.');
+      setFormError('Favor preencher o valor do lançamento.');
       return;
     }
 
-    if (parcelado && numParcelas >= 2) {
-      // Installments: save multiple entries sequentially
-      const valPerInstallment = Number((valorTotal / numParcelas).toFixed(2));
-      for (let i = 1; i <= numParcelas; i++) {
-        const itemDesc = `${descricao.trim()} (Parcela ${i}/${numParcelas})`;
-        const itemVenc = addMonths(dataVencimento, i - 1);
-        const itemComp = addMonths(dataCompetencia, i - 1);
-        
+    try {
+      if (parcelado && numParcelas >= 2) {
+      await onSubmitParcelado({
+        idempotencyKey,
+          tipoDespesa,
+          descricao: descricao.trim(),
+          categoria,
+          valorTotal,
+          dataCompetencia,
+          dataVencimento,
+          status,
+          contaBancariaId: status === 'Pago' && contaBancariaId ? contaBancariaId : undefined,
+          numeroParcelas: numParcelas,
+        });
+      } else {
         await onSubmit({
           tipo: 'despesa',
           origem: 'conta_pagar',
-          descricao: itemDesc,
+          descricao: descricao.trim(),
           categoria,
-          valor: valPerInstallment,
-          dataCompetencia: itemVenc,
-          dataPagamento: status === 'Pago' ? itemComp : undefined,
-          status: status,
+          valor: valorTotal,
+          dataCompetencia: dataVencimento,
+          dataPagamento: status === 'Pago' ? dataCompetencia : undefined,
+          status,
           contaBancariaId: status === 'Pago' && contaBancariaId ? contaBancariaId : undefined,
-          metadados: { tipoDespesa, parcelado: true, parcelaAtual: i, totalParcelas: numParcelas, dataCompetencia: itemComp },
+          metadados: { tipoDespesa, dataCompetencia },
         });
       }
-    } else {
-      // Single entry
-      await onSubmit({
-        tipo: 'despesa',
-        origem: 'conta_pagar',
-        descricao: descricao.trim(),
-        categoria,
-        valor: valorTotal,
-        dataCompetencia: dataVencimento,
-        dataPagamento: status === 'Pago' ? dataCompetencia : undefined,
-        status: status,
-        contaBancariaId: status === 'Pago' && contaBancariaId ? contaBancariaId : undefined,
-        metadados: { tipoDespesa, dataCompetencia },
-      });
+      onClose();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Falha ao registrar contas a pagar.');
     }
-
-    onClose();
   };
 
   const modalContent = (
@@ -434,6 +435,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
           )}
 
           {/* Footer Actions */}
+          {formError && <div className="financeiro-form-error" role="alert" style={{ gridColumn: '1 / -1' }}>{formError}</div>}
           <div className="faturamento-modal-actions" style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px', borderTop: '1px solid #cbd5e1', paddingTop: '16px', background: 'transparent' }}>
             <button type="button" onClick={onClose} disabled={isLoading} style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#64748b', cursor: 'pointer', height: '40px', padding: '0 18px', borderRadius: '6px', fontWeight: 700 }}>
               Cancelar

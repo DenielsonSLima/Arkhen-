@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { protocolosKeys } from '../queries/protocolosQueries';
 
 export const useProtocolosRealtime = (enabled = true) => {
@@ -14,14 +15,14 @@ export const useProtocolosRealtime = (enabled = true) => {
     };
 
     const channel = supabase
-      .channel('protocolos-realtime')
+      .channel(createRealtimeChannelName('protocolos-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 };

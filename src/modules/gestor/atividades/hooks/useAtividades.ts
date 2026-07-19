@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
 
@@ -127,15 +127,22 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     usuario: '',
   });
 
-  const loadFechamentoMeta = async () => {
-    if (selectedGroup) {
-      const meta = await atividadesService.getFechamentoMeta(selectedGroup.clienteId, selectedGroup.competencia);
-      setFechamentoMeta(meta);
-    }
-  };
-
   useEffect(() => {
-    loadFechamentoMeta();
+    if (!selectedGroup) return;
+    let cancelled = false;
+    const loadFechamentoMeta = async () => {
+      const meta = await atividadesService.getFechamentoMeta(
+        selectedGroup.clienteId,
+        selectedGroup.competencia,
+      );
+      if (!cancelled) setFechamentoMeta(meta);
+    };
+    void loadFechamentoMeta().catch((error) => {
+      console.error('Erro ao carregar metadados do fechamento:', error);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedGroup]);
 
   const handleSaveFechamentoMeta = async (meta: { finalizado: boolean; dataHora: string; usuario: string }) => {
@@ -144,7 +151,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     setFechamentoMeta(meta);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const mod = await atividadesService.getModelos();
@@ -202,15 +209,14 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
   }, []);
 
-  // Helper to map instances to Company Groups
-  const getCompanyGroups = (): CompanyActivityGroup[] => {
-    return clientes.flatMap((cliente) => {
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const allGroups = useMemo<CompanyActivityGroup[]>(() => (
+    clientes.flatMap((cliente) => {
       const clientCompetencias = Array.from(new Set(
         instancias
           .filter((inst) => inst.clienteId === cliente.id)
@@ -275,10 +281,8 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     }).sort((a, b) => (
       a.clienteNome.localeCompare(b.clienteNome) ||
       parseCompetenciaDate(a.competencia) - parseCompetenciaDate(b.competencia)
-    ));
-  };
-
-  const allGroups = getCompanyGroups();
+    ))
+  ), [clientes, instancias, modelos]);
 
   // Filter groups
   const filteredGroups = allGroups.filter((group) => {
@@ -296,20 +300,16 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     const matched = allGroups.find((group) => (
       group.clienteId === options.initialCompanyId && group.competencia === selectedCompetencia
     ));
-    if (matched) {
-      setSelectedGroup(matched);
-    }
+    if (matched) setSelectedGroup((current) => current?.id === matched.id ? current : matched);
   }, [allGroups, options.initialCompanyId, options.initialCompetencia]);
 
   // Keep selectedGroup updated on refetch
   useEffect(() => {
-    if (selectedGroup) {
-      const updated = allGroups.find((g) => g.id === selectedGroup.id);
-      if (updated) {
-        setSelectedGroup(updated);
-      }
-    }
-  }, [instancias]);
+    setSelectedGroup((current) => {
+      if (!current) return current;
+      return allGroups.find((group) => group.id === current.id) || current;
+    });
+  }, [allGroups]);
 
   // Toggle checklist step
   const handleToggleStep = async (instanciaId: string, etapa: string, value: boolean) => {

@@ -118,24 +118,24 @@ export const SimuladorComparativoRegime: React.FC<Props> = ({
     </div>
 
     <div className="resultado-card">
-      <h3><Calculator size={18} color="#c59235" /> Comparativo de Carga Tributária</h3>
+      <h3><Calculator size={18} color="#c59235" /> Triagem de Cenários Tributários</h3>
 
       <div className="resultado-row">
-        <span className="r-label">Simples Nacional (Imposto Anual Estimado)</span>
+        <span className="r-label">Simples Nacional (cenário genérico)</span>
         <span className="r-valor" style={{ color: resultado.melhorOpcao === 'Simples Nacional' ? '#10b981' : '#0f172a' }}>
           {formatCurrency(resultado.simplesNacional)}
         </span>
       </div>
 
       <div className="resultado-row">
-        <span className="r-label">Lucro Presumido (Imposto Anual Estimado)</span>
+        <span className="r-label">Lucro Presumido (cenário genérico)</span>
         <span className="r-valor" style={{ color: resultado.melhorOpcao === 'Lucro Presumido' ? '#10b981' : '#0f172a' }}>
           {formatCurrency(resultado.lucroPresumido)}
         </span>
       </div>
 
       <div className="resultado-row">
-        <span className="r-label">Lucro Real (Imposto Anual Estimado)</span>
+        <span className="r-label">Lucro Real (cenário genérico)</span>
         <span className="r-valor" style={{ color: resultado.melhorOpcao === 'Lucro Real' ? '#10b981' : '#0f172a' }}>
           {formatCurrency(resultado.lucroReal)}
         </span>
@@ -143,7 +143,7 @@ export const SimuladorComparativoRegime: React.FC<Props> = ({
 
       <div className="resultado-row destaque verde" style={{ marginTop: '16px', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#10b981', fontSize: '0.85rem' }}>
-          <AlertCircle size={15} /> Recomendação do Planejamento
+          <AlertCircle size={15} /> Limite desta triagem
         </div>
         <div style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 500, lineHeight: '1.4' }}>
           {resultado.melhorOpcaoDesc}

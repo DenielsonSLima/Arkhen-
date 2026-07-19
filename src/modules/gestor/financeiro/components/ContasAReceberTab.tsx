@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Search, Calendar, CheckCircle2, Clipboard, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, ExternalLink, TrendingUp } from 'lucide-react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { Search, Calendar, CheckCircle2, Clipboard, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, ExternalLink, TrendingUp, Wallet } from 'lucide-react';
 import type { CobrancaFinanceira } from '../services/financeiroService';
 import './ContasAReceberTab.css';
 import '../../faturamento/Faturamento.css';
@@ -36,7 +36,12 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
   const [activeFilterPill, setActiveFilterPill] = useState<FiltroStatus>('todos');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemsPerPage = 8;
+
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -94,9 +99,17 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
   const handleCopyLink = async (item: CobrancaFinanceira) => {
     const link = item.asaasBankSlipUrl || item.asaasBoletoUrl || item.asaasInvoiceUrl || '';
     if (!link) return;
-    await navigator.clipboard.writeText(link);
-    setCopiedId(item.id);
-    setTimeout(() => setCopiedId(null), 1600);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(item.id);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        copyTimerRef.current = null;
+        setCopiedId(null);
+      }, 1600);
+    } catch (error) {
+      console.warn('[Financeiro] Não foi possível copiar o link de pagamento.', error);
+    }
   };
 
   // Filter core dataset
@@ -242,7 +255,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
 
         <div className="financeiro-kpi-card hover-grow">
           <div className="kpi-icon-wrapper blue">
-            <TrendingUpCircle icon={<TrendingUp size={20} />} />
+            <TrendingUp size={20} />
           </div>
           <div className="kpi-content">
             <span className="kpi-title">Recebido no Mês</span>
@@ -264,7 +277,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
 
         <div className="financeiro-kpi-card hover-grow">
           <div className="kpi-icon-wrapper black">
-            <WalletIcon size={20} />
+            <Wallet size={20} />
           </div>
           <div className="kpi-content">
             <span className="kpi-title">Total Pendente</span>
@@ -432,8 +445,10 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
                             type="button"
                             className="table-action-btn-success"
                             onClick={() => onManualSettlement(item)}
-                            disabled={isManualSettlementLoading}
-                            title="Dar baixa manual"
+                            disabled={isManualSettlementLoading || item.bankProvider === 'inter'}
+                            title={item.bankProvider === 'inter'
+                              ? 'Baixa do Banco Inter indisponível até existir cancelamento e conciliação'
+                              : 'Dar baixa manual'}
                           >
                             <CheckCircle2 size={13} />
                             <span>Baixar</span>
@@ -469,32 +484,3 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
     </div>
   );
 };
-
-// Extra inline SVG/custom subcomponents for look cohesion
-const TrendingUpCircle = ({ icon }: { icon: React.ReactNode }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    {icon}
-  </div>
-);
-
-const WalletIcon = ({ size }: { size: number }) => (
-  <WalletIconSVG size={size} />
-);
-
-const WalletIconSVG = ({ size }: { size: number }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-  </svg>
-);

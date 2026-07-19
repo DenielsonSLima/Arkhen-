@@ -8,8 +8,8 @@ interface RecorrenciaDetailViewProps {
 
 export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ recorrencia, onBack }) => {
   const [activeTab, setActiveTab] = useState<'historico' | 'configuracoes'>('historico');
-  const [emitNfse, setEmitNfse] = useState(true);
-  const [emitCobranca, setEmitCobranca] = useState(true);
+  const emitNfse = Boolean(recorrencia.emissaoNfse);
+  const emitCobranca = Boolean(recorrencia.cobranca);
   const historico = recorrencia.historico || [];
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -119,24 +119,24 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
                         borderRadius: '12px', 
                         fontSize: '0.75rem', 
                         fontWeight: 600,
-                        backgroundColor: '#ecfdf5',
-                        color: '#10b981',
+                        backgroundColor: item.status === 'Pago' ? '#ecfdf5' : '#f8fafc',
+                        color: item.status === 'Pago' ? '#10b981' : '#64748b',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '4px'
                       }}>
-                        <CheckCircle size={12} /> Pago
+                        <CheckCircle size={12} /> {item.status}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }} title="Visualizar NFS-e">
+                        <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8', padding: '4px' }} title="Indisponível: o histórico não fornece o documento fiscal">
                           <Eye size={16} />
                         </button>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }} title="Visualizar Recibo">
+                        <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8', padding: '4px' }} title="Indisponível: o histórico não fornece o recibo">
                           <Receipt size={16} />
                         </button>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', padding: '4px' }} title="Download">
+                        <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8', padding: '4px' }} title="Indisponível: documento não vinculado pelo backend">
                           <Download size={16} />
                         </button>
                       </div>
@@ -164,7 +164,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ position: 'relative' }}>
-                  <input type="checkbox" className="sr-only" checked={emitNfse} onChange={() => setEmitNfse(!emitNfse)} />
+                  <input type="checkbox" className="sr-only" checked={emitNfse} disabled readOnly />
                   <div style={{ width: '40px', height: '24px', backgroundColor: emitNfse ? '#10b981' : '#cbd5e1', borderRadius: '12px', transition: 'background-color 0.2s' }}></div>
                   <div style={{ position: 'absolute', left: emitNfse ? '18px' : '2px', top: '2px', width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}></div>
                 </div>
@@ -175,13 +175,13 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingLeft: '24px' }}>
                  <div className="faturamento-form-group">
                   <label>Tipo de Serviço Padrão</label>
-                  <select defaultValue="17.19">
+                  <select defaultValue="17.19" disabled>
                     <option value="17.19">17.19 - Contabilidade, inclusive serviços técnicos e auxiliares</option>
                   </select>
                 </div>
                 <div className="faturamento-form-group">
                   <label>Descrição Padrão da NFS-e</label>
-                  <textarea rows={2} defaultValue="Referente a honorários contábeis do mês de [MES]/[ANO]"></textarea>
+                  <textarea rows={2} defaultValue="Referente a honorários contábeis do mês de [MES]/[ANO]" disabled />
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Variáveis disponíveis: [MES], [ANO], [NOME_CLIENTE]</span>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ position: 'relative' }}>
-                  <input type="checkbox" className="sr-only" checked={emitCobranca} onChange={() => setEmitCobranca(!emitCobranca)} />
+                  <input type="checkbox" className="sr-only" checked={emitCobranca} disabled readOnly />
                   <div style={{ width: '40px', height: '24px', backgroundColor: emitCobranca ? '#10b981' : '#cbd5e1', borderRadius: '12px', transition: 'background-color 0.2s' }}></div>
                   <div style={{ position: 'absolute', left: emitCobranca ? '18px' : '2px', top: '2px', width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}></div>
                 </div>
@@ -208,7 +208,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingLeft: '24px' }}>
                  <div className="faturamento-form-group">
                   <label>Forma de Pagamento Padrão</label>
-                  <select defaultValue="boleto_pix">
+                  <select defaultValue="boleto_pix" disabled>
                     <option value="boleto_pix">Boleto + Pix</option>
                     <option value="pix">Apenas Pix</option>
                     <option value="credit">Cartão de Crédito</option>
@@ -219,8 +219,8 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button className="faturamento-btn-primary">
-              Salvar Configurações
+            <button className="faturamento-btn-primary" disabled title="A edição exige o vínculo fiscal e financeiro da recorrência no backend.">
+              Configuração somente leitura
             </button>
           </div>
         </div>

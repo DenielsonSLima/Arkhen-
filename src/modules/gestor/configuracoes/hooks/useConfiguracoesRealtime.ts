@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { configuracoesKeys } from '../queries/configuracoesKeys';
 
 export const useConfiguracoesRealtime = (enabled: boolean) => {
@@ -9,11 +10,8 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
   useEffect(() => {
     if (!enabled) return;
 
-    const channelId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel(`configuracoes-realtime-${channelId}`)
+      .channel(createRealtimeChannelName('configuracoes-realtime'))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'configuracoes_empresa' },
@@ -88,7 +86,7 @@ export const useConfiguracoesRealtime = (enabled: boolean) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 };

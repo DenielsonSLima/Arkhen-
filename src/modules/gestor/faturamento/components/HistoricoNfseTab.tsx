@@ -9,6 +9,7 @@ type TabType = 'A Emitir' | 'Emitidas' | 'Canceladas' | 'Rejeitadas' | 'Todas';
 export const HistoricoNfseTab = () => {
   const [activeTab, setActiveTab] = useState<TabType>('Todas');
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todas');
   const [origemFilter, setOrigemFilter] = useState('Todas');
   const selectedStatus = statusFilter === 'Todos' ? 'Todas' : statusFilter;
@@ -21,9 +22,10 @@ export const HistoricoNfseTab = () => {
         : activeTab === 'A Emitir'
           ? 'A Emitir'
           : selectedStatus;
-  const nfseQuery = useFaturamentoNfseQuery({ status: queryStatus, search });
+  const nfseQuery = useFaturamentoNfseQuery({ status: queryStatus, search: appliedSearch });
   const nfse = nfseQuery.data || [];
   const filteredNfse = origemFilter === 'Todas' ? nfse : nfse.filter((item) => item.tipo === origemFilter);
+  const unavailableActionStyle = { background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8' } as const;
 
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -64,7 +66,14 @@ export const HistoricoNfseTab = () => {
         ))}
       </div>
 
-      <div className="faturamento-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}>
+      <form
+        className="faturamento-card"
+        style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          setAppliedSearch(search.trim());
+        }}
+      >
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '200px' }}>
             <label>Buscar</label>
             <input type="text" placeholder="Número, parceiro..." value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -88,10 +97,19 @@ export const HistoricoNfseTab = () => {
               <option>Manual</option>
             </select>
           </div>
-          <button className="faturamento-btn-primary" disabled={nfseQuery.isFetching}>
+          <button type="submit" className="faturamento-btn-primary" disabled={nfseQuery.isFetching}>
             {nfseQuery.isFetching ? 'Filtrando...' : 'Filtrar'}
           </button>
-      </div>
+      </form>
+
+      {nfseQuery.isError && (
+        <div className="faturamento-card" role="alert" style={{ padding: 16, color: '#991b1b', background: '#fef2f2' }}>
+          Não foi possível carregar o histórico de NFS-e.{' '}
+          <button type="button" className="faturamento-btn-secondary" onClick={() => void nfseQuery.refetch()}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       <div className="faturamento-card" style={{ padding: 0 }}>
         <div className="faturamento-table-container">
@@ -137,39 +155,39 @@ export const HistoricoNfseTab = () => {
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                         {nfse.status === 'Emitida' && (
                           <>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }} title="Visualizar NF"><Eye size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }} title="Baixar PDF/XML"><Download size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Cancelar NFS-e"><XCircle size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: visualização fiscal ainda não possui serviço"><Eye size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: PDF/XML não é retornado pelo backend"><Download size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: cancelamento fiscal ainda não possui RPC"><XCircle size={16} /></button>
                           </>
                         )}
                         {nfse.status === 'A Emitir' && (
                           <>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981' }} title="Emitir Agora"><Play size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Cancelar Emissão"><XCircle size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: emissão fiscal ainda não possui RPC"><Play size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: cancelamento da emissão ainda não possui RPC"><XCircle size={16} /></button>
                           </>
                         )}
                         {nfse.status === 'Rascunho' && (
                           <>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981' }} title="Emitir"><Play size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }} title="Editar"><Edit3 size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Excluir"><Trash2 size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: emissão fiscal ainda não possui RPC"><Play size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: edição fiscal ainda não possui serviço"><Edit3 size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: exclusão fiscal ainda não possui serviço"><Trash2 size={16} /></button>
                           </>
                         )}
                         {nfse.status === 'Rejeitada' && (
                           <>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }} title="Corrigir e Reemitir"><RotateCcw size={16} /></button>
-                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }} title="Ver Motivo"><Eye size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: correção fiscal ainda não possui RPC"><RotateCcw size={16} /></button>
+                            <button type="button" disabled style={unavailableActionStyle} title="Indisponível: o motivo não é retornado pelo backend"><Eye size={16} /></button>
                           </>
                         )}
                         {nfse.status === 'Cancelada' && (
-                          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }} title="Ver Detalhes"><Eye size={16} /></button>
+                          <button type="button" disabled style={unavailableActionStyle} title="Indisponível: detalhes fiscais ainda não possuem serviço"><Eye size={16} /></button>
                         )}
                       </div>
                     </td>
                   </tr>
                 )
               })}
-              {!nfseQuery.isLoading && filteredNfse.length === 0 && (
+              {!nfseQuery.isLoading && !nfseQuery.isError && filteredNfse.length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
                     Nenhuma NFS-e encontrada.

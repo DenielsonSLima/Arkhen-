@@ -33,6 +33,10 @@ export interface ResultadoRescisao {
   feriasVencidas: number; adicionalFeriasVencidas: number; avisoPrevio: number;
   avisoPrevioDesconto: number; multaFGTS: number; totalBruto: number; inssRescisao: number;
   irrfRescisao: number; totalDescontos: number; totalLiquido: number;
+  avosDecimoTerceiro?: number; avosFerias?: number; avisoPrevioDias?: number;
+  dataProjetadaAviso?: string; inssSaldoSalario?: number; inssDecimoTerceiro?: number;
+  irrfSaldoSalario?: number; irrfDecimoTerceiro?: number; fgtsRescisorio?: number;
+  baseMultaFGTS?: number; totalComFgts?: number;
 }
 
 export interface ResultadoProLabore { valorProLabore: number; inss: number; irrf: number; liquido: number; cpp: number; custoEmpresa: number; }

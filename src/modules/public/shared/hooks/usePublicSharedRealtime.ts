@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { getShareIdFromPath } from '../publicSharedDocumentHelpers';
 import { publicSharedDocumentKeys } from '../queries/usePublicSharedDocumentQuery';
 
@@ -16,7 +17,7 @@ export const usePublicSharedRealtime = () => {
     };
 
     const channel = supabase
-      .channel(`public-share-${shareId}`)
+      .channel(createRealtimeChannelName(`public-share-${shareId}`))
       .on(
         'postgres_changes',
         {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { invalidateDocumentosQueries } from '../queries/useDocumentosQueries';
 import type { DocumentScope } from '../services/documentosService';
 
@@ -38,7 +39,7 @@ export const useDocumentosRealtime = (enabled = true) => {
     setError(null);
 
     const channel = supabase
-      .channel('documentos-realtime')
+      .channel(createRealtimeChannelName('documentos-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, (payload) => {
         const row = getDocumentosRealtimeRow(payload);
         invalidateDocumentosQueries(queryClient, {
@@ -74,7 +75,7 @@ export const useDocumentosRealtime = (enabled = true) => {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 

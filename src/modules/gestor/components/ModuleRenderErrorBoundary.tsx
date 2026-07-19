@@ -29,7 +29,7 @@ export class ModuleRenderErrorBoundary extends React.Component<
       hasError: true,
       message: isChunkError 
         ? 'Uma nova versão do sistema está disponível. O sistema precisa ser atualizado.'
-        : message || 'Erro ao renderizar este módulo.',
+        : 'O módulo encontrou uma falha temporária. Tente novamente ou volte para o início.',
       isChunkError
     };
   }
@@ -61,6 +61,15 @@ export class ModuleRenderErrorBoundary extends React.Component<
     window.location.reload();
   };
 
+  handleRetry = () => {
+    this.setState({ hasError: false, message: '', isChunkError: false });
+  };
+
+  handleReset = () => {
+    this.setState({ hasError: false, message: '', isChunkError: false });
+    this.props.onReset();
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -85,15 +94,15 @@ export class ModuleRenderErrorBoundary extends React.Component<
               <>
                 <button
                   type="button"
-                  onClick={this.props.onReset}
+                  onClick={this.handleRetry}
                   className="btn-save-settings"
                   style={{ padding: '10px 20px', fontWeight: 600 }}
                 >
-                  Voltar para Início
+                  Tentar novamente
                 </button>
                 <button
                   type="button"
-                  onClick={this.handleReload}
+                  onClick={this.handleReset}
                   className="btn-save-settings"
                   style={{ 
                     padding: '10px 20px', 
@@ -103,7 +112,7 @@ export class ModuleRenderErrorBoundary extends React.Component<
                     color: '#334155' 
                   }}
                 >
-                  Recarregar Página
+                  Voltar para Início
                 </button>
               </>
             )}

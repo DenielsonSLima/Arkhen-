@@ -235,7 +235,15 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
                   </span>
                 )}
               </button>
-              <button type="button" className="sidebar-open-tab-btn menu-open-tab-btn" title="Abrir em nova aba" onClick={(event) => onOpenTab(event, item.id)}>
+              <button
+                type="button"
+                className="sidebar-open-tab-btn menu-open-tab-btn"
+                title="Abrir em nova aba"
+                onClick={(event) => onOpenTab(
+                  event,
+                  item.id === 'parametrizacao' ? 'parametrizacao-regimes' : item.id,
+                )}
+              >
                 <Plus size={14} />
               </button>
             </>

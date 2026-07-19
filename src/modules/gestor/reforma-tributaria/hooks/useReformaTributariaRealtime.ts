@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { reformaTributariaKeys } from '../queries/reformaTributariaQueries';
 
 const TABLES = [
@@ -13,10 +14,7 @@ const TABLES = [
 export const useReformaTributariaRealtime = () => {
   const queryClient = useQueryClient();
   useEffect(() => {
-    const channelId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    let channel = supabase.channel(`reforma-tributaria-realtime-${channelId}`);
+    let channel = supabase.channel(createRealtimeChannelName('reforma-tributaria-realtime'));
     TABLES.forEach((table) => {
       channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
         queryClient.invalidateQueries({ queryKey: reformaTributariaKeys.all });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import { InicioPage } from '../inicio/InicioPage';
 import { RegimesTributariosPage } from '../parametrizacao/regimes/RegimesTributariosPage';
@@ -29,6 +29,7 @@ import { RelatoriosPage } from '../relatorios/RelatoriosPage';
 import { ConfiguracoesPage } from '../configuracoes/ConfiguracoesPage';
 import { GuiaAjudaPage } from '../guia-ajuda/GuiaAjudaPage';
 import { ReformaTributariaPage } from '../reforma-tributaria/ReformaTributariaPage';
+import { resolveFinanceiroInitialTab } from './gestorModuleContext';
 
 const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage')
   .then((module) => ({ default: module.DocumentosPage })));
@@ -37,7 +38,6 @@ type GestorModuleContentProps = {
   id: string;
   workspaceId?: string;
   initialContext?: InternalTabContext;
-  activeModuleId: string;
   updateTabContext: (tabId: string, context: InternalTabContext) => void;
   onModuleContextChange: (moduleId: string, context: InternalTabContext) => void;
   onInitialReady?: () => void;
@@ -47,15 +47,14 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
   id,
   workspaceId = id,
   initialContext,
-  activeModuleId,
   updateTabContext,
   onModuleContextChange,
   onInitialReady,
 }) => {
-  const onContextChange = (context: InternalTabContext) => {
+  const onContextChange = useCallback((context: InternalTabContext) => {
     if (workspaceId.includes('__')) updateTabContext(workspaceId, context);
     else onModuleContextChange(id, context);
-  };
+  }, [id, onModuleContextChange, updateTabContext, workspaceId]);
 
   switch (id) {
     case 'inicio': return <InicioPage onInitialReady={onInitialReady} />;
@@ -150,10 +149,8 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
     case 'financeiro-transferencias':
     case 'financeiro-creditos':
     case 'financeiro-debitos': {
-      const subTab = activeModuleId.startsWith('financeiro-')
-        ? activeModuleId.replace('financeiro-', '')
-        : undefined;
-      return <FinanceiroPage initialTab={subTab} />;
+      const subTab = resolveFinanceiroInitialTab(id, initialContext);
+      return <FinanceiroPage initialTab={subTab} onViewContextChange={onContextChange} />;
     }
     case 'relatorios': return <RelatoriosPage />;
     case 'configuracoes': return <ConfiguracoesPage />;

@@ -70,7 +70,8 @@ export const buildLegacyPdfSections = (abaAtiva: AbaCalculo, data: PdfData): Sim
           moneyRow('Férias vencidas', r.feriasVencidas),
           moneyRow('1/3 sobre férias vencidas', r.adicionalFeriasVencidas),
           moneyRow('Aviso prévio indenizado', r.avisoPrevio),
-          moneyRow('Multa FGTS', r.multaFGTS),
+          moneyRow('Multa FGTS (conta vinculada)', r.multaFGTS),
+          moneyRow('FGTS rescisório estimado', r.fgtsRescisorio),
           moneyRow('INSS estimado', r.inssRescisao),
           moneyRow('IRRF estimado', r.irrfRescisao),
           moneyRow('Aviso prévio descontado', r.avisoPrevioDesconto),
@@ -78,7 +79,7 @@ export const buildLegacyPdfSections = (abaAtiva: AbaCalculo, data: PdfData): Sim
         section('Resumo', [
           moneyRow('Total bruto', r.totalBruto),
           moneyRow('Total de descontos', r.totalDescontos),
-          moneyRow('Total líquido estimado', r.totalLiquido),
+          moneyRow('Líquido estimado das verbas do TRCT', r.totalLiquido),
         ]),
       ];
     }
@@ -128,9 +129,9 @@ export const buildLegacyPdfSections = (abaAtiva: AbaCalculo, data: PdfData): Sim
           moneyRow('Provisão de 13º', r.provisao13),
           moneyRow('Provisão de férias', r.provisaoFerias),
           moneyRow('1/3 de férias provisionado', r.provisaoTerco),
-          moneyRow('FGTS acumulado', r.fgtsAcumulado),
+          moneyRow('FGTS histórico estimado', r.fgtsAcumulado),
           moneyRow('Multa FGTS projetada', r.multaFgtsProjetada),
-          moneyRow('Custo total acumulado', r.custoTotalAcumulado),
+          moneyRow('Provisões correntes + FGTS estimado', r.custoTotalAcumulado),
         ]),
       ];
     case 'encargos-trabalhistas':
@@ -171,7 +172,7 @@ export const buildLegacyPdfSections = (abaAtiva: AbaCalculo, data: PdfData): Sim
       return [section('Cenário tributário', [
         row('Faturamento anual', moneyInput(p.faturamentoAnual)), row('Compras / insumos', moneyInput(p.comprasInsumosAnual)),
         row('Folha anual', moneyInput(p.folhaAnual)), row('Margem de lucro', `${p.margemLucro}%`), moneyRow('Simples Nacional', r.simplesNacional),
-        moneyRow('Lucro Presumido', r.lucroPresumido), moneyRow('Lucro Real', r.lucroReal), row('Melhor opção estimada', r.melhorOpcao), row('Análise', r.melhorOpcaoDesc),
+        moneyRow('Lucro Presumido', r.lucroPresumido), moneyRow('Lucro Real', r.lucroReal), row('Conclusão da triagem', r.melhorOpcao), row('Limitações', r.melhorOpcaoDesc),
         ...(r.alertas || []).map((alerta: string, index: number) => row(`Alerta ${index + 1}`, alerta)),
       ])];
     case 'simulacao-imposto':

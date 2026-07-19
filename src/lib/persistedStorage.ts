@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { createRealtimeChannelName } from './realtimeChannel';
 
 type CachedStorage = Map<string, string>;
 
@@ -45,9 +46,11 @@ type Listener = (key: string) => void;
 
 const cache: CachedStorage = new Map();
 const listeners = new Set<Listener>();
+const dirtyKeys = new Set<string>();
 let initPromise: Promise<void> | null = null;
 let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
 let currentContext: StorageContext | null = null;
+let contextGeneration = 0;
 
 const legacyPrefixes = [
   'contabil_calculator_prefs_',
@@ -129,11 +132,11 @@ const getContext = async (): Promise<StorageContext | null> => {
   }
 };
 
-const persistToSupabase = async (key: string, value: string): Promise<void> => {
+const persistToSupabase = async (key: string, value: string): Promise<boolean> => {
   const context = await getContext();
-  if (!context) return;
+  if (!context) return false;
   try {
-    await supabase.from(STORAGE_TABLE).upsert(
+    const { error } = await supabase.from(STORAGE_TABLE).upsert(
       {
         empresa_id: context.empresa_id,
         user_id: context.user_id,
@@ -144,34 +147,48 @@ const persistToSupabase = async (key: string, value: string): Promise<void> => {
       },
       { onConflict: 'empresa_id,user_id,modulo,chave' },
     );
-  } catch {
-    // ignore
+    if (error) {
+      console.error('[persistedStorage] Falha ao persistir preferência:', error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[persistedStorage] Falha ao persistir preferência:', error);
+    return false;
   }
 };
 
-const removeFromSupabase = async (key: string): Promise<void> => {
+const removeFromSupabase = async (key: string): Promise<boolean> => {
   const context = await getContext();
-  if (!context) return;
+  if (!context) return false;
   try {
-    await supabase
+    const { error } = await supabase
       .from(STORAGE_TABLE)
       .delete()
       .eq('empresa_id', context.empresa_id)
       .eq('user_id', context.user_id)
       .eq('modulo', STORAGE_MODULE)
       .eq('chave', key);
-  } catch {
-    // ignore
+    if (error) {
+      console.error('[persistedStorage] Falha ao remover preferência:', error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[persistedStorage] Falha ao remover preferência:', error);
+    return false;
   }
 };
 
 const bootstrap = async () => {
+  const generation = contextGeneration;
   const legacyKeys = getBrowserLegacyKeys();
   hydrateFromLegacy(legacyKeys);
 
   const context = await getContext();
-  if (!context) return;
+  if (!context || generation !== contextGeneration) return;
   currentContext = context;
+  const changedKeys = new Set<string>();
 
   const { data, error } = await supabase
     .from(STORAGE_TABLE)
@@ -184,6 +201,7 @@ const bootstrap = async () => {
     for (const row of persisted) {
       const parsed = normalizeValue(row.valor);
       if (parsed === null) continue;
+      if (cache.get(row.chave) !== parsed) changedKeys.add(row.chave);
       cache.set(row.chave, parsed);
     }
   }
@@ -193,19 +211,40 @@ const bootstrap = async () => {
     const remote = cache.get(key);
     if (legacy !== null && remote === undefined) {
       cache.set(key, legacy);
-      await persistToSupabase(key, legacy);
+      if (await persistToSupabase(key, legacy)) dirtyKeys.delete(key);
     }
     if (legacy !== null) {
       window.localStorage.removeItem(key);
     }
   }
+
+  if (generation !== contextGeneration) return;
+  changedKeys.forEach(notify);
 };
+
+const resetContext = () => {
+  contextGeneration += 1;
+  initPromise = null;
+  currentContext = null;
+  dirtyKeys.clear();
+  const changedKeys = [...cache.keys()];
+  cache.clear();
+  const channel = realtimeChannel;
+  realtimeChannel = null;
+  if (channel) void supabase.removeChannel(channel);
+  changedKeys.forEach(notify);
+};
+
+supabase.auth.onAuthStateChange((event) => {
+  if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'USER_UPDATED') return;
+  window.setTimeout(resetContext, 0);
+});
 
 const ensureInitialized = () => {
   if (initPromise) return initPromise;
   initPromise = bootstrap().then(() => {
     if (!currentContext || realtimeChannel) return;
-    realtimeChannel = supabase.channel(`app-storage-${currentContext.user_id}-${currentContext.empresa_id}`);
+    realtimeChannel = supabase.channel(createRealtimeChannelName('app-storage'));
     realtimeChannel
       .on(
         'postgres_changes',
@@ -213,26 +252,35 @@ const ensureInitialized = () => {
           event: '*',
           schema: 'public',
           table: STORAGE_TABLE,
-          filter: `empresa_id=eq.${currentContext.empresa_id},user_id=eq.${currentContext.user_id}`,
+          // Realtime aceita um filtro por assinatura. O usuário continua validado
+          // no callback e pelas políticas RLS da tabela.
+          filter: `empresa_id=eq.${currentContext.empresa_id}`,
         },
         (payload) => {
           const row = (payload.new as RawPreferenceRow | null) || (payload.old as RawPreferenceRow | null);
           if (!row || row.user_id !== currentContext?.user_id || row.modulo !== STORAGE_MODULE) return;
 
           if (payload.eventType === 'DELETE') {
+            if (!cache.has(row.chave)) return;
             cache.delete(row.chave);
           } else {
             const parsed = normalizeValue(row.valor);
             if (parsed === null) {
+              if (!cache.has(row.chave)) return;
               cache.delete(row.chave);
             } else {
+              if (cache.get(row.chave) === parsed) return;
               cache.set(row.chave, parsed);
             }
           }
           notify(row.chave);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[persistedStorage] Realtime indisponível: ${status}`);
+        }
+      });
   });
   return initPromise;
 };
@@ -248,7 +296,9 @@ export const persistedStorage = {
 
   setItem(key: string, value: string) {
     const normalized = String(value);
+    if (cache.get(key) === normalized && !dirtyKeys.has(key)) return;
     cache.set(key, normalized);
+    dirtyKeys.add(key);
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(key);
@@ -256,7 +306,9 @@ export const persistedStorage = {
         // ignore
       }
       notify(key);
-      void persistToSupabase(key, normalized);
+      void persistToSupabase(key, normalized).then((success) => {
+        if (success && cache.get(key) === normalized) dirtyKeys.delete(key);
+      });
     }
   },
 

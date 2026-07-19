@@ -230,8 +230,14 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
         )}
         {resultado.multaFGTS > 0 && (
           <div className="resultado-row azul">
-            <span className="r-label">Multa FGTS (40%)</span>
+            <span className="r-label">Multa FGTS (conta vinculada)</span>
             <span className="r-valor">{formatCurrency(resultado.multaFGTS)}</span>
+          </div>
+        )}
+        {(resultado.fgtsRescisorio ?? 0) > 0 && (
+          <div className="resultado-row azul">
+            <span className="r-label">FGTS rescisório estimado</span>
+            <span className="r-valor">{formatCurrency(resultado.fgtsRescisorio ?? 0)}</span>
           </div>
         )}
         <div className="resultado-row">
@@ -253,9 +259,14 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
           <span className="r-valor">- {formatCurrency(resultado.irrfRescisao)}</span>
         </div>
         <div className="resultado-row destaque verde">
-          <span className="r-label">Total Líquido a Receber</span>
+          <span className="r-label">Líquido das verbas do TRCT</span>
           <span className="r-valor">{formatCurrency(resultado.totalLiquido)}</span>
         </div>
+        {resultado.multaFGTS > 0 && (
+          <small className="rescisao-help-text">
+            A multa do FGTS não integra este líquido: ela é recolhida na conta vinculada do trabalhador.
+          </small>
+        )}
       </div>
     </div>
   );

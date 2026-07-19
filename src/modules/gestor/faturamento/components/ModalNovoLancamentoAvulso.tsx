@@ -37,6 +37,7 @@ import {
   getCobrancaPaymentLink,
   getPublicCobrancaLink,
 } from '../cobrancas/utils/cobrancaLinks';
+import { useManagedTimeout } from '../hooks/useManagedTimeout';
 
 interface ModalNovoLancamentoAvulsoProps {
   isOpen: boolean;
@@ -72,6 +73,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [generatedCobranca, setGeneratedCobranca] = useState<CobrancaFinanceira | null>(null);
   const [copyStatus, setCopyStatus] = useState('');
+  const schedule = useManagedTimeout();
 
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value: string) => {
@@ -120,10 +122,10 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
     try {
       await copyTextToClipboard(content);
       setCopyStatus(message);
-      window.setTimeout(() => setCopyStatus(''), 1800);
+      schedule(() => setCopyStatus(''), 1800);
     } catch {
       setCopyStatus('Não foi possível copiar automaticamente.');
-      window.setTimeout(() => setCopyStatus(''), 2600);
+      schedule(() => setCopyStatus(''), 2600);
     }
   };
 

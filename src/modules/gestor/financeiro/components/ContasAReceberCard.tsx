@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Clipboard, ExternalLink } from 'lucide-react';
 import type { CobrancaFinanceira } from '../services/financeiroService';
 
@@ -55,18 +55,32 @@ export const ContasAReceberCard: React.FC<ContasAReceberCardProps> = ({
   isManualSettlementLoading,
 }) => {
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overdue = isOverdue(item, hoje);
   const statusLabel = statusToLabel(item.status);
   const statusClass = getStatusClass(item, hoje);
   const categoryLabel = categoria || item.categoria || 'Faturamento';
   const paymentLink = paymentLinkFor(item);
-  const canSettle = item.status === 'Pendente' || item.status === 'Vencido' || overdue;
+  const canSettle = item.bankProvider !== 'inter'
+    && (item.status === 'Pendente' || item.status === 'Vencido' || overdue);
+
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
 
   const handleCopy = async () => {
     if (!paymentLink) return;
-    await navigator.clipboard.writeText(paymentLink);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(paymentLink);
+      setCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => {
+        copyTimerRef.current = null;
+        setCopied(false);
+      }, 1600);
+    } catch (error) {
+      console.warn('[Financeiro] Não foi possível copiar o link de pagamento.', error);
+    }
   };
 
   return (
@@ -129,6 +143,12 @@ export const ContasAReceberCard: React.FC<ContasAReceberCardProps> = ({
             >
               <CheckCircle2 size={15} />
               <span>Baixa</span>
+            </button>
+          )}
+          {item.bankProvider === 'inter' && (
+            <button type="button" disabled title="Baixa manual do Banco Inter ainda não possui fluxo de cancelamento e conciliação">
+              <CheckCircle2 size={15} />
+              <span>Baixa indisponível</span>
             </button>
           )}
         </div>

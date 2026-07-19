@@ -77,7 +77,7 @@ export const SimuladorTempoEmpresa: React.FC<Props> = ({
       </div>
 
       <div className="resultado-row">
-        <span className="r-label">FGTS Mensal Acumulado Total</span>
+        <span className="r-label">FGTS histórico estimado (sem extrato)</span>
         <span className="r-valor">{formatCurrency(resultado.fgtsAcumulado)}</span>
       </div>
 
@@ -87,7 +87,7 @@ export const SimuladorTempoEmpresa: React.FC<Props> = ({
       </div>
 
       <div className="resultado-row destaque verde" style={{ marginTop: '16px' }}>
-        <span className="r-label">Passivo Total Estimado</span>
+        <span className="r-label">Provisões correntes + FGTS estimado</span>
         <span className="r-valor">{formatCurrency(resultado.custoTotalAcumulado)}</span>
       </div>
     </div>

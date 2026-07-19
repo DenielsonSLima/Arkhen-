@@ -33,11 +33,20 @@ let state: InternalTabsState = {
 };
 
 const hydrateFromStorage = (raw: string | null) => {
-  if (!raw) return;
+  if (!raw) {
+    if (state.tabs.length === 0 && state.activeTabId === 'inicio') return false;
+    state = {
+      tabs: [],
+      activeTabId: 'inicio',
+      persistEnabled: state.persistEnabled,
+      notice: null,
+    };
+    return true;
+  }
 
   try {
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return;
+    if (!parsed || typeof parsed !== 'object') return false;
 
     const nextState = { ...state };
     nextState.persistEnabled = parsed.persistEnabled !== false;
@@ -79,16 +88,31 @@ const hydrateFromStorage = (raw: string | null) => {
       nextState.activeTabId = 'inicio';
     }
 
+    const currentSnapshot = JSON.stringify({
+      tabs: state.tabs,
+      activeTabId: state.activeTabId,
+      persistEnabled: state.persistEnabled,
+    });
+    const nextSnapshot = JSON.stringify({
+      tabs: nextState.tabs,
+      activeTabId: nextState.activeTabId,
+      persistEnabled: nextState.persistEnabled,
+    });
+    if (currentSnapshot === nextSnapshot) return false;
+
     state = nextState;
+    return true;
   } catch (e) {
     console.error('Erro ao ler estado das abas persistidas:', e);
+    return false;
   }
 };
 
 const listeners = new Set<() => void>();
 
 const loadFromStorage = () => {
-  hydrateFromStorage(persistedStorage.getItem(STORAGE_KEY));
+  const changed = hydrateFromStorage(persistedStorage.getItem(STORAGE_KEY));
+  if (!changed) return;
   listeners.forEach((listener) => {
     try {
       listener();
@@ -111,7 +135,9 @@ function notify() {
 }
 
 function setState(updater: (current: InternalTabsState) => InternalTabsState) {
-  state = updater(state);
+  const nextState = updater(state);
+  if (Object.is(nextState, state)) return;
+  state = nextState;
   notify();
 }
 

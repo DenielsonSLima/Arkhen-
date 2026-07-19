@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Search, ShieldAlert, CheckCircle, ArrowUpCircle, ArrowDownCircle, RefreshCw, PlusCircle, MinusCircle, Plus, ChevronDown } from 'lucide-react';
-import type { LancamentoFinanceiro } from '../services/financeiroService';
+import type { LancamentoFinanceiro, TransferenciaFinanceiraInput } from '../services/financeiroService';
 import './LancamentosTab.css';
 import { AddOutrosCreditosModal } from './AddOutrosCreditosModal';
 import { AddOutrosDebitosModal } from './AddOutrosDebitosModal';
 import { AddTransferenciaModal } from './AddTransferenciaModal';
 
 type FiltroTipo = 'todos' | 'creditos' | 'debitos' | 'transferencias';
+const ITEMS_PER_PAGE = 50;
 
 type LancamentosTabProps = {
   initialFilter?: string;
@@ -15,6 +16,7 @@ type LancamentosTabProps = {
     LancamentoFinanceiro,
     'tipo' | 'origem' | 'descricao' | 'categoria' | 'valor' | 'dataCompetencia' | 'status'
   > & Partial<Pick<LancamentoFinanceiro, 'contaBancariaId' | 'clienteEmpresaId' | 'dataPagamento' | 'referenciaId' | 'metadados'>>) => Promise<void>;
+  onTransferirEntreContas: (dados: TransferenciaFinanceiraInput) => Promise<void>;
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
 };
@@ -23,6 +25,7 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
   initialFilter,
   lancamentos,
   onCreateLancamento,
+  onTransferirEntreContas,
   onFormatCurrency,
   onFormatDate,
 }) => {
@@ -35,6 +38,7 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
   const [showTransferenciaModal, setShowTransferenciaModal] = useState(false);
   const [showDropdownAction, setShowDropdownAction] = useState(false);
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Sync initial filter from sidebar selection
   useEffect(() => {
@@ -119,6 +123,20 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
       return matchesSearch && isAfterStart && isBeforeEnd && matchesType;
     });
   }, [lancamentos, search, startDate, endDate, selectedType]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, startDate, endDate, selectedType]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginatedItems = useMemo(
+    () => filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE),
+    [filtered, currentPage],
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   // Type badge helper
   const getEntryBadge = (item: LancamentoFinanceiro) => {
@@ -256,7 +274,7 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
       </div>
 
       {/* Modals for launching entries */}
-      <AddOutrosCreditosModal
+      {showCreditoModal && <AddOutrosCreditosModal
         isOpen={showCreditoModal}
         onClose={() => setShowCreditoModal(false)}
         isLoading={isSubmitLoading}
@@ -281,9 +299,9 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
             setIsSubmitLoading(false);
           }
         }}
-      />
+      />}
 
-      <AddOutrosDebitosModal
+      {showDebitoModal && <AddOutrosDebitosModal
         isOpen={showDebitoModal}
         onClose={() => setShowDebitoModal(false)}
         isLoading={isSubmitLoading}
@@ -308,39 +326,22 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
             setIsSubmitLoading(false);
           }
         }}
-      />
+      />}
 
-      <AddTransferenciaModal
+      {showTransferenciaModal && <AddTransferenciaModal
         isOpen={showTransferenciaModal}
         onClose={() => setShowTransferenciaModal(false)}
         isLoading={isSubmitLoading}
         onSubmit={async (data) => {
           setIsSubmitLoading(true);
           try {
-            // 1. Transfer out from origin account
-            await onCreateLancamento({
-              tipo: 'transferencia_saida',
-              origem: 'transferencia',
-              descricao: `${data.descricao} (Para ${data.nomeContaDestino})`,
-              categoria: 'Transferência',
+            await onTransferirEntreContas({
+              idempotencyKey: data.idempotencyKey,
+              contaOrigemId: data.contaOrigemId,
+              contaDestinoId: data.contaDestinoId,
               valor: data.valor,
-              dataCompetencia: data.data,
-              dataPagamento: data.data,
-              status: 'Pago',
-              contaBancariaId: data.contaOrigemId,
-            });
-
-            // 2. Transfer in to destination account
-            await onCreateLancamento({
-              tipo: 'transferencia_entrada',
-              origem: 'transferencia',
-              descricao: `${data.descricao} (De ${data.nomeContaOrigem})`,
-              categoria: 'Transferência',
-              valor: data.valor,
-              dataCompetencia: data.data,
-              dataPagamento: data.data,
-              status: 'Pago',
-              contaBancariaId: data.contaDestinoId,
+              data: data.data,
+              descricao: data.descricao,
             });
 
             setShowTransferenciaModal(false);
@@ -350,7 +351,7 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
             setIsSubmitLoading(false);
           }
         }}
-      />
+      />}
 
       {/* Table View */}
       {filtered.length === 0 ? (
@@ -373,7 +374,7 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item) => {
+              {paginatedItems.map((item) => {
                 const badge = getEntryBadge(item);
                 const meta = item.metadados || {};
                 const bankInfo = item.origem === 'transferencia'
@@ -410,6 +411,23 @@ export const LancamentosTab: React.FC<LancamentosTabProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {filtered.length > ITEMS_PER_PAGE && (
+        <div className="financeiro-pagination-bar">
+          <span>
+            Exibindo {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length}
+          </span>
+          <div>
+            <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>
+              Anterior
+            </button>
+            <span>Página {currentPage} de {totalPages}</span>
+            <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage((page) => page + 1)}>
+              Próxima
+            </button>
+          </div>
         </div>
       )}
     </div>

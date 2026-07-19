@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { conformidadeKeys } from '../queries/conformidadeQueries';
 
 export const useConformidadeRealtime = (enabled = true) => {
@@ -14,7 +15,7 @@ export const useConformidadeRealtime = (enabled = true) => {
     };
 
     const channel = supabase
-      .channel('conformidade-realtime')
+      .channel(createRealtimeChannelName('conformidade-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
@@ -24,7 +25,7 @@ export const useConformidadeRealtime = (enabled = true) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [enabled, queryClient]);
 };

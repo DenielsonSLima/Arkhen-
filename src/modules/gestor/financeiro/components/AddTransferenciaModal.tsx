@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useContasBancariasQuery } from '../../configuracoes/contas-bancarias/queries/useContasBancariasQueries';
 import { CalendarDays, FileText, DollarSign, Landmark, Sparkles, X } from 'lucide-react';
+import { createRuntimeId } from '../../../../lib/realtimeChannel';
 import '../../faturamento/Faturamento.css';
 import './AddContasAPagarModal.css';
 
@@ -16,6 +17,7 @@ type AddTransferenciaModalProps = {
     nomeContaOrigem: string;
     nomeContaDestino: string;
     descricao: string;
+    idempotencyKey: string;
   }) => Promise<void>;
   isLoading: boolean;
 };
@@ -35,6 +37,8 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
   const [contaOrigemId, setContaOrigemId] = useState('');
   const [contaDestinoId, setContaDestinoId] = useState('');
   const [descricao, setDescricao] = useState('Transferência entre contas');
+  const [idempotencyKey] = useState(() => createRuntimeId('transfer'));
+  const [formError, setFormError] = useState('');
 
   // Clean form when opening
   useEffect(() => {
@@ -45,6 +49,7 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
       setContaOrigemId('');
       setContaDestinoId('');
       setDescricao('Transferência entre contas');
+      setFormError('');
     }
   }, [isOpen]);
 
@@ -65,16 +70,17 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (valor <= 0) {
-      alert('Favor preencher o valor da transferência.');
+      setFormError('Favor preencher o valor da transferência.');
       return;
     }
     if (!contaOrigemId || !contaDestinoId) {
-      alert('Selecione ambas as contas (origem e destino).');
+      setFormError('Selecione ambas as contas (origem e destino).');
       return;
     }
     if (contaOrigemId === contaDestinoId) {
-      alert('A conta de destino deve ser diferente da conta de origem.');
+      setFormError('A conta de destino deve ser diferente da conta de origem.');
       return;
     }
 
@@ -82,21 +88,25 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
     const contaDestino = contas.find((c) => c.id === contaDestinoId);
 
     if (!contaOrigem || !contaDestino) {
-      alert('Conta não localizada.');
+      setFormError('Conta não localizada.');
       return;
     }
 
-    await onSubmit({
-      data,
-      valor,
-      contaOrigemId,
-      contaDestinoId,
-      nomeContaOrigem: contaOrigem.banco,
-      nomeContaDestino: contaDestino.banco,
-      descricao: descricao.trim() || 'Transferência entre contas',
-    });
-
-    onClose();
+    try {
+      await onSubmit({
+        data,
+        valor,
+        contaOrigemId,
+        contaDestinoId,
+        nomeContaOrigem: contaOrigem.banco,
+        nomeContaDestino: contaDestino.banco,
+        descricao: descricao.trim() || 'Transferência entre contas',
+        idempotencyKey,
+      });
+      onClose();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Falha ao registrar transferência.');
+    }
   };
 
   const modalContent = (
@@ -204,6 +214,7 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
           </div>
 
           {/* Footer Actions */}
+          {formError && <div className="financeiro-form-error" role="alert" style={{ gridColumn: '1 / -1' }}>{formError}</div>}
           <div className="faturamento-modal-actions" style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: '1px solid #cbd5e1', paddingTop: '16px', background: 'transparent' }}>
             <button type="button" onClick={onClose} disabled={isLoading} style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#64748b', cursor: 'pointer', height: '40px', padding: '0 18px', borderRadius: '6px', fontWeight: 700 }}>
               Cancelar

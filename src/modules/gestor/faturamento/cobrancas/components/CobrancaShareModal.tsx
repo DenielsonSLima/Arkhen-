@@ -24,6 +24,7 @@ import {
   getCobrancaBankSlipLink,
   getCobrancaPaymentLink,
 } from '../utils/cobrancaLinks';
+import { useManagedTimeout } from '../../hooks/useManagedTimeout';
 
 interface CobrancaShareModalProps {
   cobranca: CobrancaFinanceira;
@@ -40,6 +41,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [copiedKey, setCopiedKey] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const schedule = useManagedTimeout();
   const paymentLink = getCobrancaPaymentLink(cobranca);
   const bankSlipLink = getCobrancaBankSlipLink(cobranca);
   const shareMessage = useMemo(() => buildCobrancaShareMessage(cobranca, cliente), [cobranca, cliente]);
@@ -47,7 +49,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
 
   const showFeedback = (type: FeedbackState['type'], message: string, timeout = 2000) => {
     setFeedback({ type, message });
-    window.setTimeout(() => setFeedback(null), timeout);
+    schedule(() => setFeedback(null), timeout);
   };
 
   const copyText = async (content: string, key: string, message: string) => {
@@ -56,7 +58,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
       await copyTextToClipboard(content);
       setCopiedKey(key);
       showFeedback('success', message);
-      window.setTimeout(() => setCopiedKey(''), 1800);
+      schedule(() => setCopiedKey(''), 1800);
     } catch {
       showFeedback('error', 'Não foi possível copiar automaticamente.', 3200);
     }
@@ -64,8 +66,12 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
 
   const handleShare = async () => {
     if (navigator.share) {
-      await navigator.share({ title: 'Cobrança Arkhen', text: shareMessage, url: paymentLink || undefined });
-      return;
+      try {
+        await navigator.share({ title: 'Cobrança Arkhen', text: shareMessage, url: paymentLink || undefined });
+        return;
+      } catch {
+        // Cancelamento/indisponibilidade do compartilhamento nativo usa cópia.
+      }
     }
     await copyText(shareMessage, 'message', 'Mensagem copiada para compartilhar.');
   };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
 import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
 import type { Company } from '../services/gestaoEmpresarialService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
@@ -41,14 +42,14 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   useEffect(() => {
     const channel = supabase
-      .channel('clientes-realtime')
+      .channel(createRealtimeChannelName('clientes-realtime'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
         queryClient.invalidateQueries({ queryKey: clientesKeys.all });
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
