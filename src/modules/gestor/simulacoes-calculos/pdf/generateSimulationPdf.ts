@@ -120,61 +120,69 @@ const drawPageHeader = (doc: JsPdfDocument, input: SimulationPdfInput, firstPage
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(NAVY);
-    doc.text(companyName.toUpperCase(), MARGIN_X, 15);
+    doc.text(companyName.toUpperCase(), MARGIN_X, 12);
     doc.setFontSize(8);
     doc.setTextColor(GOLD);
-    doc.text(input.title.toUpperCase(), PAGE_WIDTH - MARGIN_X, 15, { align: 'right' });
+    doc.text(input.title.toUpperCase(), PAGE_WIDTH - MARGIN_X, 12, { align: 'right' });
     doc.setDrawColor(GOLD);
     doc.setLineWidth(0.4);
-    doc.line(MARGIN_X, 20, PAGE_WIDTH - MARGIN_X, 20);
-    return 29;
+    doc.line(MARGIN_X, 16, PAGE_WIDTH - MARGIN_X, 16);
+    return 22;
   }
 
-  const hasLogo = safeAddImage(doc, input.company.logoDataUrl, MARGIN_X, 13, 24, 24);
-  const textX = hasLogo ? 45 : MARGIN_X;
+  const hasLogo = safeAddImage(doc, input.company.logoDataUrl, MARGIN_X, 10, 20, 20);
+  const textX = hasLogo ? 40 : MARGIN_X;
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(GOLD);
-  doc.text('ESCRITÓRIO EMISSOR', textX, 15);
-  doc.setFontSize(13);
+  doc.text('ESCRITÓRIO EMISSOR', textX, 13);
+
+  doc.setFontSize(11);
   doc.setTextColor(NAVY);
-  const companyLines = doc.splitTextToSize(companyName.toUpperCase(), 105) as string[];
-  doc.text(companyLines.slice(0, 2), textX, 22, { lineHeightFactor: 1.05 });
+  const companyLines = doc.splitTextToSize(companyName.toUpperCase(), 110) as string[];
+  doc.text(companyLines.slice(0, 2), textX, 18, { lineHeightFactor: 1.05 });
+  const companyHeight = (Math.min(companyLines.length, 2) - 1) * 4.5;
 
   doc.setFillColor('#f8fafc');
   doc.setDrawColor(LIGHT_LINE);
-  doc.roundedRect(166, 12, 28, 18, 2, 2, 'FD');
-  doc.setFontSize(6.5);
+  doc.roundedRect(168, 10, 26, 15, 1.5, 1.5, 'FD');
+  doc.setFontSize(6);
   doc.setTextColor(SLATE);
-  doc.text('EMITIDO EM', 180, 18, { align: 'center' });
-  doc.setFontSize(7.5);
+  doc.text('EMITIDO EM', 181, 14.5, { align: 'center' });
+  doc.setFontSize(7);
   doc.setTextColor(NAVY);
-  doc.text(formatGeneratedAt(input.generatedAt), 180, 23, { align: 'center', maxWidth: 24 });
+  doc.text(formatGeneratedAt(input.generatedAt), 181, 19.5, { align: 'center', maxWidth: 24 });
 
+  const infoY = 24 + companyHeight;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.2);
+  doc.setFontSize(7);
   doc.setTextColor(SLATE);
-  doc.text(`CNPJ: ${formatCnpj(input.company.cnpj)}`, textX, 37);
-  doc.text(`Telefone: ${input.company.telefone || 'Não informado'}`, 93, 37);
-  doc.text(`E-mail: ${input.company.email || 'Não informado'}`, 139, 37, { maxWidth: 55 });
+  doc.text(`CNPJ: ${formatCnpj(input.company.cnpj)}`, textX, infoY);
+  doc.text(`Telefone: ${input.company.telefone || 'Não informado'}`, 90, infoY);
+  doc.text(`E-mail: ${input.company.email || 'Não informado'}`, 135, infoY, { maxWidth: 55 });
+
   const address = [
     [input.company.endereco, input.company.numero].filter(Boolean).join(', '),
     [input.company.cidade, input.company.estado].filter(Boolean).join(' / '),
     input.company.cep ? `CEP: ${input.company.cep}` : '',
   ].filter(Boolean).join(' — ') || 'Endereço não informado';
-  doc.text(address, textX, 44, { maxWidth: PAGE_WIDTH - textX - MARGIN_X });
+  doc.text(address, textX, infoY + 4.5, { maxWidth: PAGE_WIDTH - textX - MARGIN_X });
 
+  const lineY = Math.max(32, infoY + 9);
   doc.setDrawColor(GOLD);
-  doc.setLineWidth(0.5);
-  doc.line(MARGIN_X, 50, PAGE_WIDTH - MARGIN_X, 50);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN_X, lineY, PAGE_WIDTH - MARGIN_X, lineY);
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setTextColor(NAVY);
-  doc.text('RELATÓRIO TÉCNICO DE SIMULAÇÃO', PAGE_WIDTH / 2, 61, { align: 'center' });
-  doc.setFontSize(9);
+  doc.text('RELATÓRIO TÉCNICO DE SIMULAÇÃO', PAGE_WIDTH / 2, lineY + 6.5, { align: 'center' });
+  doc.setFontSize(8.5);
   doc.setTextColor(GOLD);
-  doc.text(input.title.toUpperCase(), PAGE_WIDTH / 2, 68, { align: 'center' });
-  return 78;
+  doc.text(input.title.toUpperCase(), PAGE_WIDTH / 2, lineY + 11.5, { align: 'center' });
+
+  return lineY + 17;
 };
 
 const measureRow = (doc: JsPdfDocument, row: SimulationPdfRow) => {
