@@ -1,38 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { inicioService } from '../services/inicioService';
-import type { DashboardStats, AtividadeRecente, ObrigacaoAgendada, VencimentoAlerta } from '../services/inicioService';
+import { inicioKeys } from '../queries/inicioKeys';
 
 export const useInicio = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [atividades, setAtividades] = useState<AtividadeRecente[]>([]);
-  const [agenda, setAgenda] = useState<ObrigacaoAgendada[]>([]);
-  const [vencimentosProximos, setVencimentosProximos] = useState<VencimentoAlerta[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const dashboardQuery = useQuery({
+    queryKey: inicioKeys.dashboard(),
+    queryFn: () => inicioService.getDashboardData(),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const data = await inicioService.getDashboardData();
-        setStats(data.stats);
-        setAtividades(data.atividades);
-        setAgenda(data.agenda);
-        setVencimentosProximos(inicioService.getVencimentosProximos());
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadDashboard();
-  }, []);
+  const vencimentosQuery = useQuery({
+    queryKey: inicioKeys.vencimentos(),
+    queryFn: () => inicioService.getVencimentosProximos(),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+  });
 
   return {
-    stats,
-    atividades,
-    agenda,
-    vencimentosProximos,
-    isLoading,
+    stats: dashboardQuery.data?.stats ?? null,
+    atividades: dashboardQuery.data?.atividades ?? [],
+    agenda: dashboardQuery.data?.agenda ?? [],
+    vencimentosProximos: vencimentosQuery.data ?? [],
+    isLoading: dashboardQuery.isLoading || vencimentosQuery.isLoading,
   };
 };
-

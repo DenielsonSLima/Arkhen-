@@ -125,7 +125,7 @@
 }
 
 .inicio-motivation-card__eyebrow {
-  color: #d4d4d4;
+  color: #ffffff;
   display: block;
   font-size: 0.72rem;
   font-weight: 800;
@@ -135,26 +135,25 @@
 }
 
 .inicio-motivation-card blockquote {
-  color: #f5ecd3;
+  color: #ffffff;
   font-size: 1.05rem;
   font-style: normal;
   font-weight: 700;
   line-height: 1.45;
   margin: 0;
   max-width: 92ch;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   text-wrap: pretty;
 }
 
 .inicio-motivation-card cite {
-  background: linear-gradient(90deg, #e5ba68 0%, #b27c2d 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #ffffff;
   display: block;
   font-size: 0.82rem;
   font-style: normal;
   font-weight: 800;
   margin: 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.72);
 }
 
 .inicio-motivation-card__content::before,
