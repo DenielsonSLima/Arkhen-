@@ -1,6 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { ContratoFinanceiro, CobrancaFinanceira, DashboardStats, LancamentoFinanceiro } from '../services/financeiroService';
+import type {
+  ContasPagarParceladasInput,
+  ContratoFinanceiro,
+  CobrancaFinanceira,
+  DashboardStats,
+  LancamentoFinanceiro,
+  TransferenciaFinanceiraInput,
+} from '../services/financeiroService';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import {
@@ -11,12 +18,14 @@ import {
   useBaixarManualCobrancaCustomMutation,
   useContratosFinanceirosQuery,
   useCreateCobrancaFinanceiraMutation,
+  useCriarContasPagarParceladasMutation,
   useDeleteContratoFinanceiroMutation,
   useEmitirNfseFinanceiraMutation,
   useFinanceiroDashboardQuery,
   useLancamentosFinanceirosQuery,
   useSaveLancamentoFinanceiroMutation,
   useSaveContratoFinanceiroMutation,
+  useTransferirEntreContasFinanceiroMutation,
 } from '../queries/useFinanceiroQueries';
 
 const emptyStats: DashboardStats = {
@@ -41,14 +50,24 @@ const emptyCobrancas: CobrancaFinanceira[] = [];
 const emptyLancamentos: LancamentoFinanceiro[] = [];
 const emptyCompanies: Company[] = [];
 
-export const useFinanceiro = () => {
-  const contratosQuery = useContratosFinanceirosQuery();
-  const cobrancasQuery = useCobrancasFinanceirasQuery();
-  const lancamentosQuery = useLancamentosFinanceirosQuery();
-  const statsQuery = useFinanceiroDashboardQuery(6);
+export type FinanceiroView = 'caixa' | 'receber' | 'pagar' | 'lancamentos';
+
+export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
+  // A página permanece montada quando é usada como aba interna. Carregar todos
+  // os conjuntos de dados a cada ativação gerava cinco requests concorrentes e
+  // reabria observers que nem eram usados pela subaba visível.
+  const needsCobrancas = activeView === 'receber';
+  const needsLancamentos = activeView === 'pagar' || activeView === 'lancamentos';
+  const needsDashboard = activeView === 'caixa';
+  const contratosQuery = useContratosFinanceirosQuery({ enabled: false });
+  const cobrancasQuery = useCobrancasFinanceirasQuery({ enabled: needsCobrancas });
+  const lancamentosQuery = useLancamentosFinanceirosQuery({ enabled: needsLancamentos });
+  const statsQuery = useFinanceiroDashboardQuery(6, { enabled: needsDashboard });
   const companiesQuery = useQuery({
     queryKey: ['gestao-empresarial', 'companies'],
     queryFn: gestaoEmpresarialService.getCompanies,
+    enabled: needsCobrancas,
+    staleTime: 5 * 60_000,
   });
 
   const saveContratoMutation = useSaveContratoFinanceiroMutation();
@@ -60,19 +79,22 @@ export const useFinanceiro = () => {
   const baixarManualCobrancaCustomMutation = useBaixarManualCobrancaCustomMutation();
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const saveLancamentoMutation = useSaveLancamentoFinanceiroMutation();
+  const transferirEntreContasMutation = useTransferirEntreContasFinanceiroMutation();
+  const criarContasPagarParceladasMutation = useCriarContasPagarParceladasMutation();
 
   const contratos = contratosQuery.data || emptyContratos;
   const cobranças = cobrancasQuery.data || emptyCobrancas;
   const lancamentos = lancamentosQuery.data || emptyLancamentos;
   const companies = (companiesQuery.data || emptyCompanies) as Company[];
   const stats = statsQuery.data || emptyStats;
-  const loadError = [
-    contratosQuery.error,
-    cobrancasQuery.error,
-    lancamentosQuery.error,
-    statsQuery.error,
-    companiesQuery.error,
-  ].find((error): error is Error => error instanceof Error) || null;
+  const activeQueries = needsCobrancas
+    ? [cobrancasQuery, companiesQuery]
+    : needsLancamentos
+      ? [lancamentosQuery]
+      : [statsQuery];
+  const loadError = activeQueries
+    .map((query) => query.error)
+    .find((error): error is Error => error instanceof Error) || null;
 
   const [activeTab, setActiveTab] = useState<'contratos' | 'cobranças'>('cobranças');
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -91,16 +113,31 @@ export const useFinanceiro = () => {
   const [contractToDelete, setContractToDelete] = useState<ContratoFinanceiro | null>(null);
   const [showManualSettlementModal, setShowManualSettlementModal] = useState(false);
   const [settlementCobranca, setSettlementCobranca] = useState<CobrancaFinanceira | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const setTransientSuccess = (message: string, timeout = 3000) => {
+  const setTransientSuccess = useCallback((message: string, timeout = 3000) => {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
     setSuccessMsg(message);
-    setTimeout(() => setSuccessMsg(null), timeout);
-  };
+    successTimerRef.current = setTimeout(() => {
+      successTimerRef.current = null;
+      setSuccessMsg(null);
+    }, timeout);
+  }, []);
 
-  const setTransientError = (message: string) => {
+  const setTransientError = useCallback((message: string) => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     setErrorMsg(message);
-    setTimeout(() => setErrorMsg(null), 4000);
-  };
+    errorTimerRef.current = setTimeout(() => {
+      errorTimerRef.current = null;
+      setErrorMsg(null);
+    }, 4000);
+  }, []);
+
+  useEffect(() => () => {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+  }, []);
 
   const companyMap = useMemo(() => {
     const map = new Map<string, { nome: string; cnpj: string }>();
@@ -280,14 +317,36 @@ export const useFinanceiro = () => {
     }
   };
 
+  const handleTransferirEntreContas = async (dados: TransferenciaFinanceiraInput) => {
+    try {
+      await transferirEntreContasMutation.mutateAsync(dados);
+      setTransientSuccess('Transferência registrada com sucesso.');
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao transferir entre contas.');
+      throw err;
+    }
+  };
+
+  const handleCriarContasPagarParceladas = async (dados: ContasPagarParceladasInput) => {
+    try {
+      await criarContasPagarParceladasMutation.mutateAsync(dados);
+      setTransientSuccess('Parcelas registradas com sucesso.');
+    } catch (err) {
+      setTransientError(err instanceof Error ? err.message : 'Falha ao criar parcelas.');
+      throw err;
+    }
+  };
+
   const retryLoad = async () => {
-    await Promise.all([
-      contratosQuery.refetch(),
-      cobrancasQuery.refetch(),
-      lancamentosQuery.refetch(),
-      statsQuery.refetch(),
-      companiesQuery.refetch(),
-    ]);
+    if (needsCobrancas) {
+      await Promise.all([cobrancasQuery.refetch(), companiesQuery.refetch()]);
+      return;
+    }
+    if (needsLancamentos) {
+      await lancamentosQuery.refetch();
+      return;
+    }
+    await statsQuery.refetch();
   };
 
   return {
@@ -307,7 +366,7 @@ export const useFinanceiro = () => {
     retryLoad,
     activeTab,
     setActiveTab,
-    isLoading: contratosQuery.isLoading || cobrancasQuery.isLoading || lancamentosQuery.isLoading || statsQuery.isLoading || companiesQuery.isLoading,
+    isLoading: activeQueries.some((query) => query.isLoading),
     successMsg,
     errorMsg,
     viewMode,
@@ -349,5 +408,7 @@ export const useFinanceiro = () => {
     isCustomSettlementLoading: baixarManualCobrancaCustomMutation.isPending,
     handleCreateCobranca,
     handleCreateLancamento,
+    handleTransferirEntreContas,
+    handleCriarContasPagarParceladas,
   };
 };

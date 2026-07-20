@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, Edit2, Download, Trash2, FileText, Table2, CreditCard, Image as ImageIcon, Presentation, FileCode2 } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
 import { documentosService } from '../../documentos/services/documentosService';
+import { enqueueDocumentPreview } from '../services/documentPreviewQueue';
 
 interface DocumentGridViewProps {
   documents: CompanyDocument[];
@@ -58,15 +59,21 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
     loadedPdfPreviewIds.current = new Set(Object.keys(pdfPreviewUrls));
   }, [pdfPreviewUrls]);
 
-  const renderPdfFirstPage = async (url: string, docId: string) => {
+  const renderPdfFirstPage = useCallback(async (
+    url: string,
+    docId: string,
+    isCancelled: () => boolean,
+  ) => {
+    if (isCancelled()) return;
     if (loadedPdfPreviewIds.current.has(docId)) return;
     if (loadingPdfPreviewIds.current.has(docId)) return;
-    if (pdfPreviewUrls[docId]) return;
 
     loadingPdfPreviewIds.current.add(docId);
-    setPdfPreviewStatus((current) => (
-      current[docId] === 'ready' ? current : { ...current, [docId]: 'loading' }
-    ));
+    if (!isCancelled()) {
+      setPdfPreviewStatus((current) => (
+        current[docId] === 'ready' ? current : { ...current, [docId]: 'loading' }
+      ));
+    }
 
     try {
       const pdfjsLib = await import('pdfjs-dist');
@@ -74,6 +81,12 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
 
       const pdf = await pdfjsLib.getDocument({ url }).promise;
       const page = await pdf.getPage(1);
+
+      if (isCancelled()) {
+        page.cleanup();
+        await pdf.destroy();
+        return;
+      }
 
       const baseViewport = page.getViewport({ scale: 1 });
       const targetWidth = 180;
@@ -88,10 +101,11 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
       const context = canvas.getContext('2d');
 
       if (!context) {
-        setPdfPreviewStatus((current) => ({
-          ...current,
-          [docId]: 'error',
-        }));
+        if (!isCancelled()) {
+          setPdfPreviewStatus((current) => ({ ...current, [docId]: 'error' }));
+        }
+        page.cleanup();
+        await pdf.destroy();
         return;
       }
 
@@ -103,30 +117,24 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
         viewport,
       }).promise;
 
-      const imageSrc = canvas.toDataURL('image/png');
-      setPdfPreviewUrls((previous) => {
-        if (previous[docId]) return previous;
-        return {
-          ...previous,
-          [docId]: imageSrc,
-        };
-      });
-      setPdfPreviewStatus((current) => ({
-        ...current,
-        [docId]: 'ready',
-      }));
+      if (!isCancelled()) {
+        const imageSrc = canvas.toDataURL('image/png');
+        setPdfPreviewUrls((previous) => (
+          previous[docId] ? previous : { ...previous, [docId]: imageSrc }
+        ));
+        setPdfPreviewStatus((current) => ({ ...current, [docId]: 'ready' }));
+      }
 
       page.cleanup();
       await pdf.destroy();
     } catch {
-      setPdfPreviewStatus((current) => ({
-        ...current,
-        [docId]: 'error',
-      }));
+      if (!isCancelled()) {
+        setPdfPreviewStatus((current) => ({ ...current, [docId]: 'error' }));
+      }
     } finally {
       loadingPdfPreviewIds.current.delete(docId);
     }
-  };
+  }, []);
 
   useEffect(() => {
       const previewDocs = documents.filter((doc) => {
@@ -154,7 +162,11 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
             });
 
             if (doc.nome.split('.').pop()?.toLowerCase() === 'pdf' && !loadedPdfPreviewIds.current.has(doc.id)) {
-              void renderPdfFirstPage(accessUrl, doc.id);
+              void enqueueDocumentPreview(() => (
+                cancelled
+                  ? Promise.resolve()
+                  : renderPdfFirstPage(accessUrl, doc.id, () => cancelled)
+              ));
             }
           }
         } catch {
@@ -168,7 +180,7 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [documents]);
+  }, [documents, renderPdfFirstPage]);
 
 const getFileMeta = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || '';

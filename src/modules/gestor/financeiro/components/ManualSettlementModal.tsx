@@ -25,6 +25,7 @@ type ManualSettlementModalProps = {
     pagadorCnpj: string;
     dataVencimento: string;
     dataVencimentoFormatted: string;
+    integracaoExterna?: boolean;
   };
   onSubmit: (data: SettlementData) => Promise<void>;
   isLoading: boolean;
@@ -48,6 +49,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
   const [juros, setJuros] = useState(0);
   const [observacao, setObservacao] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const integracaoExterna = Boolean(cobranca?.integracaoExterna);
 
   useEffect(() => {
     if (cobranca) {
@@ -56,17 +58,19 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
       setJuros(0);
       setObservacao('');
       setBaixarParcial(false);
+      if (cobranca.integracaoExterna) setContaBancariaId('');
       setValidationError(null);
     }
   }, [cobranca]);
 
+  useEffect(() => {
+    if (isOpen && !integracaoExterna && !contaBancariaId && contas.length > 0) {
+      setContaBancariaId(contas[0].id);
+    }
+  }, [contaBancariaId, contas, integracaoExterna, isOpen]);
+
   if (!isOpen || !cobranca) {
     return null;
-  }
-
-  // Pre-fill default bank account if accounts exist
-  if (!contaBancariaId && contas.length > 0) {
-    setContaBancariaId(contas[0].id);
   }
 
   const formatCurrencyInput = (val: number) => {
@@ -109,6 +113,11 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
   return (
     <FormCard title="Registrar Baixa Manual" onClose={onClose} containerMaxWidth="620px">
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {integracaoExterna && (
+          <div role="status" className="financeiro-form-info">
+            Cobrança Asaas: a baixa será integral e só será confirmada após o provedor cancelar o pagamento aberto. Ajustes parciais e conciliação de conta ficam desabilitados.
+          </div>
+        )}
         {/* Ticket Header - Immersive Design */}
         <div className="manual-settlement-receipt-card">
           <div className="receipt-header-row">
@@ -167,7 +176,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
             <select 
               value={contaBancariaId} 
               onChange={(e) => setContaBancariaId(e.target.value)}
-              disabled={isLoadingContas}
+              disabled={isLoadingContas || integracaoExterna}
             >
               <option value="">Não registrar no saldo bancário</option>
               {contas.map((conta) => (
@@ -184,6 +193,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
                 type="checkbox"
                 id="baixarParcial"
                 checked={baixarParcial}
+                disabled={integracaoExterna}
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setBaixarParcial(checked);
@@ -193,7 +203,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
                     setJuros(0);
                   }
                 }}
-                style={{ width: 'auto', cursor: 'pointer' }}
+                style={{ width: 'auto', cursor: integracaoExterna ? 'not-allowed' : 'pointer' }}
               />
               <label htmlFor="baixarParcial" style={{ cursor: 'pointer', fontWeight: 600, color: '#334155' }}>
                 Baixa Parcial (Recebimento em pedaços)

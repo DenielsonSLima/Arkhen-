@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useFinanceiro } from './hooks/useFinanceiro';
 import { useFinanceiroRealtime } from './hooks/useFinanceiroRealtime';
+import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import { CaixaTab } from './components/CaixaTab';
 import { ContasAReceberTab } from './components/ContasAReceberTab';
 import { ContasAPagarTab } from './components/ContasAPagarTab';
@@ -31,9 +32,27 @@ const FINANCEIRO_TABS: { id: FinanceiroTab; label: string; icon: React.ReactNode
 
 type FinanceiroPageProps = {
   initialTab?: string;
+  onViewContextChange?: (context: InternalTabContext) => void;
 };
 
-export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) => {
+const resolveFinanceiroTab = (initialTab?: string): FinanceiroTab => {
+  if (initialTab?.startsWith('lancamentos-')
+    || initialTab === 'transferencia'
+    || initialTab === 'transferencias'
+    || initialTab === 'creditos'
+    || initialTab === 'debitos') {
+    return 'lancamentos';
+  }
+  if (initialTab === 'receber') return 'receber';
+  if (initialTab === 'pagar') return 'pagar';
+  return 'caixa';
+};
+
+export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onViewContextChange }) => {
+  // Resolver a subaba antes dos hooks de dados evita montar Caixa, iniciar seu
+  // dashboard e logo em seguida descartá-lo ao abrir uma aba interna específica.
+  const [activeTab, setActiveTab] = useState<FinanceiroTab>(() => resolveFinanceiroTab(initialTab));
+  const onViewContextChangeRef = React.useRef(onViewContextChange);
   useFinanceiroRealtime();
   const {
     filteredCobranças,
@@ -41,40 +60,53 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
     companyMap,
     isLoading,
     loadError,
+    successMsg,
+    errorMsg,
     retryLoad,
     lancamentos,
     contasPagar,
     handleCreateLancamento,
+    handleTransferirEntreContas,
+    handleCriarContasPagarParceladas,
     showManualSettlementModal,
     setShowManualSettlementModal,
     settlementCobranca,
     setSettlementCobranca,
     handleBaixarManualCobrancaCustom,
     isCustomSettlementLoading,
-  } = useFinanceiro();
-  const [activeTab, setActiveTab] = useState<FinanceiroTab>('caixa');
+  } = useFinanceiro(activeTab);
 
   useEffect(() => {
-    if (initialTab) {
-      const tabId = initialTab.startsWith('lancamentos-') || initialTab === 'transferencia' || initialTab === 'creditos' || initialTab === 'debitos' || initialTab === 'transferencias'
-        ? 'lancamentos'
-        : (initialTab === 'receber' ? 'receber' : initialTab === 'pagar' ? 'pagar' : 'caixa');
-      setActiveTab(tabId as FinanceiroTab);
-    }
+    setActiveTab(resolveFinanceiroTab(initialTab));
   }, [initialTab]);
 
-  const contasReceber = useMemo(() => filteredCobranças, [filteredCobranças]);
+  React.useLayoutEffect(() => {
+    onViewContextChangeRef.current = onViewContextChange;
+  }, [onViewContextChange]);
 
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  useEffect(() => {
+    onViewContextChangeRef.current?.({ data: { activeTab } });
+  }, [activeTab]);
 
-  const formatDate = (value: string) => {
+  const contasReceber = filteredCobranças;
+
+  const formatCurrency = useCallback((value: number) => (
+    Number.isFinite(value) ? value : 0
+  ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), []);
+
+  const formatDate = useCallback((value: string) => {
     const parts = value.split('-');
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
-  };
+  }, []);
 
-  const getCompanyName = (companyId: string) => companyMap.get(companyId)?.nome || 'Cliente removido';
-  const getCompanyDetails = (companyId: string) => companyMap.get(companyId) || { nome: 'Cliente removido', cnpj: '-' };
+  const getCompanyName = useCallback(
+    (companyId: string) => companyMap.get(companyId)?.nome || 'Cliente removido',
+    [companyMap],
+  );
+  const getCompanyDetails = useCallback(
+    (companyId: string) => companyMap.get(companyId) || { nome: 'Cliente removido', cnpj: '-' },
+    [companyMap],
+  );
 
   const renderContent = () => {
     if (isLoading) return <div className="sub-loading">Carregando controle financeiro...</div>;
@@ -84,7 +116,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
         <div className="financeiro-empty-state-box" role="alert">
           <AlertCircle size={36} style={{ color: '#ef4444', marginBottom: '8px' }} />
           <strong>Não foi possível carregar os dados financeiros</strong>
-          <span>{loadError.message}</span>
+          <span>Confira sua conexão e tente novamente. Se o problema continuar, informe o suporte.</span>
           <button type="button" className="financeiro-dropdown-btn" onClick={() => void retryLoad()}>
             <RefreshCw size={15} />
             Tentar novamente
@@ -117,6 +149,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
           onFormatCurrency={formatCurrency}
           onFormatDate={formatDate}
           onCreateContasAPagar={handleCreateLancamento}
+          onCreateContasPagarParceladas={handleCriarContasPagarParceladas}
         />
       );
     }
@@ -133,6 +166,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
           initialFilter={initialFilter}
           lancamentos={lancamentos}
           onCreateLancamento={handleCreateLancamento}
+          onTransferirEntreContas={handleTransferirEntreContas}
           onFormatCurrency={formatCurrency}
           onFormatDate={formatDate}
         />
@@ -156,6 +190,9 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
         ))}
       </div>
 
+      {successMsg && <div className="financeiro-feedback success" role="status">{successMsg}</div>}
+      {errorMsg && <div className="financeiro-feedback error" role="alert">{errorMsg}</div>}
+
       {renderContent()}
 
       {settlementCobranca && (
@@ -173,6 +210,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab }) =>
             pagadorCnpj: getCompanyDetails(settlementCobranca.clienteEmpresaId).cnpj,
             dataVencimento: settlementCobranca.dataVencimento,
             dataVencimentoFormatted: formatDate(settlementCobranca.dataVencimento),
+            integracaoExterna: settlementCobranca.bankProvider === 'asaas',
           }}
           onSubmit={async (data) => {
             await handleBaixarManualCobrancaCustom({

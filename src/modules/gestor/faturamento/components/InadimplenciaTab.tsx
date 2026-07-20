@@ -6,7 +6,8 @@ import { useFaturamentoInadimplenciaQuery } from '../queries/useFaturamentoQueri
 export const InadimplenciaTab = () => {
   const [search, setSearch] = useState('');
   const [minDias, setMinDias] = useState(0);
-  const inadimplenciaQuery = useFaturamentoInadimplenciaQuery({ minDias, search });
+  const [appliedFilters, setAppliedFilters] = useState({ minDias: 0, search: '' });
+  const inadimplenciaQuery = useFaturamentoInadimplenciaQuery(appliedFilters);
   const items = inadimplenciaQuery.data || [];
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value: string) => {
@@ -16,7 +17,14 @@ export const InadimplenciaTab = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div className="faturamento-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}>
+      <form
+        className="faturamento-card"
+        style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          setAppliedFilters({ minDias, search: search.trim() });
+        }}
+      >
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '200px' }}>
             <label>Buscar Parceiro</label>
             <input type="text" placeholder="Nome do parceiro..." value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -30,10 +38,19 @@ export const InadimplenciaTab = () => {
               <option value={30}>Mais de 30 dias</option>
             </select>
           </div>
-          <button className="faturamento-btn-primary" disabled={inadimplenciaQuery.isFetching}>
+          <button type="submit" className="faturamento-btn-primary" disabled={inadimplenciaQuery.isFetching}>
             {inadimplenciaQuery.isFetching ? 'Filtrando...' : 'Filtrar'}
           </button>
-      </div>
+      </form>
+
+      {inadimplenciaQuery.isError && (
+        <div className="faturamento-card" role="alert" style={{ padding: 16, color: '#991b1b', background: '#fef2f2' }}>
+          Não foi possível carregar as cobranças em atraso.{' '}
+          <button type="button" className="faturamento-btn-secondary" onClick={() => void inadimplenciaQuery.refetch()}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       <div className="faturamento-card" style={{ padding: 0 }}>
         <div className="faturamento-table-container">
@@ -58,14 +75,14 @@ export const InadimplenciaTab = () => {
                   <td style={{ color: '#64748b' }}>{item.ultimoContato}</td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10b981' }} title="Registrar Contato"><MessageCircle size={16} /></button>
-                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6' }} title="Reenviar Link"><RefreshCw size={16} /></button>
-                      <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }} title="Cancelar Cobrança"><X size={16} /></button>
+                      <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8' }} title="Indisponível: registro de contato ainda não possui serviço de persistência"><MessageCircle size={16} /></button>
+                      <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8' }} title="Indisponível: reenvio ainda não possui integração configurada"><RefreshCw size={16} /></button>
+                      <button type="button" disabled style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: '#94a3b8' }} title="Indisponível nesta tela: cancelamento exige confirmação e serviço específico"><X size={16} /></button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!inadimplenciaQuery.isLoading && items.length === 0 && (
+              {!inadimplenciaQuery.isLoading && !inadimplenciaQuery.isError && items.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
                     Nenhuma cobrança em atraso encontrada.

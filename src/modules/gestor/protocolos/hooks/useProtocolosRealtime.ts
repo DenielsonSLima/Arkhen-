@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { protocolosKeys } from '../queries/protocolosQueries';
 
 export const useProtocolosRealtime = (enabled = true) => {
@@ -13,15 +14,17 @@ export const useProtocolosRealtime = (enabled = true) => {
       queryClient.invalidateQueries({ queryKey: protocolosKeys.all });
     };
 
-    const channel = supabase
-      .channel('protocolos-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
-      .subscribe();
+    const channel = subscribeRealtimeChannel('protocolos-realtime', (ch) =>
+      ch
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [enabled, queryClient]);
 };

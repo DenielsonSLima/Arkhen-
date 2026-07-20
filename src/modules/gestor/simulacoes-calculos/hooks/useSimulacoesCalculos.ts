@@ -287,6 +287,7 @@ export function useSimulacoesCalculos() {
     },
     rescisao: {
       ...rescisaoParams, salario: parseCurrencyInputValue(rescisaoParams.salario),
+      competencia: rescisaoParams.dataDemissao.slice(0, 7),
       saldoFGTS: parseCurrencyInputValue(rescisaoParams.saldoFGTS),
       feriasVencidasPeriodos: parseNumberInput(rescisaoParams.feriasVencidasPeriodos),
       tipoParametro: tipoRescisaoSelecionado,
@@ -297,16 +298,17 @@ export function useSimulacoesCalculos() {
     piscofins: { faturamento: parseCurrencyInputValue(pisParams.faturamento), regime: pisParams.regime, creditosEntrada: parseCurrencyInputValue(pisParams.creditosEntrada), regimeConfig: regimePisSelecionado },
     multas: { valorOriginal: parseCurrencyInputValue(multasParams.valorOriginal), dataVencimento: multasParams.dataVencimento, dataPagamento: multasParams.dataPagamento },
     ferias: { salarioBruto: parseCurrencyInputValue(feriasParams.salarioBruto), diasFerias: parseNumberInput(feriasParams.diasFerias), abonoPecuniario: feriasParams.abonoPecuniario, adiantamento13: feriasParams.adiantamento13, dependentes: parseNumberInput(feriasParams.dependentes), regrasGerais: parametrosCalculo.regrasGerais },
-    'tempo-empresa': { ...tempoEmpresaParams, salarioBase: parseCurrencyInputValue(tempoEmpresaParams.salarioBase), regrasGerais: parametrosCalculo.regrasGerais },
+    'tempo-empresa': { ...tempoEmpresaParams, competencia: tempoEmpresaParams.dataReferencia.slice(0, 7), salarioBase: parseCurrencyInputValue(tempoEmpresaParams.salarioBase), regrasGerais: parametrosCalculo.regrasGerais },
     'encargos-trabalhistas': { ...encargosParams, salarioBruto: parseCurrencyInputValue(encargosParams.salarioBruto), rat: parseNumberInput(encargosParams.rat), fap: parseNumberInput(encargosParams.fap), terceiros: parseNumberInput(encargosParams.terceiros), regrasGerais: parametrosCalculo.regrasGerais },
     'simulacao-contratacao': { salarioProposto: parseCurrencyInputValue(contratacaoParams.salarioProposto), valeTransporte: parseCurrencyInputValue(contratacaoParams.valeTransporte), valeAlimentacao: parseCurrencyInputValue(contratacaoParams.valeAlimentacao), planoSaude: parseCurrencyInputValue(contratacaoParams.planoSaude), regrasGerais: parametrosCalculo.regrasGerais },
-    'comparativo-regime': { faturamentoAnual: parseCurrencyInputValue(comparativoRegimeParams.faturamentoAnual), comprasInsumosAnual: parseCurrencyInputValue(comparativoRegimeParams.comprasInsumosAnual), folhaAnual: parseCurrencyInputValue(comparativoRegimeParams.folhaAnual), margemLucro: parseNumberInput(comparativoRegimeParams.margemLucro) },
+    'comparativo-regime': { faturamentoAnual: parseCurrencyInputValue(comparativoRegimeParams.faturamentoAnual), comprasInsumosAnual: parseCurrencyInputValue(comparativoRegimeParams.comprasInsumosAnual), folhaAnual: parseCurrencyInputValue(comparativoRegimeParams.folhaAnual), margemLucro: parseNumberInput(comparativoRegimeParams.margemLucro), tipoEmpresa: activeTipoEmpresa, naturezaJuridica: activeNaturezaJuridica },
     'simulacao-imposto': { faturamentoMensal: parseCurrencyInputValue(simulacaoImpostoParams.faturamentoMensal), tipoAtividade: simulacaoImpostoParams.tipoAtividade, aliquotaEstimada: parseNumberInput(simulacaoImpostoParams.aliquotaEstimada) },
     'simulacao-custos': { custosFixos: parseCurrencyInputValue(simulacaoCustosParams.custosFixos), custosVariaveisPercentual: parseNumberInput(simulacaoCustosParams.custosVariaveisPercentual), markupDesejado: parseNumberInput(simulacaoCustosParams.markupDesejado) },
   }), [folhaParams, rescisaoParams, tipoRescisaoSelecionado, prolaboreValor, dasParams, pisParams,
     regimePisSelecionado, multasParams, feriasParams, tempoEmpresaParams, encargosParams,
     contratacaoParams, comparativoRegimeParams,
-    simulacaoImpostoParams, simulacaoCustosParams, parametrosCalculo.regrasGerais]);
+    simulacaoImpostoParams, simulacaoCustosParams, parametrosCalculo.regrasGerais,
+    activeTipoEmpresa, activeNaturezaJuridica]);
 
   const abaExistente = isAbaExistente(abaAtiva) ? abaAtiva : null;
   const simulacoesQuery = useQuery({
@@ -334,6 +336,7 @@ export function useSimulacoesCalculos() {
 
   return {
     status: simulacoesQuery.isFetching ? 'Calculando no servidor' : status,
+    erroCalculo: simulacoesQuery.error instanceof Error ? simulacoesQuery.error.message : '',
     abaAtiva,
     setAbaAtiva,
     folhaParams, setFolhaParams, resultadoFolha,

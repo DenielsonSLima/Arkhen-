@@ -1,22 +1,34 @@
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FileText, XCircle, CheckCircle, FilePlus, AlertCircle, DollarSign, Activity, TrendingUp } from 'lucide-react';
 import { useFaturamentoDashboardQuery } from '../queries/useFaturamentoQueries';
+import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { BillingClientSelect } from './billingFormUtils';
+import { formatLocalISODate } from '../utils/dateUtils';
 
 export const DashboardMesTab = () => {
   const { firstDay, lastDay } = React.useMemo(() => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    const firstDay = formatLocalISODate(new Date(today.getFullYear(), today.getMonth(), 1));
+    const lastDay = formatLocalISODate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
     return { firstDay, lastDay };
   }, []);
   const [dataInicial, setDataInicial] = React.useState(firstDay);
   const [dataFinal, setDataFinal] = React.useState(lastDay);
   const [status, setStatus] = React.useState('Todos');
-  const dashboardQuery = useFaturamentoDashboardQuery({
-    dataInicial,
-    dataFinal,
-    status,
+  const [clienteEmpresaId, setClienteEmpresaId] = React.useState('');
+  const [appliedFilters, setAppliedFilters] = React.useState({
+    dataInicial: firstDay,
+    dataFinal: lastDay,
+    status: 'Todos',
+    clienteEmpresaId: null as string | null,
+  });
+  const dashboardQuery = useFaturamentoDashboardQuery(appliedFilters);
+  const clientesQuery = useQuery({
+    queryKey: ['gestao-empresarial', 'companies'],
+    queryFn: gestaoEmpresarialService.getCompanies,
+    staleTime: 60_000,
   });
   const data = dashboardQuery.data;
 
@@ -39,7 +51,14 @@ export const DashboardMesTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="faturamento-card" style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}>
+      <form
+        className="faturamento-card"
+        style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          setAppliedFilters({ dataInicial, dataFinal, status, clienteEmpresaId: clienteEmpresaId || null });
+        }}
+      >
           <div className="faturamento-form-group" style={{ flex: '1', minWidth: '150px' }}>
             <label>Data Inicial</label>
             <input type="date" value={dataInicial} onChange={(event) => setDataInicial(event.target.value)} />
@@ -50,7 +69,12 @@ export const DashboardMesTab = () => {
           </div>
           <div className="faturamento-form-group" style={{ flex: '2', minWidth: '200px' }}>
             <label>Parceiro/Empresa</label>
-            <input type="text" placeholder="Buscar parceiro..." />
+            <BillingClientSelect
+              clientes={clientesQuery.data || []}
+              value={clienteEmpresaId}
+              onChange={setClienteEmpresaId}
+              isLoading={clientesQuery.isLoading}
+            />
           </div>
           <div className="faturamento-form-group" style={{ width: '150px' }}>
             <label>Status Pagamento</label>
@@ -62,15 +86,24 @@ export const DashboardMesTab = () => {
               <option value="Cancelado">Cancelados</option>
             </select>
           </div>
-          <button className="faturamento-btn-primary" disabled={dashboardQuery.isFetching}>
+          <button type="submit" className="faturamento-btn-primary" disabled={dashboardQuery.isFetching}>
             {dashboardQuery.isFetching ? 'Filtrando...' : 'Filtrar'}
           </button>
-      </div>
+      </form>
 
       <div className="faturamento-card" style={{ padding: '12px 16px', color: '#92400e', background: '#fffbeb', borderColor: '#fde68a' }}>
         A emissão integrada de NFS-e depende da disponibilidade e da homologação do provedor de cada prefeitura.
         “A emitir” considera apenas clientes com configuração fiscal municipal ativa; notas já emitidas continuam no histórico.
       </div>
+
+      {dashboardQuery.isError && (
+        <div className="faturamento-card" role="alert" style={{ padding: 16, color: '#991b1b', background: '#fef2f2' }}>
+          Não foi possível carregar o resumo de faturamento.{' '}
+          <button type="button" className="faturamento-btn-secondary" onClick={() => void dashboardQuery.refetch()}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       <div className="faturamento-stats-grid">
         {stats.map((stat, idx) => (

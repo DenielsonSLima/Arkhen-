@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { reformaTributariaKeys } from '../queries/reformaTributariaQueries';
 
 const TABLES = [
@@ -13,16 +14,20 @@ const TABLES = [
 export const useReformaTributariaRealtime = () => {
   const queryClient = useQueryClient();
   useEffect(() => {
-    const channelId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    let channel = supabase.channel(`reforma-tributaria-realtime-${channelId}`);
-    TABLES.forEach((table) => {
-      channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-        queryClient.invalidateQueries({ queryKey: reformaTributariaKeys.all });
+    const channel = subscribeRealtimeChannel('reforma-tributaria-realtime', (ch) => {
+      let builder = ch;
+      TABLES.forEach((table) => {
+        builder = builder.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+          queryClient.invalidateQueries({ queryKey: reformaTributariaKeys.all });
+        });
       });
+      return builder;
     });
-    channel.subscribe();
-    return () => { void supabase.removeChannel(channel); };
+
+    return () => {
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
   }, [queryClient]);
 };

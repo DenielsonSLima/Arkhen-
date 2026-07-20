@@ -1,21 +1,25 @@
 import { supabase, supabaseProjectUrl } from '../../../../lib/supabase';
+import { createRuntimeId } from '../../../../lib/realtimeChannel';
+import { baixarManualCobranca, type ManualSettlementInput } from './manualSettlementService';
 import type {
   CobrancaFinanceira,
+  ContasPagarParceladasInput,
   ContratoFinanceiro,
   DashboardStats,
   LancamentoFinanceiro,
+  TransferenciaFinanceiraInput,
 } from './financeiroTypes';
-
 export type {
   CobrancaFinanceira,
+  ContasPagarParceladasInput,
   ContratoFinanceiro,
   DashboardStats,
   FinanceiroBreakdown,
   FinanceiroChartPoint,
   FinanceiroContaSaldo,
   LancamentoFinanceiro,
+  TransferenciaFinanceiraInput,
 } from './financeiroTypes';
-
 interface ContratoRow {
   id: string;
   empresa_id: string;
@@ -28,7 +32,6 @@ interface ContratoRow {
   created_at: string;
   updated_at: string;
 }
-
 interface CobrancaRow {
   id: string;
   public_token: string | null;
@@ -56,7 +59,6 @@ interface CobrancaRow {
   updated_at: string;
   financeiro_cobrancas_integracoes?: CobrancaIntegracaoRow[];
 }
-
 interface CobrancaIntegracaoRow {
   provedor: 'asaas' | 'inter';
   external_id: string | null;
@@ -65,7 +67,6 @@ interface CobrancaIntegracaoRow {
   pix_copia_cola: string | null;
   pix_qr_code: string | null;
 }
-
 interface LancamentoRow {
   id: string;
   empresa_id: string;
@@ -84,7 +85,6 @@ interface LancamentoRow {
   created_at: string;
   updated_at: string;
 }
-
 type ContratoSaveInput = Omit<ContratoFinanceiro, 'id' | 'empresaId' | 'createdAt' | 'updatedAt'> & { id?: string; gerarCobranca?: boolean };
 type LancamentoSaveInput = Pick<
   LancamentoFinanceiro,
@@ -109,17 +109,26 @@ const emptyStats: DashboardStats = {
   despesasPorCategoria: [],
 };
 
+const finiteNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const safeText = (value: unknown, fallback = ''): string => (
+  typeof value === 'string' && value.trim() ? value : fallback
+);
+
 const fromContratoRow = (row: ContratoRow): ContratoFinanceiro => ({
-  id: row.id,
-  empresaId: row.empresa_id,
-  clienteEmpresaId: row.cliente_empresa_id || '',
-  descricaoServico: row.descricao_servico,
-  valorMensal: Number(row.valor_mensal || 0),
-  diaVencimento: row.dia_vencimento,
-  emissaoAutomaticaNfse: row.emissao_automatica_nfse,
-  ativo: row.ativo,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+  id: safeText(row.id),
+  empresaId: safeText(row.empresa_id),
+  clienteEmpresaId: safeText(row.cliente_empresa_id),
+  descricaoServico: safeText(row.descricao_servico, 'Honorários contábeis'),
+  valorMensal: finiteNumber(row.valor_mensal),
+  diaVencimento: finiteNumber(row.dia_vencimento),
+  emissaoAutomaticaNfse: Boolean(row.emissao_automatica_nfse),
+  ativo: Boolean(row.ativo),
+  createdAt: safeText(row.created_at),
+  updatedAt: safeText(row.updated_at),
 });
 
 const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
@@ -131,54 +140,54 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
   const mergedPayload = pixCopyPaste
     ? { ...(row.asaas_payload || {}), pixQrCode: { payload: pixCopyPaste } }
     : row.asaas_payload || undefined;
-  return ({
-  id: row.id,
-  publicToken: row.public_token || undefined,
-  empresaId: row.empresa_id,
-  contratoId: row.contrato_id || undefined,
-  clienteEmpresaId: row.cliente_empresa_id || '',
-  descricao: row.descricao,
-  categoria: row.categoria,
-  valor: Number(row.valor || 0),
-  dataVencimento: row.data_vencimento,
-  status: row.status,
-  meioPagamento: row.meio_pagamento,
-  asaasCobrancaId: row.asaas_cobranca_id || undefined,
-  asaasNfseId: row.asaas_nfse_id || undefined,
-  asaasBoletoUrl: row.asaas_boleto_url || integration?.boleto_url || interDocumentUrl,
-  asaasInvoiceUrl: row.asaas_invoice_url || integration?.boleto_url || interDocumentUrl,
-  asaasBankSlipUrl: row.asaas_bank_slip_url || interDocumentUrl,
-  asaasBillingType: row.asaas_billing_type || undefined,
-  asaasStatus: row.asaas_status || undefined,
-  asaasAmbiente: row.asaas_ambiente || undefined,
-  asaasPayload: mergedPayload,
-  bankProvider: integration?.provedor,
-  bankExternalId: integration?.external_id || undefined,
-  pixCopyPaste,
-  dataPagamento: row.data_pagamento || undefined,
-  dataCancelamento: row.data_cancelamento || undefined,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-  });
+  return {
+    id: safeText(row.id),
+    publicToken: row.public_token || undefined,
+    empresaId: safeText(row.empresa_id),
+    contratoId: row.contrato_id || undefined,
+    clienteEmpresaId: safeText(row.cliente_empresa_id),
+    descricao: safeText(row.descricao, 'Cobrança sem descrição'),
+    categoria: safeText(row.categoria, 'Faturamento'),
+    valor: finiteNumber(row.valor),
+    dataVencimento: safeText(row.data_vencimento),
+    status: row.status,
+    meioPagamento: row.meio_pagamento,
+    asaasCobrancaId: row.asaas_cobranca_id || undefined,
+    asaasNfseId: row.asaas_nfse_id || undefined,
+    asaasBoletoUrl: row.asaas_boleto_url || integration?.boleto_url || interDocumentUrl,
+    asaasInvoiceUrl: row.asaas_invoice_url || integration?.boleto_url || interDocumentUrl,
+    asaasBankSlipUrl: row.asaas_bank_slip_url || interDocumentUrl,
+    asaasBillingType: row.asaas_billing_type || undefined,
+    asaasStatus: row.asaas_status || undefined,
+    asaasAmbiente: row.asaas_ambiente || undefined,
+    asaasPayload: mergedPayload,
+    bankProvider: integration?.provedor,
+    bankExternalId: integration?.external_id || undefined,
+    pixCopyPaste,
+    dataPagamento: row.data_pagamento || undefined,
+    dataCancelamento: row.data_cancelamento || undefined,
+    createdAt: safeText(row.created_at),
+    updatedAt: safeText(row.updated_at),
+  };
 };
 
 const fromLancamentoRow = (row: LancamentoRow): LancamentoFinanceiro => ({
-  id: row.id,
-  empresaId: row.empresa_id,
+  id: safeText(row.id),
+  empresaId: safeText(row.empresa_id),
   contaBancariaId: row.conta_bancaria_id || undefined,
   clienteEmpresaId: row.cliente_empresa_id || undefined,
   tipo: row.tipo,
   origem: row.origem,
-  descricao: row.descricao,
-  categoria: row.categoria,
-  valor: Number(row.valor || 0),
-  dataCompetencia: row.data_competencia,
+  descricao: safeText(row.descricao, 'Lançamento sem descrição'),
+  categoria: safeText(row.categoria, 'Sem categoria'),
+  valor: finiteNumber(row.valor),
+  dataCompetencia: safeText(row.data_competencia),
   dataPagamento: row.data_pagamento || undefined,
   status: row.status,
   referenciaId: row.referencia_id || undefined,
   metadados: row.metadados || {},
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+  createdAt: safeText(row.created_at),
+  updatedAt: safeText(row.updated_at),
 });
 
 const toContratoPayload = (contrato: ContratoSaveInput) => ({
@@ -207,37 +216,65 @@ const toLancamentoPayload = (lancamento: LancamentoSaveInput) => ({
   metadados: lancamento.metadados || {},
 });
 
-const normalizeStats = (data: Partial<DashboardStats> | null): DashboardStats => ({
-  ...emptyStats,
-  ...(data || {}),
-  totalFaturado: Number(data?.totalFaturado || 0),
-  totalRecebido: Number(data?.totalRecebido || 0),
-  totalPendente: Number(data?.totalPendente || 0),
-  taxaInadimplencia: Number(data?.taxaInadimplencia || 0),
-  patrimonioLiquido: Number(data?.patrimonioLiquido || 0),
-  saldoDisponivel: Number(data?.saldoDisponivel || 0),
-  contasReceber: Number(data?.contasReceber || 0),
-  contasPagar: Number(data?.contasPagar || 0),
-  lucroMes: Number(data?.lucroMes || 0),
-  receitasRecebidas: Number(data?.receitasRecebidas || 0),
-  despesasPagas: Number(data?.despesasPagas || 0),
-  desempenho: data?.desempenho || [],
-  contas: data?.contas || [],
-  receitasPorParceiro: data?.receitasPorParceiro || [],
-  despesasPorCategoria: data?.despesasPorCategoria || [],
-});
+export const normalizeFinanceiroStats = (data: Partial<DashboardStats> | null): DashboardStats => {
+  const desempenho = Array.isArray(data?.desempenho)
+    ? data.desempenho.map((item) => ({
+        name: safeText(item?.name, '-'),
+        receita: finiteNumber(item?.receita),
+        despesas: finiteNumber(item?.despesas),
+        lucro: finiteNumber(item?.lucro),
+      }))
+    : [];
+  const contas = Array.isArray(data?.contas)
+    ? data.contas.map((item) => ({
+        id: safeText(item?.id),
+        banco: safeText(item?.banco, 'Banco não informado'),
+        agencia: safeText(item?.agencia, '-'),
+        conta: safeText(item?.conta, '-'),
+        saldo: finiteNumber(item?.saldo),
+      }))
+    : [];
+  const normalizeBreakdown = (items: DashboardStats['receitasPorParceiro'] | undefined) => (
+    Array.isArray(items)
+      ? items.map((item) => ({
+          id: typeof item?.id === 'string' ? item.id : null,
+          nome: safeText(item?.nome, 'Não informado'),
+          valor: finiteNumber(item?.valor),
+          percentual: finiteNumber(item?.percentual),
+        }))
+      : []
+  );
 
+  return {
+    ...emptyStats,
+    totalFaturado: finiteNumber(data?.totalFaturado),
+    totalRecebido: finiteNumber(data?.totalRecebido),
+    totalPendente: finiteNumber(data?.totalPendente),
+    taxaInadimplencia: finiteNumber(data?.taxaInadimplencia),
+    patrimonioLiquido: finiteNumber(data?.patrimonioLiquido),
+    saldoDisponivel: finiteNumber(data?.saldoDisponivel),
+    contasReceber: finiteNumber(data?.contasReceber),
+    contasPagar: finiteNumber(data?.contasPagar),
+    lucroMes: finiteNumber(data?.lucroMes),
+    receitasRecebidas: finiteNumber(data?.receitasRecebidas),
+    despesasPagas: finiteNumber(data?.despesasPagas),
+    desempenho,
+    contas,
+    receitasPorParceiro: normalizeBreakdown(data?.receitasPorParceiro),
+    despesasPorCategoria: normalizeBreakdown(data?.despesasPorCategoria),
+  };
+};
 export const financeiroService = {
-  async getContratos(): Promise<ContratoFinanceiro[]> {
+  async getContratos(signal?: AbortSignal): Promise<ContratoFinanceiro[]> {
     const { data, error } = await supabase
       .from('financeiro_configuracoes')
       .select('id,empresa_id,cliente_empresa_id,descricao_servico,valor_mensal,dia_vencimento,emissao_automatica_nfse,ativo,created_at,updated_at')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .abortSignal(signal ?? new AbortController().signal);
 
     if (error) throw new Error(`Erro ao carregar contratos financeiros: ${error.message}`);
     return ((data || []) as ContratoRow[]).map(fromContratoRow);
   },
-
   async saveContrato(contrato: ContratoSaveInput): Promise<ContratoFinanceiro> {
     const { data, error } = await supabase.rpc('salvar_contrato_financeiro', {
       p_payload: toContratoPayload(contrato),
@@ -256,21 +293,23 @@ export const financeiroService = {
     if (error) throw new Error(`Erro ao excluir contrato financeiro: ${error.message}`);
   },
 
-  async getCobranças(): Promise<CobrancaFinanceira[]> {
+  async getCobranças(signal?: AbortSignal): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
       .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,external_id,tipo,boleto_url,pix_copia_cola,pix_qr_code)')
-      .order('data_vencimento', { ascending: false });
+      .order('data_vencimento', { ascending: false })
+      .abortSignal(signal ?? new AbortController().signal);
 
     if (error) throw new Error(`Erro ao carregar cobranças financeiras: ${error.message}`);
     return ((data || []) as CobrancaRow[]).map(fromCobrancaRow);
   },
 
-  async getLancamentos(): Promise<LancamentoFinanceiro[]> {
+  async getLancamentos(signal?: AbortSignal): Promise<LancamentoFinanceiro[]> {
     const { data, error } = await supabase
       .from('financeiro_lancamentos')
       .select('id,empresa_id,conta_bancaria_id,cliente_empresa_id,tipo,origem,descricao,categoria,valor,data_competencia,data_pagamento,status,referencia_id,metadados,created_at,updated_at')
-      .order('data_competencia', { ascending: false });
+      .order('data_competencia', { ascending: false })
+      .abortSignal(signal ?? new AbortController().signal);
 
     if (error) throw new Error(`Erro ao carregar lançamentos financeiros: ${error.message}`);
     return ((data || []) as LancamentoRow[]).map(fromLancamentoRow);
@@ -283,6 +322,40 @@ export const financeiroService = {
 
     if (error) throw new Error(`Erro ao salvar lançamento financeiro: ${error.message}`);
     return fromLancamentoRow(data as LancamentoRow);
+  },
+
+  async transferirEntreContas(input: TransferenciaFinanceiraInput): Promise<void> {
+    const { error } = await supabase.rpc('transferir_entre_contas_financeiro', {
+      p_payload: {
+        conta_origem_id: input.contaOrigemId,
+        conta_destino_id: input.contaDestinoId,
+        valor: input.valor,
+        data: input.data,
+        descricao: input.descricao,
+        idempotency_key: input.idempotencyKey,
+      },
+    });
+
+    if (error) throw new Error(`Erro ao transferir entre contas: ${error.message}`);
+  },
+
+  async criarContasPagarParceladas(input: ContasPagarParceladasInput): Promise<void> {
+    const { error } = await supabase.rpc('criar_contas_pagar_parceladas', {
+      p_payload: {
+        tipo_despesa: input.tipoDespesa,
+        descricao: input.descricao,
+        categoria: input.categoria,
+        valor_total: input.valorTotal,
+        data_competencia: input.dataCompetencia,
+        data_vencimento: input.dataVencimento,
+        status: input.status,
+        conta_bancaria_id: input.contaBancariaId || null,
+        numero_parcelas: input.numeroParcelas,
+        idempotency_key: input.idempotencyKey,
+      },
+    });
+
+    if (error) throw new Error(`Erro ao criar contas a pagar parceladas: ${error.message}`);
   },
 
   async cancelarCobrança(cobrancaId: string): Promise<void> {
@@ -323,40 +396,8 @@ export const financeiroService = {
     if (!data?.ok) throw new Error(data?.error || 'Erro ao registrar baixa manual.');
   },
 
-  async baixarManualCobrancaCustom(dados: {
-    cobrancaId: string;
-    dataPagamento: string;
-    formaPagamento: string;
-    valorRecebido: number;
-    desconto: number;
-    juros: number;
-    observacao: string;
-    baixarParcial: boolean;
-    contaBancariaId?: string;
-  }): Promise<void> {
-    const { error } = await supabase.rpc('baixar_manual_cobranca_custom', {
-      p_cobranca_id: dados.cobrancaId,
-      p_data_pagamento: dados.dataPagamento,
-      p_forma_pagamento: dados.formaPagamento,
-      p_valor_recebido: dados.valorRecebido,
-      p_desconto: dados.desconto,
-      p_juros: dados.juros,
-      p_observacao: dados.observacao,
-      p_baixar_parcial: dados.baixarParcial,
-      p_conta_bancaria_id: dados.contaBancariaId || null,
-    });
-
-    if (error) throw new Error(`Erro ao registrar baixa manual: ${error.message}`);
-
-    // After local baixa succeeds, cancel the open payment in Asaas (best-effort)
-    try {
-      await supabase.functions.invoke('asaas-manual-settlement', {
-        body: { cobranca_id: dados.cobrancaId },
-      });
-    } catch (asaasErr) {
-      // Log but don't block — the local settlement is already done
-      console.warn('[Asaas] Falha ao cancelar cobrança no Asaas após baixa manual:', asaasErr);
-    }
+  async baixarManualCobrancaCustom(dados: ManualSettlementInput): Promise<void> {
+    await baixarManualCobranca(dados);
   },
 
   async pagarDespesaManual(dados: {
@@ -381,13 +422,12 @@ export const financeiroService = {
     if (error) throw new Error(`Erro ao registrar pagamento de despesa: ${error.message}`);
   },
 
-  async getStats(meses = 6): Promise<DashboardStats> {
-    const { data, error } = await supabase.rpc('get_financeiro_dashboard', {
-      p_meses: meses,
-    });
+  async getStats(meses = 6, signal?: AbortSignal): Promise<DashboardStats> {
+    const { data, error } = await supabase.rpc('get_financeiro_dashboard', { p_meses: meses })
+      .abortSignal(signal ?? new AbortController().signal);
 
     if (error) throw new Error(`Erro ao carregar dashboard financeiro: ${error.message}`);
-    return normalizeStats(data as Partial<DashboardStats>);
+    return normalizeFinanceiroStats(data as Partial<DashboardStats>);
   },
 
   async gerarCobrançaManual(dados: {
@@ -417,7 +457,7 @@ export const financeiroService = {
         multa_percentual: dados.multaPercentual || 0,
         mensagem_boleto: dados.mensagemBoleto || '',
         external_reference: dados.contratoId || '',
-        request_id: crypto.randomUUID(),
+        request_id: createRuntimeId('bank-charge-request'),
       },
     });
 

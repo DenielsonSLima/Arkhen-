@@ -23,11 +23,11 @@ export async function getMensagemInspiradoraDoDia(dataReferencia?: string): Prom
   if (error) throw error;
 
   const row = (Array.isArray(data) ? data[0] : data) as MensagemInspiradoraRow | null;
-  if (!row?.texto) return null;
+  if (!row?.texto || !row.autor) return null;
 
   return {
     texto: row.texto,
-    autor: row.autor || 'Equipe Contábil',
+    autor: row.autor,
     categoria: row.categoria || undefined,
   };
 }

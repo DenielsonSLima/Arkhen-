@@ -191,8 +191,8 @@ export const FeriasPdfModelo: React.FC<{ params: any; resultado: ResultadoFerias
 export const TempoEmpresaPdfModelo: React.FC<{ params: any; resultado: ResultadoTempoEmpresa }> = ({ params, resultado }) => (
   <PdfModel>
     <SummaryCards rows={[
-      ['Custo acumulado', resultado.custoTotalAcumulado, 'info'],
-      ['FGTS acumulado', resultado.fgtsAcumulado],
+      ['Provisões + FGTS estimado', resultado.custoTotalAcumulado, 'info'],
+      ['FGTS histórico estimado', resultado.fgtsAcumulado],
       ['Multa FGTS projetada', resultado.multaFgtsProjetada, 'bad'],
     ]} />
     <PdfSection title="Período do vínculo">
@@ -208,7 +208,7 @@ export const TempoEmpresaPdfModelo: React.FC<{ params: any; resultado: Resultado
         ['Provisão 13º', resultado.provisao13],
         ['Provisão férias', resultado.provisaoFerias],
         ['1/3 férias provisionado', resultado.provisaoTerco],
-        ['FGTS acumulado', resultado.fgtsAcumulado],
+        ['FGTS histórico estimado', resultado.fgtsAcumulado],
         ['Multa FGTS projetada', resultado.multaFgtsProjetada, 'bad'],
       ]} />
     </PdfSection>
@@ -354,7 +354,7 @@ export const ComparativoRegimePdfModelo: React.FC<{ params: any; resultado: Resu
         ['Compras/insumos', formatCurrency(parseCurrencyInputValue(params.comprasInsumosAnual))],
         ['Folha anual', formatCurrency(parseCurrencyInputValue(params.folhaAnual))],
         ['Margem lucro', `${params.margemLucro}%`],
-        ['Melhor opção', resultado.melhorOpcao],
+        ['Conclusão da triagem', resultado.melhorOpcao],
       ]} />
       <p style={{ margin: 0, color: '#475569', fontSize: '0.7rem', lineHeight: 1.5, fontWeight: 650 }}>{resultado.melhorOpcaoDesc}</p>
       {(resultado.alertas || []).map((alerta) => (

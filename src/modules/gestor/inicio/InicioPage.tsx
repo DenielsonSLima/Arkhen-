@@ -23,6 +23,7 @@ import {
 } from '../atividades/services/rotinasAtividadesService';
 import { useInicio } from './hooks/useInicio';
 import { useInicioBootstrap } from './hooks/useInicioBootstrap';
+import { useInicioRealtime } from './hooks/useInicioRealtime';
 import type { VencimentoAlerta } from './services/inicioService';
 import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
 import './InicioPage.css';
@@ -64,6 +65,7 @@ type InicioPageProps = {
 };
 
 export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
+  useInicioRealtime(true);
   const { stats, vencimentosProximos, isLoading } = useInicio();
   const { openTab } = useInternalTabs();
 

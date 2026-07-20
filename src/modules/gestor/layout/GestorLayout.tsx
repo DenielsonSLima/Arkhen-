@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { Activity, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import { persistedStorage } from '../../../lib/persistedStorage';
@@ -49,7 +49,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const modulesReady = modulesQuery.isSuccess;
   const [moduleContexts, setModuleContexts] = useState<Record<string, InternalTabContext>>({});
   const [moduleContextVersions, setModuleContextVersions] = useState<Record<string, number>>({});
-  const [visitedBaseModuleIds, setVisitedBaseModuleIds] = useState<string[]>(['inicio']);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [initialContentReady, setInitialContentReady] = useState(false);
   const [userProfile, setUserProfile] = useState(readUserProfile);
@@ -80,29 +79,21 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     () => visibleTabs.find((tab) => tab.id === activeTabId),
     [activeTabId, visibleTabs],
   );
-  const mountedBaseModuleIds = useMemo(() => {
-    const mounted = visitedBaseModuleIds.filter((id) => isRouteEnabled(id, enabledModuleIds));
-    if (!activeVisibleTab && !mounted.includes(activeModuleId)) mounted.push(activeModuleId);
-    return mounted;
-  }, [activeModuleId, activeVisibleTab, enabledModuleIds, visitedBaseModuleIds]);
+  // A navegação comum não precisa preservar cópias ocultas de todos os módulos.
+  // Somente abas internas permanecem montadas; isso evita duplicar Financeiro ou
+  // Faturamento no exato momento em que o usuário os promove pelo botão "+".
+  const mountedBaseModuleIds = activeVisibleTab ? [] : [activeModuleId];
 
   const resetContentScroll = useCallback(() => {
     const viewport = contentViewportRef.current;
     if (!viewport) return;
     viewport.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    const scrollRoot = viewport.querySelector<HTMLElement>('[data-active-module-panel="true"]') || viewport;
-    scrollRoot.scrollTop = 0;
-    scrollRoot.scrollLeft = 0;
-    scrollRoot.querySelectorAll<HTMLElement>('*').forEach((element) => {
-      const style = window.getComputedStyle(element);
-      if (element.scrollHeight > element.clientHeight && ['auto', 'scroll'].includes(style.overflowY)) {
-        element.scrollTop = 0;
-      }
-      if (element.scrollWidth > element.clientWidth && ['auto', 'scroll'].includes(style.overflowX)) {
-        element.scrollLeft = 0;
-      }
-    });
+    // Não percorra todos os descendentes: módulos financeiros/documentais têm
+    // árvores grandes, e getComputedStyle + métricas de layout em cada nó trava
+    // a thread principal justamente ao promover o módulo para uma aba interna.
+    const activePanel = viewport.querySelector<HTMLElement>('[data-active-module-panel="true"]');
+    activePanel?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, []);
 
   useEffect(() => {
@@ -120,13 +111,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   }, [activateModule, closeTab, enabledModuleIds, modulesReady, requestedModuleId, tabs]);
 
   useEffect(() => {
-    if (!modulesReady || activeVisibleTab) return;
-    setVisitedBaseModuleIds((current) => (
-      current.includes(activeModuleId) ? current : [...current, activeModuleId]
-    ));
-  }, [activeModuleId, activeVisibleTab, modulesReady]);
-
-  useEffect(() => {
     const baseTitle = 'Arkhen Gestão Contábil';
     if (activeOpenedTab && isRouteEnabled(activeOpenedTab.moduleId, enabledModuleIds)) {
       document.title = `${activeOpenedTab.title} | ${baseTitle}`;
@@ -142,10 +126,8 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   useLayoutEffect(() => {
     resetContentScroll();
     const frame = window.requestAnimationFrame(resetContentScroll);
-    const timer = window.setTimeout(resetContentScroll, 60);
     return () => {
       window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
     };
   }, [activeModuleId, activeWorkspaceId, resetContentScroll]);
 
@@ -163,8 +145,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const navigate = (id: string) => {
     if (!modulesReady || !isRouteEnabled(id, enabledModuleIds)) return;
     activateModule(id);
-    resetContentScroll();
-    window.setTimeout(resetContentScroll, 0);
   };
 
   const openModuleTab = (event: React.MouseEvent | React.KeyboardEvent, id: string) => {
@@ -175,16 +155,14 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       ? activeOpenedTab.context
       : activeModuleId === id ? moduleContexts[id] : undefined;
     openTab(id, info?.title || id, info?.iconName || 'Layers', context);
-    resetContentScroll();
-    window.setTimeout(resetContentScroll, 0);
   };
 
-  const handleModuleContextChange = (moduleId: string, context: InternalTabContext) => {
+  const handleModuleContextChange = useCallback((moduleId: string, context: InternalTabContext) => {
     setModuleContexts((current) => {
       if (JSON.stringify(current[moduleId] || {}) === JSON.stringify(context || {})) return current;
       return { ...current, [moduleId]: context };
     });
-  };
+  }, []);
 
   const openMyProfile = () => {
     if (!modulesReady || !isRouteEnabled('configuracoes', enabledModuleIds)) return;
@@ -244,7 +222,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
       id={id}
       workspaceId={workspaceId}
       initialContext={context}
-      activeModuleId={activeModuleId}
       updateTabContext={updateTabContext}
       onModuleContextChange={handleModuleContextChange}
       onInitialReady={id === 'inicio' && workspaceId === 'inicio' ? handleInitialContentReady : undefined}
@@ -298,33 +275,32 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           {mountedBaseModuleIds.map((moduleId) => {
             const isActive = !activeVisibleTab && activeModuleId === moduleId;
             return (
-              <div
-                key={moduleId}
-                data-active-module-panel={isActive ? 'true' : undefined}
-                style={{ display: isActive ? 'block' : 'none', height: '100%' }}
-              >
-                <ModuleRenderErrorBoundary moduleName={moduleId} onReset={() => activateModule('inicio')}>
-                  {renderContent(
-                    moduleId,
-                    moduleId,
-                    moduleContexts[moduleId],
-                    moduleContextVersions[moduleId],
-                  )}
-                </ModuleRenderErrorBoundary>
-              </div>
+              <Activity key={moduleId} mode={isActive ? 'visible' : 'hidden'}>
+                <div data-active-module-panel={isActive ? 'true' : undefined} style={{ height: '100%' }}>
+                  <ModuleRenderErrorBoundary moduleName={moduleId} onReset={() => activateModule('inicio')}>
+                    {renderContent(
+                      moduleId,
+                      moduleId,
+                      moduleContexts[moduleId],
+                      moduleContextVersions[moduleId],
+                    )}
+                  </ModuleRenderErrorBoundary>
+                </div>
+              </Activity>
             );
           })}
-          {visibleTabs.map((tab) => (
-            <div
-              key={tab.id}
-              data-active-module-panel={activeTabId === tab.id ? 'true' : undefined}
-              style={{ display: activeTabId === tab.id ? 'block' : 'none', height: '100%' }}
-            >
-              <ModuleRenderErrorBoundary key={tab.id} moduleName={tab.moduleId} onReset={() => activateModule('inicio')}>
-                {renderContent(tab.moduleId, tab.id, tab.context)}
-              </ModuleRenderErrorBoundary>
-            </div>
-          ))}
+          {visibleTabs.map((tab) => {
+            const isActive = activeTabId === tab.id;
+            return (
+              <Activity key={tab.id} mode={isActive ? 'visible' : 'hidden'}>
+                <div data-active-module-panel={isActive ? 'true' : undefined} style={{ height: '100%' }}>
+                  <ModuleRenderErrorBoundary moduleName={tab.moduleId} onReset={() => activateModule('inicio')}>
+                    {renderContent(tab.moduleId, tab.id, tab.context)}
+                  </ModuleRenderErrorBoundary>
+                </div>
+              </Activity>
+            );
+          })}
         </main>
       </div>
       {showLogoutConfirm && (

@@ -89,39 +89,39 @@ const normalizeStats = (data: Partial<FaturamentoDashboardStats> | null): Fatura
 });
 
 export const faturamentoService = {
-  async getDashboard(filters: FaturamentoDashboardFilters): Promise<FaturamentoDashboardStats> {
+  async getDashboard(filters: FaturamentoDashboardFilters, signal: AbortSignal): Promise<FaturamentoDashboardStats> {
     const { data, error } = await supabase.rpc('get_faturamento_dashboard', {
       p_data_inicial: filters.dataInicial,
       p_data_final: filters.dataFinal,
       p_cliente_empresa_id: filters.clienteEmpresaId || null,
       p_status: filters.status || 'Todos',
-    });
+    }).abortSignal(signal);
 
     if (error) throw new Error(`Erro ao carregar dashboard de faturamento: ${error.message}`);
     return normalizeStats(data as Partial<FaturamentoDashboardStats>);
   },
 
-  async getRecorrencias(): Promise<FaturamentoRecorrencia[]> {
-    const { data, error } = await supabase.rpc('get_faturamento_recorrencias');
+  async getRecorrencias(signal: AbortSignal): Promise<FaturamentoRecorrencia[]> {
+    const { data, error } = await supabase.rpc('get_faturamento_recorrencias').abortSignal(signal);
     if (error) throw new Error(`Erro ao carregar recorrências: ${error.message}`);
     return (Array.isArray(data) ? data : []) as FaturamentoRecorrencia[];
   },
 
-  async getNfse(filters: { status?: string; search?: string }): Promise<FaturamentoNfse[]> {
+  async getNfse(filters: { status?: string; search?: string }, signal: AbortSignal): Promise<FaturamentoNfse[]> {
     const { data, error } = await supabase.rpc('get_faturamento_nfse', {
       p_status: filters.status || 'Todas',
       p_search: filters.search || '',
-    });
+    }).abortSignal(signal);
 
     if (error) throw new Error(`Erro ao carregar histórico de NFS-e: ${error.message}`);
     return (Array.isArray(data) ? data : []) as FaturamentoNfse[];
   },
 
-  async getInadimplencia(filters: { minDias?: number; search?: string }): Promise<FaturamentoInadimplencia[]> {
+  async getInadimplencia(filters: { minDias?: number; search?: string }, signal: AbortSignal): Promise<FaturamentoInadimplencia[]> {
     const { data, error } = await supabase.rpc('get_faturamento_inadimplencia', {
       p_min_dias: filters.minDias || 0,
       p_search: filters.search || '',
-    });
+    }).abortSignal(signal);
 
     if (error) throw new Error(`Erro ao carregar inadimplência: ${error.message}`);
     return (Array.isArray(data) ? data : []) as FaturamentoInadimplencia[];

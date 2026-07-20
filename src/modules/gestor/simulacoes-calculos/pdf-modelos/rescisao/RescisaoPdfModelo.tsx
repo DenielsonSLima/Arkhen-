@@ -111,7 +111,7 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: '#0f172a' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr 1fr', gap: '10px' }}>
         <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '13px 14px', background: '#f8fafc' }}>
-          <div style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase' }}>Total líquido estimado</div>
+          <div style={{ color: '#64748b', fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase' }}>Líquido das verbas do TRCT</div>
           <div style={{ color: '#10b981', fontSize: '1.18rem', fontWeight: 950, marginTop: '4px' }}>{formatCurrency(resultado.totalLiquido)}</div>
         </div>
         <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '13px 14px', background: '#fff' }}>
@@ -160,7 +160,7 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
             <DemonstrativoRow label="Férias vencidas" provento={resultado.feriasVencidas} />
             <DemonstrativoRow label="1/3 sobre férias vencidas" provento={resultado.adicionalFeriasVencidas} />
             <DemonstrativoRow label="Aviso prévio indenizado" provento={resultado.avisoPrevio} />
-            <DemonstrativoRow label="Multa FGTS" provento={resultado.multaFGTS} destaque="blue" />
+            <DemonstrativoRow label="Multa FGTS (conta vinculada)" provento={resultado.multaFGTS} destaque="blue" />
             <DemonstrativoRow label="INSS estimado" desconto={resultado.inssRescisao} destaque="danger" />
             <DemonstrativoRow label="IRRF estimado" desconto={resultado.irrfRescisao} destaque="danger" />
             <DemonstrativoRow label="Aviso prévio descontado" desconto={resultado.avisoPrevioDesconto} destaque="danger" />
@@ -173,9 +173,10 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
           <h4 style={{ ...sectionTitleStyle, marginBottom: '8px' }}>Memória de cálculo</h4>
           <ul style={{ margin: 0, paddingLeft: '16px', color: '#475569', fontSize: '0.66rem', lineHeight: 1.55, fontWeight: 600 }}>
             <li>Saldo de salário: base remuneratória dividida por 30 e multiplicada pelos dias do mês do desligamento.</li>
-            <li>13º proporcional: estimado pelos meses da competência informada no desligamento.</li>
+            <li>13º proporcional: cada mês ou fração com pelo menos 15 dias, incluindo a projeção legal do aviso indenizado.</li>
             <li>Férias proporcionais e vencidas recebem acréscimo de 1/3 constitucional.</li>
-            <li>Multa FGTS: percentual aplicado sobre o saldo de FGTS informado na simulação.</li>
+            <li>Multa FGTS: 40% sobre o saldo informado acrescido dos depósitos rescisórios estimados.</li>
+            <li>A multa do FGTS vai para a conta vinculada e não integra o líquido das verbas do TRCT.</li>
           </ul>
         </div>
 
@@ -192,7 +193,7 @@ export const RescisaoPdfModelo: React.FC<Props> = ({ params, resultado }) => {
 
       <div style={{ border: '1px solid #dbeafe', background: '#eff6ff', borderRadius: '12px', padding: '12px 14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
-          <span style={{ color: '#1e3a8a', fontSize: '0.72rem', fontWeight: 900 }}>Resultado final estimado para conferência</span>
+          <span style={{ color: '#1e3a8a', fontSize: '0.72rem', fontWeight: 900 }}>Líquido estimado das verbas do TRCT</span>
           <span style={{ color: '#10b981', fontSize: '1.16rem', fontWeight: 950 }}>{formatCurrency(resultado.totalLiquido)}</span>
         </div>
       </div>

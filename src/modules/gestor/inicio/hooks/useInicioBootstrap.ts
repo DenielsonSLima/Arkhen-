@@ -1,20 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import officeBackground from '../../../../assets/office-scene-meeting.png';
-import { getEventosPorIntervalo, type Evento } from '../../agenda/services/agenda.service';
-import { rotinasAtividadesService, type TarefaGestor } from '../../atividades/services/rotinasAtividadesService';
+import { getEventosPorIntervalo } from '../../agenda/services/agenda.service';
+import { rotinasAtividadesService } from '../../atividades/services/rotinasAtividadesService';
 import { getMensagemInspiradoraDoDia, type FraseMotivacional } from '../services/motivationalPhrases';
+import { inicioKeys } from '../queries/inicioKeys';
+import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
+import { agendaKeys } from '../../agenda/hooks/useAgenda';
 
 type ConfigNoticeType = 'address' | 'watermark' | null;
-type ReadyKey = 'company' | 'message' | 'workspace' | 'agenda' | 'media';
-
-const INITIAL_READINESS: Record<ReadyKey, boolean> = {
-  company: false,
-  message: false,
-  workspace: false,
-  agenda: false,
-  media: false,
-};
 
 type UseInicioBootstrapOptions = {
   hoje: string;
@@ -29,68 +24,75 @@ export const useInicioBootstrap = ({
   dashboardReady,
   onReady,
 }: UseInicioBootstrapOptions) => {
-  const [tarefasWorkspace, setTarefasWorkspace] = useState<TarefaGestor[]>([]);
-  const [eventosAgenda, setEventosAgenda] = useState<Evento[]>([]);
-  const [showConfigNotice, setShowConfigNotice] = useState(false);
-  const [noticeType, setNoticeType] = useState<ConfigNoticeType>(null);
-  const [fraseMotivacional, setFraseMotivacional] = useState(fraseFallback);
-  const [readiness, setReadiness] = useState(INITIAL_READINESS);
+  const [mediaReady, setMediaReady] = useState(false);
 
-  const markReady = useCallback((key: ReadyKey) => {
-    setReadiness((current) => current[key] ? current : { ...current, [key]: true });
-  }, []);
+  const now = useMemo(() => new Date(), []);
+  const ano = now.getFullYear();
+  const mes = now.getMonth();
 
-  useEffect(() => {
-    let active = true;
+  const companyConfigQuery = useQuery({
+    queryKey: inicioKeys.companyNotice(),
+    queryFn: async () => {
+      const { data: companyData } = await supabase
+        .from('configuracoes_empresa')
+        .select('endereco, cep')
+        .maybeSingle();
 
-    const checkCompanyDetails = async () => {
-      try {
-        const { data: companyData } = await supabase
-          .from('configuracoes_empresa')
-          .select('endereco, cep')
-          .maybeSingle();
+      const lowerEndereco = (companyData?.endereco || '').toLowerCase();
+      const addressIncomplete = !companyData?.endereco
+        || lowerEndereco.includes('ficticia')
+        || lowerEndereco.includes('fictícia')
+        || !companyData?.cep
+        || companyData.cep === '49000-000';
 
-        const lowerEndereco = (companyData?.endereco || '').toLowerCase();
-        const addressIncomplete = !companyData?.endereco
-          || lowerEndereco.includes('ficticia')
-          || lowerEndereco.includes('fictícia')
-          || !companyData?.cep
-          || companyData.cep === '49000-000';
-
-        if (addressIncomplete) {
-          if (active) {
-            setNoticeType('address');
-            setShowConfigNotice(true);
-          }
-          return;
-        }
-
-        const { data: watermarkData } = await supabase
-          .from('configuracoes_marca_dagua')
-          .select('file_url_paisagem, file_url_retrato')
-          .maybeSingle();
-        const watermarksIncomplete = !watermarkData?.file_url_paisagem || !watermarkData?.file_url_retrato;
-
-        if (active) {
-          setNoticeType(watermarksIncomplete ? 'watermark' : null);
-          setShowConfigNotice(watermarksIncomplete);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar dados da empresa e marca dágua:', error);
-      } finally {
-        if (active) markReady('company');
+      if (addressIncomplete) {
+        return { showConfigNotice: true, noticeType: 'address' as ConfigNoticeType };
       }
-    };
 
-    void checkCompanyDetails();
-    return () => { active = false; };
-  }, [markReady]);
+      const { data: watermarkData } = await supabase
+        .from('configuracoes_marca_dagua')
+        .select('file_url_paisagem, file_url_retrato')
+        .maybeSingle();
+
+      const watermarksIncomplete = !watermarkData?.file_url_paisagem || !watermarkData?.file_url_retrato;
+      return {
+        showConfigNotice: watermarksIncomplete,
+        noticeType: watermarksIncomplete ? ('watermark' as ConfigNoticeType) : null,
+      };
+    },
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+  });
+
+  const messageQuery = useQuery({
+    queryKey: inicioKeys.mensagemInspiradora(hoje),
+    queryFn: async () => {
+      const frase = await getMensagemInspiradoraDoDia(hoje);
+      return frase || fraseFallback;
+    },
+    staleTime: 60 * 60_000,
+    gcTime: 24 * 60 * 60_000,
+  });
+
+  const workspaceQuery = useQuery({
+    queryKey: atividadesKeys.workspace(),
+    queryFn: () => rotinasAtividadesService.getWorkspace(),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+  });
+
+  const agendaQuery = useQuery({
+    queryKey: agendaKeys.eventos(ano, mes, 2),
+    queryFn: () => getEventosPorIntervalo(ano, mes, 2),
+    staleTime: 30_000,
+    gcTime: 30 * 60_000,
+  });
 
   useEffect(() => {
     let active = true;
     const image = new Image();
     const settle = () => {
-      if (active) markReady('media');
+      if (active) setMediaReady(true);
     };
     image.addEventListener('load', settle);
     image.addEventListener('error', settle);
@@ -102,50 +104,14 @@ export const useInicioBootstrap = ({
       image.removeEventListener('load', settle);
       image.removeEventListener('error', settle);
     };
-  }, [markReady]);
+  }, []);
 
-  useEffect(() => {
-    let active = true;
-    setFraseMotivacional(fraseFallback);
-    void getMensagemInspiradoraDoDia(hoje)
-      .then((frase) => {
-        if (active && frase) setFraseMotivacional(frase);
-      })
-      .catch((error) => console.error('Erro ao carregar mensagem inspiradora:', error))
-      .finally(() => {
-        if (active) markReady('message');
-      });
-    return () => { active = false; };
-  }, [fraseFallback, hoje, markReady]);
-
-  useEffect(() => {
-    let active = true;
-    void rotinasAtividadesService.getWorkspace()
-      .then((workspace) => {
-        if (active) setTarefasWorkspace(workspace.tarefas);
-      })
-      .catch((error) => console.error('Erro ao carregar atividades do início:', error))
-      .finally(() => {
-        if (active) markReady('workspace');
-      });
-    return () => { active = false; };
-  }, [markReady]);
-
-  useEffect(() => {
-    let active = true;
-    const now = new Date();
-    void getEventosPorIntervalo(now.getFullYear(), now.getMonth(), 2)
-      .then((eventos) => {
-        if (active) setEventosAgenda(eventos);
-      })
-      .catch((error) => console.error('Erro ao carregar agenda do início:', error))
-      .finally(() => {
-        if (active) markReady('agenda');
-      });
-    return () => { active = false; };
-  }, [markReady]);
-
-  const isReady = dashboardReady && Object.values(readiness).every(Boolean);
+  const isReady = dashboardReady
+    && companyConfigQuery.isSuccess
+    && messageQuery.isSuccess
+    && workspaceQuery.isSuccess
+    && agendaQuery.isSuccess
+    && mediaReady;
 
   useEffect(() => {
     if (isReady) onReady?.();
@@ -158,10 +124,10 @@ export const useInicioBootstrap = ({
   }, [isReady, onReady]);
 
   return {
-    tarefasWorkspace,
-    eventosAgenda,
-    showConfigNotice,
-    noticeType,
-    fraseMotivacional,
+    tarefasWorkspace: workspaceQuery.data?.tarefas ?? [],
+    eventosAgenda: agendaQuery.data ?? [],
+    showConfigNotice: companyConfigQuery.data?.showConfigNotice ?? false,
+    noticeType: companyConfigQuery.data?.noticeType ?? null,
+    fraseMotivacional: messageQuery.data ?? fraseFallback,
   };
 };

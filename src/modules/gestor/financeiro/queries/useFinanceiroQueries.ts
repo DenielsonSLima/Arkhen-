@@ -4,8 +4,10 @@ import { faturamentoKeys } from '../../faturamento/queries/faturamentoKeys';
 import {
   financeiroService,
   type CobrancaFinanceira,
+  type ContasPagarParceladasInput,
   type ContratoFinanceiro,
   type LancamentoFinanceiro,
+  type TransferenciaFinanceiraInput,
 } from '../services/financeiroService';
 import { financeiroKeys } from './financeiroKeys';
 
@@ -18,34 +20,50 @@ type LancamentoSaveInput = Pick<
 const invalidateFinanceiro = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: financeiroKeys.all });
   queryClient.invalidateQueries({ queryKey: faturamentoKeys.all });
+  queryClient.invalidateQueries({ queryKey: configuracoesKeys.contasBancarias() });
   queryClient.invalidateQueries({ queryKey: configuracoesKeys.contasBancariasResumo() });
 };
 
-export const useContratosFinanceirosQuery = () => (
+const FINANCEIRO_STALE_TIME_MS = 30_000;
+const FINANCEIRO_STATIC_STALE_TIME_MS = 5 * 60_000;
+
+type FinanceiroQueryOptions = {
+  enabled?: boolean;
+};
+
+export const useContratosFinanceirosQuery = ({ enabled = true }: FinanceiroQueryOptions = {}) => (
   useQuery({
     queryKey: financeiroKeys.contratos(),
-    queryFn: financeiroService.getContratos,
+    queryFn: ({ signal }) => financeiroService.getContratos(signal),
+    enabled,
+    staleTime: FINANCEIRO_STATIC_STALE_TIME_MS,
   })
 );
 
-export const useCobrancasFinanceirasQuery = () => (
+export const useCobrancasFinanceirasQuery = ({ enabled = true }: FinanceiroQueryOptions = {}) => (
   useQuery({
     queryKey: financeiroKeys.cobrancas(),
-    queryFn: financeiroService.getCobranças,
+    queryFn: ({ signal }) => financeiroService.getCobranças(signal),
+    enabled,
+    staleTime: FINANCEIRO_STALE_TIME_MS,
   })
 );
 
-export const useLancamentosFinanceirosQuery = () => (
+export const useLancamentosFinanceirosQuery = ({ enabled = true }: FinanceiroQueryOptions = {}) => (
   useQuery({
     queryKey: financeiroKeys.lancamentos(),
-    queryFn: financeiroService.getLancamentos,
+    queryFn: ({ signal }) => financeiroService.getLancamentos(signal),
+    enabled,
+    staleTime: FINANCEIRO_STALE_TIME_MS,
   })
 );
 
-export const useFinanceiroDashboardQuery = (meses = 6) => (
+export const useFinanceiroDashboardQuery = (meses = 6, { enabled = true }: FinanceiroQueryOptions = {}) => (
   useQuery({
     queryKey: financeiroKeys.dashboard(meses),
-    queryFn: () => financeiroService.getStats(meses),
+    queryFn: ({ signal }) => financeiroService.getStats(meses, signal),
+    enabled,
+    staleTime: FINANCEIRO_STALE_TIME_MS,
   })
 );
 
@@ -148,6 +166,24 @@ export const useSaveLancamentoFinanceiroMutation = () => {
 
   return useMutation({
     mutationFn: (dados: LancamentoSaveInput) => financeiroService.salvarLancamento(dados),
+    onSuccess: () => invalidateFinanceiro(queryClient),
+  });
+};
+
+export const useTransferirEntreContasFinanceiroMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dados: TransferenciaFinanceiraInput) => financeiroService.transferirEntreContas(dados),
+    onSuccess: () => invalidateFinanceiro(queryClient),
+  });
+};
+
+export const useCriarContasPagarParceladasMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dados: ContasPagarParceladasInput) => financeiroService.criarContasPagarParceladas(dados),
     onSuccess: () => invalidateFinanceiro(queryClient),
   });
 };

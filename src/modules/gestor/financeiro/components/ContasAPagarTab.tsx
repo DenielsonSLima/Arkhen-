@@ -1,11 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Search, Calendar, CheckCircle2, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, Plus } from 'lucide-react';
-import type { LancamentoFinanceiro } from '../services/financeiroService';
+import { Search, Calendar, CheckCircle2, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, Plus, Wallet } from 'lucide-react';
+import type { ContasPagarParceladasInput, LancamentoFinanceiro } from '../services/financeiroService';
 import './ContasAPagarTab.css';
 import { AddContasAPagarModal } from './AddContasAPagarModal';
-import { ModalPagarDespesa } from './ModalPagarDespesa';
+import { ModalPagarDespesaWithAccounts } from './ModalPagarDespesaWithAccounts';
 import { usePagarDespesaManualMutation } from '../queries/useFinanceiroQueries';
-import { useContasBancariasQuery } from '../../configuracoes/contas-bancarias/queries/useContasBancariasQueries';
 
 type FiltroStatus = 'todos' | 'aberto' | 'hoje' | 'atrasado' | 'pago' | 'cancelado';
 type ContasAPagarTabProps = {
@@ -13,6 +12,7 @@ type ContasAPagarTabProps = {
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
   onCreateContasAPagar?: (dados: any) => Promise<void>;
+  onCreateContasPagarParceladas: (dados: ContasPagarParceladasInput) => Promise<void>;
 };
 
 const toDate = (value: string) => {
@@ -25,6 +25,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
   onFormatCurrency,
   onFormatDate,
   onCreateContasAPagar,
+  onCreateContasPagarParceladas,
 }) => {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -36,16 +37,16 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  // Manual payment states
   const [selectedDespesa, setSelectedDespesa] = useState<LancamentoFinanceiro | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
   const [isPayLoading, setIsPayLoading] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
-  const contasBancariasQuery = useContasBancariasQuery();
   const pagarDespesaMutation = usePagarDespesaManualMutation();
 
   const handleRowClick = (item: LancamentoFinanceiro) => {
     if (item.status === 'Pendente') {
+      setPayError(null);
       setSelectedDespesa(item);
       setShowPayModal(true);
     }
@@ -61,19 +62,18 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
     observacao: string;
   }) => {
     setIsPayLoading(true);
+    setPayError(null);
     try {
       await pagarDespesaMutation.mutateAsync(dadosPgto);
       setShowPayModal(false);
       setSelectedDespesa(null);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Falha ao registrar pagamento.');
+      setPayError(err instanceof Error ? err.message : 'Falha ao registrar pagamento.');
     } finally {
       setIsPayLoading(false);
     }
   };
-
-  const contasBancarias = contasBancariasQuery.data || [];
 
   useEffect(() => {
     setCurrentPage(1);
@@ -92,7 +92,6 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
     return ['Todas as categorias', ...Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
   }, [dados]);
 
-  // Calculate dynamic KPI Card metrics
   const kpis = useMemo(() => {
     const pagarHoje = dados.filter(i => i.status === 'Pendente' && i.dataCompetencia === hoje);
     const pagarHojeVal = pagarHoje.reduce((acc, i) => acc + i.valor, 0);
@@ -125,7 +124,6 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
   }, [dados, hoje, currentMonth, currentYear]);
 
 
-  // Filter core dataset
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
 
@@ -284,7 +282,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
 
         <div className="financeiro-kpi-card hover-grow">
           <div className="kpi-icon-wrapper black">
-            <WalletIcon size={20} />
+            <Wallet size={20} />
           </div>
           <div className="kpi-content">
             <span className="kpi-title">Total Pendente</span>
@@ -364,6 +362,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
       </div>
 
       {/* Unified Table View */}
+      {payError && <div className="financeiro-form-error" role="alert">{payError}</div>}
       {filtered.length === 0 ? (
         <div className="financeiro-empty-state-box">
           <ShieldAlert size={36} style={{ color: '#94a3b8', marginBottom: '8px' }} />
@@ -470,11 +469,22 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
               setIsSubmitLoading(false);
             }
           }}
+          onSubmitParcelado={async (parcelas) => {
+            setIsSubmitLoading(true);
+            try {
+              await onCreateContasPagarParceladas(parcelas);
+            } catch (error) {
+              console.error(error);
+              throw error;
+            } finally {
+              setIsSubmitLoading(false);
+            }
+          }}
           isLoading={isSubmitLoading}
         />
       )}
       {showPayModal && (
-        <ModalPagarDespesa
+        <ModalPagarDespesaWithAccounts
           isOpen={showPayModal}
           onClose={() => {
             setShowPayModal(false);
@@ -482,28 +492,9 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
           }}
           onSubmit={handlePaySubmit}
           despesa={selectedDespesa}
-          contasBancarias={contasBancarias}
           isLoading={isPayLoading}
         />
       )}
     </div>
   );
 };
-
-const WalletIcon = ({ size }: { size: number }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-  </svg>
-);

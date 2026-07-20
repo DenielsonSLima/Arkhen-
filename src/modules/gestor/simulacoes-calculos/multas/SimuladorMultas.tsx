@@ -47,7 +47,9 @@ export const SimuladorMultas: React.FC<Props> = ({ params, setParams, resultado 
         >
           <strong>⚠️ Multa:</strong> 0,33% ao dia, limitada a 20% do valor original.
           <br />
-          <strong>Juros:</strong> Taxa Selic acumulada (simulada em 10,75% a.a.).
+          <strong>Juros:</strong> Selic mensal oficial do BCB, acrescida de 1% no mês do pagamento.
+          <br />
+          Confira o valor final no Sicalc antes de pagar.
         </div>
       </div>
 

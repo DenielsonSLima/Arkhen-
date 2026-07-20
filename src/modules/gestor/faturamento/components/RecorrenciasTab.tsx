@@ -63,6 +63,14 @@ export const RecorrenciasTab = () => {
         {recorrenciasQuery.isLoading && (
           <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>Carregando recorrências...</div>
         )}
+        {recorrenciasQuery.isError && (
+          <div className="faturamento-card" role="alert" style={{ padding: 20, gridColumn: '1 / -1', color: '#991b1b', background: '#fef2f2' }}>
+            Não foi possível carregar as recorrências.{' '}
+            <button type="button" className="faturamento-btn-secondary" onClick={() => void recorrenciasQuery.refetch()}>
+              Tentar novamente
+            </button>
+          </div>
+        )}
         {filteredRecorrencias.map((item) => (
           <div 
             key={item.id} 
@@ -135,7 +143,7 @@ export const RecorrenciasTab = () => {
             </div>
           </div>
         ))}
-        {!recorrenciasQuery.isLoading && filteredRecorrencias.length === 0 && (
+        {!recorrenciasQuery.isLoading && !recorrenciasQuery.isError && filteredRecorrencias.length === 0 && (
           <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>
             Nenhuma recorrência encontrada.
           </div>

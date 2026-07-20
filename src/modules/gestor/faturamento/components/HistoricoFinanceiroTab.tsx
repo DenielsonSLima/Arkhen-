@@ -30,6 +30,8 @@ import {
   getPublicCobrancaLink,
 } from '../cobrancas/utils/cobrancaLinks';
 import './HistoricoFinanceiroTab.css';
+import { useManagedTimeout } from '../hooks/useManagedTimeout';
+import { formatLocalISODate } from '../utils/dateUtils';
 
 type FiltroStatus = 'todos' | 'aberto' | 'hoje' | 'atrasado' | 'recebido' | 'cancelado';
 
@@ -52,6 +54,7 @@ export const HistoricoFinanceiroTab = () => {
   const [feedbackType, setFeedbackType] = useState<'success' | 'error'>('success');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const schedule = useManagedTimeout();
 
   const cobrancasQuery = useCobrancasFinanceirasQuery();
   const clientesQuery = useQuery({
@@ -71,7 +74,7 @@ export const HistoricoFinanceiroTab = () => {
     setCurrentPage(1);
   }, [search, startDate, endDate, selectedType, activeFilterPill]);
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = formatLocalISODate(new Date());
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
@@ -171,7 +174,7 @@ export const HistoricoFinanceiroTab = () => {
   const showFeedback = (type: 'success' | 'error', message: string, timeout = 2200) => {
     setFeedbackType(type);
     setFeedback(message);
-    window.setTimeout(() => setFeedback(''), timeout);
+    schedule(() => setFeedback(''), timeout);
   };
 
   const buildShareLink = (item: CobrancaFinanceira) => getPublicCobrancaLink(item, companyMap.get(item.clienteEmpresaId));
@@ -183,7 +186,7 @@ export const HistoricoFinanceiroTab = () => {
       await copyTextToClipboard(link);
       showFeedback('success', 'Link copiado.');
       setCopiedId(item.id);
-      window.setTimeout(() => setCopiedId(''), 1800);
+      schedule(() => setCopiedId(''), 1800);
     } catch {
       showFeedback('error', 'Não foi possível copiar.');
     }

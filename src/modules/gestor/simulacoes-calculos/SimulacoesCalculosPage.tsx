@@ -70,7 +70,7 @@ const TRABALHISTA_NAV: NavItem[] = [
   { id: 'folha', label: 'Folha de Pagamento', icon: <Users size={15} />, desc: 'INSS, IRRF e FGTS' },
   { id: 'prolabore', label: 'Pró-Labore', icon: <Briefcase size={15} />, desc: 'INSS do sócio' },
   { id: 'rescisao', label: 'Rescisão', icon: <FileX2 size={15} />, desc: 'Verbas rescisórias' },
-  { id: 'tempo-empresa', label: 'Tempo de Empresa', icon: <History size={15} />, desc: 'Provisões acumuladas' },
+  { id: 'tempo-empresa', label: 'Tempo de Empresa', icon: <History size={15} />, desc: 'Provisões correntes e FGTS estimado' },
 ];
 
 const FISCAL_NAV: NavItem[] = [
@@ -95,13 +95,13 @@ const PAGE_TITLES: Record<AbaCalculo, { title: string; desc: string }> = {
   rescisao: { title: 'Calculadora de Rescisão', desc: 'Verbas rescisórias: saldo, 13º, férias, aviso e multa FGTS.' },
   prolabore: { title: 'Simulador de Pró-Labore', desc: 'Calcule o INSS e IRRF do sócio-administrador.' },
   ferias: { title: 'Simulador de Férias', desc: 'Calcule o valor das férias com o terço constitucional, abonos e deduções.' },
-  'tempo-empresa': { title: 'Provisões por Tempo de Empresa', desc: 'Veja o passivo acumulado de férias, 13º e FGTS de um contrato.' },
+  'tempo-empresa': { title: 'Provisões por Tempo de Empresa', desc: 'Estime provisões correntes e o FGTS histórico sem substituir o extrato analítico.' },
   'encargos-trabalhistas': { title: 'Calculadora de Encargos Patronais', desc: 'Simule o custo de encargos previdenciários e trabalhistas sobre a folha.' },
   'simulacao-contratacao': { title: 'Comparativo de Formas de Contratação', desc: 'Compare os custos e rendimentos entre CLT, PJ e Estagiários.' },
   das: { title: 'Calculadora DAS — Simples Nacional', desc: 'Identifique a faixa e calcule o DAS do mês.' },
   piscofins: { title: 'Calculadora PIS / COFINS', desc: 'Débito, créditos e saldo a recolher nos regimes cumulativo e não-cumulativo.' },
   multas: { title: 'Calculadora de Multas e Juros', desc: 'Calcule acréscimos de DARFs vencidos com multa 0,33%/dia + Selic.' },
-  'comparativo-regime': { title: 'Comparativo de Regimes Tributários', desc: 'Projete impostos e escolha entre Simples Nacional, Lucro Presumido e Lucro Real.' },
+  'comparativo-regime': { title: 'Triagem de Regimes Tributários', desc: 'Compare cenários genéricos antes da análise completa por CNAE e receitas segregadas.' },
   'simulacao-imposto': { title: 'Simulação Mensal de Impostos', desc: 'Estime a carga tributária do faturamento de acordo com a atividade.' },
   'simulacao-custos': { title: 'Análise de Custos e Break-even', desc: 'Determine o ponto de equilíbrio operacional e metas de faturamento.' },
   'carne-leao': { title: 'Carnê-Leão e Livro Caixa', desc: 'Projete o recolhimento mensal com deduções e regras da competência.' },
@@ -217,6 +217,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
     naturezasJuridicasAtivas,
     activeTipoEmpresa,
     activeNaturezaJuridica,
+    erroCalculo,
   } = useSimulacoesCalculos();
 
   const {
@@ -286,8 +287,8 @@ export const SimulacoesCalculosPage: React.FC = () => {
       case 'tempo-empresa':
         return [
           `Tempo apurado: ${resultadoTempoEmpresa.anos} anos, ${resultadoTempoEmpresa.meses} meses e ${resultadoTempoEmpresa.dias} dias`,
-          `Custo acumulado: ${formatCurrency(resultadoTempoEmpresa.custoTotalAcumulado)}`,
-          `FGTS acumulado: ${formatCurrency(resultadoTempoEmpresa.fgtsAcumulado)}`,
+          `Provisões correntes + FGTS estimado: ${formatCurrency(resultadoTempoEmpresa.custoTotalAcumulado)}`,
+          `FGTS histórico estimado: ${formatCurrency(resultadoTempoEmpresa.fgtsAcumulado)}`,
         ];
       case 'encargos-trabalhistas':
         return [
@@ -1081,19 +1082,19 @@ export const SimulacoesCalculosPage: React.FC = () => {
               </tbody>
             </table>
 
-            <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: '12px 0 0 0' }}>PROVISÕES ACUMULADAS</h4>
+            <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #cbd5e1', paddingBottom: '6px', margin: '12px 0 0 0' }}>PROVISÕES CORRENTES E ESTIMATIVAS</h4>
             <table style={{ width: '100%', fontSize: '0.75rem', borderCollapse: 'collapse', textAlign: 'left' }}>
               <tbody>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão de 13º Salário</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisao13)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão de Férias</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisaoFerias)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Provisão do terço</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.provisaoTerco)}</td></tr>
-                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>FGTS Acumulado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.fgtsAcumulado)}</td></tr>
+                <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>FGTS histórico estimado</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#0f172a' }}>{formatCurrency(resultadoTempoEmpresa.fgtsAcumulado)}</td></tr>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}><th style={{ padding: '8px 0', fontWeight: 600, color: '#64748b' }}>Multa FGTS Projetada</th><td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 500, color: '#ef4444' }}>{formatCurrency(resultadoTempoEmpresa.multaFgtsProjetada)}</td></tr>
               </tbody>
             </table>
 
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>Total do Passivo Acumulado:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1.1rem' }}>{formatCurrency(resultadoTempoEmpresa.custoTotalAcumulado)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>Provisões correntes + FGTS estimado:</span><span style={{ fontWeight: 800, color: '#c59235', fontSize: '1.1rem' }}>{formatCurrency(resultadoTempoEmpresa.custoTotalAcumulado)}</span></div>
             </div>
           </div>
         );
@@ -1177,7 +1178,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
             </table>
 
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '16px', textAlign: 'center' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>REGIME TRIBUTÁRIO RECOMENDADO:</span><span style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem' }}>{resultadoComparativoRegime.melhorOpcao.toUpperCase()}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem' }}><span style={{ fontWeight: 700, color: '#334155' }}>CONCLUSÃO DA TRIAGEM:</span><span style={{ fontWeight: 800, color: '#10b981', fontSize: '1rem' }}>{resultadoComparativoRegime.melhorOpcao.toUpperCase()}</span></div>
             </div>
           </div>
         );
@@ -1381,7 +1382,11 @@ export const SimulacoesCalculosPage: React.FC = () => {
           </div>
         </div>
 
-        {erroSimulacao && <div className="error-banner" role="alert">Não foi possível calcular esta simulação: {erroSimulacao}</div>}
+        {(erroCalculo || erroSimulacao) && (
+          <div className="error-banner" role="alert">
+            Não foi possível calcular esta simulação: {erroCalculo || erroSimulacao}
+          </div>
+        )}
         {erroHistorico && <div className="error-banner" role="alert">{erroHistorico}</div>}
 
         <div key={abaAtiva} style={{ animation: 'fadeInTab 0.22s ease' }}>

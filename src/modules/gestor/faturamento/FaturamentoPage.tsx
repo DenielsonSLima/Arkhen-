@@ -7,7 +7,8 @@ import { HistoricoFinanceiroTab } from './components/HistoricoFinanceiroTab';
 import { ConfiguracoesTab } from './components/ConfiguracoesTab';
 import { ModalNovoLancamentoAvulso } from './components/ModalNovoLancamentoAvulso';
 import { Calendar, Repeat, Search, AlertCircle, Activity, Plus, Settings } from 'lucide-react';
-import { useFinanceiroRealtime } from '../financeiro/hooks/useFinanceiroRealtime';
+import { useFaturamentoRealtime } from './hooks/useFaturamentoRealtime';
+import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import './Faturamento.css';
 
 export type FaturamentoTab = 'dashboard' | 'recorrencias' | 'historico-nfse' | 'inadimplencia' | 'historico-financeiro' | 'configuracoes';
@@ -16,22 +17,28 @@ export type FaturamentoViewMode = 'default';
 interface FaturamentoPageProps {
   initialActiveTab?: FaturamentoTab;
   initialViewMode?: FaturamentoViewMode;
-  onViewContextChange?: (context: any) => void;
+  onViewContextChange?: (context: InternalTabContext) => void;
 }
 
 export const FaturamentoPage: React.FC<FaturamentoPageProps> = ({
   initialActiveTab = 'dashboard',
   onViewContextChange
 }) => {
-  useFinanceiroRealtime();
+  useFaturamentoRealtime();
   const [activeTab, setActiveTab] = useState<FaturamentoTab>(initialActiveTab);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const onViewContextChangeRef = React.useRef(onViewContextChange);
+
+  // GestorModuleContent cria a ponte de contexto durante o render. Manter essa
+  // função diretamente nas dependências do efeito formava um ciclo ao abrir o
+  // módulo em uma aba interna: contexto -> render do pai -> nova função -> efeito.
+  React.useLayoutEffect(() => {
+    onViewContextChangeRef.current = onViewContextChange;
+  }, [onViewContextChange]);
 
   React.useEffect(() => {
-    if (onViewContextChange) {
-      onViewContextChange({ data: { activeTab } });
-    }
-  }, [activeTab, onViewContextChange]);
+    onViewContextChangeRef.current?.({ data: { activeTab } });
+  }, [activeTab]);
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: <Activity size={16} /> },
