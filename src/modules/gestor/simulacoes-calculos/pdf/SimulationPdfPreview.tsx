@@ -19,7 +19,7 @@ export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ byte
   const fallbackBlobUrl = useMemo(() => {
     if (!bytes) return null;
     try {
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' });
       return URL.createObjectURL(blob);
     } catch {
       return null;
