@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { configuracoesKeys } from '../../configuracoes/queries/configuracoesKeys';
 import { faturamentoKeys } from '../../faturamento/queries/faturamentoKeys';
 import { financeiroKeys } from '../queries/financeiroKeys';
@@ -43,8 +43,6 @@ export const useFinanceiroRealtime = (enabled = true) => {
       pendingScopes.clear();
     };
 
-    // Uma baixa/transferência pode emitir vários eventos na mesma transação.
-    // Agrupar o burst evita uma cascata de refetches entre Financeiro e Faturamento.
     const scheduleInvalidation = (...scopes: InvalidationScope[]) => {
       if (disposed) return;
       scopes.forEach((scope) => pendingScopes.add(scope));
@@ -52,38 +50,39 @@ export const useFinanceiroRealtime = (enabled = true) => {
       invalidationTimer = setTimeout(flushInvalidations, 100);
     };
 
-    // O cliente Realtime reutiliza canais com o mesmo tópico. Como Financeiro e
-    // Faturamento podem permanecer montados ao mesmo tempo (e o StrictMode
-    // remonta effects em desenvolvimento), cada assinatura precisa de um tópico
-    // próprio para não tentar adicionar callbacks em um canal já inscrito.
-    const channel = supabase
-      .channel(createRealtimeChannelName('financeiro-realtime'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_configuracoes' }, () => {
-        scheduleInvalidation('contratos', 'faturamento');
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas' }, () => {
-        scheduleInvalidation('cobrancas', 'dashboard', 'faturamento');
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas_integracoes' }, () => {
-        scheduleInvalidation('cobrancas', 'faturamento');
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_lancamentos' }, () => {
-        scheduleInvalidation('lancamentos', 'dashboard', 'contas', 'faturamento');
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_contas_bancarias' }, () => {
-        scheduleInvalidation('dashboard', 'contas');
-      })
-      .subscribe((status) => {
+    const channel = subscribeRealtimeChannel(
+      'financeiro-realtime',
+      (ch) =>
+        ch
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_configuracoes' }, () => {
+            scheduleInvalidation('contratos', 'faturamento');
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas' }, () => {
+            scheduleInvalidation('cobrancas', 'dashboard', 'faturamento');
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas_integracoes' }, () => {
+            scheduleInvalidation('cobrancas', 'faturamento');
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_lancamentos' }, () => {
+            scheduleInvalidation('lancamentos', 'dashboard', 'contas', 'faturamento');
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_contas_bancarias' }, () => {
+            scheduleInvalidation('dashboard', 'contas');
+          }),
+      (status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error(`[Financeiro Realtime] Assinatura indisponível: ${status}`);
         }
-      });
+      }
+    );
 
     return () => {
       disposed = true;
       if (invalidationTimer) clearTimeout(invalidationTimer);
       pendingScopes.clear();
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [enabled, queryClient]);
 };

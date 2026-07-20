@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRealtimeChannelName, createRuntimeId } from './realtimeChannel';
+import { createRealtimeChannelName, createRuntimeId, subscribeRealtimeChannel } from './realtimeChannel';
+
+vi.mock('./supabase', () => ({
+  supabase: {
+    channel: vi.fn((name: string) => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+      name,
+    })),
+    removeChannel: vi.fn(),
+  },
+}));
 
 describe('runtime identifiers', () => {
   afterEach(() => {
@@ -21,5 +32,10 @@ describe('runtime identifiers', () => {
 
     expect(first).toMatch(/^bank-charge-request-[0-9]+-[0-9]+$/);
     expect(second).not.toBe(first);
+  });
+
+  it('subscribes to realtime channel safely without errors', () => {
+    const channel = subscribeRealtimeChannel('test-scope', (ch) => ch.on('postgres_changes', {}, () => {}));
+    expect(channel).toBeDefined();
   });
 });

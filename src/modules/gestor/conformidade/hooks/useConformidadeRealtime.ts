@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { conformidadeKeys } from '../queries/conformidadeQueries';
 
 export const useConformidadeRealtime = (enabled = true) => {
@@ -14,18 +14,20 @@ export const useConformidadeRealtime = (enabled = true) => {
       queryClient.invalidateQueries({ queryKey: conformidadeKeys.all });
     };
 
-    const channel = supabase
-      .channel(createRealtimeChannelName('conformidade-realtime'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conformidade_obrigacoes' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
-      .subscribe();
+    const channel = subscribeRealtimeChannel('conformidade-realtime', (ch) =>
+      ch
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'conformidade_obrigacoes' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [enabled, queryClient]);
 };

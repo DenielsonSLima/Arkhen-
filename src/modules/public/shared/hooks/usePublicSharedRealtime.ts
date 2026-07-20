@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { getShareIdFromPath } from '../publicSharedDocumentHelpers';
 import { publicSharedDocumentKeys } from '../queries/usePublicSharedDocumentQuery';
 
@@ -16,32 +16,34 @@ export const usePublicSharedRealtime = () => {
       void queryClient.invalidateQueries({ queryKey: publicSharedDocumentKeys.all });
     };
 
-    const channel = supabase
-      .channel(createRealtimeChannelName(`public-share-${shareId}`))
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'documentos_compartilhamentos',
-          filter: `share_group_id=eq.${shareId}`,
-        },
-        invalidateShare,
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'documentos_compartilhamentos',
-          filter: `id=eq.${shareId}`,
-        },
-        invalidateShare,
-      )
-      .subscribe();
+    const channel = subscribeRealtimeChannel(`public-share-${shareId}`, (ch) =>
+      ch
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'documentos_compartilhamentos',
+            filter: `share_group_id=eq.${shareId}`,
+          },
+          invalidateShare,
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'documentos_compartilhamentos',
+            filter: `id=eq.${shareId}`,
+          },
+          invalidateShare,
+        )
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [queryClient]);
 };

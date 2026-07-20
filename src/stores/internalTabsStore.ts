@@ -32,6 +32,31 @@ let state: InternalTabsState = {
   notice: null,
 };
 
+const getStoredTabsState = (): string | null => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const sessionData = window.sessionStorage.getItem(STORAGE_KEY);
+      if (sessionData) return sessionData;
+    }
+    return persistedStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const saveStoredTabsState = (value: string): void => {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem(STORAGE_KEY, value);
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(STORAGE_KEY, value);
+    }
+  } catch (e) {
+    console.error('Erro ao salvar estado das abas:', e);
+  }
+};
+
 const hydrateFromStorage = (raw: string | null) => {
   if (!raw) {
     if (state.tabs.length === 0 && state.activeTabId === 'inicio') return false;
@@ -111,7 +136,7 @@ const hydrateFromStorage = (raw: string | null) => {
 const listeners = new Set<() => void>();
 
 const loadFromStorage = () => {
-  const changed = hydrateFromStorage(persistedStorage.getItem(STORAGE_KEY));
+  const changed = hydrateFromStorage(getStoredTabsState());
   if (!changed) return;
   listeners.forEach((listener) => {
     try {
@@ -123,11 +148,6 @@ const loadFromStorage = () => {
 };
 
 loadFromStorage();
-persistedStorage.subscribe((changedKey) => {
-  if (changedKey === STORAGE_KEY) {
-    loadFromStorage();
-  }
-});
 
 function notify() {
   saveState();
@@ -142,15 +162,11 @@ function setState(updater: (current: InternalTabsState) => InternalTabsState) {
 }
 
 function saveState() {
-  try {
-    persistedStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tabs: state.persistEnabled ? state.tabs : [],
-      activeTabId: state.activeTabId,
-      persistEnabled: state.persistEnabled,
-    }));
-  } catch (e) {
-    console.error('Erro ao salvar estado das abas persistidas:', e);
-  }
+  saveStoredTabsState(JSON.stringify({
+    tabs: state.persistEnabled ? state.tabs : [],
+    activeTabId: state.activeTabId,
+    persistEnabled: state.persistEnabled,
+  }));
 }
 
 function isSameContext(a?: InternalTabContext, b?: InternalTabContext) {

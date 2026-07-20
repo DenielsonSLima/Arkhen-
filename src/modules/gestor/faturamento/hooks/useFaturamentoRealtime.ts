@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { faturamentoKeys } from '../queries/faturamentoKeys';
 
 const financeiroCobrancasKey = ['financeiro', 'cobrancas'] as const;
@@ -20,23 +20,25 @@ export const useFaturamentoRealtime = (enabled = true) => {
       void queryClient.invalidateQueries({ queryKey: financeiroCobrancasKey });
     };
 
-    // O Faturamento mantém uma assinatura própria e direcionada. Usar o hook
-    // global do Financeiro fazia cada evento invalidar também dashboard, contas
-    // bancárias e lançamentos que não estavam visíveis nesta tela.
-    const channel = supabase
-      .channel(createRealtimeChannelName('faturamento-realtime'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_configuracoes' }, invalidateFaturamento)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas' }, invalidateCobrancas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas_integracoes' }, invalidateCobrancas)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_lancamentos' }, invalidateFaturamento)
-      .subscribe((status) => {
+    const channel = subscribeRealtimeChannel(
+      'faturamento-realtime',
+      (ch) =>
+        ch
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_configuracoes' }, invalidateFaturamento)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas' }, invalidateCobrancas)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_cobrancas_integracoes' }, invalidateCobrancas)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'financeiro_lancamentos' }, invalidateFaturamento),
+      (status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error(`[Faturamento Realtime] Assinatura indisponível: ${status}`);
         }
-      });
+      }
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [enabled, queryClient]);
 };

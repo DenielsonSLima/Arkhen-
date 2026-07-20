@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
-import { createRealtimeChannelName } from '../../../../lib/realtimeChannel';
+import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { inicioKeys } from '../queries/inicioKeys';
 import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
 import { agendaKeys } from '../../agenda/hooks/useAgenda';
@@ -25,21 +25,23 @@ export const useInicioRealtime = (enabled = true) => {
       }, 200);
     };
 
-    const channel = supabase
-      .channel(createRealtimeChannelName('inicio-realtime'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_empresa' }, invalidate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_marca_dagua' }, invalidate)
-      .subscribe();
+    const channel = subscribeRealtimeChannel('inicio-realtime', (ch) =>
+      ch
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_empresa' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_marca_dagua' }, invalidate)
+    );
 
     return () => {
       if (refreshTimerRef.current !== null) {
         window.clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
-      void supabase.removeChannel(channel);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
   }, [enabled, queryClient]);
 };

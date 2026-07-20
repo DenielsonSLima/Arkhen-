@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { createRealtimeChannelName } from './realtimeChannel';
+import { subscribeRealtimeChannel } from './realtimeChannel';
 
 type CachedStorage = Map<string, string>;
 
@@ -244,43 +244,43 @@ const ensureInitialized = () => {
   if (initPromise) return initPromise;
   initPromise = bootstrap().then(() => {
     if (!currentContext || realtimeChannel) return;
-    realtimeChannel = supabase.channel(createRealtimeChannelName('app-storage'));
-    realtimeChannel
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: STORAGE_TABLE,
-          // Realtime aceita um filtro por assinatura. O usuário continua validado
-          // no callback e pelas políticas RLS da tabela.
-          filter: `empresa_id=eq.${currentContext.empresa_id}`,
-        },
-        (payload) => {
-          const row = (payload.new as RawPreferenceRow | null) || (payload.old as RawPreferenceRow | null);
-          if (!row || row.user_id !== currentContext?.user_id || row.modulo !== STORAGE_MODULE) return;
+    realtimeChannel = subscribeRealtimeChannel(
+      'app-storage',
+      (ch) =>
+        ch.on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: STORAGE_TABLE,
+            filter: `empresa_id=eq.${currentContext.empresa_id}`,
+          },
+          (payload) => {
+            const row = (payload.new as RawPreferenceRow | null) || (payload.old as RawPreferenceRow | null);
+            if (!row || row.user_id !== currentContext?.user_id || row.modulo !== STORAGE_MODULE) return;
 
-          if (payload.eventType === 'DELETE') {
-            if (!cache.has(row.chave)) return;
-            cache.delete(row.chave);
-          } else {
-            const parsed = normalizeValue(row.valor);
-            if (parsed === null) {
+            if (payload.eventType === 'DELETE') {
               if (!cache.has(row.chave)) return;
               cache.delete(row.chave);
             } else {
-              if (cache.get(row.chave) === parsed) return;
-              cache.set(row.chave, parsed);
+              const parsed = normalizeValue(row.valor);
+              if (parsed === null) {
+                if (!cache.has(row.chave)) return;
+                cache.delete(row.chave);
+              } else {
+                if (cache.get(row.chave) === parsed) return;
+                cache.set(row.chave, parsed);
+              }
             }
-          }
-          notify(row.chave);
-        },
-      )
-      .subscribe((status) => {
+            notify(row.chave);
+          },
+        ),
+      (status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error(`[persistedStorage] Realtime indisponível: ${status}`);
         }
-      });
+      }
+    );
   });
   return initPromise;
 };
