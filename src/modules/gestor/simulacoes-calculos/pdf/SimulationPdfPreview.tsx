@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 interface PreviewPage {
   pageNumber: number;
@@ -13,24 +13,52 @@ interface SimulationPdfPreviewProps {
 
 export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ bytes, loading, error }) => {
   const [pages, setPages] = useState<PreviewPage[]>([]);
-  const [previewError, setPreviewError] = useState('');
+  const [isRendering, setIsRendering] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  const fallbackBlobUrl = useMemo(() => {
+    if (!bytes) return null;
+    try {
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }, [bytes]);
+
+  useEffect(() => {
+    return () => {
+      if (fallbackBlobUrl) {
+        URL.revokeObjectURL(fallbackBlobUrl);
+      }
+    };
+  }, [fallbackBlobUrl]);
 
   useEffect(() => {
     let cancelled = false;
     if (!bytes) {
       setPages([]);
-      setPreviewError('');
+      setIsRendering(false);
+      setUseFallback(false);
       return () => { cancelled = true; };
     }
 
+    setIsRendering(true);
+    setUseFallback(false);
+
+    const timer = setTimeout(() => {
+      if (!cancelled && pages.length === 0) {
+        setUseFallback(true);
+        setIsRendering(false);
+      }
+    }, 3500);
+
     const renderPages = async () => {
       try {
-        setPreviewError('');
         const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-          'pdfjs-dist/build/pdf.worker.min.mjs',
-          import.meta.url,
-        ).href;
+        if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+        }
         const pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
         const rendered: PreviewPage[] = [];
 
@@ -46,31 +74,53 @@ export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ byte
           rendered.push({ pageNumber, dataUrl: canvas.toDataURL('image/png') });
         }
 
-        if (!cancelled) setPages(rendered);
-      } catch (renderError) {
-        console.error('Erro ao renderizar pré-visualização do PDF.', renderError);
         if (!cancelled) {
-          setPages([]);
-          setPreviewError('Não foi possível exibir as páginas do PDF. O download continua disponível.');
+          setPages(rendered);
+          setIsRendering(false);
+          clearTimeout(timer);
+        }
+      } catch (renderError) {
+        console.warn('Fallback para visualizador nativo de PDF.', renderError);
+        if (!cancelled) {
+          setUseFallback(true);
+          setIsRendering(false);
+          clearTimeout(timer);
         }
       }
     };
 
     void renderPages();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [bytes]);
 
   if (loading) {
-    return <div className="simulation-pdf-status">Gerando páginas A4…</div>;
+    return <div className="simulation-pdf-status">Gerando documento A4…</div>;
   }
   if (error) {
     return <div className="simulation-pdf-status simulation-pdf-status--error">{error}</div>;
   }
-  if (previewError) {
-    return <div className="simulation-pdf-status simulation-pdf-status--error">{previewError}</div>;
+
+  if (useFallback && fallbackBlobUrl) {
+    return (
+      <div className="simulation-pdf-fallback-container">
+        <iframe
+          src={`${fallbackBlobUrl}#toolbar=0&navpanes=0`}
+          title="Pré-visualização do PDF"
+          className="simulation-pdf-iframe"
+        />
+      </div>
+    );
   }
-  if (!pages.length) {
+
+  if (isRendering && !pages.length) {
     return <div className="simulation-pdf-status">Preparando pré-visualização…</div>;
+  }
+
+  if (!pages.length) {
+    return <div className="simulation-pdf-status">Pré-visualização indisponível. O download do PDF continua ativo.</div>;
   }
 
   return (

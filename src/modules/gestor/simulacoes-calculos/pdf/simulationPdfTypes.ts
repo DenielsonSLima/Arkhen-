@@ -28,6 +28,7 @@ export interface SimulationPdfWatermark {
   opacity?: number;
   size?: number;
   position?: 'topo-esquerda' | 'topo-direita' | 'centro' | 'rodape-direita';
+  aspectRatio?: number;
 }
 
 export interface SimulationPdfInput {

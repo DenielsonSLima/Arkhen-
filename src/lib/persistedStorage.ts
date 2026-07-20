@@ -243,7 +243,8 @@ supabase.auth.onAuthStateChange((event) => {
 const ensureInitialized = () => {
   if (initPromise) return initPromise;
   initPromise = bootstrap().then(() => {
-    if (!currentContext || realtimeChannel) return;
+    const ctx = currentContext;
+    if (!ctx || realtimeChannel) return;
     realtimeChannel = subscribeRealtimeChannel(
       'app-storage',
       (ch) =>
@@ -253,11 +254,11 @@ const ensureInitialized = () => {
             event: '*',
             schema: 'public',
             table: STORAGE_TABLE,
-            filter: `empresa_id=eq.${currentContext.empresa_id}`,
+            filter: `empresa_id=eq.${ctx.empresa_id}`,
           },
-          (payload) => {
+          (payload: any) => {
             const row = (payload.new as RawPreferenceRow | null) || (payload.old as RawPreferenceRow | null);
-            if (!row || row.user_id !== currentContext?.user_id || row.modulo !== STORAGE_MODULE) return;
+            if (!row || row.user_id !== ctx.user_id || row.modulo !== STORAGE_MODULE) return;
 
             if (payload.eventType === 'DELETE') {
               if (!cache.has(row.chave)) return;

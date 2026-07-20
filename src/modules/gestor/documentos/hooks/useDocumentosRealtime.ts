@@ -42,7 +42,7 @@ export const useDocumentosRealtime = (enabled = true) => {
       'documentos-realtime',
       (ch) =>
         ch
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, (payload) => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, (payload: any) => {
             const row = getDocumentosRealtimeRow(payload);
             invalidateDocumentosQueries(queryClient, {
               scope: row.scope || undefined,
@@ -52,7 +52,7 @@ export const useDocumentosRealtime = (enabled = true) => {
           .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
             invalidateDocumentosQueries(queryClient, { includeCompanies: true });
           })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'preferencias_usuario_modulos' }, (payload) => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'preferencias_usuario_modulos' }, (payload: any) => {
             const row = getDocumentosPreferencesRow(payload);
             if (row?.modulo === 'documentos') {
               invalidateDocumentosQueries(queryClient, { includeSettings: true });

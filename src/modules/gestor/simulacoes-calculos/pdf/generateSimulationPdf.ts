@@ -59,8 +59,18 @@ const drawWatermark = (doc: JsPdfDocument, input: SimulationPdfInput) => {
   if (!watermark?.enabled || !watermark.dataUrl) return;
 
   const sizePercent = Math.max(12, Math.min(70, watermark.size ?? 35));
-  const width = CONTENT_WIDTH * (sizePercent / 100);
-  const height = width;
+  const maxW = CONTENT_WIDTH * (sizePercent / 100);
+  const maxH = (PAGE_HEIGHT - 40) * (sizePercent / 100);
+  const aspect = watermark.aspectRatio && watermark.aspectRatio > 0 ? watermark.aspectRatio : 1;
+
+  let width = maxW;
+  let height = width / aspect;
+
+  if (height > maxH) {
+    height = maxH;
+    width = height * aspect;
+  }
+
   const position = watermark.position ?? 'centro';
   let x = (PAGE_WIDTH - width) / 2;
   let y = (PAGE_HEIGHT - height) / 2;
@@ -269,6 +279,31 @@ export const imageUrlToDataUrl = async (url: string | null | undefined): Promise
   } catch {
     return null;
   }
+};
+
+export const getImageDetails = async (
+  url: string | null | undefined
+): Promise<{ dataUrl: string | null; aspectRatio: number }> => {
+  if (!url) return { dataUrl: null, aspectRatio: 1 };
+  const dataUrl = await imageUrlToDataUrl(url);
+  if (!dataUrl) return { dataUrl: null, aspectRatio: 1 };
+
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve({ dataUrl, aspectRatio: 1 });
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const naturalWidth = img.naturalWidth || 100;
+      const naturalHeight = img.naturalHeight || 100;
+      resolve({ dataUrl, aspectRatio: naturalWidth / naturalHeight });
+    };
+    img.onerror = () => {
+      resolve({ dataUrl, aspectRatio: 1 });
+    };
+    img.src = dataUrl;
+  });
 };
 
 export const pdfBytesToDataUrl = (bytes: Uint8Array) => {

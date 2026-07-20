@@ -33,6 +33,7 @@ import { formatCurrency, formatPercent } from './services/calculos.service';
 import { buildLegacyPdfSections } from './pdf/buildLegacyPdfSections';
 import {
   generateSimulationPdf,
+  getImageDetails,
   imageUrlToDataUrl,
   pdfBytesToDataUrl,
 } from './pdf/generateSimulationPdf';
@@ -681,9 +682,9 @@ export const SimulacoesCalculosPage: React.FC = () => {
 
   const createCurrentPdf = async (generatedAt: Date) => {
     const watermarkUrl = marcaDagua?.fileUrlRetrato || marcaDagua?.fileUrl || marcaDagua?.fileUrlPaisagem;
-    const [logoDataUrl, watermarkDataUrl] = await Promise.all([
+    const [logoDataUrl, watermarkDetails] = await Promise.all([
       imageUrlToDataUrl(empresa?.logoUrl),
-      marcaDagua?.habilitado ? imageUrlToDataUrl(watermarkUrl) : Promise.resolve(null),
+      marcaDagua?.habilitado ? getImageDetails(watermarkUrl) : Promise.resolve({ dataUrl: null, aspectRatio: 1 }),
     ]);
     return generateSimulationPdf({
       title,
@@ -691,11 +692,12 @@ export const SimulacoesCalculosPage: React.FC = () => {
       company: { ...empresa, logoDataUrl },
       sections: getCurrentPdfSections(),
       watermark: {
-        enabled: Boolean(marcaDagua?.habilitado && watermarkDataUrl),
-        dataUrl: watermarkDataUrl,
+        enabled: Boolean(marcaDagua?.habilitado && watermarkDetails.dataUrl),
+        dataUrl: watermarkDetails.dataUrl,
         opacity: marcaDagua?.opacidadeRetrato ?? marcaDagua?.opacidade ?? 10,
         size: marcaDagua?.tamanhoRetrato ?? marcaDagua?.tamanho ?? 35,
         position: marcaDagua?.posicaoRetrato ?? marcaDagua?.posicao ?? 'centro',
+        aspectRatio: watermarkDetails.aspectRatio,
       },
     });
   };
