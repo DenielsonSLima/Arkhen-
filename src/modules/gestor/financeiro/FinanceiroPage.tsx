@@ -210,7 +210,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
             pagadorCnpj: getCompanyDetails(settlementCobranca.clienteEmpresaId).cnpj,
             dataVencimento: settlementCobranca.dataVencimento,
             dataVencimentoFormatted: formatDate(settlementCobranca.dataVencimento),
-            integracaoExterna: settlementCobranca.bankProvider === 'asaas',
+            integracaoExterna: settlementCobranca.bankProvider === 'inter',
           }}
           onSubmit={async (data) => {
             await handleBaixarManualCobrancaCustom({

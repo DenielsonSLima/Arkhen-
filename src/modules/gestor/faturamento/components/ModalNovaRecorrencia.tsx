@@ -120,7 +120,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             </span>
             <div>
               <h2>Nova recorrência</h2>
-              <p>Contrato mensal com padrão de cobrança e regras Asaas.</p>
+              <p>Contrato mensal com padrão de cobrança pelo Banco Inter.</p>
             </div>
           </div>
           <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
@@ -183,13 +183,13 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             </BillingInputFrame>
           </div>
 
-          <BillingSectionTitle title="Automação Asaas" description="Primeira cobrança e padrão financeiro da recorrência." />
+          <BillingSectionTitle title="Automação Banco Inter" description="Primeira cobrança e padrão financeiro da recorrência." />
 
           <label className="faturamento-switch-row" style={{ gridColumn: '1 / -1' }}>
             <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
             <span>
               <strong>Gerar primeira cobrança automaticamente</strong>
-              <small>Cria uma cobrança no Asaas com o próximo vencimento calculado.</small>
+              <small>Cria uma cobrança BolePix no Banco Inter para o próximo vencimento.</small>
             </span>
           </label>
 

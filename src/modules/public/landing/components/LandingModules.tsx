@@ -36,9 +36,9 @@ const modules: ModuleCard[] = [
   },
   {
     icon: <CreditCard size={26} />,
-    title: 'Faturamento Asaas',
+    title: 'Faturamento Banco Inter',
     desc: 'Geração de cobranças por Pix e boleto, acompanhamento de vencimentos e registro de recebimentos.',
-    badge: 'Integração Asaas',
+    badge: 'Integração Banco Inter',
     badgeColor: '#c59235',
   },
   {

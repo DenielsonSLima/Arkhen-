@@ -96,7 +96,7 @@ export const createInterCharge = async (
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(boletoRequest),
-        acceptedStatuses: [200],
+        acceptedStatuses: [200, 201, 202],
       },
     );
     const creationPayload = await readProviderJson(response);

@@ -108,7 +108,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   if (!isOpen) return null;
 
   const selectedCliente = (clientesQuery.data || []).find((cliente) => cliente.id === clienteEmpresaId);
-  const asaasPaymentLink = generatedCobranca ? getCobrancaPaymentLink(generatedCobranca) : '';
+  const bankPaymentLink = generatedCobranca ? getCobrancaPaymentLink(generatedCobranca) : '';
   const paymentLink = generatedCobranca ? getPublicCobrancaLink(generatedCobranca, selectedCliente) : '';
   const shareText = generatedCobranca ? buildCobrancaShareMessage(generatedCobranca, selectedCliente) : '';
 
@@ -132,7 +132,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const handleShare = async () => {
     if (!shareText) return;
     if (navigator.share) {
-      await navigator.share({ title: 'Cobrança Asaas', text: shareText, url: paymentLink || undefined });
+      await navigator.share({ title: 'Cobrança Banco Inter', text: shareText, url: paymentLink || undefined });
       return;
     }
     await copyToClipboard(shareText, 'Mensagem copiada para compartilhar.');
@@ -187,7 +187,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
                 {step === 2 && 'Dados da cobrança'}
                 {step === 3 && 'Cobrança gerada'}
               </h2>
-              <p>Emissão avulsa com regras de boleto, Pix e link Asaas.</p>
+              <p>Emissão avulsa com BolePix e cobrança Pix pelo Banco Inter.</p>
             </div>
           </div>
           <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
@@ -269,7 +269,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               </BillingInputFrame>
             </div>
 
-            <BillingSectionTitle title="Pagamento e regras do boleto" description="Configure desconto, juros e multa enviados para o Asaas." />
+            <BillingSectionTitle title="Pagamento e regras do boleto" description="Configure desconto, juros e multa enviados ao Banco Inter." />
 
             <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Forma de Pagamento</label>
@@ -365,7 +365,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
           <div className="faturamento-success-panel">
             <div className="faturamento-success-alert">
               <Check size={18} />
-              <span>Cobrança criada no Asaas e registrada no financeiro.</span>
+              <span>Cobrança criada no Banco Inter e registrada no financeiro.</span>
             </div>
 
             <div className="faturamento-success-summary">
@@ -415,7 +415,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
             <div className="faturamento-form-group">
               <label>Link da página de cobrança</label>
               <div className="faturamento-link-row">
-                <input readOnly value={paymentLink || 'O Asaas não retornou link de pagamento para esta cobrança.'} />
+                <input readOnly value={paymentLink || 'O Banco Inter ainda está processando o documento desta cobrança.'} />
                 <button type="button" onClick={() => copyToClipboard(paymentLink, 'Link copiado.')} disabled={!paymentLink} className="faturamento-icon-action" title="Copiar link">
                   <Clipboard size={16} />
                 </button>
@@ -428,8 +428,8 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               <a href={paymentLink || undefined} target="_blank" rel="noreferrer" className={`faturamento-share-action ${!paymentLink ? 'disabled' : ''}`}>
                 <ExternalLink size={16} /> Abrir cobrança
               </a>
-              <a href={asaasPaymentLink || undefined} target="_blank" rel="noreferrer" className={`faturamento-share-action ${!asaasPaymentLink ? 'disabled' : ''}`}>
-                <ExternalLink size={16} /> Abrir Asaas
+              <a href={bankPaymentLink || undefined} target="_blank" rel="noreferrer" className={`faturamento-share-action ${!bankPaymentLink ? 'disabled' : ''}`}>
+                <ExternalLink size={16} /> Abrir boleto Inter
               </a>
               <button type="button" onClick={() => void handleShare()} className="faturamento-share-action">
                 <Share2 size={16} /> Compartilhar

@@ -35,8 +35,8 @@ export const LandingPage: React.FC = () => {
       answer: 'A integração de NFS-e não está disponível em todos os municípios. A ativação depende do provedor utilizado pela prefeitura, dos requisitos locais e de homologação prévia. Consulte a disponibilidade para a cidade do seu escritório antes da contratação desse recurso.'
     },
     {
-      question: 'Como funciona o faturamento integrado ao Asaas?',
-      answer: 'O Arkhen pode conectar a conta Asaas do escritório para gerar cobranças por Pix e boleto e acompanhar as atualizações de pagamento recebidas pela integração. Tarifas, disponibilidade e regras do serviço seguem as condições do Asaas.'
+      question: 'Como funciona o faturamento integrado ao Banco Inter?',
+      answer: 'O Arkhen conecta a conta PJ do Banco Inter para gerar BolePix e cobranças Pix, além de conciliar pagamentos pelos webhooks oficiais. A disponibilidade depende das permissões habilitadas na integração Inter Empresas.'
     },
     {
       question: 'O que é o compartilhamento de documentos com senha?',

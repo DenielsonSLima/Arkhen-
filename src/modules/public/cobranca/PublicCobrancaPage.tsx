@@ -172,7 +172,7 @@ export const PublicCobrancaPage = () => {
                 <div className="public-charge-empty-preview">
                   <FileText size={38} />
                   <strong>{isExpired ? 'Link expirado' : 'Boleto ainda indisponível'}</strong>
-                  <span>{isExpired ? cobranca.expiredReason || 'Esta cobrança não está mais disponível para pagamento.' : 'Use o botão de pagamento para acessar a cobrança no Asaas.'}</span>
+                  <span>{isExpired ? cobranca.expiredReason || 'Esta cobrança não está mais disponível para pagamento.' : 'Use o botão para abrir o boleto do Banco Inter ou copie o Pix.'}</span>
                 </div>
               )}
             </div>

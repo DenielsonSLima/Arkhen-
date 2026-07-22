@@ -19,8 +19,6 @@
   padding: 8px 12px;
 }
 .bank-logo img { height: 25px; max-width: 116px; object-fit: contain; width: 100%; }
-.bank-logo--asaas { background: #003b71; }
-.bank-logo--asaas img { height: 18px; }
 .bank-logo--inter { background: #fff7ed; border: 1px solid #fed7aa; }
 .bank-logo--large { min-width: 142px; }
 .bank-logo--large img { max-width: 132px; }

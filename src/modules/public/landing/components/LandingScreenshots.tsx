@@ -40,7 +40,7 @@ const slides: Slide[] = [
   {
     src: screenFaturamento,
     title: 'Faturamento e Cobranças',
-    desc: 'Dashboard de NFS-e emitidas, cobranças geradas e controle de inadimplência com integração Asaas.',
+    desc: 'Dashboard de NFS-e, BolePix, cobranças Pix e controle de inadimplência integrado ao Banco Inter.',
     featurePhrase: 'Organize cobranças, recebimentos e honorários em uma visão única.',
   },
   {

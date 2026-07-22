@@ -73,6 +73,29 @@ export const FiscalRps: React.FC<FiscalRpsProps> = ({
 
       <div className="form-row-grid">
         <div className="form-item-group">
+          <label>Inscrição Municipal do Prestador</label>
+          <input
+            type="text"
+            value={config.inscricaoMunicipal}
+            onChange={(e) => setConfig(prev => ({ ...prev, inscricaoMunicipal: e.target.value }))}
+            disabled={saving}
+            placeholder="Inscrição no WebISS de Itabaiana"
+          />
+        </div>
+        <div className="form-item-group">
+          <label>CNAE do Serviço</label>
+          <input
+            type="text"
+            value={config.codigoCnae}
+            onChange={(e) => setConfig(prev => ({ ...prev, codigoCnae: e.target.value }))}
+            disabled={saving}
+            placeholder="Ex: 6920601"
+          />
+        </div>
+      </div>
+
+      <div className="form-row-grid">
+        <div className="form-item-group">
           <label>Código do Serviço</label>
           <input
             type="text"

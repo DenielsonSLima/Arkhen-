@@ -115,7 +115,7 @@ export const ManualSettlementModal: React.FC<ManualSettlementModalProps> = ({
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {integracaoExterna && (
           <div role="status" className="financeiro-form-info">
-            Cobrança Asaas: a baixa será integral e só será confirmada após o provedor cancelar o pagamento aberto. Ajustes parciais e conciliação de conta ficam desabilitados.
+            Cobrança Banco Inter: a liquidação é conciliada automaticamente pelo webhook. Para baixa manual, cancele primeiro a cobrança externa.
           </div>
         )}
         {/* Ticket Header - Immersive Design */}

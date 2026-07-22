@@ -131,6 +131,8 @@ export const FiscalConfig: React.FC = () => {
     ultimoNumeroRps: '',
     proximoNumeroRps: '',
     ultimoNumeroNfse: '',
+    inscricaoMunicipal: '',
+    codigoCnae: '',
     codigoServico: '',
     itemListaServico: '',
     aliquotaIss: '',
@@ -525,18 +527,8 @@ export const FiscalConfig: React.FC = () => {
     setCertResult(null);
 
     try {
-      await fiscalIntegrationService.registerOperation(activeScope, config, {
-        operacao: 'Consulta',
-        numeroNfse: '-',
-        protocolo: `CERT-${Date.now().toString().slice(-6)}`,
-        status: 'Sucesso',
-        usuario: 'Administrador',
-        mensagemPrefeitura: 'Assinatura digital validada pela Edge Function com certificado A1 protegido.'
-      });
-      setCertResult({
-        success: true,
-        message: `Certificado [${config.certificadoNome}] validado com sucesso e pronto para assinatura.`
-      });
+      const result = await fiscalIntegrationService.testCertificate(activeScope, config);
+      setCertResult(result);
       setTimeout(() => setCertResult(null), 5000);
       await reloadActiveContext();
     } catch (error) {

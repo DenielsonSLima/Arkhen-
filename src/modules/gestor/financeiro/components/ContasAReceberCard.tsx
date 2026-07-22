@@ -40,7 +40,7 @@ const getStatusClass = (item: CobrancaFinanceira, hoje: string) => {
 };
 
 const paymentLinkFor = (item: CobrancaFinanceira) => (
-  item.asaasBankSlipUrl || item.asaasBoletoUrl || item.asaasInvoiceUrl || ''
+  item.bankSlipPdfUrl || item.bankSlipUrl || item.paymentUrl || ''
 );
 
 export const ContasAReceberCard: React.FC<ContasAReceberCardProps> = ({

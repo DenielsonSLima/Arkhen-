@@ -38,16 +38,16 @@ export const LandingFeatures: React.FC = () => {
   const features: Record<FeatureKey, FeatureDetail> = {
     financeiro: {
       icon: <CreditCard size={18} />,
-      tabLabel: 'Faturamento Asaas',
-      title: 'Faturamento de Honorários Contábeis com Asaas',
+      tabLabel: 'Faturamento Banco Inter',
+      title: 'Faturamento de Honorários com Banco Inter',
       subtitle: 'Geração e acompanhamento de cobranças por Pix e boleto.',
       description: (
         <span>
-          O Arkhen integra-se ao Asaas para gerar links de pagamento e boletos e acompanhar o status das cobranças em um painel financeiro.
+          O Arkhen integra-se à API oficial do Banco Inter para gerar BolePix, cobranças Pix e acompanhar a conciliação no painel financeiro.
           <br /><br />
-          <strong style={{ color: '#c59235' }}>Atenção:</strong> A conta Asaas possui custos e tarifas operacionais próprias sobre as cobranças liquidadas. Você pode conferir os valores diretamente no site oficial:{' '}
-          <a href="https://www.asaas.com" target="_blank" rel="noopener noreferrer" style={{ color: '#c59235', textDecoration: 'underline', fontWeight: 600 }}>
-            www.asaas.com
+          <strong style={{ color: '#c59235' }}>Requisito:</strong> a integração exige conta Inter Empresas PJ, certificado mTLS e permissões de cobrança habilitadas. Consulte o portal oficial:{' '}
+          <a href="https://developers.inter.co" target="_blank" rel="noopener noreferrer" style={{ color: '#c59235', textDecoration: 'underline', fontWeight: 600 }}>
+            developers.inter.co
           </a>.
         </span>
       ) as any,
@@ -58,7 +58,7 @@ export const LandingFeatures: React.FC = () => {
         'Controle total da inadimplência do escritório em um só painel.'
       ],
       visualContent: (
-        <div className="widget-asaas">
+        <div className="widget-banco-inter">
           <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 6px 20px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

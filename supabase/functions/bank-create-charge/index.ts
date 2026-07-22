@@ -24,40 +24,6 @@ const parseChargeRequest = async (req: Request) => {
   return record;
 };
 
-const invokeAsaas = async (
-  req: Request,
-  supabaseUrl: string,
-  payload: Record<string, unknown>,
-) => {
-  const authorization = req.headers.get("Authorization") || "";
-  const apiKey = req.headers.get("apikey") ||
-    Deno.env.get("SUPABASE_ANON_KEY") || "";
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
-  try {
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/asaas-create-payment`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: authorization,
-          apikey: apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      },
-    );
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error("Nao foi possivel acionar a integracao Asaas.");
-    }
-    return asRecord(result);
-  } finally {
-    clearTimeout(timer);
-  }
-};
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -105,10 +71,6 @@ Deno.serve(async (req) => {
       throw new Error("Selecione e valide um banco padrao antes de cobrar.");
     }
 
-    if (integration.provedor === "asaas") {
-      const result = await invokeAsaas(req, supabaseUrl, payload);
-      return jsonResponse(result);
-    }
     if (integration.provedor !== "inter") {
       throw new Error("Provedor bancario ativo nao suportado.");
     }

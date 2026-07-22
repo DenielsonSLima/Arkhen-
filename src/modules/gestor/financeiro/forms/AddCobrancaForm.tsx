@@ -124,7 +124,7 @@ export const AddCobrancaForm: React.FC<AddCobrancaFormProps> = ({
       </div>
 
       <div className="form-item-group">
-        <label>Meio de Pagamento Asaas</label>
+        <label>Meio de pagamento Banco Inter</label>
         <select
           value={meioPagamento}
           onChange={(e) => setMeioPagamento(e.target.value as any)}

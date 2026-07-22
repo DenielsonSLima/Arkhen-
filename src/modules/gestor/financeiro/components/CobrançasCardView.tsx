@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, FileX, Trash2, ExternalLink } from 'lucide-react';
+import { FileX, Trash2, ExternalLink } from 'lucide-react';
 import type { CobrancaFinanceira, ContratoFinanceiro } from '../services/financeiroService';
 
 interface CobrançasCardViewProps {
@@ -10,7 +10,6 @@ interface CobrançasCardViewProps {
   formatVencimento: (dateStr: string) => string;
   formatTimestamp: (tsStr?: string) => string;
   handleEmitirNfseManual: (id: string) => Promise<void>;
-  handleSimularRecebimento: (id: string) => Promise<void>;
   setBoletoToCancel: (cob: CobrancaFinanceira) => void;
   setCobrancaToCancel: (cob: CobrancaFinanceira) => void;
 }
@@ -23,7 +22,6 @@ export const CobrançasCardView: React.FC<CobrançasCardViewProps> = ({
   formatVencimento,
   formatTimestamp,
   handleEmitirNfseManual,
-  handleSimularRecebimento,
   setBoletoToCancel,
   setCobrancaToCancel,
 }) => {
@@ -122,26 +120,18 @@ export const CobrançasCardView: React.FC<CobrançasCardViewProps> = ({
                             </div>
                           )}
                           <div className="financeiro-card-grid-row">
-                            <span>NFS-e Asaas</span>
-                            {cob.asaasNfseId ? (
+                            <span>NFS-e WebISS</span>
+                            {cob.nfseId ? (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.75rem' }}>
                                   Emitida
                                 </span>
-                                <a
-                                  href={`https://asaas.com/nfse/${cob.asaasNfseId}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{ color: '#3b82f6', fontWeight: 600, fontSize: '0.72rem', textDecoration: 'underline' }}
-                                  title="Visualizar Nota Fiscal de Serviço"
-                                >
-                                  Ver
-                                </a>
+                                <span title={cob.nfseId} style={{ color: '#64748b', fontSize: '0.72rem' }}>#{cob.nfseId}</span>
                               </div>
                             ) : cob.status === 'Cancelado' ? (
                               <strong>-</strong>
                             ) : (
-                              <button onClick={() => handleEmitirNfseManual(cob.id)} style={{ background: 'none', border: 'none', color: 'var(--color-gold-dark)', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer', padding: 0 }} title="Emitir NFS-e manual no Asaas">
+                              <button onClick={() => handleEmitirNfseManual(cob.id)} style={{ background: 'none', border: 'none', color: 'var(--color-gold-dark)', fontWeight: 600, fontSize: '0.75rem', cursor: 'pointer', padding: 0 }} title="Emitir NFS-e pelo WebISS">
                                 Emitir NFS-e
                               </button>
                             )}
@@ -156,17 +146,12 @@ export const CobrançasCardView: React.FC<CobrançasCardViewProps> = ({
                       <div className="financeiro-card-footer financeiro-card-footer-actions">
                         <span title={cob.id}>ID {cob.id.slice(0, 8).toUpperCase()}</span>
                         <div className="financeiro-receber-actions">
-                          {cob.asaasBoletoUrl && cob.status === 'Pendente' && (
-                            <a href={cob.asaasBoletoUrl} target="_blank" rel="noreferrer" className="financeiro-action-btn link" title="Boleto Asaas">
+                          {cob.bankSlipUrl && cob.status === 'Pendente' && (
+                            <a href={cob.bankSlipUrl} target="_blank" rel="noreferrer" className="financeiro-action-btn link" title="Boleto Banco Inter">
                               <ExternalLink size={15} />
                             </a>
                           )}
-                          {(cob.status === 'Pendente' || cob.status === 'Vencido') && (
-                            <button onClick={() => handleSimularRecebimento(cob.id)} className="financeiro-action-btn pay" title="Simular Recebimento">
-                              <Play size={15} />
-                            </button>
-                          )}
-                          {cob.status === 'Pendente' && cob.asaasBoletoUrl && (
+                          {cob.status === 'Pendente' && cob.bankSlipUrl && (
                             <button onClick={() => setBoletoToCancel(cob)} className="financeiro-action-btn boleto-cancel" title="Cancelar Boleto">
                               <FileX size={15} />
                             </button>

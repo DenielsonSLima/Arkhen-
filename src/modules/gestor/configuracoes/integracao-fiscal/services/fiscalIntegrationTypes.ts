@@ -19,6 +19,8 @@ export interface FiscalConfigData {
   ultimoNumeroRps: string;
   proximoNumeroRps: string;
   ultimoNumeroNfse: string;
+  inscricaoMunicipal: string;
+  codigoCnae: string;
   codigoServico: string;
   itemListaServico: string;
   aliquotaIss: string;

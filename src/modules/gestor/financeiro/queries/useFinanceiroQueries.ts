@@ -112,15 +112,6 @@ export const useEmitirNfseFinanceiraMutation = () => {
   });
 };
 
-export const useConfirmarRecebimentoFinanceiroMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => financeiroService.simularRecebimento(id),
-    onSuccess: () => invalidateFinanceiro(queryClient),
-  });
-};
-
 export const useBaixarManualCobrancaCustomMutation = () => {
   const queryClient = useQueryClient();
 

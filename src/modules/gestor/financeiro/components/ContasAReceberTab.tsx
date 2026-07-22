@@ -97,7 +97,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
 
   // Handle link copying
   const handleCopyLink = async (item: CobrancaFinanceira) => {
-    const link = item.asaasBankSlipUrl || item.asaasBoletoUrl || item.asaasInvoiceUrl || '';
+    const link = item.bankSlipPdfUrl || item.bankSlipUrl || item.paymentUrl || '';
     if (!link) return;
     try {
       await navigator.clipboard.writeText(link);
@@ -368,7 +368,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
               {paginatedItems.map((item) => {
                 const badge = getStatusBadge(item);
                 const isItemOverdue = item.status === 'Vencido' || (item.status === 'Pendente' && toDate(item.dataVencimento) < toDate(hoje));
-                const paymentLink = item.asaasBankSlipUrl || item.asaasBoletoUrl || item.asaasInvoiceUrl || '';
+                const paymentLink = item.bankSlipPdfUrl || item.bankSlipUrl || item.paymentUrl || '';
                 const details = getCompanyDetails(item.clienteEmpresaId);
 
                 return (
@@ -431,12 +431,12 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
                             href={paymentLink}
                             target="_blank"
                             rel="noreferrer"
-                            title="Abrir fatura Asaas"
+                            title="Abrir cobrança Banco Inter"
                           >
                             <ExternalLink size={16} />
                           </a>
                         ) : (
-                          <button type="button" disabled title="Sem link Asaas">
+                          <button type="button" disabled title="Cobrança sem documento bancário">
                             <ExternalLink size={16} />
                           </button>
                         )}

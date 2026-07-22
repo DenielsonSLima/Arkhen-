@@ -9,7 +9,7 @@ interface AddRegraCnabFormProps {
 
 export const AddRegraCnabForm: React.FC<AddRegraCnabFormProps> = ({ onSave, onCancel, isSaving }) => {
   const [nome, setNome] = useState('');
-  const [banco, setBanco] = useState('Asaas');
+  const [banco, setBanco] = useState('Banco Inter');
   const [tipoRegra, setTipoRegra] = useState<'cobranca' | 'conciliacao'>('conciliacao');
 
   // Cobrança parameters
@@ -45,7 +45,7 @@ export const AddRegraCnabForm: React.FC<AddRegraCnabFormProps> = ({ onSave, onCa
         <input
           type="text"
           required
-          placeholder="Ex: Conciliação automática - Tarifas Asaas"
+          placeholder="Ex: Conciliação automática - Tarifas Banco Inter"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           disabled={isSaving}
@@ -60,7 +60,7 @@ export const AddRegraCnabForm: React.FC<AddRegraCnabFormProps> = ({ onSave, onCa
             onChange={(e) => setBanco(e.target.value)}
             disabled={isSaving}
           >
-            <option value="Asaas">Asaas</option>
+            <option value="Banco Inter">Banco Inter</option>
             <option value="Itaú">Itaú Unibanco</option>
             <option value="Banco do Brasil">Banco do Brasil</option>
             <option value="Bradesco">Bradesco</option>

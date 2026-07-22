@@ -12,7 +12,7 @@ export interface PublicCobrancaPayload {
   paymentLink: string;
   bankSlipLink: string;
   pixCopyPaste?: string;
-  bankProvider?: 'asaas' | 'inter';
+  bankProvider?: 'inter';
   clienteNome: string;
   clienteCnpj?: string;
   clienteEmail?: string;

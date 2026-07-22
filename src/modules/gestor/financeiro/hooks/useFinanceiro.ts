@@ -14,7 +14,6 @@ import {
   useCancelBoletoFinanceiroMutation,
   useCancelCobrancaFinanceiraMutation,
   useCobrancasFinanceirasQuery,
-  useConfirmarRecebimentoFinanceiroMutation,
   useBaixarManualCobrancaCustomMutation,
   useContratosFinanceirosQuery,
   useCreateCobrancaFinanceiraMutation,
@@ -75,7 +74,6 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   const cancelCobrancaMutation = useCancelCobrancaFinanceiraMutation();
   const cancelBoletoMutation = useCancelBoletoFinanceiroMutation();
   const emitirNfseMutation = useEmitirNfseFinanceiraMutation();
-  const confirmarRecebimentoMutation = useConfirmarRecebimentoFinanceiroMutation();
   const baixarManualCobrancaCustomMutation = useBaixarManualCobrancaCustomMutation();
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const saveLancamentoMutation = useSaveLancamentoFinanceiroMutation();
@@ -229,7 +227,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   const handleCancelCobranca = async (id: string) => {
     try {
       await cancelCobrancaMutation.mutateAsync(id);
-      setTransientSuccess('Cobrança cancelada com sucesso no Asaas e no sistema.');
+      setTransientSuccess('Cobrança cancelada no Banco Inter e no sistema.');
       setCobrancaToCancel(null);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar cobrança.');
@@ -239,7 +237,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   const handleCancelBoleto = async (id: string) => {
     try {
       await cancelBoletoMutation.mutateAsync(id);
-      setTransientSuccess('Boleto cancelado no Asaas. Link de faturamento removido.');
+      setTransientSuccess('Cobrança cancelada no Banco Inter. Documento removido.');
       setBoletoToCancel(null);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar boleto.');
@@ -252,15 +250,6 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
       setTransientSuccess(`Nota Fiscal de Serviço (NFS-e) emitida com sucesso! ID: ${nfseId}`, 4000);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao emitir NFS-e.');
-    }
-  };
-
-  const handleSimularRecebimento = async (id: string) => {
-    try {
-      await confirmarRecebimentoMutation.mutateAsync(id);
-      setTransientSuccess('Baixa manual registrada e cobrança aberta cancelada no Asaas.');
-    } catch (err) {
-      setTransientError(err instanceof Error ? err.message : 'Falha ao registrar baixa manual.');
     }
   };
 
@@ -298,7 +287,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   }) => {
     try {
       await createCobrancaMutation.mutateAsync(dados);
-      setTransientSuccess('Cobrança avulsa gerada com sucesso no Asaas!');
+      setTransientSuccess('Cobrança avulsa gerada com sucesso no Banco Inter!');
       setShowAddCobrancaModal(false);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao gerar cobrança avulsa.');
@@ -402,8 +391,6 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
     handleCancelCobranca,
     handleCancelBoleto,
     handleEmitirNfseManual,
-    handleSimularRecebimento,
-    isManualSettlementLoading: confirmarRecebimentoMutation.isPending,
     handleBaixarManualCobrancaCustom,
     isCustomSettlementLoading: baixarManualCobrancaCustomMutation.isPending,
     handleCreateCobranca,

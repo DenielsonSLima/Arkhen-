@@ -82,7 +82,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
       await downloadCobrancaBankSlip(cobranca);
       showFeedback('success', 'Boleto baixado.');
     } catch {
-      showFeedback('error', 'O Asaas bloqueou o download direto. Use abrir em nova aba.', 3200);
+      showFeedback('error', 'O documento bancário não pôde ser baixado diretamente. Abra em uma nova aba.', 3200);
     } finally {
       setIsDownloading(false);
     }
@@ -116,7 +116,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
 
           <div className="faturamento-share-safe-note">
             <Shield size={15} />
-            <span>Esta cobrança é compartilhada com link seguro. O pagamento acontece no ambiente Asaas.</span>
+            <span>Esta cobrança usa link seguro e documento emitido pelo Banco Inter.</span>
           </div>
         </div>
 
@@ -194,7 +194,7 @@ export const CobrancaShareModal = ({ cobranca, cliente, onClose }: CobrancaShare
             onClick={() => window.open(paymentLink, '_blank', 'noopener,noreferrer')}
             disabled={!paymentLink}
           >
-            <ExternalLink size={16} /> Abrir pagamento no Asaas
+            <ExternalLink size={16} /> Abrir documento Banco Inter
           </button>
         </aside>
       </div>

@@ -67,7 +67,7 @@ export const useGestorGlobalSearch = (
       }))
       .filter((item) => isRouteEnabled(item.moduleId, enabledModuleIds));
     const configResults: GlobalSearchResult[] = [
-      ['integracao-bancaria', 'Integrações Bancárias', 'Asaas, Pix, boleto, checkout e webhooks'],
+      ['integracao-bancaria', 'Integração Banco Inter', 'BolePix, Pix, boleto, certificado e webhooks'],
       ['contas-bancarias', 'Contas Bancárias', 'Bancos, agências, contas e saldos'],
       ['empresa', 'Dados da Empresa', 'CNPJ, endereço, logo e contato'],
       ['usuarios', 'Gestão de Usuários', 'Usuários, convites e perfis'],

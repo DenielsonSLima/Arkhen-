@@ -44,15 +44,7 @@ interface CobrancaRow {
   data_vencimento: string;
   status: CobrancaFinanceira['status'];
   meio_pagamento: CobrancaFinanceira['meioPagamento'];
-  asaas_cobranca_id: string | null;
-  asaas_nfse_id: string | null;
-  asaas_boleto_url: string | null;
-  asaas_invoice_url: string | null;
-  asaas_bank_slip_url: string | null;
-  asaas_billing_type: string | null;
-  asaas_status: string | null;
-  asaas_ambiente: string | null;
-  asaas_payload: Record<string, unknown> | null;
+  nfse_id: string | null;
   data_pagamento: string | null;
   data_cancelamento: string | null;
   created_at: string;
@@ -60,12 +52,15 @@ interface CobrancaRow {
   financeiro_cobrancas_integracoes?: CobrancaIntegracaoRow[];
 }
 interface CobrancaIntegracaoRow {
-  provedor: 'asaas' | 'inter';
+  provedor: 'inter';
+  ambiente: string;
   external_id: string | null;
   tipo: string;
+  status: string | null;
   boleto_url: string | null;
   pix_copia_cola: string | null;
   pix_qr_code: string | null;
+  payload: Record<string, unknown> | null;
 }
 interface LancamentoRow {
   id: string;
@@ -138,8 +133,8 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
     : undefined;
   const pixCopyPaste = integration?.pix_copia_cola || undefined;
   const mergedPayload = pixCopyPaste
-    ? { ...(row.asaas_payload || {}), pixQrCode: { payload: pixCopyPaste } }
-    : row.asaas_payload || undefined;
+    ? { ...(integration?.payload || {}), pixQrCode: { payload: pixCopyPaste } }
+    : integration?.payload || undefined;
   return {
     id: safeText(row.id),
     publicToken: row.public_token || undefined,
@@ -152,15 +147,15 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
     dataVencimento: safeText(row.data_vencimento),
     status: row.status,
     meioPagamento: row.meio_pagamento,
-    asaasCobrancaId: row.asaas_cobranca_id || undefined,
-    asaasNfseId: row.asaas_nfse_id || undefined,
-    asaasBoletoUrl: row.asaas_boleto_url || integration?.boleto_url || interDocumentUrl,
-    asaasInvoiceUrl: row.asaas_invoice_url || integration?.boleto_url || interDocumentUrl,
-    asaasBankSlipUrl: row.asaas_bank_slip_url || interDocumentUrl,
-    asaasBillingType: row.asaas_billing_type || undefined,
-    asaasStatus: row.asaas_status || undefined,
-    asaasAmbiente: row.asaas_ambiente || undefined,
-    asaasPayload: mergedPayload,
+    bankChargeId: integration?.external_id || undefined,
+    nfseId: row.nfse_id || undefined,
+    paymentUrl: integration?.boleto_url || interDocumentUrl,
+    bankSlipUrl: integration?.boleto_url || interDocumentUrl,
+    bankSlipPdfUrl: interDocumentUrl,
+    bankChargeType: integration?.tipo || undefined,
+    bankStatus: integration?.status || undefined,
+    bankEnvironment: integration?.ambiente || undefined,
+    bankPayload: mergedPayload,
     bankProvider: integration?.provedor,
     bankExternalId: integration?.external_id || undefined,
     pixCopyPaste,
@@ -296,7 +291,7 @@ export const financeiroService = {
   async getCobranças(signal?: AbortSignal): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,asaas_cobranca_id,asaas_nfse_id,asaas_boleto_url,asaas_invoice_url,asaas_bank_slip_url,asaas_billing_type,asaas_status,asaas_ambiente,asaas_payload,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,external_id,tipo,boleto_url,pix_copia_cola,pix_qr_code)')
+      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,nfse_id,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,ambiente,external_id,tipo,status,boleto_url,pix_copia_cola,pix_qr_code,payload)')
       .order('data_vencimento', { ascending: false })
       .abortSignal(signal ?? new AbortController().signal);
 
@@ -359,41 +354,28 @@ export const financeiroService = {
   },
 
   async cancelarCobrança(cobrancaId: string): Promise<void> {
-    const { data, error } = await supabase.rpc('cancelar_cobranca_financeira', {
-      p_cobranca_id: cobrancaId,
+    const { data, error } = await supabase.functions.invoke('bank-cancel-charge', {
+      body: { cobranca_id: cobrancaId, motivo: 'Cancelamento solicitado no financeiro' },
     });
-
     if (error) throw new Error(`Erro ao cancelar cobrança: ${error.message}`);
-    if (!data) throw new Error('Cobrança não encontrada ou já paga.');
+    if (!data?.ok) throw new Error(data?.error || 'Cobrança não encontrada ou já paga.');
   },
 
   async cancelarBoleto(cobrancaId: string): Promise<void> {
-    const { data, error } = await supabase.rpc('cancelar_boleto_financeiro', {
-      p_cobranca_id: cobrancaId,
+    const { data, error } = await supabase.functions.invoke('bank-cancel-charge', {
+      body: { cobranca_id: cobrancaId, motivo: 'Cancelamento do boleto solicitado no financeiro' },
     });
-
     if (error) throw new Error(`Erro ao cancelar boleto: ${error.message}`);
-    if (!data) throw new Error('Apenas boletos pendentes podem ser cancelados.');
+    if (!data?.ok) throw new Error(data?.error || 'Apenas cobranças pendentes podem ser canceladas.');
   },
 
   async emitirNfseManual(cobrancaId: string): Promise<string> {
-    const { data, error } = await supabase.rpc('emitir_nfse_asaas', {
-      p_cobranca_id: cobrancaId,
+    const { data, error } = await supabase.functions.invoke('fiscal-integration', {
+      body: { action: 'emit-nfse', cobranca_id: cobrancaId },
     });
-
     if (error) throw new Error(`Erro ao emitir NFS-e: ${error.message}`);
-    return String(data);
-  },
-
-  async simularRecebimento(cobrancaId: string): Promise<void> {
-    const { data, error } = await supabase.functions.invoke('asaas-manual-settlement', {
-      body: {
-        cobranca_id: cobrancaId,
-      },
-    });
-
-    if (error) throw new Error(`Erro ao registrar baixa manual: ${error.message}`);
-    if (!data?.ok) throw new Error(data?.error || 'Erro ao registrar baixa manual.');
+    if (!data?.ok || !data?.nfseId) throw new Error(data?.error || 'O WebISS não confirmou a emissão da NFS-e.');
+    return String(data.nfseId);
   },
 
   async baixarManualCobrancaCustom(dados: ManualSettlementInput): Promise<void> {

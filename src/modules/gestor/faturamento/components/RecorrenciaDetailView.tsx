@@ -193,7 +193,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
                 <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <DollarSign size={18} color="#10b981" /> Gerar Cobrança Automaticamente
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Gera boleto/pix (Asaas) e envia para o cliente.</p>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Gera BolePix pelo Banco Inter e envia para o cliente.</p>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ position: 'relative' }}>

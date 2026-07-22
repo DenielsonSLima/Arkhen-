@@ -33,7 +33,7 @@ export const ItabaianaPrefeituraProfile: FiscalPrefeituraProfile = {
     consultaSituacao: true,
   },
   notes: [
-    'Município WebISS com serviços ABRASF 1.2/2.03 e operação em produção/homologação.',
+    'Município WebISS com contrato ABRASF 2.02 e operação em produção/homologação.',
     'Manual municipal aponta ajustes para o padrão NFS-e e envio obrigatório ao Ambiente de Dados Nacional.',
     'Para homologação é necessário acesso ao usuário/contador e CeC aprovado no portal municipal.',
   ],
@@ -43,5 +43,5 @@ export const ItabaianaPrefeituraProfile: FiscalPrefeituraProfile = {
     ...itabaianaConsultarNFSEOperacoes,
     ...itabaianaBaixarXmlOperacoes,
   ],
-  fonte: 'Pesquisa web 2026: endpoint WSDL do WSS e páginas de autenticação/manual da WebISS.',
+  fonte: 'Portal WebISS Itabaiana/SE: WSDL oficial e Manual Técnico de Integração ABRASF 2.02 (consulta em 22/07/2026).',
 };

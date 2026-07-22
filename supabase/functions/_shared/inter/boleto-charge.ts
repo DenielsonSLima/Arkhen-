@@ -29,6 +29,11 @@ export const getBolePixPdfUrl = (
   codigoSolicitacao: string,
 ) => `${getBolePixDetailUrl(endpoints, codigoSolicitacao)}/pdf`;
 
+export const getBolePixCancelUrl = (
+  endpoints: InterEndpoints,
+  codigoSolicitacao: string,
+) => `${getBolePixDetailUrl(endpoints, codigoSolicitacao)}/cancelar`;
+
 export const buildBolePixPayload = (
   prepared: PreparedInterCharge,
   referenceHash: string,

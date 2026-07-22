@@ -135,6 +135,8 @@ const normalizeConfig = (value: unknown, fallback?: FiscalConfigData): FiscalCon
     ultimoNumeroRps: normalizeString(source.ultimoNumeroRps, base.ultimoNumeroRps),
     proximoNumeroRps: normalizeString(source.proximoNumeroRps, base.proximoNumeroRps),
     ultimoNumeroNfse: normalizeString(source.ultimoNumeroNfse, base.ultimoNumeroNfse),
+    inscricaoMunicipal: normalizeString(source.inscricaoMunicipal, base.inscricaoMunicipal),
+    codigoCnae: normalizeString(source.codigoCnae, base.codigoCnae),
     codigoServico: normalizeString(source.codigoServico, base.codigoServico),
     itemListaServico: normalizeString(source.itemListaServico, base.itemListaServico),
     aliquotaIss: normalizeString(source.aliquotaIss, base.aliquotaIss),
@@ -281,6 +283,8 @@ const toUpsertPayload = (context: FiscalContextInput, config: FiscalConfigData, 
   ultimoNumeroRps: config.ultimoNumeroRps,
   proximoNumeroRps: config.proximoNumeroRps,
   ultimoNumeroNfse: config.ultimoNumeroNfse,
+  inscricaoMunicipal: config.inscricaoMunicipal,
+  codigoCnae: config.codigoCnae,
   codigoServico: config.codigoServico,
   itemListaServico: config.itemListaServico,
   aliquotaIss: config.aliquotaIss,
@@ -361,6 +365,17 @@ export const fiscalIntegrationService = {
     });
 
     if (error) throw error;
+    if (context.uf === 'SE' && context.municipio.toLowerCase() === 'itabaiana' && config.provedor === 'WebISS') {
+      const { error: parametersError } = await supabase.rpc('salvar_parametros_webiss_itabaiana', {
+        p_cliente_id: isUuid(context.companyId) ? context.companyId : null,
+        p_payload: {
+          inscricaoMunicipal: config.inscricaoMunicipal,
+          codigoCnae: config.codigoCnae,
+        },
+      });
+      if (parametersError) throw parametersError;
+      return this.getContext(context);
+    }
     const normalized = normalizeFiscalData(data);
     if (!normalized) throw new Error('Resposta fiscal inválida.');
     return normalized;
@@ -371,17 +386,26 @@ export const fiscalIntegrationService = {
   },
 
   async testConnection(context: FiscalContextInput, config: FiscalConfigData): Promise<{ success: boolean; message: string }> {
-    const providerEndpoint = this.getProfileEnvironmentUrl(context.uf, context.municipio, config.ambiente);
     const data = await invokeFiscalEdge({
       action: 'test-connection',
       ...toUpsertPayload(context, config, true),
       senhaWebServiceConfigured: config.senhaWebServiceConfigured,
-      providerEndpoint,
     });
 
     return {
       success: Boolean(data.success),
       message: typeof data.message === 'string' ? data.message : 'Teste de conexão concluído.',
+    };
+  },
+
+  async testCertificate(context: FiscalContextInput, config: FiscalConfigData): Promise<{ success: boolean; message: string }> {
+    const data = await invokeFiscalEdge({
+      action: 'test-certificate',
+      ...toUpsertPayload(context, config, true),
+    });
+    return {
+      success: Boolean(data.success),
+      message: typeof data.message === 'string' ? data.message : 'Certificado validado.',
     };
   },
 

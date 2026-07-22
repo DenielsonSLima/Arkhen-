@@ -29,11 +29,11 @@ export interface PublicCobrancaPayload {
 }
 
 export const getCobrancaPaymentLink = (item: CobrancaFinanceira) => (
-  item.asaasBankSlipUrl || item.asaasBoletoUrl || item.asaasInvoiceUrl || ''
+  item.bankSlipPdfUrl || item.bankSlipUrl || item.paymentUrl || ''
 );
 
 export const getCobrancaBankSlipLink = (item: CobrancaFinanceira) => (
-  item.asaasBankSlipUrl || item.asaasBoletoUrl || ''
+  item.bankSlipPdfUrl || item.bankSlipUrl || ''
 );
 
 export const getCobrancaAccessLabel = (item: CobrancaFinanceira) => {
@@ -85,7 +85,7 @@ const readPayloadText = (payload: unknown, paths: string[][]) => {
   return '';
 };
 
-export const getCobrancaPixCopyPaste = (item: CobrancaFinanceira) => readPayloadText(item.asaasPayload, [
+export const getCobrancaPixCopyPaste = (item: CobrancaFinanceira) => readPayloadText(item.bankPayload, [
   ['pixCopiaECola'],
   ['pix', 'pixCopiaECola'],
   ['pixQrCode', 'payload'],
@@ -177,7 +177,7 @@ export const downloadCobrancaBankSlip = async (item: CobrancaFinanceira) => {
   if (!response.ok) throw new Error('Não foi possível baixar o boleto.');
 
   const blob = await response.blob();
-  const fileName = `boleto-${item.asaasCobrancaId || item.id}.pdf`;
+  const fileName = `boleto-${item.bankChargeId || item.id}.pdf`;
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;

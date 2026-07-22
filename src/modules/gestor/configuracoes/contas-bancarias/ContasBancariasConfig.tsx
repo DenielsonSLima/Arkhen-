@@ -168,7 +168,7 @@ export const ContasBancariasConfig: React.FC = () => {
             <form onSubmit={onSubmitConta} className="config-form popup-form">
               <div className="form-item-group">
                 <label>Instituição Financeira (Banco) *</label>
-                <input type="text" required placeholder="Ex: Itaú, Banco do Brasil, Asaas" value={banco} onChange={(event) => setBanco(event.target.value)} disabled={isSavingConta} />
+                <input type="text" required placeholder="Ex: Banco Inter, Itaú, Banco do Brasil" value={banco} onChange={(event) => setBanco(event.target.value)} disabled={isSavingConta} />
               </div>
               <div className="form-row-grid">
                 <div className="form-item-group">

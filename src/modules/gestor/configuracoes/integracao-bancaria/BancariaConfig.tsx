@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CreditCard, Landmark, ShieldCheck } from 'lucide-react';
-import { AsaasConfigPage } from './asaas/components/AsaasConfigPage';
 import { ActiveProviderSummary } from './components/ActiveProviderSummary';
 import { BankCatalog } from './components/BankCatalog';
 import type { BankGatewayId } from './gateway/bankGateway';
@@ -26,7 +25,6 @@ export const BancariaConfig: React.FC = () => {
     setActiveTab('bancos');
   };
 
-  if (selectedProvider === 'asaas') return <AsaasConfigPage onBack={backToBanks} />;
   if (selectedProvider === 'inter') return <InterConfigPage onBack={backToBanks} />;
 
   return (
@@ -34,7 +32,7 @@ export const BancariaConfig: React.FC = () => {
       <div className="submodule-card-header flex-header">
         <div>
           <h2>Integração Bancária</h2>
-          <p>Escolha o banco padrão e configure cada provedor de forma independente.</p>
+          <p>Configure o Banco Inter para emitir BolePix, Pix e conciliar recebimentos.</p>
         </div>
         <CreditCard size={28} className="gold-text" />
       </div>

@@ -20,7 +20,7 @@ const asRecord = (value: unknown): Record<string, unknown> => (
 
 const normalizeProvider = (value: unknown): BankGatewayId | null => {
   const provider = String(value || '').toLowerCase();
-  return provider === 'asaas' || provider === 'inter' ? provider : null;
+  return provider === 'inter' ? provider : null;
 };
 
 const normalizeStatus = (value: unknown, configured: boolean): BankIntegrationStatus => {
@@ -77,7 +77,7 @@ const normalizeIntegrations = (value: unknown): BankIntegrationSummary[] => {
 
   return bankGateways.map((gateway) => normalized.find((row) => row.provider === gateway.id) || {
     provider: gateway.id,
-    selected: gateway.id === (selectedProvider || 'asaas'),
+    selected: gateway.id === (selectedProvider || 'inter'),
     configured: false,
     status: 'pendente',
     environment: 'homologacao',

@@ -51,7 +51,7 @@ export const EditRegraCnabForm: React.FC<EditRegraCnabFormProps> = ({
         <input
           type="text"
           required
-          placeholder="Ex: Conciliação automática - Tarifas Asaas"
+          placeholder="Ex: Conciliação automática - Tarifas Banco Inter"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           disabled={isSaving}
@@ -66,7 +66,7 @@ export const EditRegraCnabForm: React.FC<EditRegraCnabFormProps> = ({
             onChange={(e) => setBanco(e.target.value)}
             disabled={isSaving}
           >
-            <option value="Asaas">Asaas</option>
+            <option value="Banco Inter">Banco Inter</option>
             <option value="Itaú">Itaú Unibanco</option>
             <option value="Banco do Brasil">Banco do Brasil</option>
             <option value="Bradesco">Bradesco</option>
