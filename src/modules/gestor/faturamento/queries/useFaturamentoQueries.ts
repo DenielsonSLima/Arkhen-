@@ -1,5 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { faturamentoService, type FaturamentoDashboardFilters } from '../services/faturamentoService';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  faturamentoService,
+  type FaturamentoDashboardFilters,
+  type FaturamentoParametros,
+} from '../services/faturamentoService';
 import { faturamentoKeys } from './faturamentoKeys';
 
 const faturamentoQueryOptions = {
@@ -15,6 +19,25 @@ export const useFaturamentoDashboardQuery = (filters: FaturamentoDashboardFilter
     ...faturamentoQueryOptions,
   })
 );
+
+export const useFaturamentoParametrosQuery = () => (
+  useQuery({
+    queryKey: faturamentoKeys.parametros(),
+    queryFn: ({ signal }) => faturamentoService.getParametros(signal),
+    ...faturamentoQueryOptions,
+  })
+);
+
+export const useSaveFaturamentoParametrosMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (parametros: FaturamentoParametros) => faturamentoService.saveParametros(parametros),
+    onSuccess: (parametros) => {
+      queryClient.setQueryData(faturamentoKeys.parametros(), parametros);
+      void queryClient.invalidateQueries({ queryKey: faturamentoKeys.all });
+    },
+  });
+};
 
 export const useFaturamentoRecorrenciasQuery = () => (
   useQuery({

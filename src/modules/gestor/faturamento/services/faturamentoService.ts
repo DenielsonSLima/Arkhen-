@@ -62,6 +62,31 @@ export interface FaturamentoInadimplencia {
   ultimoContato: string;
 }
 
+export interface FaturamentoParametros {
+  codigoServicoNfse: string;
+  aliquotaIss: number;
+  retencaoInss: number;
+  regimeTributacao: 'simples' | 'lucro_presumido' | 'lucro_real';
+  observacaoNfse: string;
+  mensagemEmailCobranca: string;
+}
+
+export const faturamentoParametrosPadrao: FaturamentoParametros = {
+  codigoServicoNfse: '17.19',
+  aliquotaIss: 2,
+  retencaoInss: 0,
+  regimeTributacao: 'simples',
+  observacaoNfse: 'Referente a prestação de serviços do mês [MES_ATUAL]. Valor aproximado dos tributos: [TRIBUTOS_APROX].',
+  mensagemEmailCobranca: 'Olá [NOME_CLIENTE], a fatura referente aos serviços de [MES_ATUAL] está disponível. O vencimento será em [DATA_VENCIMENTO].',
+};
+
+const normalizeParametros = (value: Partial<FaturamentoParametros> | null): FaturamentoParametros => ({
+  ...faturamentoParametrosPadrao,
+  ...(value || {}),
+  aliquotaIss: Number(value?.aliquotaIss ?? faturamentoParametrosPadrao.aliquotaIss),
+  retencaoInss: Number(value?.retencaoInss ?? faturamentoParametrosPadrao.retencaoInss),
+});
+
 const emptyStats: FaturamentoDashboardStats = {
   nfseAEmitir: 0,
   nfseEmitidas: 0,
@@ -89,6 +114,20 @@ const normalizeStats = (data: Partial<FaturamentoDashboardStats> | null): Fatura
 });
 
 export const faturamentoService = {
+  async getParametros(signal: AbortSignal): Promise<FaturamentoParametros> {
+    const { data, error } = await supabase.rpc('listar_parametros_faturamento').abortSignal(signal);
+    if (error) throw new Error(`Erro ao carregar configurações de faturamento: ${error.message}`);
+    return normalizeParametros(data as Partial<FaturamentoParametros> | null);
+  },
+
+  async saveParametros(parametros: FaturamentoParametros): Promise<FaturamentoParametros> {
+    const { data, error } = await supabase.rpc('salvar_parametros_faturamento', {
+      p_payload: parametros,
+    });
+    if (error) throw new Error(`Erro ao salvar configurações de faturamento: ${error.message}`);
+    return normalizeParametros(data as Partial<FaturamentoParametros> | null);
+  },
+
   async getDashboard(filters: FaturamentoDashboardFilters, signal: AbortSignal): Promise<FaturamentoDashboardStats> {
     const { data, error } = await supabase.rpc('get_faturamento_dashboard', {
       p_data_inicial: filters.dataInicial,
