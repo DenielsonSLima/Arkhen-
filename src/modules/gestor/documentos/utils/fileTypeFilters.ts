@@ -29,7 +29,7 @@ export const matchesDocumentFileType = (doc: CompanyDocument, fileTypeFilter: st
   if (fileTypeFilter === 'text') return hasExt('txt', 'efd', 'ecd', 'ecf') || mimeType.startsWith('text/');
   if (fileTypeFilter === 'csv') return hasExt('csv') || mimeType === 'text/csv';
   if (fileTypeFilter === 'bank') return hasExt('ofx', 'qif', 'rem', 'ret', 'cnab');
-  if (fileTypeFilter === 'certificate') return hasExt('pfx', 'p12', 'cer', 'crt', 'pem', 'p7s');
+  if (fileTypeFilter === 'certificate') return hasExt('pfx', 'p12', 'cer', 'crt', 'pem', 'p7s', 'key');
   if (fileTypeFilter === 'archive') return hasExt('zip', 'rar', '7z') || mimeType.includes('zip') || mimeType.includes('compressed');
   if (fileTypeFilter === 'email') return hasExt('eml', 'msg') || mimeType === 'message/rfc822';
 

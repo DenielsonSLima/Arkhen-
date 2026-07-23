@@ -69,6 +69,7 @@ const ALLOWED_ACCOUNTING_EXTENSIONS = [
   '.crt',
   '.pem',
   '.p7s',
+  '.key',
   '.eml',
   '.msg',
 ];
@@ -82,7 +83,7 @@ const ALLOWED_ACCOUNTING_ACCEPT = [
   'message/rfc822',
 ].join(',');
 
-const ACCEPTED_FORMATS_LABEL = 'PDF, Office, XML, TXT/SPED, CSV, OFX/QIF, CNAB, imagens, certificados e ZIP/RAR/7Z';
+const ACCEPTED_FORMATS_LABEL = 'PDF, Office, XML, TXT/SPED, CSV, OFX/QIF, CNAB, imagens, certificados (.pfx, .p12, .cer, .crt, .pem, .p7s, .key) e ZIP/RAR/7Z';
 
 const getFileExtension = (fileName: string) => {
   const dotIndex = fileName.lastIndexOf('.');
