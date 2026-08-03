@@ -2,6 +2,9 @@
   .gestor-sidebar {
     padding: 18px 10px 12px;
     width: 255px;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
   }
 
   .sidebar-brand {
@@ -22,33 +25,80 @@
   .menu-collapsible-container { gap: 4px; }
 
   .menu-btn {
+    color: #c9cbd0;
     font-size: 0.94rem;
+    font-weight: 600;
     gap: 10px;
+    letter-spacing: 0.005em;
     line-height: 1.25;
     min-height: 42px;
     padding: 9px 8px;
   }
 
+  .menu-btn:hover {
+    color: #ffffff;
+  }
+
+  .menu-btn.active {
+    color: #f0c66f;
+    font-weight: 700;
+  }
+
   .menu-btn > svg { height: 22px; width: 22px; }
 
   .submenu-btn {
+    color: #bfc2c8;
     font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.005em;
     line-height: 1.3;
     min-height: 38px;
     padding-bottom: 9px;
     padding-top: 9px;
   }
 
+  .submenu-btn:hover {
+    color: #ffffff;
+  }
+
+  .submenu-btn.active {
+    color: #f0c66f;
+    font-weight: 700;
+  }
+
   .sidebar-submenu-list { gap: 4px; margin-bottom: 6px; margin-top: 4px; }
 
-  .sidebar-brand-text h3 { font-size: 1.08rem; }
+  .sidebar-brand-text h3 {
+    font-size: 1.08rem;
+    font-weight: 700;
+  }
 
-  .sidebar-brand-text span { font-size: 0.92rem; }
+  .sidebar-brand-text span {
+    color: #d6a441;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
 
-  .profile-info h4 { font-size: 0.9rem; }
+  .profile-info h4 {
+    color: #f8fafc;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .profile-role {
+    color: #c3c6cc;
+  }
 
   .profile-role,
-  .profile-status-text { font-size: 0.73rem; }
+  .profile-status-text {
+    font-size: 0.73rem;
+    font-weight: 600;
+  }
+
+  .expand-chevron,
+  .sidebar-drag-handle {
+    color: #aeb2ba;
+  }
 
   .sidebar-drag-handle { padding: 6px 0 6px 2px; }
 
