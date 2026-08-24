@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { DEMO_AUTH, loginService, type LoginResponse } from '../services/loginService';
+import { loginService, type LoginResponse } from '../services/loginService';
 import { cnpjLookupService } from '../../../gestor/gestao-empresarial/services/cnpjLookupService';
 
 export type LoginMode = 'login' | 'signup' | 'recovery';
@@ -9,17 +9,14 @@ export const useLogin = () => {
     if (window.location.pathname === '/signup') return 'signup';
     return 'login';
   });
-  const [usuario, setUsuario] = useState(DEMO_AUTH.email);
-  const [senha, setSenha] = useState(DEMO_AUTH.senha);
-  const [signupNome, setSignupNome] = useState(DEMO_AUTH.nome);
-  const [signupEmpresa, setSignupEmpresa] = useState(DEMO_AUTH.empresaNome);
-  const [signupCnpj, setSignupCnpj] = useState(DEMO_AUTH.cnpj);
-  const [signupEmail, setSignupEmail] = useState(DEMO_AUTH.email);
-  const [signupSenha, setSignupSenha] = useState(DEMO_AUTH.senha);
-  const [signupConfirmSenha, setSignupConfirmSenha] = useState(DEMO_AUTH.senha);
-  const [signupLogoUrl, setSignupLogoUrl] = useState('');
-  const [signupWatermarkPaisagemUrl, setSignupWatermarkPaisagemUrl] = useState('');
-  const [signupWatermarkRetratoUrl, setSignupWatermarkRetratoUrl] = useState('');
+  const [usuario, setUsuario] = useState('');
+  const [senha, setSenha] = useState('');
+  const [signupNome, setSignupNome] = useState('');
+  const [signupEmpresa, setSignupEmpresa] = useState('');
+  const [signupCnpj, setSignupCnpj] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupSenha, setSignupSenha] = useState('');
+  const [signupConfirmSenha, setSignupConfirmSenha] = useState('');
   const [signupCpf, setSignupCpf] = useState('');
   const [signupTelefone, setSignupTelefone] = useState('');
   const [signupCep, setSignupCep] = useState('');
@@ -32,7 +29,7 @@ export const useLogin = () => {
   const [error, setError] = useState<string | null>(null);
   const [accessBlockMessage, setAccessBlockMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [recoveryEmail, setRecoveryEmail] = useState(DEMO_AUTH.email);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
 
   const isRecovering = mode === 'recovery';
   const isSigningUp = mode === 'signup';
@@ -93,9 +90,6 @@ export const useLogin = () => {
         cnpj: signupCnpj,
         email: signupEmail,
         senha: signupSenha,
-        logoUrl: signupLogoUrl,
-        watermarkPaisagemUrl: signupWatermarkPaisagemUrl,
-        watermarkRetratoUrl: signupWatermarkRetratoUrl,
         cpf: signupCpf,
         telefone: signupTelefone,
         cep: signupCep,
@@ -112,8 +106,8 @@ export const useLogin = () => {
       setSuccessMessage(response.message);
       if (response.needsConfirmation) {
         setMode('login');
-        setUsuario(signupEmail);
-        setSenha(signupSenha);
+        setUsuario(signupEmail.trim());
+        setSenha('');
       }
       return response;
     } catch {
@@ -181,7 +175,6 @@ export const useLogin = () => {
     try {
       const data = await cnpjLookupService.lookup(cleanCnpj);
       setSignupEmpresa(data.razaoSocial || data.nome || '');
-      if (data.email) setSignupEmail(data.email);
       if (data.telefone) setSignupTelefone(data.telefone);
       if (data.cep) setSignupCep(data.cep);
       if (data.endereco) setSignupEndereco(data.endereco);
@@ -215,12 +208,6 @@ export const useLogin = () => {
     setSignupSenha,
     signupConfirmSenha,
     setSignupConfirmSenha,
-    signupLogoUrl,
-    setSignupLogoUrl,
-    signupWatermarkPaisagemUrl,
-    setSignupWatermarkPaisagemUrl,
-    signupWatermarkRetratoUrl,
-    setSignupWatermarkRetratoUrl,
     signupCpf,
     setSignupCpf,
     signupTelefone,

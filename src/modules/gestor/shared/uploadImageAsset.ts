@@ -32,12 +32,17 @@ export const uploadImageAsset = async (file: File, folder: string, entityId: str
     throw new Error('A imagem deve ter no máximo 5 MB.');
   }
 
+  const { data: empresaId, error: empresaError } = await supabase.rpc('current_empresa_id');
+  if (empresaError || !empresaId) {
+    throw empresaError ?? new Error('Empresa ativa não encontrada para o upload.');
+  }
+
   const extension = getImageExtension(file);
-  const storagePath = `${sanitizeSegment(folder)}/${sanitizeSegment(entityId)}/${Date.now()}.${extension}`;
+  const storagePath = `${empresaId}/${sanitizeSegment(folder)}/${sanitizeSegment(entityId)}/${Date.now()}.${extension}`;
   const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(storagePath, file, {
     cacheControl: '31536000',
     contentType: file.type,
-    upsert: true,
+    upsert: false,
   });
 
   if (error) {
