@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type ErrorInfo, Component } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { LoginPage } from './modules/public/login/LoginPage';
 import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
 import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
@@ -16,6 +17,23 @@ import { navigate } from './lib/navigation';
 import { queryClient } from './lib/queryClient';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+const LEGACY_DEMO_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150';
+const LEGACY_DEMO_NAMES = new Set(['João Silva', 'João Silva Demonstração']);
+const LEGACY_DEMO_EMAILS = new Set(['joao.silva@arkhen.com.br', 'demo@arkhen.com.br']);
+
+const createInitialsAvatar = (name: string) => {
+  const initials = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).replace(/[^a-z0-9]/gi, '').toUpperCase())
+    .join('') || 'U';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" rx="75" fill="#1e293b"/><text x="75" y="82" text-anchor="middle" font-family="Arial,sans-serif" font-size="52" font-weight="700" fill="#c59235">${initials}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
 
 interface GestorErrorBoundaryProps {
   onReset: () => void;
@@ -104,6 +122,7 @@ function App() {
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
 
   const [view, setView] = useState<'loading' | 'login' | 'gestor'>('loading');
+  const [authError, setAuthError] = useState<string | null>(null);
   const viewRef = useRef(view);
   const authenticatedUserIdRef = useRef<string | null>(null);
 
@@ -128,7 +147,7 @@ function App() {
   useConfiguracoesRealtime(view === 'gestor');
   usePersistedStorageRealtime(view === 'gestor');
 
-  const syncUserProfile = (user: any) => {
+  const syncUserProfile = (user: User) => {
     try {
       const metadata = user.user_metadata || {};
       const saved = persistedStorage.getItem('gestor_user_profile');
@@ -140,11 +159,18 @@ function App() {
           console.error('Erro ao ler perfil do usuário local:', error);
         }
       }
+      const storedName = LEGACY_DEMO_NAMES.has(localProfile.nome) ? '' : localProfile.nome;
+      const storedEmail = LEGACY_DEMO_EMAILS.has(localProfile.email) ? '' : localProfile.email;
+      const storedAvatar = localProfile.avatar === LEGACY_DEMO_AVATAR
+        || localProfile.avatar?.startsWith('data:image/svg+xml')
+        ? ''
+        : localProfile.avatar;
+      const nome = metadata.nome || metadata.name || storedName || 'Usuário';
       const updated = {
-        nome: metadata.nome || metadata.name || localProfile.nome || 'João Silva',
-        email: user.email || localProfile.email || 'joao.silva@arkhen.com.br',
+        nome,
+        email: user.email || storedEmail || '',
         perfil: localProfile.perfil || 'Administrador',
-        avatar: metadata.avatar_url || metadata.picture || localProfile.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+        avatar: metadata.avatar_url || metadata.picture || storedAvatar || createInitialsAvatar(nome),
         googleLinked: localProfile.googleLinked || false,
         googleEmail: localProfile.googleEmail || undefined,
       };
@@ -157,60 +183,79 @@ function App() {
 
   useEffect(() => {
     let mounted = true;
+    let authStateTimer: number | undefined;
+
+    const clearLocalAuthentication = () => {
+      authenticatedUserIdRef.current = null;
+      queryClient.clear();
+      persistedStorage.removeItem('contabil_auth');
+      persistedStorage.removeItem('gestor_user_profile');
+    };
+
+    const showLogin = () => {
+      clearLocalAuthentication();
+      viewRef.current = 'login';
+      setView('login');
+    };
+
+    const handleBootstrapFailure = async (error: unknown) => {
+      console.error('Erro ao preparar a conta autenticada:', error);
+      if (!mounted) return;
+      setAuthError(error instanceof Error ? error.message : 'Não foi possível preparar sua conta. Tente entrar novamente.');
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (signOutError) {
+        console.error('Erro ao encerrar sessão incompleta:', signOutError);
+      }
+      if (mounted) {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+          navigate('/login');
+        }
+        showLogin();
+      }
+    };
+
+    const activateAuthenticatedUser = async (user: User) => {
+      authenticatedUserIdRef.current = user.id;
+      queryClient.clear();
+      const authorization = await loginService.authorizeAuthenticatedUser(user);
+      if (!authorization.allowed) {
+        throw new Error(authorization.message);
+      }
+      if (!mounted || authenticatedUserIdRef.current !== user.id) return;
+
+      syncUserProfile(user);
+      persistedStorage.setItem('contabil_auth', 'gestor');
+      setAuthError(null);
+      viewRef.current = 'gestor';
+      setView('gestor');
+    };
 
     void supabase.auth.getSession().then(async ({ data, error }) => {
       if (!mounted) return;
 
       if (error || !data.session) {
-        authenticatedUserIdRef.current = null;
-        queryClient.clear();
         try {
-          persistedStorage.removeItem('contabil_auth');
-          persistedStorage.removeItem('gestor_user_profile');
-        } catch (error) {
-          console.error('Erro ao remover auth persistido:', error);
+          showLogin();
+        } catch (storageError) {
+          console.error('Erro ao remover auth persistido:', storageError);
+          viewRef.current = 'login';
+          setView('login');
         }
-        viewRef.current = 'login';
-        setView('login');
         return;
       }
-
-      authenticatedUserIdRef.current = data.session.user.id;
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (!mounted) return;
       if (userError || !userData.user) {
-        await supabase.auth.signOut({ scope: 'local' });
-        queryClient.clear();
-        persistedStorage.removeItem('contabil_auth');
-        persistedStorage.removeItem('gestor_user_profile');
-        viewRef.current = 'login';
-        setView('login');
+        await handleBootstrapFailure(userError || new Error('Sessão autenticada inválida.'));
         return;
       }
 
-      syncUserProfile(userData.user);
-
-      try {
-        await loginService.completeOnboarding({ email: userData.user.email || undefined });
-      } catch (error) {
-        console.error('Erro ao finalizar cadastro autenticado:', error);
-      }
-      persistedStorage.setItem('contabil_auth', 'gestor');
-      viewRef.current = 'gestor';
-      setView('gestor');
+      await activateAuthenticatedUser(userData.user);
     }).catch((error) => {
       if (!mounted) return;
-      console.error('Erro ao validar a sessão inicial:', error);
-      queryClient.clear();
-      try {
-        persistedStorage.removeItem('contabil_auth');
-        persistedStorage.removeItem('gestor_user_profile');
-      } catch (storageError) {
-        console.error('Erro ao limpar autenticação local:', storageError);
-      }
-      viewRef.current = 'login';
-      setView('login');
+      void handleBootstrapFailure(error);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -219,21 +264,15 @@ function App() {
         authenticatedUserIdRef.current = session.user.id;
         if (isSameAuthenticatedSession && viewRef.current === 'gestor') return;
 
-        queryClient.clear();
-        syncUserProfile(session.user);
-        void loginService.completeOnboarding({ email: session.user.email || undefined }).catch((error) => {
-          console.error('Erro ao finalizar cadastro autenticado:', error);
-        });
-        persistedStorage.setItem('contabil_auth', 'gestor');
-        viewRef.current = 'gestor';
-        setView('gestor');
+        // O callback de Auth deve retornar antes de novas chamadas ao cliente.
+        window.clearTimeout(authStateTimer);
+        authStateTimer = window.setTimeout(() => {
+          void activateAuthenticatedUser(session.user).catch(handleBootstrapFailure);
+        }, 0);
       }
 
       if (event === 'SIGNED_OUT') {
-        authenticatedUserIdRef.current = null;
-        queryClient.clear();
-        persistedStorage.removeItem('contabil_auth');
-        persistedStorage.removeItem('gestor_user_profile');
+        clearLocalAuthentication();
         sessionStorage.removeItem('contabil_config_active_subtab');
         viewRef.current = 'login';
         setView('login');
@@ -242,6 +281,7 @@ function App() {
 
     return () => {
       mounted = false;
+      window.clearTimeout(authStateTimer);
       listener.subscription.unsubscribe();
     };
   }, []);
@@ -258,6 +298,7 @@ function App() {
     persistedStorage.removeItem('contabil_internal_tabs_state');
     sessionStorage.removeItem('contabil_config_active_subtab');
     try {
+      setAuthError(null);
       persistedStorage.setItem('contabil_auth', 'gestor');
       viewRef.current = 'gestor';
       setView('gestor');
@@ -347,6 +388,11 @@ function App() {
   if (isLoginOrSignupRoute) {
     return (
       <div className="animate-page-fade">
+        {authError && (
+          <div role="alert" className="error-message" style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 10000, maxWidth: 560 }}>
+            {authError}
+          </div>
+        )}
         <LoginPage 
           onLoginSuccess={handleLoginSuccess} 
           onBackToLanding={() => navigate('/')} 

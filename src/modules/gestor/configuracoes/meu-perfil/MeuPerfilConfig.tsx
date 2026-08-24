@@ -31,19 +31,32 @@ interface UserProfile {
 }
 
 const DEFAULT_USER: UserProfile = {
-  nome: 'João Silva',
-  email: 'joao.silva@arkhen.com.br',
+  nome: 'Usuário',
+  email: '',
   perfil: 'Administrador',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+  avatar: '',
   cpf: '',
   dataNascimento: '',
   googleLinked: false,
 };
 
+const sanitizeAvatar = (avatar: unknown) => typeof avatar === 'string'
+  && !avatar.includes('images.unsplash.com')
+  && !avatar.startsWith('data:image/svg+xml') ? avatar : '';
+const normalizeStoredProfile = (storedProfile: Partial<UserProfile>): UserProfile => ({
+  ...DEFAULT_USER,
+  ...storedProfile,
+  nome: !storedProfile.nome || storedProfile.nome === 'João Silva'
+    ? DEFAULT_USER.nome
+    : storedProfile.nome,
+  email: storedProfile.email === 'joao.silva@arkhen.com.br' ? '' : storedProfile.email || '',
+  avatar: sanitizeAvatar(storedProfile.avatar),
+});
+
 const getStoredProfile = (): UserProfile => {
   try {
     const saved = persistedStorage.getItem('gestor_user_profile');
-    return saved ? { ...DEFAULT_USER, ...JSON.parse(saved) } : DEFAULT_USER;
+    return saved ? normalizeStoredProfile(JSON.parse(saved)) : DEFAULT_USER;
   } catch (error) {
     console.error('Erro ao carregar perfil local:', error);
     return DEFAULT_USER;
@@ -103,7 +116,7 @@ export const MeuPerfilConfig: React.FC = () => {
         ...localProfile,
         nome: metadata.nome || metadata.name || localProfile.nome,
         email: user.email || localProfile.email,
-        avatar: metadata.avatar_url || metadata.picture || localProfile.avatar,
+        avatar: sanitizeAvatar(metadata.avatar_url || metadata.picture || localProfile.avatar),
         cpf: metadata.cpf || localProfile.cpf || '',
         dataNascimento: metadata.data_nascimento || localProfile.dataNascimento || '',
         googleLinked: Boolean(googleIdentity),
@@ -135,7 +148,7 @@ export const MeuPerfilConfig: React.FC = () => {
         nome: nome.trim(),
         cpf: cpf.trim(),
         data_nascimento: dataNascimento,
-        avatar_url: profile.avatar,
+        ...(profile.avatar ? { avatar_url: profile.avatar } : {}),
       };
       const payload = email.trim() !== profile.email
         ? { email: email.trim(), data: nextMetadata }
@@ -285,12 +298,13 @@ export const MeuPerfilConfig: React.FC = () => {
     boxSizing: 'border-box',
   };
 
-  const avatarChoices = [
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-  ];
+  const profileInitials = profile.nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toLocaleUpperCase('pt-BR'))
+    .join('') || 'U';
 
   const tabButtonStyle = (tab: 'dados' | 'seguranca'): React.CSSProperties => ({
     alignItems: 'center',
@@ -352,7 +366,13 @@ export const MeuPerfilConfig: React.FC = () => {
               title="Enviar nova foto"
               disabled={isUploadingPhoto}
             >
-              <img src={profile.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
+              ) : (
+                <span style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center', color: '#475569', fontSize: '1.75rem', fontWeight: 800 }}>
+                  {profileInitials}
+                </span>
+              )}
               <span style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.48)', color: '#fff', display: 'grid', placeItems: 'center', opacity: isUploadingPhoto ? 1 : 0 }}>
                 {isUploadingPhoto ? <Upload size={20} /> : <Camera size={20} />}
               </span>
@@ -365,21 +385,6 @@ export const MeuPerfilConfig: React.FC = () => {
               <button type="button" className="btn-save-settings" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto}>
                 <Upload size={14} /> {isUploadingPhoto ? 'Enviando...' : 'Enviar nova foto'}
               </button>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 14 }}>
-                {avatarChoices.map((choice) => (
-                  <button
-                    key={choice}
-                    type="button"
-                    onClick={() => {
-                      updateProfileData({ ...profile, avatar: choice });
-                      void supabase.auth.updateUser({ data: { avatar_url: choice, nome: profile.nome, cpf: profile.cpf, data_nascimento: profile.dataNascimento } });
-                    }}
-                    style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: profile.avatar === choice ? '2px solid var(--color-gold-primary)' : '1px solid #cbd5e1', padding: 0, cursor: 'pointer' }}
-                  >
-                    <img src={choice} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>

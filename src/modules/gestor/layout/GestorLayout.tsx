@@ -26,17 +26,27 @@ interface GestorLayoutProps {
 const INITIAL_MODULE_IDS = new Set<SystemModuleId>(['inicio']);
 
 const DEFAULT_PROFILE = {
-  nome: 'João Silva',
-  email: 'joao.silva@arkhen.com.br',
+  nome: 'Usuário',
+  email: '',
   perfil: 'Administrador',
-  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+  avatar: '',
   googleLinked: false,
 };
+
+const normalizeUserProfile = (storedProfile: Partial<typeof DEFAULT_PROFILE>) => ({
+  ...DEFAULT_PROFILE,
+  ...storedProfile,
+  nome: !storedProfile.nome || storedProfile.nome === 'João Silva'
+    ? DEFAULT_PROFILE.nome
+    : storedProfile.nome,
+  email: storedProfile.email === 'joao.silva@arkhen.com.br' ? '' : storedProfile.email || '',
+  avatar: storedProfile.avatar?.includes('images.unsplash.com') ? '' : storedProfile.avatar || '',
+});
 
 const readUserProfile = () => {
   try {
     const saved = persistedStorage.getItem('gestor_user_profile');
-    return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
+    return saved ? normalizeUserProfile(JSON.parse(saved)) : DEFAULT_PROFILE;
   } catch (error) {
     console.error('Erro ao ler perfil do usuário:', error);
     return DEFAULT_PROFILE;

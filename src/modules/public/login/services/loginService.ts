@@ -1,13 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { usuariosService, type UsuarioAccessConfig } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
-
-export const DEMO_AUTH = {
-  nome: 'João Silva Demonstração',
-  empresaNome: 'Empresa Fictícia Contábil',
-  cnpj: '12.345.678/0001-90',
-  email: 'demo@arkhen.com.br',
-  senha: 'Demo@123456',
-};
 
 export interface LoginPayload {
   usuario: string;
@@ -21,9 +14,6 @@ export interface SignupPayload {
   cnpj: string;
   email: string;
   senha: string;
-  logoUrl?: string;
-  watermarkPaisagemUrl?: string;
-  watermarkRetratoUrl?: string;
   cpf?: string;
   telefone?: string;
   cep?: string;
@@ -47,6 +37,37 @@ export interface LoginResponse {
 }
 
 const getRedirectUrl = () => window.location.origin;
+
+type OnboardingResult = { empresa_id?: string; nome?: string; email?: string } | null;
+
+interface AccountAuthorizationResult {
+  allowed: boolean;
+  message: string;
+  onboarding: OnboardingResult;
+}
+
+const onboardingRequests = new Map<string, Promise<OnboardingResult>>();
+
+const buildOnboardingPayload = (payload?: Partial<SignupPayload>) => {
+  const rpcPayload: Record<string, string> = {};
+  const append = (key: string, value?: string) => {
+    const normalized = value?.trim();
+    if (normalized) rpcPayload[key] = normalized;
+  };
+
+  append('nome', payload?.nome);
+  append('empresa_nome', payload?.empresaNome);
+  append('cnpj', payload?.cnpj);
+  append('email', payload?.email);
+  append('cpf', payload?.cpf);
+  append('telefone', payload?.telefone);
+  append('cep', payload?.cep);
+  append('endereco', payload?.endereco);
+  append('cidade', payload?.cidade);
+  append('estado', payload?.estado);
+
+  return rpcPayload;
+};
 
 const timeToMinutes = (value: string) => {
   const [hours, minutes] = value.split(':').map(Number);
@@ -73,30 +94,71 @@ const validateAccessWindow = (config: UsuarioAccessConfig) => {
   };
 };
 
-const completeOnboarding = async (payload?: Partial<SignupPayload>) => {
-  const { data, error } = await supabase.rpc('finalizar_cadastro_auth', {
-    p_payload: {
-      nome: payload?.nome || DEMO_AUTH.nome,
-      empresa_nome: payload?.empresaNome || DEMO_AUTH.empresaNome,
-      cnpj: payload?.cnpj || DEMO_AUTH.cnpj,
-      email: payload?.email || DEMO_AUTH.email,
-      logo_url: payload?.logoUrl || '',
-      file_url_paisagem: payload?.watermarkPaisagemUrl || '',
-      file_url_retrato: payload?.watermarkRetratoUrl || '',
-      cpf: payload?.cpf || '',
-      telefone: payload?.telefone || '',
-      cep: payload?.cep || '',
-      endereco: payload?.endereco || '',
-      cidade: payload?.cidade || '',
-      estado: payload?.estado || '',
-    },
-  });
-
-  if (error) {
-    throw new Error(`Falha ao vincular empresa ao usuário: ${error.message}`);
+const completeOnboarding = (userId: string, payload?: Partial<SignupPayload>) => {
+  const cacheKey = userId.trim();
+  if (!cacheKey) {
+    return Promise.reject(new Error('Não foi possível identificar o usuário autenticado.'));
   }
 
-  return data as { empresa_id?: string; nome?: string; email?: string } | null;
+  const cachedRequest = onboardingRequests.get(cacheKey);
+  if (cachedRequest) return cachedRequest;
+
+  const request = (async (): Promise<OnboardingResult> => {
+    const { data, error } = await supabase.rpc('finalizar_cadastro_auth', {
+      p_payload: buildOnboardingPayload(payload),
+    });
+
+    if (error) {
+      throw new Error(`Falha ao vincular empresa ao usuário: ${error.message}`);
+    }
+
+    return data as OnboardingResult;
+  })();
+
+  onboardingRequests.set(cacheKey, request);
+  const clearRequest = () => {
+    if (onboardingRequests.get(cacheKey) === request) {
+      onboardingRequests.delete(cacheKey);
+    }
+  };
+  void request.then(clearRequest, clearRequest);
+
+  return request;
+};
+
+const authorizeAuthenticatedUser = async (
+  user: User,
+  payload?: Partial<SignupPayload>,
+): Promise<AccountAuthorizationResult> => {
+  const onboarding = await completeOnboarding(user.id, payload);
+  const email = user.email?.trim().toLowerCase();
+  if (!email) {
+    return { allowed: false, message: 'E-mail do usuário autenticado não encontrado.', onboarding };
+  }
+
+  const usuarioConfig = await usuariosService.vincularAuthUserPorEmail(email, user.id);
+  if (!usuarioConfig) {
+    return {
+      allowed: false,
+      message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
+      onboarding,
+    };
+  }
+
+  if (usuarioConfig.status === 'Inativo') {
+    return {
+      allowed: false,
+      message: 'Seu usuário está inativo. Entre em contato com o gestor para reativar o acesso.',
+      onboarding,
+    };
+  }
+
+  const access = validateAccessWindow(usuarioConfig.accessConfig);
+  if (!access.allowed) {
+    return { allowed: false, message: access.message, onboarding };
+  }
+
+  return { allowed: true, message: '', onboarding };
 };
 
 export const loginService = {
@@ -114,24 +176,10 @@ export const loginService = {
       return { success: false, message: error.message || 'Não foi possível autenticar.' };
     }
 
-    const onboarding = await completeOnboarding({ email: payload.usuario });
-    const usuarioConfig = await usuariosService.vincularAuthUserPorEmail(data.user.email || payload.usuario, data.user.id);
-
-    if (usuarioConfig?.status === 'Inativo') {
+    const authorization = await authorizeAuthenticatedUser(data.user);
+    if (!authorization.allowed) {
       await supabase.auth.signOut();
-      return {
-        success: false,
-        blockedByAccess: true,
-        message: 'Seu usuário está inativo. Entre em contato com o gestor para reativar o acesso.',
-      };
-    }
-
-    if (usuarioConfig) {
-      const access = validateAccessWindow(usuarioConfig.accessConfig);
-      if (!access.allowed) {
-        await supabase.auth.signOut();
-        return { success: false, blockedByAccess: true, message: access.message };
-      }
+      return { success: false, blockedByAccess: true, message: authorization.message };
     }
 
     return {
@@ -139,9 +187,9 @@ export const loginService = {
       message: 'Login realizado com sucesso!',
       user: {
         id: data.user.id,
-        nome: onboarding?.nome || data.user.user_metadata?.nome || DEMO_AUTH.nome,
+        nome: authorization.onboarding?.nome || data.user.user_metadata?.nome || data.user.email?.split('@')[0] || 'Usuário',
         email: data.user.email || payload.usuario,
-        empresaId: onboarding?.empresa_id || '',
+        empresaId: authorization.onboarding?.empresa_id || '',
         role: payload.role,
       },
     };
@@ -171,6 +219,12 @@ export const loginService = {
           nome: payload.nome.trim(),
           empresa_nome: payload.empresaNome.trim(),
           cnpj: payload.cnpj.trim(),
+          cpf: payload.cpf?.trim() || '',
+          telefone: payload.telefone?.trim() || '',
+          cep: payload.cep?.trim() || '',
+          endereco: payload.endereco?.trim() || '',
+          cidade: payload.cidade?.trim() || '',
+          estado: payload.estado?.trim() || '',
         },
       },
     });
@@ -180,7 +234,15 @@ export const loginService = {
     }
 
     if (data.session) {
-      const onboarding = await completeOnboarding(payload);
+      if (!data.user?.id) {
+        return { success: false, message: 'Cadastro criado, mas o usuário autenticado não foi identificado.' };
+      }
+
+      const authorization = await authorizeAuthenticatedUser(data.user, payload);
+      if (!authorization.allowed) {
+        await supabase.auth.signOut();
+        return { success: false, blockedByAccess: true, message: authorization.message };
+      }
       return {
         success: true,
         message: 'Cadastro criado e sessão iniciada.',
@@ -188,7 +250,7 @@ export const loginService = {
           id: data.user?.id || '',
           nome: payload.nome,
           email: data.user?.email || payload.email,
-          empresaId: onboarding?.empresa_id || '',
+          empresaId: authorization.onboarding?.empresa_id || '',
           role: 'gestor',
         },
       };
@@ -225,4 +287,5 @@ export const loginService = {
   },
 
   completeOnboarding,
+  authorizeAuthenticatedUser,
 };

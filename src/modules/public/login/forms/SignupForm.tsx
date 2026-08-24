@@ -1,7 +1,6 @@
 import React from 'react';
-import { Building2, FileCheck2, User, Lock, Eye, EyeOff, LockKeyhole, Mail, ArrowLeft, UploadCloud, Phone } from 'lucide-react';
+import { Building2, FileCheck2, User, Lock, Eye, EyeOff, LockKeyhole, Mail, ArrowLeft, Phone } from 'lucide-react';
 import { useLogin } from '../hooks/useLogin';
-import { uploadImageAsset } from '../../../gestor/shared/uploadImageAsset';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
 
@@ -24,12 +23,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
     setSignupSenha,
     signupConfirmSenha,
     setSignupConfirmSenha,
-    signupLogoUrl,
-    setSignupLogoUrl,
-    signupWatermarkPaisagemUrl,
-    setSignupWatermarkPaisagemUrl,
-    signupWatermarkRetratoUrl,
-    setSignupWatermarkRetratoUrl,
     signupCpf,
     setSignupCpf,
     signupTelefone,
@@ -40,7 +33,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
     togglePasswordVisibility,
     isLoading,
     error,
-    setError,
     successMessage,
     handleSignupSubmit,
     switchMode,
@@ -127,106 +119,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
                 </div>
               </div>
 
-              {/* Upload Logo */}
-              <div className="form-group">
-                <label className="form-label">Logotipo da Empresa</label>
-                <div className="signup-upload-box">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          const url = await uploadImageAsset(file, 'logos', signupEmail || 'temp');
-                          setSignupLogoUrl(url);
-                        } catch (err: any) {
-                          setError(err.message);
-                        }
-                      }
-                    }}
-                    className="signup-file-input"
-                    id="logo-upload"
-                  />
-                  <label htmlFor="logo-upload" className="signup-upload-label">
-                    {signupLogoUrl ? (
-                      <img src={signupLogoUrl} alt="Logo" className="signup-upload-preview" />
-                    ) : (
-                      <>
-                        <UploadCloud size={24} />
-                        <span>Selecionar Logo da Empresa (PNG ou JPG)</span>
-                      </>
-                    )}
-                  </label>
-                </div>
-              </div>
-
-              {/* Watermarks (Landscape and Portrait) */}
-              <div className="watermarks-upload-row">
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label text-xs" style={{ fontSize: '0.75rem' }}>Marca d'Água (Paisagem)</label>
-                  <div className="signup-upload-box small">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await uploadImageAsset(file, 'watermarks-landscape', signupEmail || 'temp');
-                            setSignupWatermarkPaisagemUrl(url);
-                          } catch (err: any) {
-                            setError(err.message);
-                          }
-                        }
-                      }}
-                      className="signup-file-input"
-                      id="watermark-land-upload"
-                    />
-                    <label htmlFor="watermark-land-upload" className="signup-upload-label">
-                      {signupWatermarkPaisagemUrl ? (
-                        <img src={signupWatermarkPaisagemUrl} alt="Paisagem" className="signup-upload-preview" />
-                      ) : (
-                        <>
-                          <UploadCloud size={18} />
-                          <span>Selecionar Paisagem</span>
-                        </>
-                      )}
-                    </label>
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label text-xs" style={{ fontSize: '0.75rem' }}>Marca d'Água (Retrato)</label>
-                  <div className="signup-upload-box small">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          try {
-                            const url = await uploadImageAsset(file, 'watermarks-portrait', signupEmail || 'temp');
-                            setSignupWatermarkRetratoUrl(url);
-                          } catch (err: any) {
-                            setError(err.message);
-                          }
-                        }
-                      }}
-                      className="signup-file-input"
-                      id="watermark-port-upload"
-                    />
-                    <label htmlFor="watermark-port-upload" className="signup-upload-label">
-                      {signupWatermarkRetratoUrl ? (
-                        <img src={signupWatermarkRetratoUrl} alt="Retrato" className="signup-upload-preview" />
-                      ) : (
-                        <>
-                          <UploadCloud size={18} />
-                          <span>Selecionar Retrato</span>
-                        </>
-                      )}
-                    </label>
-                  </div>
+              <div className="signup-secure-info" role="note">
+                <LockKeyhole size={18} className="footer-secure-icon" />
+                <div className="footer-secure-text">
+                  <strong>Logo e marcas d'água após a confirmação</strong>
+                  <span>
+                    Confirme o e-mail, entre no sistema e configure essas imagens em Configurações.
+                  </span>
                 </div>
               </div>
             </div>
