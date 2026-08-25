@@ -15,29 +15,29 @@ import {
 } from './empresaService';
 
 const brasilApiFixture = {
-  razao_social: 'BARRETO & MACHADO ASSESSORIA E CONSULTORIA CONTABIL LTDA',
-  nome_fantasia: 'B & M ASSESSORIA E CONSULTORIA CONTABIL',
+  razao_social: 'EMPRESA EXEMPLO CONTABIL LTDA',
+  nome_fantasia: 'EXEMPLO CONTABIL',
   email: null,
-  ddd_telefone_1: '7999468900',
-  cep: '49500151',
-  descricao_tipo_de_logradouro: 'RUA',
-  logradouro: 'ANTONIO DULTRA',
-  numero: '1169',
-  municipio: 'ITABAIANA',
-  uf: 'se',
+  ddd_telefone_1: '1198765432',
+  cep: '01001000',
+  descricao_tipo_de_logradouro: 'PRAÇA',
+  logradouro: 'DA SÉ',
+  numero: '100',
+  municipio: 'SÃO PAULO',
+  uf: 'sp',
 };
 
 describe('mapBrasilApiCnpjToEmpresa', () => {
   it('mapeia o endereço e o telefone no formato atual da BrasilAPI', () => {
     expect(mapBrasilApiCnpjToEmpresa(brasilApiFixture)).toEqual({
-      razaoSocial: 'BARRETO & MACHADO ASSESSORIA E CONSULTORIA CONTABIL LTDA',
-      nomeFantasia: 'B & M ASSESSORIA E CONSULTORIA CONTABIL',
-      telefone: '(79) 9946-8900',
-      cep: '49500-151',
-      endereco: 'RUA ANTONIO DULTRA',
-      numero: '1169',
-      cidade: 'ITABAIANA',
-      estado: 'SE',
+      razaoSocial: 'EMPRESA EXEMPLO CONTABIL LTDA',
+      nomeFantasia: 'EXEMPLO CONTABIL',
+      telefone: '(11) 9876-5432',
+      cep: '01001-000',
+      endereco: 'PRAÇA DA SÉ',
+      numero: '100',
+      cidade: 'SÃO PAULO',
+      estado: 'SP',
     });
   });
 
@@ -61,7 +61,7 @@ describe('mergeCnpjLookupIntoEmpresa', () => {
   const currentEmpresa: EmpresaDados = {
     razaoSocial: 'EMPRESA ANTERIOR LTDA',
     nomeFantasia: 'Empresa Anterior',
-    cnpj: '35.898.750/0001-07',
+    cnpj: '11.222.333/0001-81',
     inscricaoEstadual: '123',
     email: 'anterior@empresa.com',
     telefone: '(79) 99999-9999',
@@ -121,21 +121,21 @@ describe('empresaService.buscarCnpj', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await empresaService.buscarCnpj('35.898.750/0001-07');
+    const result = await empresaService.buscarCnpj('11.222.333/0001-81');
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://brasilapi.com.br/api/cnpj/v1/35898750000107',
+      'https://brasilapi.com.br/api/cnpj/v1/11222333000181',
       {
         cache: 'no-store',
         headers: { Accept: 'application/json' },
       },
     );
     expect(result).toMatchObject({
-      cep: '49500-151',
-      endereco: 'RUA ANTONIO DULTRA',
-      numero: '1169',
-      cidade: 'ITABAIANA',
-      estado: 'SE',
+      cep: '01001-000',
+      endereco: 'PRAÇA DA SÉ',
+      numero: '100',
+      cidade: 'SÃO PAULO',
+      estado: 'SP',
     });
   });
 });

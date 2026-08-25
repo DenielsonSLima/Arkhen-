@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Artefatos locais de ferramentas e validações
+tmp/
+supabase/.temp/
+
+# Materiais privados de clientes (o repositório é público)
+/*/ROTINA FIXA*.xlsx
+/*/WhatsApp Image*.jp*g
+/*/*marca dagua*.png
+supabase/migrations/20260802152920_*_rotina_*.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
