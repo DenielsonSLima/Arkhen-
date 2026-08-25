@@ -437,6 +437,33 @@ GRANT EXECUTE ON FUNCTION public.atualizar_atividade_valores(uuid, jsonb)
 ALTER TABLE public.atividades_rotinas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.atividades_tarefas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.atividades_instancias ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS atividades_rotinas_insert_manager ON public.atividades_rotinas;
+DROP POLICY IF EXISTS atividades_rotinas_update_manager ON public.atividades_rotinas;
+DROP POLICY IF EXISTS atividades_rotinas_delete_manager ON public.atividades_rotinas;
+CREATE POLICY atividades_rotinas_insert_manager
+ON public.atividades_rotinas FOR INSERT TO authenticated
+WITH CHECK (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND public.current_user_can_access_client_row(empresa_id, cliente_id)
+);
+CREATE POLICY atividades_rotinas_update_manager
+ON public.atividades_rotinas FOR UPDATE TO authenticated
+USING (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND public.current_user_can_access_client_row(empresa_id, cliente_id)
+)
+WITH CHECK (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND public.current_user_can_access_client_row(empresa_id, cliente_id)
+);
+CREATE POLICY atividades_rotinas_delete_manager
+ON public.atividades_rotinas FOR DELETE TO authenticated
+USING (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND public.current_user_can_access_client_row(empresa_id, cliente_id)
+);
+
 REVOKE ALL ON TABLE public.atividades_rotinas FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.atividades_tarefas FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.atividades_instancias FROM PUBLIC, anon, authenticated;
@@ -444,7 +471,5 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.atividades_rotinas TO authenticat
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.atividades_tarefas TO authenticated;
 GRANT SELECT, INSERT, DELETE ON public.atividades_instancias TO authenticated;
 
--- As policies existentes sao preservadas intencionalmente. Em producao elas
--- incluem view-own/current_user_has_client_access, vinculo por tarefa e a policy
--- restritiva isolamento_cliente_select; policies permissivas sao combinadas por
--- OR e policies restritivas por AND, portanto recria-las aqui reduziria o escopo.
+-- As policies de leitura existentes permanecem. A escrita direta de rotinas
+-- exige permissao de gestor e respeita o cliente vinculado ao perfil.

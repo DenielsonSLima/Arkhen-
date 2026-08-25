@@ -20,14 +20,26 @@ USING (
 );
 CREATE POLICY atividades_modelos_insert_manager
 ON public.atividades_modelos FOR INSERT TO authenticated
-WITH CHECK (public.current_user_has_permission(empresa_id, 'atividades:manage'));
+WITH CHECK (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND NOT public.current_user_is_client_scoped(empresa_id)
+);
 CREATE POLICY atividades_modelos_update_manager
 ON public.atividades_modelos FOR UPDATE TO authenticated
-USING (public.current_user_has_permission(empresa_id, 'atividades:manage'))
-WITH CHECK (public.current_user_has_permission(empresa_id, 'atividades:manage'));
+USING (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND NOT public.current_user_is_client_scoped(empresa_id)
+)
+WITH CHECK (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND NOT public.current_user_is_client_scoped(empresa_id)
+);
 CREATE POLICY atividades_modelos_delete_manager
 ON public.atividades_modelos FOR DELETE TO authenticated
-USING (public.current_user_has_permission(empresa_id, 'atividades:manage'));
+USING (
+  public.current_user_has_permission(empresa_id, 'atividades:manage')
+  AND NOT public.current_user_is_client_scoped(empresa_id)
+);
 
 DROP POLICY IF EXISTS atividades_fechamentos_empresa_policy ON public.atividades_fechamentos;
 DROP POLICY IF EXISTS atividades_fechamentos_select_scope ON public.atividades_fechamentos;
