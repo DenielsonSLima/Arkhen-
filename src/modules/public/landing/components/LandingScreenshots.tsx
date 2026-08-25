@@ -9,7 +9,6 @@ import screenFaturamento from '../assets/screen-faturamento.png';
 import screenDocumentos from '../assets/screen-documentos.png';
 import screenCompartilhar from '../assets/screen-compartilhar.png';
 import screenLinkPublico from '../assets/screen-link-publico.png';
-import screenSimulacoes from '../assets/screen-simulacoes.png';
 
 interface Slide {
   src: string;
@@ -60,12 +59,6 @@ const slides: Slide[] = [
     title: 'Portal Público do Cliente',
     desc: 'Página profissional de acesso ao arquivo com contador regressivo e identificação do escritório.',
     featurePhrase: 'Ofereça um canal ágil e moderno para seus parceiros comerciais resgatarem arquivos.',
-  },
-  {
-    src: screenSimulacoes,
-    title: 'Calculadora de Rescisão',
-    desc: 'Simule rescisões, férias e pró-labore com parâmetros centralizados no sistema.',
-    featurePhrase: 'Compare cenários e revise os resultados antes de orientar o cliente.',
   },
 ];
 

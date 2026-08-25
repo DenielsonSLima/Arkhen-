@@ -130,8 +130,19 @@ const drawPageHeader = (doc: JsPdfDocument, input: SimulationPdfInput, firstPage
     return 22;
   }
 
-  const hasLogo = safeAddImage(doc, input.company.logoDataUrl, MARGIN_X, 10, 20, 20);
-  const textX = hasLogo ? 40 : MARGIN_X;
+  let logoW = 20;
+  let logoH = 20;
+  if (input.company.logoAspectRatio) {
+    if (input.company.logoAspectRatio > 1) {
+      logoH = logoW / input.company.logoAspectRatio;
+    } else {
+      logoW = logoH * input.company.logoAspectRatio;
+    }
+  }
+
+  const logoY = 10 + (20 - logoH) / 2;
+  const hasLogo = safeAddImage(doc, input.company.logoDataUrl, MARGIN_X, logoY, logoW, logoH);
+  const textX = hasLogo ? MARGIN_X + logoW + 4 : MARGIN_X;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
@@ -143,16 +154,6 @@ const drawPageHeader = (doc: JsPdfDocument, input: SimulationPdfInput, firstPage
   const companyLines = doc.splitTextToSize(companyName.toUpperCase(), 110) as string[];
   doc.text(companyLines.slice(0, 2), textX, 18, { lineHeightFactor: 1.05 });
   const companyHeight = (Math.min(companyLines.length, 2) - 1) * 4.5;
-
-  doc.setFillColor('#f8fafc');
-  doc.setDrawColor(LIGHT_LINE);
-  doc.roundedRect(168, 10, 26, 15, 1.5, 1.5, 'FD');
-  doc.setFontSize(6);
-  doc.setTextColor(SLATE);
-  doc.text('EMITIDO EM', 181, 14.5, { align: 'center' });
-  doc.setFontSize(7);
-  doc.setTextColor(NAVY);
-  doc.text(formatGeneratedAt(input.generatedAt), 181, 19.5, { align: 'center', maxWidth: 24 });
 
   const infoY = 24 + companyHeight;
   doc.setFont('helvetica', 'normal');

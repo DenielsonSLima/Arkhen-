@@ -97,14 +97,11 @@ export const HELP_DATA: HelpModule[] = [
   {
     titulo: 'Simulações e Cálculos',
     icone: <FileText size={18} />,
-    descricao: 'Ferramentas de simulação de folha, impostos e cenários tributários.',
-    objetivo: 'Apoiar decisão técnica e geração de cenários antes de emissão.',
-    comoUsa: 'Escolha o simulador (folha, rescisão, encargos, DAS etc.) e preencha os dados do caso.',
+    descricao: 'Calculadora de rescisão com regras processadas no servidor.',
+    objetivo: 'Apoiar a conferência das verbas rescisórias antes da orientação ao cliente.',
+    comoUsa: 'Informe o tipo de desligamento, salário, datas e saldo do FGTS; depois revise o resultado e gere o relatório em PDF.',
     submodulos: [
-      { nome: 'Folha e encargos', descricao: 'Cálculo de proventos, descontos e custo trabalhista.', comoUsar: 'Use para referência técnica antes de registrar lançamentos.' },
-      { nome: 'Rescisão e PL', descricao: 'Projeções de verbas e custos de desligamento.', comoUsar: 'Preencha salários, datas e regras da simulação.' },
-      { nome: 'DAS, PIS/COFINS e multas', descricao: 'Simulações tributárias do período.', comoUsar: 'Compare cenários e valide impactos no fluxo.' },
-      { nome: 'Custos e comparativo de regimes', descricao: 'Avalia carga tributária por cenário.', comoUsar: 'Use para orientação e análise de viabilidade.' },
+      { nome: 'Rescisão', descricao: 'Projeção de saldo de salário, férias, 13º, aviso-prévio e multa do FGTS.', comoUsar: 'Preencha os dados do vínculo, confira as verbas calculadas e exporte o PDF.' },
     ],
   },
   {

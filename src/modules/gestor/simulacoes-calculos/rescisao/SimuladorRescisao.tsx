@@ -33,6 +33,33 @@ const AVISO_PREVIO_OPCOES: { id: AvisoPrevioModo; label: string; desc: string }[
   { id: 'indenizado', label: 'Indenizado', desc: 'Soma aviso prévio indenizado nas verbas.' },
 ];
 
+const AVISO_NAO_APLICAVEL = {
+  id: 'cumprido' as const,
+  label: 'Não se aplica',
+  desc: 'A rescisão por justa causa não gera aviso-prévio.',
+};
+
+const AVISO_PREVIO_POR_TIPO: Record<string, AvisoPrevioModo[]> = {
+  sem_justa_causa: ['cumprido', 'indenizado'],
+  com_justa_causa: ['cumprido'],
+  pedido_demissao: ['cumprido', 'descontado'],
+};
+
+export const getAvisoPrevioOpcoes = (tipo: string) => {
+  if (tipo === 'com_justa_causa') return [AVISO_NAO_APLICAVEL];
+  const permitidos = AVISO_PREVIO_POR_TIPO[tipo] || ['cumprido'];
+  return AVISO_PREVIO_OPCOES.filter((opcao) => permitidos.includes(opcao.id));
+};
+
+export const normalizeAvisoPrevioModo = (
+  tipo: string,
+  modo: AvisoPrevioModo,
+): AvisoPrevioModo => {
+  const opcoes = getAvisoPrevioOpcoes(tipo);
+  if (opcoes.some((opcao) => opcao.id === modo)) return modo;
+  return tipo === 'sem_justa_causa' ? 'indenizado' : 'cumprido';
+};
+
 const ADICIONAL_TEMPO_SERVICO_OPCOES: { id: AdicionalTempoServicoTipo; label: string }[] = [
   { id: 'trienio', label: 'Triênio' },
   { id: 'quinquenio', label: 'Quinquênio' },
@@ -42,6 +69,7 @@ const ADICIONAL_TEMPO_SERVICO_OPCOES: { id: AdicionalTempoServicoTipo; label: st
 export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultado, tiposRescisao }) => {
   const set = (key: keyof Params) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setParams({ ...params, [key]: e.target.value });
+  const avisoPrevioOpcoes = getAvisoPrevioOpcoes(params.tipo);
 
   return (
     <div className="calc-layout">
@@ -56,7 +84,11 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
               <button
                 key={tipo.id}
                 className={`tipo-rescisao-btn${params.tipo === tipo.id ? ' active' : ''}`}
-                onClick={() => setParams({ ...params, tipo: tipo.id })}
+                onClick={() => setParams({
+                  ...params,
+                  tipo: tipo.id,
+                  avisoPrevioModo: normalizeAvisoPrevioModo(tipo.id, params.avisoPrevioModo),
+                })}
                 title={tipo.descricao}
               >
                 {tipo.label}
@@ -69,7 +101,7 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
             Aviso Prévio
           </label>
           <div className="aviso-previo-grid">
-            {AVISO_PREVIO_OPCOES.map((opcao) => (
+            {avisoPrevioOpcoes.map((opcao) => (
               <button
                 key={opcao.id}
                 type="button"

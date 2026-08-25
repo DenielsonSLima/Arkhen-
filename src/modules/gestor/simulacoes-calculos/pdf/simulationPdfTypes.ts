@@ -20,6 +20,7 @@ export interface SimulationPdfCompany {
   estado?: string;
   cep?: string;
   logoDataUrl?: string | null;
+  logoAspectRatio?: number;
 }
 
 export interface SimulationPdfWatermark {

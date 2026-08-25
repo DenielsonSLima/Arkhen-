@@ -29,7 +29,7 @@ const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },
   { id: 'parametrizacao-cnae', label: 'CNAE' },
   { id: 'parametrizacao-regras', label: 'Impostos' },
-  { id: 'parametrizacao-parametros-calculo', label: 'Parâmetros de Cálculo' },
+  { id: 'parametrizacao-parametros-calculo', label: 'Rescisão' },
   { id: 'parametrizacao-tabelas-tributarias', label: 'Tabelas Tributárias' },
   { id: 'parametrizacao-prazos-entrega', label: 'Obrigações' },
   { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },

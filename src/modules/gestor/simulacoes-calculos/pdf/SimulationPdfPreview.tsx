@@ -1,49 +1,23 @@
-import React, { useEffect, useMemo } from 'react';
+import React from 'react';
 
 interface SimulationPdfPreviewProps {
-  bytes: Uint8Array | null;
-  loading: boolean;
-  error: string;
+  pdfDataUrl: string;
+  pageCount?: number;
 }
 
-export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ bytes, loading, error }) => {
-  const blobUrl = useMemo(() => {
-    if (!bytes) return null;
-    try {
-      const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' });
-      return URL.createObjectURL(blob);
-    } catch {
-      return null;
-    }
-  }, [bytes]);
-
-  useEffect(() => {
-    return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [blobUrl]);
-
-  if (loading) {
-    return <div className="simulation-pdf-status">Gerando documento A4…</div>;
+export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ pdfDataUrl, pageCount }) => {
+  if (!pdfDataUrl) {
+    return <div className="simulation-pdf-status">Pré-visualização indisponível. O download do PDF continua ativo.</div>;
   }
 
-  if (error) {
-    return <div className="simulation-pdf-status simulation-pdf-status--error">{error}</div>;
-  }
-
-  if (blobUrl) {
-    return (
-      <div className="simulation-pdf-fallback-container">
-        <iframe
-          src={`${blobUrl}#toolbar=0&navpanes=0`}
-          title="Pré-visualização do PDF"
-          className="simulation-pdf-iframe"
-        />
-      </div>
-    );
-  }
-
-  return <div className="simulation-pdf-status">Pré-visualização indisponível. O download do PDF continua ativo.</div>;
+  return (
+    <div className="simulation-pdf-fallback-container" style={{ width: '100%', height: '100%' }}>
+      <iframe
+        src={`${pdfDataUrl}#toolbar=0&navpanes=0`}
+        title={`Pré-visualização do PDF${pageCount ? ` (${pageCount} página${pageCount === 1 ? '' : 's'})` : ''}`}
+        className="simulation-pdf-iframe"
+        style={{ width: '100%', height: '100%', border: 'none' }}
+      />
+    </div>
+  );
 };

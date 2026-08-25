@@ -32,7 +32,7 @@ const modules: ModuleCard[] = [
   {
     icon: <Calculator size={26} />,
     title: 'Simulações e Cálculos',
-    desc: 'Calculadora de rescisão, férias, pró-labore e simulação comparativa de regimes tributários.',
+    desc: 'Calculadora de rescisão com parâmetros validados, processamento seguro no servidor e relatório em PDF.',
   },
   {
     icon: <CreditCard size={26} />,
