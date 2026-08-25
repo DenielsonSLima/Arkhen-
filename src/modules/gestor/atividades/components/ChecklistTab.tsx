@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Calculator, Clock, User, Pencil } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calculator, Clock, User } from 'lucide-react';
 import type { CompanyActivity } from '../hooks/useAtividades';
 import type { ValoresCompetenciaAtividade } from '../services/atividadesService';
 
 interface ChecklistTabProps {
   atv: CompanyActivity;
   handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
-  handleSaveStepDate: (instanciaId: string, etapa: string, dateStr: string) => Promise<void>;
   handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
 
@@ -36,17 +35,11 @@ const isDctfWebModel = (atv: CompanyActivity) => (
 
 // Sub-componente que exibe o badge de conclusão sem o input nativo visível
 interface CheckedBadgeProps {
-  etapa: string;
-  instanciaId: string;
   userName?: string;
   dateValue?: string;
-  onSaveDate: (instanciaId: string, etapa: string, dateStr: string) => Promise<void>;
 }
 
-const CheckedBadge: React.FC<CheckedBadgeProps> = ({ etapa, instanciaId, userName, dateValue, onSaveDate }) => {
-  const [editing, setEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
+const CheckedBadge: React.FC<CheckedBadgeProps> = ({ userName, dateValue }) => {
   const formatDate = (val?: string) => {
     if (!val) return '—';
     try {
@@ -55,17 +48,6 @@ const CheckedBadge: React.FC<CheckedBadgeProps> = ({ etapa, instanciaId, userNam
     } catch {
       return val;
     }
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditing(true);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSaveDate(instanciaId, etapa, e.target.value);
-    setEditing(false);
   };
 
   return (
@@ -96,25 +78,6 @@ const CheckedBadge: React.FC<CheckedBadgeProps> = ({ etapa, instanciaId, userNam
         <Clock size={11} style={{ color: 'var(--color-gold-primary)', flexShrink: 0 }} />
         Feito em: <strong style={{ color: '#334155', marginLeft: '2px' }}>{formatDate(dateValue)}</strong>
       </span>
-      {/* Botão para editar data — mostra o input escondido ao clicar */}
-      <button
-        type="button"
-        onClick={handleEditClick}
-        title="Editar data/hora"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', color: '#94a3b8' }}
-      >
-        <Pencil size={11} />
-      </button>
-      {editing && (
-        <input
-          ref={inputRef}
-          type="datetime-local"
-          defaultValue={dateValue || ''}
-          onBlur={() => setEditing(false)}
-          onChange={handleChange}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
-        />
-      )}
     </div>
   );
 };
@@ -123,14 +86,16 @@ const CheckedBadge: React.FC<CheckedBadgeProps> = ({ etapa, instanciaId, userNam
 export const ChecklistTab: React.FC<ChecklistTabProps> = ({
   atv,
   handleToggleStep,
-  handleSaveStepDate,
   handleSaveTaxValores,
 }) => {
   const [valoresDraft, setValoresDraft] = useState<Record<string, string>>({});
   const [isEditingTax, setIsEditingTax] = useState(false);
+  const [isSavingTax, setIsSavingTax] = useState(false);
+  const [operationError, setOperationError] = useState('');
   const camposValores = [...CAMPOS_VALORES_COMPETENCIA, ...CAMPOS_ENCARGOS_DCTFWEB];
 
   const openTaxEditor = () => {
+    setOperationError('');
     const current = atv.valores || {};
     setValoresDraft(Object.fromEntries(
       camposValores.map((campo) => [campo.key, String(current[campo.key] ?? '0.00')])
@@ -138,13 +103,23 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
     setIsEditingTax(true);
   };
 
-  const handleSaveTax = (e: React.FormEvent) => {
+  const handleSaveTax = async (e: React.FormEvent) => {
     e.preventDefault();
     const valores = Object.fromEntries(
       camposValores.map((campo) => [campo.key, parseFloat(valoresDraft[campo.key] || '0') || 0])
     ) as ValoresCompetenciaAtividade;
-    handleSaveTaxValores(atv.instanciaId, valores);
-    setIsEditingTax(false);
+    setIsSavingTax(true);
+    setOperationError('');
+    try {
+      await handleSaveTaxValores(atv.instanciaId, valores);
+      setIsEditingTax(false);
+    } catch (error) {
+      setOperationError(error instanceof Error
+        ? error.message
+        : 'Não foi possível salvar os valores da competência.');
+    } finally {
+      setIsSavingTax(false);
+    }
   };
 
   const formatCurrency = (val?: number) => {
@@ -169,6 +144,12 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
           {atv.status} ({atv.progresso}%)
         </span>
       </div>
+
+      {operationError && (
+        <div className="error-banner" role="alert" style={{ marginBottom: '12px', padding: '10px 12px' }}>
+          {operationError}
+        </div>
+      )}
 
       {isDctfWebModel(atv) && (
         <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
@@ -200,11 +181,11 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
                 ))}
               </div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                <button type="button" className="btn-cancel" onClick={() => setIsEditingTax(false)} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+                <button type="button" className="btn-cancel" disabled={isSavingTax} onClick={() => setIsEditingTax(false)} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-save-settings" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                  Salvar Alterações
+                <button type="submit" className="btn-save-settings" disabled={isSavingTax} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+                  {isSavingTax ? 'Salvando...' : 'Salvar Alterações'}
                 </button>
               </div>
             </form>
@@ -264,7 +245,16 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
                   type="checkbox"
                   id={`step-${atv.instanciaId}-${etapa}`}
                   checked={checked}
-                  onChange={(e) => handleToggleStep(atv.instanciaId, etapa, e.target.checked)}
+                  onChange={async (event) => {
+                    setOperationError('');
+                    try {
+                      await handleToggleStep(atv.instanciaId, etapa, event.target.checked);
+                    } catch (error) {
+                      setOperationError(error instanceof Error
+                        ? error.message
+                        : 'Não foi possível atualizar o checklist.');
+                    }
+                  }}
                   style={{
                     width: '16px',
                     height: '16px',
@@ -282,11 +272,8 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
 
               {checked && (
                 <CheckedBadge
-                  etapa={etapa}
-                  instanciaId={atv.instanciaId}
                   userName={atv.checklistUsers?.[etapa]}
                   dateValue={atv.checklistDates?.[etapa]}
-                  onSaveDate={handleSaveStepDate}
                 />
               )}
             </div>

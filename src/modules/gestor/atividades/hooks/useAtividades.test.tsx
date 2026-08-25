@@ -54,7 +54,8 @@ describe('useAtividades internal-tab context', () => {
   it('selects the requested company once without a render feedback loop', async () => {
     const { result } = renderHook(() => useAtividades({
       initialCompanyId: 'cliente-1',
-      initialCompetencia: '06/2026',
+      initialCompetencia: '2026-06',
+      canMaterialize: true,
     }));
 
     await waitFor(() => {
@@ -63,6 +64,23 @@ describe('useAtividades internal-tab context', () => {
 
     expect(serviceMock.getModelos).toHaveBeenCalledTimes(1);
     expect(serviceMock.getClientes).toHaveBeenCalledTimes(1);
+    expect(serviceMock.ensureInstancias).toHaveBeenCalledOnce();
+    expect(serviceMock.ensureInstancias).toHaveBeenCalledWith('06/2026');
+    expect(serviceMock.getInstancias).toHaveBeenCalledOnce();
+    expect(serviceMock.getInstancias).toHaveBeenCalledWith('06/2026');
     expect(serviceMock.getFechamentoMeta).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the previous month when no initial competencia is provided', async () => {
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const expectedCompetencia = `${String(previousMonth.getMonth() + 1).padStart(2, '0')}/${previousMonth.getFullYear()}`;
+
+    renderHook(() => useAtividades({ canMaterialize: true }));
+
+    await waitFor(() => {
+      expect(serviceMock.ensureInstancias).toHaveBeenCalledWith(expectedCompetencia);
+      expect(serviceMock.getInstancias).toHaveBeenCalledWith(expectedCompetencia);
+    });
   });
 });

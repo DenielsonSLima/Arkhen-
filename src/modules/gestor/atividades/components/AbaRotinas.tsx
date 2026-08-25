@@ -2,6 +2,38 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Repeat, Trash2, Edit, X, ClipboardCheck } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import {
+  primaryBtnStyle,
+  tabsWrapperStyle,
+  tabsContainerStyle,
+  tabBtnStyle,
+  gridContainerStyle,
+  rotinaCardStyle,
+  iconBtnStyle,
+  cardMetaStyle,
+  metaLabelStyle,
+  metaValStyle,
+  checklistBlockStyle,
+  checklistListStyle,
+  checklistItemStyle,
+  cardFooterStyle,
+  badgeStyle,
+  emptyCardStyle,
+  drawerOverlayStyle,
+  drawerContentStyle,
+  drawerHeaderStyle,
+  closeBtnStyle,
+  formStyle,
+  fieldStyle,
+  rowStyle,
+  labelStyle,
+  inputStyle,
+  selectStyle,
+  textareaStyle,
+  drawerActionsStyle,
+  submitBtnStyle,
+  cancelBtnStyle,
+} from './AbaRotinas.styles';
+import {
   todayKey,
   type CategoriaAtividade,
   type FrequenciaAtividade,
@@ -27,36 +59,42 @@ const blankRotina = (): RotinaAtividade => ({
 type FiltroRotinaTab = 'todas' | 'diarias' | 'semanais' | 'mensais' | 'empresa';
 
 export const AbaRotinas: React.FC = () => {
-  const { rotinas, usuarios, saveRotina, deleteRotina } = useAtividadesWorkspace();
+  const { rotinas, usuarios, clientes, saveRotinaAsync, deleteRotina, isSaving } = useAtividadesWorkspace();
   const [form, setForm] = useState<RotinaAtividade>(blankRotina());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FiltroRotinaTab>('todas');
-
-  const clientes = useMemo(() => ['Escritório'], []);
+  const [formError, setFormError] = useState('');
 
   const handleEditClick = (rotina: RotinaAtividade) => {
+    setFormError('');
     setForm(rotina);
     setIsDrawerOpen(true);
   };
 
   const handleCreateClick = () => {
+    setFormError('');
     setForm(blankRotina());
     setIsDrawerOpen(true);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.nome.trim()) return;
     const checklist = form.checklist.map((item) => item.trim()).filter(Boolean);
-    saveRotina({
-      ...form,
-      responsavelUserId: usuarios.find((usuario) => usuario.configUsuarioId === form.responsavelConfigUsuarioId)?.userId,
-      id: form.id || `rotina-${Date.now()}`,
-      checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
-      intervaloDias: form.frequencia === 'Personalizada' ? Math.max(1, form.intervaloDias) : form.intervaloDias,
-    });
-    setForm(blankRotina());
-    setIsDrawerOpen(false);
+    setFormError('');
+    try {
+      await saveRotinaAsync({
+        ...form,
+        responsavelUserId: usuarios.find((usuario) => usuario.configUsuarioId === form.responsavelConfigUsuarioId)?.userId,
+        id: form.id || `rotina-${Date.now()}`,
+        checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
+        intervaloDias: form.frequencia === 'Personalizada' ? Math.max(1, form.intervaloDias) : form.intervaloDias,
+      });
+      setForm(blankRotina());
+      setIsDrawerOpen(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Não foi possível salvar a rotina.');
+    }
   };
 
   const setChecklistText = (value: string) => {
@@ -148,7 +186,7 @@ export const AbaRotinas: React.FC = () => {
               <div style={cardMetaStyle}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={metaLabelStyle}>Responsável Padrão</span>
-                  <span style={metaValStyle}>{rotina.responsavel}</span>
+                  <span style={metaValStyle}>{rotina.responsavel || 'Sem responsável'}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={metaLabelStyle}>Cliente / Vínculo</span>
@@ -208,6 +246,11 @@ export const AbaRotinas: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} style={formStyle}>
+              {formError && (
+                <div className="error-banner" role="alert" style={{ padding: '10px 12px' }}>
+                  {formError}
+                </div>
+              )}
               <div style={fieldStyle}>
                 <label style={labelStyle}>Nome do Checklist</label>
                 <input
@@ -289,12 +332,20 @@ export const AbaRotinas: React.FC = () => {
                 <div style={{ ...fieldStyle, flex: 1 }}>
                   <label style={labelStyle}>Cliente / Vínculo</label>
                   <select
-                    value={form.cliente}
-                    onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+                    value={form.clienteId || ''}
+                    onChange={(e) => {
+                      const cliente = clientes.find((item) => item.id === e.target.value);
+                      setForm({
+                        ...form,
+                        clienteId: cliente?.id,
+                        cliente: cliente?.nome || 'Escritório',
+                      });
+                    }}
                     style={selectStyle}
                   >
+                    <option value="">Escritório</option>
                     {clientes.map((c) => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c.id} value={c.id}>{c.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -350,8 +401,8 @@ export const AbaRotinas: React.FC = () => {
                 <button onClick={() => setIsDrawerOpen(false)} style={cancelBtnStyle} type="button">
                   Cancelar
                 </button>
-                <button type="submit" style={submitBtnStyle}>
-                  {form.id ? 'Salvar Alterações' : 'Salvar Modelo'}
+                <button type="submit" disabled={isSaving} style={submitBtnStyle}>
+                  {isSaving ? 'Salvando...' : form.id ? 'Salvar Alterações' : 'Salvar Modelo'}
                 </button>
               </div>
             </form>
@@ -363,278 +414,3 @@ export const AbaRotinas: React.FC = () => {
 };
 
 // Estilos Tema Claro
-const primaryBtnStyle = {
-  background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)',
-  border: 'none',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#ffffff',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  boxShadow: '0 4px 10px rgba(197, 146, 53, 0.15)',
-};
-
-const tabsWrapperStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #e2e8f0',
-  flexWrap: 'wrap' as const,
-  gap: '12px',
-};
-
-const tabsContainerStyle = {
-  display: 'flex',
-  gap: '16px',
-};
-
-const tabBtnStyle = {
-  background: 'none',
-  border: 'none',
-  borderBottom: '2px solid transparent',
-  padding: '8px 4px',
-  fontSize: '0.82rem',
-  cursor: 'pointer',
-  color: '#64748b',
-  outline: 'none',
-  transition: 'all 0.18s ease',
-};
-
-const gridContainerStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-  gap: '16px',
-};
-
-const rotinaCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  padding: '16px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '12px',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.02)',
-  justifyContent: 'space-between',
-};
-
-const iconBtnStyle = {
-  backgroundColor: '#f1f5f9',
-  border: 'none',
-  borderRadius: '4px',
-  padding: '5px',
-  color: 'var(--color-gold-dark)',
-  cursor: 'pointer',
-  display: 'flex',
-};
-
-const cardMetaStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '8px',
-  borderTop: '1px solid #f1f5f9',
-  borderBottom: '1px solid #f1f5f9',
-  padding: '10px 0',
-};
-
-const metaLabelStyle = {
-  fontSize: '0.66rem',
-  color: '#64748b',
-  fontWeight: 600,
-  textTransform: 'uppercase' as const,
-};
-
-const metaValStyle = {
-  fontSize: '0.78rem',
-  color: '#0f172a',
-  fontWeight: 700,
-};
-
-const checklistBlockStyle = {
-  backgroundColor: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '8px 10px',
-};
-
-const checklistListStyle = {
-  listStyle: 'none',
-  padding: 0,
-  margin: '4px 0 0 0',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '4px',
-};
-
-const checklistItemStyle = {
-  fontSize: '0.75rem',
-  color: '#334155',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap' as const,
-};
-
-const cardFooterStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: '4px',
-};
-
-const badgeStyle = {
-  fontSize: '0.65rem',
-  fontWeight: 700,
-  padding: '2px 6px',
-  borderRadius: '4px',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
-
-const emptyCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px dashed #cbd5e1',
-  borderRadius: '8px',
-  padding: '40px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-/* Estilos da Gaveta Lateral (Drawer) */
-const drawerOverlayStyle = {
-  position: 'fixed' as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  backdropFilter: 'blur(3px)',
-  zIndex: 1000,
-  display: 'flex',
-  justifyContent: 'flex-end',
-};
-
-const drawerContentStyle = {
-  width: '100%',
-  maxWidth: '460px',
-  backgroundColor: '#ffffff',
-  height: '100%',
-  boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
-  padding: '24px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '16px',
-  overflowY: 'auto' as const,
-};
-
-const drawerHeaderStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #e2e8f0',
-  paddingBottom: '14px',
-};
-
-const closeBtnStyle = {
-  background: 'none',
-  border: 'none',
-  color: '#64748b',
-  cursor: 'pointer',
-  padding: '4px',
-  display: 'flex',
-};
-
-const formStyle = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '14px',
-};
-
-const fieldStyle = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '5px',
-};
-
-const rowStyle = {
-  display: 'flex',
-  gap: '12px',
-};
-
-const labelStyle = {
-  fontSize: '0.75rem',
-  color: 'var(--color-gold-dark)',
-  fontWeight: 600,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
-
-const inputStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  width: '100%',
-};
-
-const selectStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  width: '100%',
-  cursor: 'pointer',
-};
-
-const textareaStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  resize: 'vertical' as const,
-  width: '100%',
-};
-
-const drawerActionsStyle = {
-  display: 'flex',
-  gap: '12px',
-  marginTop: '12px',
-};
-
-const submitBtnStyle = {
-  background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)',
-  border: 'none',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#ffffff',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  flex: 1,
-  boxShadow: '0 2px 6px rgba(197, 146, 53, 0.2)',
-};
-
-const cancelBtnStyle = {
-  backgroundColor: 'transparent',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#64748b',
-  fontSize: '0.82rem',
-  fontWeight: 500,
-  cursor: 'pointer',
-};

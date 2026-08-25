@@ -1,5 +1,9 @@
 import { supabase } from '../../../../lib/supabase';
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
+import { activityWriteError, isMissingRpcFunctionError } from './rpcCompatibility';
+import { toLocalDateKey } from '../utils/localDateKey';
+
+export { toLocalDateKey } from '../utils/localDateKey';
 
 export type FrequenciaAtividade = 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Personalizada';
 export type CategoriaAtividade = 'Interna' | 'Cliente' | 'Fiscal' | 'Folha' | 'Contábil' | 'Controle';
@@ -15,6 +19,7 @@ export interface RotinaAtividade {
   responsavel: string;
   responsavelUserId?: string;
   responsavelConfigUsuarioId?: string;
+  clienteId?: string;
   cliente: string;
   proximaExecucao: string;
   prioridade: PrioridadeAtividade;
@@ -24,9 +29,15 @@ export interface RotinaAtividade {
   incluirFinaisDeSemana?: boolean;
 }
 
+export interface ClienteRotina {
+  id: string;
+  nome: string;
+}
+
 export interface TarefaGestor {
   id: string;
   rotinaId?: string;
+  clienteId?: string;
   titulo: string;
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade | 'Única';
@@ -65,6 +76,7 @@ interface RotinaAtividadeRow {
   responsavel_nome: string | null;
   responsavel_user_id: string | null;
   responsavel_config_usuario_id: string | null;
+  cliente_id: string | null;
   cliente_nome: string | null;
   proxima_execucao: string | null;
   prioridade: PrioridadeAtividade | null;
@@ -77,6 +89,7 @@ interface RotinaAtividadeRow {
 interface TarefaGestorRow {
   id: string;
   rotina_id: string | null;
+  cliente_id: string | null;
   titulo: string;
   categoria: CategoriaAtividade | null;
   frequencia: FrequenciaAtividade | 'Única' | null;
@@ -96,12 +109,12 @@ interface TarefaGestorRow {
 
 export const RESPONSAVEIS_ATIVIDADES: string[] = [];
 
-export const todayKey = () => new Date().toISOString().split('T')[0];
+export const todayKey = () => toLocalDateKey(new Date());
 
 export const addDaysKey = (dateKey: string, days: number) => {
   const date = new Date(`${dateKey}T00:00:00`);
   date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
+  return toLocalDateKey(date);
 };
 
 export const formatDateBR = (dateKey: string) => new Date(`${dateKey}T00:00:00`).toLocaleDateString('pt-BR');
@@ -126,6 +139,7 @@ const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
   responsavel: row.responsavel_nome || '',
   responsavelUserId: row.responsavel_user_id || undefined,
   responsavelConfigUsuarioId: row.responsavel_config_usuario_id || undefined,
+  clienteId: row.cliente_id || undefined,
   cliente: row.cliente_nome || 'Escritório',
   proximaExecucao: row.proxima_execucao || todayKey(),
   prioridade: row.prioridade || 'Média',
@@ -138,6 +152,7 @@ const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
 const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   id: row.id,
   rotinaId: row.rotina_id || undefined,
+  clienteId: row.cliente_id || undefined,
   titulo: row.titulo,
   categoria: row.categoria || 'Cliente',
   frequencia: row.frequencia || 'Única',
@@ -166,22 +181,31 @@ export const rotinasAtividadesService = {
     return Boolean(data);
   },
 
+  async materializarRotinas() {
+    const { data, error } = await supabase.rpc('materializar_atividades_rotinas', {
+      p_ate: todayKey(),
+    });
+    if (error) throw error;
+    return Number(data || 0);
+  },
+
   async getWorkspace() {
     const empresaId = await getCurrentEmpresaId();
     const [
       { data: rotinasData, error: rotinasError },
       { data: tarefasData, error: tarefasError },
       { data: usuariosData, error: usuariosError },
+      { data: clientesData, error: clientesError },
     ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
-        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
         .eq('empresa_id', empresaId)
         .eq('ativa', true)
         .order('proxima_execucao', { ascending: true }),
       supabase
         .from('atividades_tarefas')
-        .select('id,rotina_id,titulo,categoria,frequencia,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta')
+        .select('id,rotina_id,cliente_id,titulo,categoria,frequencia,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta')
         .eq('empresa_id', empresaId)
         .eq('ativo', true)
         .order('vencimento', { ascending: true }),
@@ -191,11 +215,18 @@ export const rotinasAtividadesService = {
         .eq('empresa_id', empresaId)
         .eq('status', 'Ativo')
         .order('nome', { ascending: true }),
+      supabase
+        .from('clientes')
+        .select('id,nome')
+        .eq('empresa_id', empresaId)
+        .eq('status', 'Ativa')
+        .order('nome', { ascending: true }),
     ]);
 
     if (rotinasError) throw rotinasError;
     if (tarefasError) throw tarefasError;
     if (usuariosError) throw usuariosError;
+    if (clientesError) throw clientesError;
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
@@ -224,6 +255,7 @@ export const rotinasAtividadesService = {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
       usuarios,
+      clientes: (clientesData || []) as ClienteRotina[],
       usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
     };
   },
@@ -236,16 +268,17 @@ export const rotinasAtividadesService = {
       categoria: rotina.categoria,
       frequencia: rotina.frequencia,
       intervalo_dias: rotina.intervaloDias,
-      responsavel_nome: rotina.responsavel || null,
+      responsavel_nome: rotina.responsavel || '',
       responsavel_user_id: isUuid(rotina.responsavelUserId) ? rotina.responsavelUserId : null,
       responsavel_config_usuario_id: isUuid(rotina.responsavelConfigUsuarioId)
         ? rotina.responsavelConfigUsuarioId
         : null,
+      cliente_id: isUuid(rotina.clienteId) ? rotina.clienteId : null,
       cliente_nome: rotina.cliente || 'Escritório',
       proxima_execucao: rotina.proximaExecucao || todayKey(),
       prioridade: rotina.prioridade,
       checklist: rotina.checklist || [],
-      observacoes: rotina.observacoes || null,
+      observacoes: rotina.observacoes || '',
       incluir_finais_de_semana: rotina.incluirFinaisDeSemana || false,
       ativa: rotina.ativa !== false,
     };
@@ -275,13 +308,13 @@ export const rotinasAtividadesService = {
       if (authError) throw authError;
       responsavelUserId = authData.user?.id;
     }
-    const payload = {
-      empresa_id: empresaId,
+    const rpcPayload = {
       rotina_id: isUuid(tarefa.rotinaId) ? tarefa.rotinaId : null,
+      cliente_id: isUuid(tarefa.clienteId) ? tarefa.clienteId : null,
       titulo: tarefa.titulo,
       categoria: tarefa.categoria,
       frequencia: tarefa.frequencia || 'Única',
-      responsavel_nome: tarefa.responsavel || null,
+      responsavel_nome: tarefa.responsavel || '',
       responsavel_user_id: isUuid(responsavelUserId) ? responsavelUserId : null,
       responsavel_config_usuario_id: isUuid(tarefa.responsavelConfigUsuarioId)
         ? tarefa.responsavelConfigUsuarioId
@@ -292,26 +325,55 @@ export const rotinasAtividadesService = {
       status: tarefa.status,
       origem: tarefa.origem,
       checklist: tarefa.checklist || [],
-      notas: tarefa.notas || null,
-      data_hora_conclusao: tarefa.dataHoraConclusao || null,
+      notas: tarefa.notas || '',
       observacao_falta: tarefa.observacaoFalta || null,
       ativo: true,
     };
 
-    const request = isUuid(tarefa.id)
-      ? supabase.from('atividades_tarefas').update(payload).eq('id', tarefa.id).eq('empresa_id', empresaId)
-      : supabase.from('atividades_tarefas').insert(payload);
+    const tarefaId = isUuid(tarefa.id) ? tarefa.id : null;
+    const { error: rpcError } = await supabase.rpc('salvar_atividade_tarefa', {
+      p_tarefa_id: tarefaId,
+      p_payload: rpcPayload,
+    });
+    if (!rpcError) return this.getWorkspace();
+    if (!isMissingRpcFunctionError(rpcError)) {
+      throw activityWriteError('Não foi possível salvar a tarefa', rpcError);
+    }
+
+    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
+    const legacyPayload = {
+      empresa_id: empresaId,
+      ...rpcPayload,
+      data_hora_conclusao: tarefa.status === 'Concluída' ? new Date().toISOString() : null,
+    };
+
+    const request = tarefaId
+      ? supabase.from('atividades_tarefas').update(legacyPayload).eq('id', tarefaId).eq('empresa_id', empresaId)
+      : supabase.from('atividades_tarefas').insert(legacyPayload);
 
     const { error } = await request;
-    if (error) throw error;
+    if (error) throw activityWriteError('Não foi possível salvar a tarefa', error);
     return this.getWorkspace();
   },
 
   async deleteTarefa(id: string) {
     if (!isUuid(id)) return this.getWorkspace();
+    const { error: rpcError } = await supabase.rpc('salvar_atividade_tarefa', {
+      p_tarefa_id: id,
+      p_payload: { ativo: false },
+    });
+    if (!rpcError) return this.getWorkspace();
+    if (!isMissingRpcFunctionError(rpcError)) {
+      throw activityWriteError('Não foi possível arquivar a tarefa', rpcError);
+    }
+
     const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase.from('atividades_tarefas').update({ ativo: false }).eq('id', id).eq('empresa_id', empresaId);
-    if (error) throw error;
+    const { error } = await supabase
+      .from('atividades_tarefas')
+      .update({ ativo: false })
+      .eq('id', id)
+      .eq('empresa_id', empresaId);
+    if (error) throw activityWriteError('Não foi possível arquivar a tarefa', error);
     return this.getWorkspace();
   },
 };

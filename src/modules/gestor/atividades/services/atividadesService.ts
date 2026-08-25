@@ -1,5 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
+import { activityWriteError, isMissingRpcFunctionError } from './rpcCompatibility';
 
 export interface ClienteEmpresa {
   id: string;
@@ -234,30 +235,50 @@ export const atividadesService = {
     return ((data || []) as InstanciaRow[]).map(toInstancia);
   },
 
-  async saveInstancia(instancia: AtividadeInstancia): Promise<AtividadeInstancia> {
-    const empresaId = await getCurrentEmpresaId();
-    const payload = {
-      empresa_id: empresaId,
-      cliente_id: isUuid(instancia.clienteId) ? instancia.clienteId : null,
-      cliente_nome: instancia.clienteNome,
-      modelo_id: isUuid(instancia.modeloId) ? instancia.modeloId : null,
-      modelo_codigo: isUuid(instancia.modeloId) ? '' : instancia.modeloId,
-      competencia: instancia.competencia,
-      status: instancia.status,
-      checklists: instancia.checklists,
-      checklist_dates: instancia.checklistDates || {},
-      checklist_users: instancia.checklistUsers || {},
-      valores: instancia.valores || {},
-      ativo: true,
-    };
-
-    const request = isUuid(instancia.id)
-      ? supabase.from('atividades_instancias').update(payload).eq('id', instancia.id).select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores').single()
-      : supabase.from('atividades_instancias').insert(payload).select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores').single();
-
-    const { data, error } = await request;
+  async atualizarChecklist(
+    instanciaId: string,
+    etapa: string,
+    concluida: boolean,
+  ): Promise<AtividadeInstancia> {
+    const { data, error } = await supabase.rpc('atualizar_atividade_checklist', {
+      p_instancia_id: instanciaId,
+      p_etapa: etapa,
+      p_concluida: concluida,
+    });
     if (error) throw error;
     return toInstancia(data as InstanciaRow);
+  },
+
+  async atualizarValores(
+    instanciaId: string,
+    valores: ValoresCompetenciaAtividade,
+  ): Promise<AtividadeInstancia> {
+    const { data, error } = await supabase.rpc('atualizar_atividade_valores', {
+      p_instancia_id: instanciaId,
+      p_valores: valores,
+    });
+    if (!error) {
+      if (!data) throw new Error('A atualização não retornou a atividade salva.');
+      return toInstancia(data as InstanciaRow);
+    }
+    if (error && !isMissingRpcFunctionError(error)) {
+      throw activityWriteError('Não foi possível salvar os valores da atividade', error);
+    }
+
+    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
+    const empresaId = await getCurrentEmpresaId();
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('atividades_instancias')
+      .update({ valores })
+      .eq('id', instanciaId)
+      .eq('empresa_id', empresaId)
+      .eq('ativo', true)
+      .select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores')
+      .single();
+    if (legacyError) {
+      throw activityWriteError('Não foi possível salvar os valores da atividade', legacyError);
+    }
+    return toInstancia(legacyData as InstanciaRow);
   },
 
   async getFechamentoMeta(clienteId: string, competencia: string) {
@@ -277,20 +298,57 @@ export const atividadesService = {
     };
   },
 
-  async saveFechamentoMeta(clienteId: string, competencia: string, meta: { finalizado: boolean; dataHora: string; usuario: string }) {
+  async saveFechamentoMeta(
+    clienteId: string,
+    competencia: string,
+    meta: { finalizado: boolean; dataHora: string; usuario: string },
+  ) {
+    if (!isUuid(clienteId)) throw new Error('Cliente inválido para homologar o fechamento.');
+
+    const { data, error } = await supabase.rpc('salvar_atividade_fechamento', {
+      p_cliente_id: clienteId,
+      p_competencia: competencia,
+      p_finalizado: meta.finalizado,
+    });
+    if (!error) {
+      if (!data) throw new Error('A homologação não retornou os dados salvos.');
+      const row = data as FechamentoRow;
+      return {
+        finalizado: row.finalizado,
+        dataHora: row.data_hora || '',
+        usuario: row.usuario || '',
+      };
+    }
+    if (!isMissingRpcFunctionError(error)) {
+      throw activityWriteError('Não foi possível salvar a auditoria do fechamento', error);
+    }
+
+    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
     const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    const usuario = user?.user_metadata?.full_name
+      || user?.user_metadata?.name
+      || user?.email
+      || user?.id
+      || meta.usuario
+      || '';
+    const dataHora = new Date().toISOString();
+    const { error: legacyError } = await supabase
       .from('atividades_fechamentos')
       .upsert({
         empresa_id: empresaId,
-        cliente_id: isUuid(clienteId) ? clienteId : null,
+        cliente_id: clienteId,
         cliente_ref: clienteId,
         competencia,
         finalizado: meta.finalizado,
-        data_hora: meta.dataHora || null,
-        usuario: meta.usuario || '',
+        data_hora: dataHora,
+        usuario,
       }, { onConflict: 'empresa_id,cliente_ref,competencia' });
 
-    if (error) throw error;
+    if (legacyError) {
+      throw activityWriteError('Não foi possível salvar a auditoria do fechamento', legacyError);
+    }
+    return { finalizado: meta.finalizado, dataHora, usuario };
   },
 };

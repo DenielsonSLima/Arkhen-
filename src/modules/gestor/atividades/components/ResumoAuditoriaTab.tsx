@@ -19,30 +19,39 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
   getActivityIcon,
   onSelectTab,
 }) => {
-  // Audit form states
   const [auditFinalizado, setAuditFinalizado] = useState(false);
-  const [auditDataHora, setAuditDataHora] = useState('');
-  const [auditUsuario, setAuditUsuario] = useState('');
   const [auditSuccessMsg, setAuditSuccessMsg] = useState(false);
+  const [auditError, setAuditError] = useState('');
+  const [isSavingAudit, setIsSavingAudit] = useState(false);
+  const auditDataHora = fechamentoMeta?.dataHora || '';
+  const auditUsuario = fechamentoMeta?.usuario || '';
 
-  // Synchronize audit states when metadata is loaded
   useEffect(() => {
-    if (fechamentoMeta) {
-      setAuditFinalizado(fechamentoMeta.finalizado || false);
-      setAuditDataHora(fechamentoMeta.dataHora || new Date().toISOString().slice(0, 16));
-      setAuditUsuario(fechamentoMeta.usuario || '');
-    }
+    setAuditFinalizado(Boolean(fechamentoMeta?.finalizado));
+    setAuditSuccessMsg(false);
+    setAuditError('');
   }, [fechamentoMeta, selectedGroup]);
 
-  const handleSaveAudit = (e: React.FormEvent) => {
+  const handleSaveAudit = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleSaveFechamentoMeta({
-      finalizado: auditFinalizado,
-      dataHora: auditDataHora,
-      usuario: auditUsuario,
-    });
-    setAuditSuccessMsg(true);
-    setTimeout(() => setAuditSuccessMsg(false), 3000);
+    setIsSavingAudit(true);
+    setAuditSuccessMsg(false);
+    setAuditError('');
+    try {
+      await handleSaveFechamentoMeta({
+        finalizado: auditFinalizado,
+        dataHora: auditDataHora,
+        usuario: auditUsuario,
+      });
+      setAuditSuccessMsg(true);
+      setTimeout(() => setAuditSuccessMsg(false), 3000);
+    } catch (error) {
+      setAuditError(error instanceof Error
+        ? error.message
+        : 'Não foi possível salvar a auditoria do fechamento.');
+    } finally {
+      setIsSavingAudit(false);
+    }
   };
 
   const formatDateTime = (dtStr?: string) => {
@@ -118,9 +127,14 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
         </p>
 
         {auditSuccessMsg && (
-          <div className="success-banner animate-fade-in" style={{ marginBottom: '16px', padding: '10px 14px' }}>
+          <div className="success-banner animate-fade-in" role="status" style={{ marginBottom: '16px', padding: '10px 14px' }}>
             <CheckCircle2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle', display: 'inline' }} />
             Dados de auditoria salvos com sucesso!
+          </div>
+        )}
+        {auditError && (
+          <div className="error-banner animate-fade-in" role="alert" style={{ marginBottom: '16px', padding: '10px 14px' }}>
+            {auditError}
           </div>
         )}
 
@@ -131,6 +145,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
               <input
                 type="checkbox"
                 checked={auditFinalizado}
+                disabled={isSavingAudit}
                 onChange={(e) => setAuditFinalizado(e.target.checked)}
                 style={{ width: '18px', height: '18px', accentColor: 'var(--color-gold-primary)' }}
               />
@@ -139,39 +154,29 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
           </div>
 
           <div className="form-row-grid">
-            {/* Date & Time */}
             <div className="form-item-group">
               <label style={{ color: '#334155', fontWeight: 600, fontSize: '0.75rem' }}>
                 <Clock size={12} style={{ marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} />
                 Data e Hora do Fechamento
               </label>
-              <input
-                type="datetime-local"
-                required
-                value={auditDataHora}
-                onChange={(e) => setAuditDataHora(e.target.value)}
-                style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem' }}
-              />
+              <div aria-label="Data e hora registradas pelo servidor" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem', background: '#f8fafc', color: '#475569' }}>
+                {auditDataHora ? formatDateTime(auditDataHora) : 'Será registrada automaticamente ao salvar'}
+              </div>
             </div>
 
-            {/* User Executor */}
             <div className="form-item-group">
               <label style={{ color: '#334155', fontWeight: 600, fontSize: '0.75rem' }}>
                 <User size={12} style={{ marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} />
                 Usuário Executor (Responsável)
               </label>
-              <input
-                type="text"
-                value={auditUsuario}
-                onChange={(e) => setAuditUsuario(e.target.value)}
-                placeholder="Responsável pelo fechamento"
-                style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem' }}
-              />
+              <div aria-label="Usuário registrado pelo servidor" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem', background: '#f8fafc', color: '#475569' }}>
+                {auditUsuario || 'Será identificado automaticamente ao salvar'}
+              </div>
             </div>
           </div>
 
-          <button type="submit" className="btn-invite" style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <CheckCircle2 size={16} /> Salvar Auditoria Contábil
+          <button type="submit" disabled={isSavingAudit} className="btn-invite" style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <CheckCircle2 size={16} /> {isSavingAudit ? 'Salvando...' : 'Salvar Auditoria Contábil'}
           </button>
         </form>
 

@@ -122,7 +122,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </label>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-            <button onClick={() => updateTarefa(selectedTask.id, { status: 'Concluída', dataHoraConclusao: new Date().toLocaleString('pt-BR') })} style={styles.primaryBtn} type="button">
+            <button onClick={() => updateTarefa(selectedTask.id, { status: 'Concluída', dataHoraConclusao: new Date().toISOString() })} style={styles.primaryBtn} type="button">
               <CheckCircle2 size={15} /> Marcar concluída
             </button>
             <button onClick={() => deleteTarefa(selectedTask.id)} style={deleteOutlineBtnStyle} type="button">

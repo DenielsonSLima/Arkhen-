@@ -36,69 +36,15 @@ const getPreviousMonthCompetencia = () => {
   return formatCompetencia(new Date(today.getFullYear(), today.getMonth() - 1, 1));
 };
 
-const addCompetenciaMonth = (competencia: string) => {
-  const [month, year] = competencia.split('/').map(Number);
-  return formatCompetencia(new Date(year, month, 1));
-};
-
 const parseCompetenciaDate = (competencia: string) => {
   const [month, year] = competencia.split('/').map(Number);
   return new Date(year, month - 1, 1).getTime();
 };
 
-const getInstanceProgress = (instancia: AtividadeInstancia) => {
-  const steps = Object.keys(instancia.checklists);
-  if (steps.length === 0) return 0;
-  const completed = steps.filter((step) => instancia.checklists[step]).length;
-  return Math.round((completed / steps.length) * 100);
-};
-
-const isModeloAplicavelAoCliente = (modelo: ModeloAtividade, cliente: ClienteEmpresa) => {
-  if (!modelo.tipos || modelo.tipos.length === 0) return true;
-  if (modelo.tipos.includes(cliente.regime)) return true;
-  return (cliente.regime === 'Isenta' && modelo.tipos.includes('Isento')) ||
-    (cliente.regime === 'Isento' && modelo.tipos.includes('Isenta'));
-};
-
-const getDefaultModelosForCliente = (
-  cliente: ClienteEmpresa,
-  modelos: ModeloAtividade[]
-) => {
-  const aplicaveis = modelos
-    .filter((modelo) => isModeloAplicavelAoCliente(modelo, cliente))
-    .map((modelo) => modelo.id);
-
-  return aplicaveis.length > 0 ? aplicaveis : modelos.map((modelo) => modelo.id);
-};
-
-const clienteHasValidModelo = (cliente: ClienteEmpresa, modelos: ModeloAtividade[]) => (
-  cliente.modelosAtivos.some((modeloAtivo) => (
-    modelos.some((modelo) => modelo.id === modeloAtivo || modelo.codigo === modeloAtivo)
-  ))
-);
-
-const isClientCompetenciaComplete = (
-  cliente: ClienteEmpresa,
-  modelos: ModeloAtividade[],
-  instancias: AtividadeInstancia[]
-) => {
-  const activeModelos = cliente.modelosAtivos.filter((modeloId) => (
-    modelos.some((modelo) => modelo.id === modeloId || modelo.codigo === modeloId)
-  ));
-  if (activeModelos.length === 0) return false;
-  return activeModelos.every((modeloId) => {
-    const modelo = modelos.find((item) => item.id === modeloId || item.codigo === modeloId);
-    const instancia = instancias.find((item) => (
-      item.clienteId === cliente.id &&
-      (item.modeloId === modeloId || item.modeloId === modelo?.id || item.modeloId === modelo?.codigo)
-    ));
-    return !!instancia && getInstanceProgress(instancia) === 100;
-  });
-};
-
 export interface UseAtividadesOptions {
   initialCompanyId?: string;
   initialCompetencia?: string;
+  canMaterialize?: boolean;
 }
 
 const normalizeCompetencia = (value?: string) => {
@@ -112,7 +58,9 @@ const normalizeCompetencia = (value?: string) => {
 };
 
 export const useAtividades = (options: UseAtividadesOptions = {}) => {
-  const [competencia] = useState(getPreviousMonthCompetencia);
+  const [competencia] = useState(() => (
+    normalizeCompetencia(options.initialCompetencia) || getPreviousMonthCompetencia()
+  ));
   const [globalFilter, setGlobalFilter] = useState<'todas' | 'pendentes' | 'andamento' | 'concluidas'>('todas');
   
   const [clientes, setClientes] = useState<ClienteEmpresa[]>([]);
@@ -147,69 +95,39 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
 
   const handleSaveFechamentoMeta = async (meta: { finalizado: boolean; dataHora: string; usuario: string }) => {
     if (!selectedGroup) return;
-    await atividadesService.saveFechamentoMeta(selectedGroup.clienteId, selectedGroup.competencia, meta);
-    setFechamentoMeta(meta);
+    const savedMeta = await atividadesService.saveFechamentoMeta(
+      selectedGroup.clienteId,
+      selectedGroup.competencia,
+      meta,
+    );
+    setFechamentoMeta(savedMeta);
   };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const mod = await atividadesService.getModelos();
-      const loadedClientes = await atividadesService.getClientes();
-      const cli = await Promise.all(loadedClientes.map(async (cliente) => {
-        if (clienteHasValidModelo(cliente, mod)) return cliente;
-
-        const modelosAtivos = getDefaultModelosForCliente(cliente, mod);
-        if (modelosAtivos.length === 0) return cliente;
-
-        const updatedCliente = { ...cliente, modelosAtivos };
+      const [mod, loadedClientes] = await Promise.all([
+        atividadesService.getModelos(),
+        atividadesService.getClientes(),
+      ]);
+      if (options.canMaterialize) {
         try {
-          return await atividadesService.saveCliente(updatedCliente);
-        } catch (err) {
-          console.error('Erro ao vincular modelos padrao ao cliente:', err);
-          return updatedCliente;
+          await atividadesService.ensureInstancias(competencia);
+        } catch (materializeError) {
+          console.warn('Não foi possível materializar novas atividades nesta carga:', materializeError);
         }
-      }));
-      const visibleById = new Map<string, AtividadeInstancia>();
-      const instanciasByCompetencia = new Map<string, AtividadeInstancia[]>();
-      const baseCompetencia = getPreviousMonthCompetencia();
-      const getInstanciasForCompetencia = async (targetCompetencia: string) => {
-        const cached = instanciasByCompetencia.get(targetCompetencia);
-        if (cached) return cached;
-
-        await atividadesService.ensureInstancias(targetCompetencia);
-        const competenciaInstancias = await atividadesService.getInstancias(targetCompetencia);
-        instanciasByCompetencia.set(targetCompetencia, competenciaInstancias);
-        return competenciaInstancias;
-      };
-
-      for (const cliente of cli) {
-        let activeCompetencia = baseCompetencia;
-        let safety = 0;
-
-        while (safety < 12) {
-          const competenciaInstancias = await getInstanciasForCompetencia(activeCompetencia);
-          const clientInstancias = competenciaInstancias.filter((instancia) => instancia.clienteId === cliente.id);
-          clientInstancias.forEach((instancia) => visibleById.set(instancia.id, instancia));
-
-          if (!isClientCompetenciaComplete(cliente, mod, clientInstancias)) {
-            break;
-          }
-
-        activeCompetencia = addCompetenciaMonth(activeCompetencia);
-        safety += 1;
       }
-      }
+      const competenciaInstancias = await atividadesService.getInstancias(competencia);
       
-      setClientes(cli);
+      setClientes(loadedClientes);
       setModelos(mod);
-      setInstancias(Array.from(visibleById.values()));
+      setInstancias(competenciaInstancias);
     } catch (err) {
       console.error('Erro ao carregar dados de atividades:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [competencia, options.canMaterialize]);
 
   useEffect(() => {
     void loadData();
@@ -316,80 +234,29 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     const target = instancias.find((i) => i.id === instanciaId);
     if (!target) return;
 
-    const usuarioLogado = 'Sistema';
-
-    const newChecklists = { ...target.checklists, [etapa]: value };
-    const steps = Object.keys(newChecklists);
-    const completed = steps.filter((s) => newChecklists[s]).length;
-    const progress = steps.length > 0 ? (completed / steps.length) * 100 : 0;
-
-    let newStatus: AtividadeInstancia['status'] = 'Pendente';
-    if (progress === 100) {
-      newStatus = 'Concluída';
-    } else if (progress > 0) {
-      newStatus = 'Em andamento';
-    }
-
-    // Update checklist dates
-    const newChecklistDates = { ...(target.checklistDates || {}) };
-    const newChecklistUsers = { ...(target.checklistUsers || {}) };
-    if (value) {
-      if (!newChecklistDates[etapa]) {
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const localNow = new Date(now.getTime() - offset * 60 * 1000);
-        newChecklistDates[etapa] = localNow.toISOString().slice(0, 16);
-      }
-      // Registra o usuário que marcou (somente se ainda não houver um)
-      if (!newChecklistUsers[etapa]) {
-        newChecklistUsers[etapa] = usuarioLogado;
-      }
-    } else {
-      delete newChecklistDates[etapa];
-      delete newChecklistUsers[etapa];
-    }
-
-    const updatedInstancia: AtividadeInstancia = {
+    const optimistic = {
       ...target,
-      checklists: newChecklists,
-      checklistDates: newChecklistDates,
-      checklistUsers: newChecklistUsers,
-      status: newStatus,
+      checklists: { ...target.checklists, [etapa]: value },
     };
-
-    // Update locally immediately
-    const updatedInstancias = instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i));
-    setInstancias(updatedInstancias);
+    setInstancias((current) => current.map((item) => (
+      item.id === instanciaId ? optimistic : item
+    )));
 
     try {
-      await atividadesService.saveInstancia(updatedInstancia);
-      await loadData();
+      const updatedInstancia = await atividadesService.atualizarChecklist(
+        instanciaId,
+        etapa,
+        value,
+      );
+      setInstancias((current) => current.map((item) => (
+        item.id === instanciaId ? updatedInstancia : item
+      )));
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  // Save checklist step custom completion date/time
-  const handleSaveStepDate = async (instanciaId: string, etapa: string, dateStr: string) => {
-    const target = instancias.find((i) => i.id === instanciaId);
-    if (!target) return;
-
-    const newChecklistDates = {
-      ...(target.checklistDates || {}),
-      [etapa]: dateStr,
-    };
-
-    const updatedInstancia: AtividadeInstancia = {
-      ...target,
-      checklistDates: newChecklistDates,
-    };
-
-    setInstancias(instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i)));
-
-    try {
-      await atividadesService.saveInstancia(updatedInstancia);
-    } catch (err) {
-      console.error(err);
+      setInstancias((current) => current.map((item) => (
+        item.id === instanciaId ? target : item
+      )));
+      throw err;
     }
   };
 
@@ -409,12 +276,21 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       },
     };
 
-    setInstancias(instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i)));
+    setInstancias((current) => current.map((item) => (
+      item.id === instanciaId ? updatedInstancia : item
+    )));
 
     try {
-      await atividadesService.saveInstancia(updatedInstancia);
+      const savedInstancia = await atividadesService.atualizarValores(instanciaId, valores);
+      setInstancias((current) => current.map((item) => (
+        item.id === instanciaId ? savedInstancia : item
+      )));
     } catch (err) {
       console.error(err);
+      setInstancias((current) => current.map((item) => (
+        item.id === instanciaId ? target : item
+      )));
+      throw err;
     }
   };
 
@@ -435,7 +311,6 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     fechamentoMeta,
     handleSaveFechamentoMeta,
     handleToggleStep,
-    handleSaveStepDate,
     handleSaveTaxValores,
     metrics: {
       total: totalCount,

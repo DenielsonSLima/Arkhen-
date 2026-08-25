@@ -10,6 +10,7 @@ export const atividadesKeys = {
   all: ['atividades'] as const,
   workspace: () => [...atividadesKeys.all, 'workspace'] as const,
   permissoes: () => [...atividadesKeys.all, 'permissoes'] as const,
+  materializacao: () => [...atividadesKeys.all, 'materializacao'] as const,
 };
 
 export const useAtividadesWorkspace = () => {
@@ -23,6 +24,19 @@ export const useAtividadesWorkspace = () => {
     queryKey: atividadesKeys.permissoes(),
     queryFn: () => rotinasAtividadesService.getPodeGerenciar(),
     staleTime: 60_000,
+  });
+  useQuery({
+    queryKey: atividadesKeys.materializacao(),
+    queryFn: async () => {
+      const criadas = await rotinasAtividadesService.materializarRotinas();
+      if (criadas > 0) {
+        await queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+      }
+      return criadas;
+    },
+    enabled: permissoesQuery.data === true,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const invalidateWorkspace = () => {
@@ -49,10 +63,11 @@ export const useAtividadesWorkspace = () => {
     onSuccess: invalidateWorkspace,
   });
 
-  const workspace = workspaceQuery.data || { rotinas: [], tarefas: [], usuarios: [], usuarioAtual: null };
+  const workspace = workspaceQuery.data || { rotinas: [], tarefas: [], usuarios: [], clientes: [], usuarioAtual: null };
 
   const actions = useMemo(() => ({
     saveRotina: (rotina: RotinaAtividade) => saveRotinaMutation.mutate(rotina),
+    saveRotinaAsync: (rotina: RotinaAtividade) => saveRotinaMutation.mutateAsync(rotina),
     deleteRotina: (id: string) => deleteRotinaMutation.mutate(id),
     saveTarefa: (tarefa: TarefaGestor) => saveTarefaMutation.mutate(tarefa),
     saveTarefaAsync: (tarefa: TarefaGestor) => saveTarefaMutation.mutateAsync(tarefa),
@@ -80,6 +95,7 @@ export const useAtividadesWorkspace = () => {
     rotinas: workspace.rotinas,
     tarefas: workspace.tarefas,
     usuarios: workspace.usuarios,
+    clientes: workspace.clientes,
     usuarioAtual: workspace.usuarioAtual,
     podeGerenciar: Boolean(permissoesQuery.data),
     isLoadingPermissoes: permissoesQuery.isLoading,

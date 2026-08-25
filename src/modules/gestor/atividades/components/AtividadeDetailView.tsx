@@ -13,7 +13,6 @@ interface AtividadeDetailViewProps {
   fechamentoMeta: { finalizado: boolean; dataHora: string; usuario: string } | null;
   handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string }) => Promise<void>;
   handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
-  handleSaveStepDate: (instanciaId: string, etapa: string, dateStr: string) => Promise<void>;
   handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
 
@@ -50,7 +49,6 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
   fechamentoMeta,
   handleSaveFechamentoMeta,
   handleToggleStep,
-  handleSaveStepDate,
   handleSaveTaxValores,
 }) => {
   const [activeDetailTab, setActiveDetailTab] = useState('resumo');
@@ -84,6 +82,12 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
       {/* 2. Premium Full-Width Header Banner */}
       <div style={{
         background: '#ffffff',
+        backgroundImage: selectedGroup.logo
+          ? `linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)), url("${selectedGroup.logo}")`
+          : undefined,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        backgroundSize: '280px auto',
         border: '1px solid #e2e8f0',
         borderRadius: '16px',
         padding: '24px',
@@ -233,7 +237,6 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
                 key={atv.instanciaId}
                 atv={atv}
                 handleToggleStep={handleToggleStep}
-                handleSaveStepDate={handleSaveStepDate}
                 handleSaveTaxValores={handleSaveTaxValores}
               />
             );

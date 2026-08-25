@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
-import { addDaysKey, formatDateBR, todayKey, type TarefaGestor } from '../services/rotinasAtividadesService';
+import { addDaysKey, formatDateBR, todayKey, toLocalDateKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
 
@@ -19,7 +19,7 @@ const getMonday = (dateKey: string) => {
   const date = new Date(`${dateKey}T00:00:00`);
   const day = date.getDay();
   date.setDate(date.getDate() - day + (day === 0 ? -6 : 1));
-  return date.toISOString().split('T')[0];
+  return toLocalDateKey(date);
 };
 
 const isDone = (tarefa: TarefaGestor) => tarefa.status === 'Concluída';
@@ -41,7 +41,7 @@ const matchesFilter = (tarefa: TarefaGestor, filtro: MinhaFilaFiltro, refDate: s
 const addMonthsKey = (dateKey: string, months: number) => {
   const date = new Date(`${dateKey}T00:00:00`);
   date.setMonth(date.getMonth() + months);
-  return date.toISOString().split('T')[0];
+  return toLocalDateKey(date);
 };
 
 const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
@@ -134,7 +134,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
   const handleToggleConcluir = (tarefa: TarefaGestor) => {
     updateTarefa(tarefa.id, {
       status: isDone(tarefa) ? 'Pendente' : 'Concluída',
-      dataHoraConclusao: isDone(tarefa) ? undefined : new Date().toLocaleString('pt-BR'),
+      dataHoraConclusao: isDone(tarefa) ? undefined : new Date().toISOString(),
     });
   };
 

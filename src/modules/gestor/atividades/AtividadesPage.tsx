@@ -65,13 +65,13 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     fechamentoMeta,
     handleSaveFechamentoMeta,
     handleToggleStep,
-    handleSaveStepDate,
     handleSaveTaxValores,
     metrics,
     refresh,
   } = useAtividades({
     initialCompanyId,
     initialCompetencia,
+    canMaterialize: podeGerenciar && !isLoadingPermissoes,
   });
 
   useAtividadesRealtime(true, refresh);
@@ -86,7 +86,6 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
           fechamentoMeta={fechamentoMeta}
           handleSaveFechamentoMeta={handleSaveFechamentoMeta}
           handleToggleStep={handleToggleStep}
-          handleSaveStepDate={handleSaveStepDate}
           handleSaveTaxValores={handleSaveTaxValores}
         />
       </div>
