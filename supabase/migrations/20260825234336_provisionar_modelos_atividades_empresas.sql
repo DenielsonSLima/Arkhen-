@@ -1,6 +1,7 @@
 -- Garante os seis modelos operacionais canônicos por empresa e vincula clientes
 -- ativos sem configuração válida. A migration é idempotente e não expõe funções
 -- administrativas à API.
+-- Versao registrada no Supabase de producao: 20260825234336.
 
 CREATE OR REPLACE FUNCTION public.provisionar_atividades_modelos_empresa(
   p_empresa_id uuid

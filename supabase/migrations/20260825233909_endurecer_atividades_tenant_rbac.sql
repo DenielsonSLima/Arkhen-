@@ -1,5 +1,6 @@
 -- Versiona o hardening multi-tenant/RBAC do modulo de Atividades sem incluir
 -- identificadores ou dados de clientes. Casos ambiguos abortam sem alterar dados.
+-- Versao registrada no Supabase de producao: 20260825233909.
 
 DO $$
 BEGIN

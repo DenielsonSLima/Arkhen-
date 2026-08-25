@@ -1,5 +1,6 @@
 -- Remove privilegios de owner-like concedidos a authenticated e separa leitura
 -- de escrita em modelos e fechamentos. Policies restritivas de cliente permanecem.
+-- Versao registrada no Supabase de producao: 20260825233936.
 
 ALTER TABLE public.atividades_defaults ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.atividades_modelos ENABLE ROW LEVEL SECURITY;

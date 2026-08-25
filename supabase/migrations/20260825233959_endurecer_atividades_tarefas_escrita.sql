@@ -1,5 +1,6 @@
 -- Centraliza criacao/edicao de tarefas, limita update-own a progresso e deriva
 -- tenant, responsavel proprio e horario de conclusao no servidor.
+-- Versao registrada no Supabase de producao: 20260825233959.
 
 CREATE OR REPLACE FUNCTION public.salvar_atividade_tarefa(
   p_tarefa_id uuid,

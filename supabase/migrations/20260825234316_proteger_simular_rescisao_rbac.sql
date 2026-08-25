@@ -1,5 +1,6 @@
 -- Mantem a assinatura publica usada pelo frontend e isola a implementacao longa.
 -- A renomeacao ocorre uma unica vez; repeticoes apenas recompõem wrapper e ACL.
+-- Versao registrada no Supabase de producao: 20260825234316.
 DO $$
 BEGIN
   IF to_regprocedure('public.simular_rescisao_interna(jsonb)') IS NULL THEN
