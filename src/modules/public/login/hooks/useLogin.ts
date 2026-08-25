@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { loginService, type LoginResponse } from '../services/loginService';
 import { cnpjLookupService } from '../../../gestor/gestao-empresarial/services/cnpjLookupService';
+import { validatePassword } from '../services/passwordPolicy';
 
 export type LoginMode = 'login' | 'signup' | 'recovery';
 
@@ -74,9 +75,7 @@ export const useLogin = () => {
       return null;
     }
 
-    const hasLetter = /[a-zA-Z]/.test(signupSenha);
-    const hasNumber = /[0-9]/.test(signupSenha);
-    if (signupSenha.length < 6 || !hasLetter || !hasNumber) {
+    if (validatePassword(signupSenha)) {
       setError('A senha não atende aos requisitos mínimos de segurança.');
       return null;
     }

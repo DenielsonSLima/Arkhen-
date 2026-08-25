@@ -1,6 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import { usuariosService, type UsuarioAccessConfig } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
+import { passwordRecoveryService } from './passwordRecoveryService';
 
 export interface LoginPayload {
   usuario: string;
@@ -264,13 +265,7 @@ export const loginService = {
   },
 
   async recuperarSenha(email: string): Promise<void> {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getRedirectUrl(),
-    });
-
-    if (error) {
-      throw new Error(error.message || 'Erro ao enviar recuperação de senha.');
-    }
+    await passwordRecoveryService.sendRecoveryEmail(email);
   },
 
   async loginGoogle(): Promise<void> {

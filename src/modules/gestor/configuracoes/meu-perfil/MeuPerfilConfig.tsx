@@ -18,6 +18,7 @@ import {
 import { supabase } from '../../../../lib/supabase';
 import { persistedStorage } from '../../../../lib/persistedStorage';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
+import { passwordRecoveryService } from '../../../public/login/services/passwordRecoveryService';
 
 interface UserProfile {
   nome: string;
@@ -206,10 +207,7 @@ export const MeuPerfilConfig: React.FC = () => {
 
     setIsSendingResetEmail(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
-        redirectTo: window.location.origin,
-      });
-      if (error) throw error;
+      await passwordRecoveryService.sendRecoveryEmail(profile.email);
       showSuccess(`E-mail de redefinição enviado para ${profile.email}.`);
     } catch (error: any) {
       showError(error.message || 'Erro ao enviar e-mail de redefinição.');

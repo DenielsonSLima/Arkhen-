@@ -1,206 +1,103 @@
-import { useEffect, useRef, useState, type ReactNode, type ErrorInfo, Component } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { LoginPage } from './modules/public/login/LoginPage';
+import { PasswordRecoveryGate } from './modules/public/login/PasswordRecoveryGate';
 import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
 import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
 import { GestorShellLoading } from './modules/gestor/layout/GestorShellLoading';
+import { GestorErrorBoundary } from './modules/gestor/layout/GestorErrorBoundary';
 import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/useConfiguracoesRealtime';
 import { usePersistedStorageRealtime } from './modules/gestor/configuracoes/hooks/usePersistedStorageRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
-import { supabase } from './lib/supabase';
+import { getInitialAuthLocation, supabase } from './lib/supabase';
 import { loginService } from './modules/public/login/services/loginService';
 import { persistedStorage } from './lib/persistedStorage';
 import { LandingPage } from './modules/public/landing/LandingPage';
 import { DemoWebsite } from './modules/public/demowebsite/DemoWebsite';
 import { navigate } from './lib/navigation';
 import { queryClient } from './lib/queryClient';
+import { useCurrentPath } from './hooks/useCurrentPath';
+import {
+  inspectPasswordRecoveryCallback,
+  passwordRecoveryService,
+  PASSWORD_RECOVERY_PATH,
+  PASSWORD_RECOVERY_SESSION_ERROR,
+  type PasswordRecoverySession,
+} from './modules/public/login/services/passwordRecoveryService';
+import { syncAuthenticatedUserProfile } from './modules/public/login/services/syncAuthenticatedUserProfile';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
-const LEGACY_DEMO_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150';
-const LEGACY_DEMO_NAMES = new Set(['João Silva', 'João Silva Demonstração']);
-const LEGACY_DEMO_EMAILS = new Set(['joao.silva@arkhen.com.br', 'demo@arkhen.com.br']);
-
-const createInitialsAvatar = (name: string) => {
-  const initials = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).replace(/[^a-z0-9]/gi, '').toUpperCase())
-    .join('') || 'U';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" rx="75" fill="#1e293b"/><text x="75" y="82" text-anchor="middle" font-family="Arial,sans-serif" font-size="52" font-weight="700" fill="#c59235">${initials}</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-};
-
-interface GestorErrorBoundaryProps {
-  onReset: () => void;
-  children: ReactNode;
-}
-
-interface GestorErrorBoundaryState {
-  hasError: boolean;
-  message: string;
-}
-
-class GestorErrorBoundary extends Component<GestorErrorBoundaryProps, GestorErrorBoundaryState> {
-  constructor(props: GestorErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      message: '',
-    };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return {
-      hasError: true,
-      message: error.message || 'Erro inesperado ao carregar o sistema.',
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Erro ao renderizar área do Gestor:', error, errorInfo);
-  }
-
-  handleReset = () => {
-    this.setState({ hasError: false, message: '' });
-    this.props.onReset();
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div
-          style={{
-            alignItems: 'center',
-            background: '#0f172a',
-            color: '#f8fafc',
-            display: 'flex',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            padding: '24px',
-            textAlign: 'center',
-          }}
-        >
-          <div>
-            <h2 style={{ margin: '0 0 12px 0', fontSize: '1.05rem', color: '#f97316' }}>Falha ao abrir o sistema</h2>
-            <p style={{ margin: 0 }}>{this.state.message || 'Aconteceu um erro inesperado.'}</p>
-            <button
-              type="button"
-              onClick={this.handleReset}
-              style={{
-                marginTop: '14px',
-                border: 'none',
-                background: '#c59235',
-                color: '#fff',
-                borderRadius: '8px',
-                padding: '10px 18px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Voltar ao Login
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
+type PasswordRecoveryStatus = 'validating' | 'ready' | 'error' | 'complete';
 
 function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
-
+  const currentPath = useCurrentPath();
+  const initialPasswordRecovery = useRef(inspectPasswordRecoveryCallback(getInitialAuthLocation() || undefined));
   const isSharedDocumentRoute = /^(?:\/shared|\/s)(?:\/|$)/.test(currentPath);
   const isPublicCobrancaRoute = /^\/cobranca(?:\/|$)/.test(currentPath);
   const isLoginOrSignupRoute = currentPath === '/login' || currentPath === '/signup';
+  const isPasswordResetRoute = currentPath === PASSWORD_RECOVERY_PATH;
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
-
-  const [view, setView] = useState<'loading' | 'login' | 'gestor'>('loading');
+  const [view, setView] = useState<'loading' | 'login' | 'password-reset' | 'gestor'>('loading');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [passwordRecoveryStatus, setPasswordRecoveryStatus] = useState<PasswordRecoveryStatus>('validating');
+  const [passwordRecoveryError, setPasswordRecoveryError] = useState<string | null>(
+    initialPasswordRecovery.current.errorMessage,
+  );
   const viewRef = useRef(view);
   const authenticatedUserIdRef = useRef<string | null>(null);
-
+  const passwordRecoveryContextRef = useRef(initialPasswordRecovery.current.isRecovery);
+  const passwordRecoverySessionRef = useRef<PasswordRecoverySession | null>(null);
+  const authFlowGenerationRef = useRef(0);
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
-
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    window.addEventListener('popstate', handleLocationChange);
-    window.addEventListener('pushstate', handleLocationChange);
-    window.addEventListener('replacestate', handleLocationChange);
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-      window.removeEventListener('pushstate', handleLocationChange);
-      window.removeEventListener('replacestate', handleLocationChange);
-    };
-  }, []);
-
   useConfiguracoesRealtime(view === 'gestor');
   usePersistedStorageRealtime(view === 'gestor');
-
-  const syncUserProfile = (user: User) => {
-    try {
-      const metadata = user.user_metadata || {};
-      const saved = persistedStorage.getItem('gestor_user_profile');
-      let localProfile: any = {};
-      if (saved) {
-        try {
-          localProfile = JSON.parse(saved);
-        } catch (error) {
-          console.error('Erro ao ler perfil do usuário local:', error);
-        }
-      }
-      const storedName = LEGACY_DEMO_NAMES.has(localProfile.nome) ? '' : localProfile.nome;
-      const storedEmail = LEGACY_DEMO_EMAILS.has(localProfile.email) ? '' : localProfile.email;
-      const storedAvatar = localProfile.avatar === LEGACY_DEMO_AVATAR
-        || localProfile.avatar?.startsWith('data:image/svg+xml')
-        ? ''
-        : localProfile.avatar;
-      const nome = metadata.nome || metadata.name || storedName || 'Usuário';
-      const updated = {
-        nome,
-        email: user.email || storedEmail || '',
-        perfil: localProfile.perfil || 'Administrador',
-        avatar: metadata.avatar_url || metadata.picture || storedAvatar || createInitialsAvatar(nome),
-        googleLinked: localProfile.googleLinked || false,
-        googleEmail: localProfile.googleEmail || undefined,
-      };
-      persistedStorage.setItem('gestor_user_profile', JSON.stringify(updated));
-      window.dispatchEvent(new Event('profile_updated'));
-    } catch (error) {
-      console.error('Erro ao sincronizar perfil do usuário localmente:', error);
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
     let authStateTimer: number | undefined;
 
+    const invalidatePendingAuthentication = () => {
+      authFlowGenerationRef.current += 1;
+      window.clearTimeout(authStateTimer);
+      authStateTimer = undefined;
+      authenticatedUserIdRef.current = null;
+    };
     const clearLocalAuthentication = () => {
       authenticatedUserIdRef.current = null;
       queryClient.clear();
       persistedStorage.removeItem('contabil_auth');
       persistedStorage.removeItem('gestor_user_profile');
     };
-
     const showLogin = () => {
+      invalidatePendingAuthentication();
       clearLocalAuthentication();
+      passwordRecoveryContextRef.current = false;
+      passwordRecoverySessionRef.current = null;
+      setPasswordRecoveryStatus('error');
+      setPasswordRecoveryError(null);
       viewRef.current = 'login';
       setView('login');
     };
-
+    const showPasswordRecovery = (
+      status: PasswordRecoveryStatus,
+      errorMessage: string | null = null,
+    ) => {
+      invalidatePendingAuthentication();
+      queryClient.clear();
+      persistedStorage.resetLocalContext();
+      passwordRecoveryContextRef.current = true;
+      setPasswordRecoveryStatus(status);
+      setPasswordRecoveryError(errorMessage);
+      setAuthError(null);
+      if (window.location.pathname !== PASSWORD_RECOVERY_PATH) navigate(PASSWORD_RECOVERY_PATH);
+      viewRef.current = 'password-reset';
+      setView('password-reset');
+    };
     const handleBootstrapFailure = async (error: unknown) => {
       console.error('Erro ao preparar a conta autenticada:', error);
-      if (!mounted) return;
+      if (!mounted || passwordRecoveryContextRef.current) return;
       setAuthError(error instanceof Error ? error.message : 'Não foi possível preparar sua conta. Tente entrar novamente.');
       try {
         await supabase.auth.signOut({ scope: 'local' });
@@ -214,66 +111,129 @@ function App() {
         showLogin();
       }
     };
-
-    const activateAuthenticatedUser = async (user: User) => {
+    const activateAuthenticatedUser = async (user: User, generation: number) => {
+      if (generation !== authFlowGenerationRef.current
+        || passwordRecoveryContextRef.current
+        || window.location.pathname === PASSWORD_RECOVERY_PATH) return;
       authenticatedUserIdRef.current = user.id;
       queryClient.clear();
       const authorization = await loginService.authorizeAuthenticatedUser(user);
+      if (!mounted
+        || generation !== authFlowGenerationRef.current
+        || passwordRecoveryContextRef.current
+        || window.location.pathname === PASSWORD_RECOVERY_PATH
+        || authenticatedUserIdRef.current !== user.id) return;
       if (!authorization.allowed) {
         throw new Error(authorization.message);
       }
-      if (!mounted || authenticatedUserIdRef.current !== user.id) return;
-
-      syncUserProfile(user);
+      syncAuthenticatedUserProfile(user);
       persistedStorage.setItem('contabil_auth', 'gestor');
       setAuthError(null);
       viewRef.current = 'gestor';
       setView('gestor');
     };
 
-    void supabase.auth.getSession().then(async ({ data, error }) => {
-      if (!mounted) return;
-
-      if (error || !data.session) {
-        try {
-          showLogin();
-        } catch (storageError) {
-          console.error('Erro ao remover auth persistido:', storageError);
-          viewRef.current = 'login';
-          setView('login');
+    const bootstrapMainSession = async () => {
+      const bootstrapGeneration = authFlowGenerationRef.current;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted
+          || bootstrapGeneration !== authFlowGenerationRef.current
+          || passwordRecoveryContextRef.current) return;
+        if (error || !data.session) {
+          try {
+            showLogin();
+          } catch (storageError) {
+            console.error('Erro ao remover auth persistido:', storageError);
+            viewRef.current = 'login';
+            setView('login');
+          }
+          return;
         }
+
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (!mounted
+          || bootstrapGeneration !== authFlowGenerationRef.current
+          || passwordRecoveryContextRef.current) return;
+        if (userError || !userData.user) {
+          await handleBootstrapFailure(userError || new Error('Sessão autenticada inválida.'));
+          return;
+        }
+        await activateAuthenticatedUser(userData.user, bootstrapGeneration);
+      } catch (error) {
+        if (!mounted
+          || bootstrapGeneration !== authFlowGenerationRef.current
+          || passwordRecoveryContextRef.current) return;
+        await handleBootstrapFailure(error);
+      }
+    };
+
+    const preparePasswordRecovery = async () => {
+      const callback = initialPasswordRecovery.current;
+      if (callback.errorMessage) {
+        showPasswordRecovery('error', callback.errorMessage);
+        return;
+      }
+      if (!callback.hasRecoveryProof) {
+        showPasswordRecovery('error', 'Abra o link enviado por e-mail para criar uma nova senha.');
         return;
       }
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (!mounted) return;
-      if (userError || !userData.user) {
-        await handleBootstrapFailure(userError || new Error('Sessão autenticada inválida.'));
-        return;
+      showPasswordRecovery('validating');
+      try {
+        const recoverySession = await passwordRecoveryService.getInitialSession();
+        if (!mounted) return;
+        passwordRecoverySessionRef.current = recoverySession;
+        showPasswordRecovery('ready');
+      } catch (error) {
+        if (!mounted) return;
+        passwordRecoverySessionRef.current = null;
+        showPasswordRecovery(
+          'error',
+          error instanceof Error ? error.message : PASSWORD_RECOVERY_SESSION_ERROR,
+        );
       }
+    };
 
-      await activateAuthenticatedUser(userData.user);
-    }).catch((error) => {
-      if (!mounted) return;
-      void handleBootstrapFailure(error);
-    });
+    if (initialPasswordRecovery.current.isRecovery
+      || window.location.pathname === PASSWORD_RECOVERY_PATH) {
+      void preparePasswordRecovery();
+    } else {
+      void bootstrapMainSession();
+    }
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (passwordRecoveryContextRef.current
+        || window.location.pathname === PASSWORD_RECOVERY_PATH
+        || event === 'PASSWORD_RECOVERY') return;
+
       if (event === 'SIGNED_IN' && session) {
         const isSameAuthenticatedSession = authenticatedUserIdRef.current === session.user.id;
+        invalidatePendingAuthentication();
+        const generation = authFlowGenerationRef.current;
         authenticatedUserIdRef.current = session.user.id;
         if (isSameAuthenticatedSession && viewRef.current === 'gestor') return;
 
         // O callback de Auth deve retornar antes de novas chamadas ao cliente.
         window.clearTimeout(authStateTimer);
         authStateTimer = window.setTimeout(() => {
-          void activateAuthenticatedUser(session.user).catch(handleBootstrapFailure);
+          void activateAuthenticatedUser(session.user, generation).catch((error) => {
+            if (generation !== authFlowGenerationRef.current
+              || passwordRecoveryContextRef.current) return;
+            void handleBootstrapFailure(error);
+          });
         }, 0);
       }
 
       if (event === 'SIGNED_OUT') {
+        invalidatePendingAuthentication();
         clearLocalAuthentication();
+        passwordRecoveryContextRef.current = false;
+        passwordRecoverySessionRef.current = null;
+        setPasswordRecoveryStatus('error');
+        setAuthError(null);
         sessionStorage.removeItem('contabil_config_active_subtab');
+        if (window.location.pathname === PASSWORD_RECOVERY_PATH) navigate('/login');
         viewRef.current = 'login';
         setView('login');
       }
@@ -287,12 +247,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (view === 'gestor') {
-      internalTabsStore.resetToInicio();
-    }
+    if (view === 'gestor') internalTabsStore.resetToInicio();
   }, [view]);
 
   const handleLoginSuccess = () => {
+    passwordRecoveryContextRef.current = false;
+    passwordRecoverySessionRef.current = null;
+    setPasswordRecoveryStatus('error');
+    setPasswordRecoveryError(null);
+    authFlowGenerationRef.current += 1;
     queryClient.clear();
     internalTabsStore.resetToInicio();
     persistedStorage.removeItem('contabil_internal_tabs_state');
@@ -307,9 +270,41 @@ function App() {
       viewRef.current = 'gestor';
       setView('gestor');
     }
+    void supabase.auth.getUser().then(({ data }) => {
+      if (data.user) syncAuthenticatedUserProfile(data.user);
+    }).catch((error) => {
+      console.error('Erro ao sincronizar perfil após o login:', error);
+    });
+  };
+
+  const leavePasswordRecovery = async () => {
+    const recoverySession = passwordRecoverySessionRef.current;
+    if (recoverySession) await recoverySession.cancel();
+    if (passwordRecoverySessionRef.current === recoverySession) {
+      passwordRecoverySessionRef.current = null;
+    }
+    authFlowGenerationRef.current += 1;
+    setPasswordRecoveryStatus('error');
+    setPasswordRecoveryError(null);
+    queryClient.clear();
+    authenticatedUserIdRef.current = null;
+    persistedStorage.resetLocalContext();
+    if (window.location.pathname !== '/login') navigate('/login');
+    viewRef.current = 'login';
+    setView('login');
+  };
+
+  const handlePasswordUpdate = async (password: string) => {
+    const recoverySession = passwordRecoverySessionRef.current;
+    if (!recoverySession) throw new Error(PASSWORD_RECOVERY_SESSION_ERROR);
+    await recoverySession.updatePassword(password);
+    passwordRecoverySessionRef.current = null;
+    setPasswordRecoveryError(null);
+    setPasswordRecoveryStatus('complete');
   };
 
   const handleLogout = () => {
+    authFlowGenerationRef.current += 1;
     void (async () => {
       try {
         const { data } = await supabase.auth.getSession();
@@ -356,23 +351,29 @@ function App() {
   }, [view]);
 
   if (isSharedDocumentRoute) {
-    return (
-      <div className="animate-page-fade">
-        <PublicSharedDocumentPage />
-      </div>
-    );
+    return <div className="animate-page-fade"><PublicSharedDocumentPage /></div>;
   }
 
   if (isPublicCobrancaRoute) {
-    return (
-      <div className="animate-page-fade">
-        <PublicCobrancaPage />
-      </div>
-    );
+    return <div className="animate-page-fade"><PublicCobrancaPage /></div>;
   }
 
-  if (view === 'loading') {
-    return <GestorShellLoading message="Validando seu acesso..." />;
+  if (isDemoWebsiteRoute) {
+    return <div className="animate-page-fade"><DemoWebsite /></div>;
+  }
+
+  if (view === 'loading') return <GestorShellLoading message="Validando seu acesso..." />;
+
+  if (view === 'password-reset' || isPasswordResetRoute) {
+    return (
+      <PasswordRecoveryGate
+        status={passwordRecoveryStatus}
+        callbackError={passwordRecoveryError}
+        onSubmitPassword={handlePasswordUpdate}
+        onCancel={() => leavePasswordRecovery()}
+        onContinue={() => leavePasswordRecovery()}
+      />
+    );
   }
 
   if (view === 'gestor') {
@@ -393,27 +394,14 @@ function App() {
             {authError}
           </div>
         )}
-        <LoginPage 
-          onLoginSuccess={handleLoginSuccess} 
-          onBackToLanding={() => navigate('/')} 
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          onBackToLanding={() => navigate('/')}
         />
       </div>
     );
   }
 
-  if (isDemoWebsiteRoute) {
-    return (
-      <div className="animate-page-fade">
-        <DemoWebsite />
-      </div>
-    );
-  }
-
-  return (
-    <div className="animate-page-fade">
-      <LandingPage />
-    </div>
-  );
+  return <div className="animate-page-fade"><LandingPage /></div>;
 }
-
 export default App;
