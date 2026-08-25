@@ -110,10 +110,12 @@ BEGIN
         USING ERRCODE = '22023';
     END;
     IF v_valor < 0
-       OR v_valor > CASE
-         WHEN v_chave = 'adicionalTempoServicoPercentual' THEN 100
-         ELSE 999999999.99
-       END THEN
+       OR v_valor > (
+         CASE
+           WHEN v_chave = 'adicionalTempoServicoPercentual' THEN 100
+           ELSE 999999999.99
+         END
+       ) THEN
       RAISE EXCEPTION 'Valor numérico da rescisão fora da faixa: %', v_chave
         USING ERRCODE = '22023';
     END IF;
