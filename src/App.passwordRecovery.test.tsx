@@ -183,7 +183,7 @@ describe('App password recovery isolation', () => {
   });
 
   it('não aceita uma sessão comum na rota aberta manualmente', async () => {
-    window.history.replaceState({}, '', '/redefinir-senha');
+    window.history.replaceState({}, '', '/redefinir-senha/');
     render(<App />);
 
     await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('error'));
@@ -228,6 +228,19 @@ describe('App password recovery isolation', () => {
     await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('complete'));
     expect(mocks.globalSignOut).not.toHaveBeenCalled();
     expect(localStorage.getItem(SUPABASE_STORAGE_KEY)).toBe(GLOBAL_STORAGE_SENTINEL);
+  });
+
+  it('encerra o formulário quando a alteração falha em estado terminal', async () => {
+    mocks.recoveryUpdatePassword.mockRejectedValueOnce(new Error('Não foi possível confirmar a alteração.'));
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('ready'));
+
+    fireEvent.click(screen.getByRole('button', { name: /concluir redefinição/i }));
+
+    await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('error'));
+    expect(screen.getByTestId('recovery-error').textContent).toMatch(/não foi possível confirmar/i);
+    expect(screen.queryByRole('button', { name: /concluir redefinição/i })).toBeNull();
+    expect(mocks.globalSignOut).not.toHaveBeenCalled();
   });
 
   it('cancela somente o handle isolado e volta ao login', async () => {

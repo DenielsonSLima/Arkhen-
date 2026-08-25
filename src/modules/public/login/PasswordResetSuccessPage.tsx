@@ -49,7 +49,7 @@ export const PasswordResetSuccessPage = ({ onContinue }: PasswordResetSuccessPag
             <ShieldCheck size={20} className="footer-secure-icon" />
             <div className="footer-secure-text">
               <strong>Sessão de recuperação encerrada</strong>
-              <span>Outras sessões já abertas não foram alteradas.</span>
+              <span>Esta aba não mantém mais o acesso temporário do link.</span>
             </div>
             <span className="app-version-badge">{CURRENT_RELEASE.label}</span>
           </div>

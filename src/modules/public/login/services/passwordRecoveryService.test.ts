@@ -59,7 +59,7 @@ describe('password recovery callback', () => {
     }).errorMessage).toMatch(/expirou|utilizado/i);
 
     expect(recoveryModule.inspectPasswordRecoveryCallback({
-      pathname: recoveryModule.PASSWORD_RECOVERY_PATH,
+      pathname: `${recoveryModule.PASSWORD_RECOVERY_PATH}/`,
       search: '?code=present',
       hash: '',
     }).errorMessage).toMatch(/não pôde ser validado/i);
@@ -161,15 +161,17 @@ describe('passwordRecoveryService', () => {
     expect(mocks.isolatedDispose).toHaveBeenCalledOnce();
   });
 
-  it('permite corrigir a senha após um erro confirmado pelo servidor', async () => {
-    mocks.isolatedUpdateUser
-      .mockResolvedValueOnce({ data: { user: null }, error: { message: 'Senha recusada' } })
-      .mockResolvedValueOnce({ data: { user: { id: 'recovery-user' } }, error: null });
+  it('terminaliza o handle após qualquer erro retornado pela mutação', async () => {
+    mocks.isolatedUpdateUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: 'Falha ao confirmar a alteração' },
+    });
     const session = await recoveryModule.passwordRecoveryService.getInitialSession();
 
-    await expect(session.updatePassword('SenhaRecusada1')).rejects.toThrow('Senha recusada');
-    await expect(session.updatePassword('SenhaValida123')).resolves.toBeUndefined();
-    expect(mocks.isolatedUpdateUser).toHaveBeenCalledTimes(2);
+    await expect(session.updatePassword('SenhaValida123')).rejects.toThrow('Falha ao confirmar a alteração');
+    await expect(session.updatePassword('OutraSenha123')).rejects.toThrow(/sessão de recuperação/i);
+    expect(mocks.isolatedUpdateUser).toHaveBeenCalledOnce();
+    expect(mocks.isolatedDispose).toHaveBeenCalledOnce();
   });
 
   it('falha fechado e fica terminal se a resposta da mutação trouxer outro usuário', async () => {

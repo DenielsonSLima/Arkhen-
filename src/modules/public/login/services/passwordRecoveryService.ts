@@ -7,6 +7,9 @@ import {
 export const PASSWORD_RECOVERY_PATH = '/redefinir-senha';
 export const PASSWORD_RECOVERY_SESSION_ERROR =
   'A sessão de recuperação mudou ou expirou. Solicite um novo link.';
+export const isPasswordRecoveryPath = (pathname: string) => (
+  pathname.replace(/\/+$/, '') === PASSWORD_RECOVERY_PATH
+);
 
 export interface PasswordRecoveryCallback {
   isRecovery: boolean;
@@ -38,7 +41,7 @@ export const inspectPasswordRecoveryCallback = (
 ): PasswordRecoveryCallback => {
   const params = readAuthParams(location.search, location.hash);
   const hasRecoveryProof = params.type === 'recovery';
-  const isRecovery = location.pathname === PASSWORD_RECOVERY_PATH || hasRecoveryProof;
+  const isRecovery = isPasswordRecoveryPath(location.pathname) || hasRecoveryProof;
 
   if (!isRecovery) {
     return { isRecovery: false, hasRecoveryProof: false, errorMessage: null };
@@ -143,7 +146,8 @@ const initializePasswordRecoverySession = async (): Promise<PasswordRecoverySess
       }
 
       if (updateResult.error) {
-        state = 'active';
+        state = 'terminal';
+        await closeTemporarySession();
         throw new Error(updateResult.error.message || 'Erro ao atualizar a senha.');
       }
       if (!updateResult.data.user || updateResult.data.user.id !== userId) {

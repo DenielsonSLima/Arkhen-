@@ -7,6 +7,9 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() || defaultSupabase
 export const supabasePublishableKey =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || defaultSupabasePublishableKey;
 const PASSWORD_RECOVERY_PATH = '/redefinir-senha';
+const isPasswordRecoveryPath = (pathname: string) => (
+  pathname.replace(/\/+$/, '') === PASSWORD_RECOVERY_PATH
+);
 const AUTH_URL_KEYS = [
   'access_token',
   'refresh_token',
@@ -60,7 +63,7 @@ const initialHashParams = new URLSearchParams((initialBrowserLocation?.hash || '
 const initialAuthType = initialHashParams.get('type') || initialSearchParams.get('type');
 const isPasswordRecoveryLoad = Boolean(
   initialBrowserLocation
-  && (initialBrowserLocation.pathname === PASSWORD_RECOVERY_PATH || initialAuthType === 'recovery'),
+  && (isPasswordRecoveryPath(initialBrowserLocation.pathname) || initialAuthType === 'recovery'),
 );
 const hasInitialAuthError = Boolean(
   initialHashParams.get('error')
