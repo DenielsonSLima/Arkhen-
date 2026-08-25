@@ -45,10 +45,12 @@ BEGIN
 END;
 $$;
 
+CREATE UNIQUE INDEX IF NOT EXISTS clientes_id_empresa_id_unq
+  ON public.clientes (id, empresa_id);
+
 DO $$
 DECLARE
   v_constraint record;
-  v_tem_unique_composta boolean;
 BEGIN
   FOR v_constraint IN
     SELECT con.conname
@@ -66,30 +68,11 @@ BEGIN
     EXECUTE format('ALTER TABLE public.atividades_rotinas DROP CONSTRAINT %I', v_constraint.conname);
   END LOOP;
 
-  SELECT EXISTS (
-    SELECT 1
-    FROM pg_constraint con
-    WHERE con.conrelid = 'public.clientes'::regclass
-      AND con.contype IN ('p', 'u')
-      AND (
-        SELECT array_agg(a.attname::text ORDER BY k.ord)
-        FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
-        JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
-      ) = ARRAY['id', 'empresa_id']::text[]
-  ) INTO v_tem_unique_composta;
-
-  IF v_tem_unique_composta THEN
-    ALTER TABLE public.atividades_rotinas
-      ADD CONSTRAINT atividades_rotinas_cliente_tenant_fkey
-      FOREIGN KEY (cliente_id, empresa_id)
-      REFERENCES public.clientes (id, empresa_id)
-      ON DELETE SET NULL (cliente_id);
-  ELSE
-    ALTER TABLE public.atividades_rotinas
-      ADD CONSTRAINT atividades_rotinas_cliente_id_fkey
-      FOREIGN KEY (cliente_id) REFERENCES public.clientes (id) ON DELETE SET NULL;
-    RAISE NOTICE 'UNIQUE (clientes.id, empresa_id) ausente; mantida FK simples com trigger tenant.';
-  END IF;
+  ALTER TABLE public.atividades_rotinas
+    ADD CONSTRAINT atividades_rotinas_cliente_tenant_fkey
+    FOREIGN KEY (cliente_id, empresa_id)
+    REFERENCES public.clientes (id, empresa_id)
+    ON DELETE SET NULL (cliente_id);
 END;
 $$;
 
