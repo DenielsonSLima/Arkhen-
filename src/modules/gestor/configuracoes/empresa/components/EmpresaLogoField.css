@@ -1,0 +1,227 @@
+.empresa-logo-field {
+  align-items: center;
+  background: linear-gradient(135deg, #fcfcfd 0%, #f8f5ee 100%);
+  border: 1px solid #e9e4d9;
+  border-radius: 14px;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 18px;
+}
+
+.empresa-logo-field__preview {
+  align-items: center;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #f3f4f6 25%, transparent 25%),
+    linear-gradient(-45deg, #f3f4f6 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f3f4f6 75%),
+    linear-gradient(-45deg, transparent 75%, #f3f4f6 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  border: 1px solid #d8dce3;
+  border-radius: 12px;
+  display: flex;
+  flex: 0 0 270px;
+  height: 250px;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.empresa-logo-field__preview.is-dragging {
+  border: 2px dashed #c59235;
+  box-shadow: 0 0 0 4px rgba(197, 146, 53, 0.12);
+}
+
+.empresa-logo-field__preview > img {
+  display: block;
+  max-width: calc(100% - 20px);
+  object-fit: contain;
+  transition: height 0.15s ease;
+  width: auto;
+}
+
+.empresa-logo-field__placeholder {
+  align-items: center;
+  color: #98a2b3;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  font-weight: 650;
+  gap: 7px;
+}
+
+.empresa-logo-field__upload {
+  align-items: center;
+  background: rgba(18, 20, 25, 0.78);
+  border: 0;
+  bottom: 10px;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 700;
+  gap: 6px;
+  left: 50%;
+  opacity: 0;
+  padding: 9px 12px;
+  position: absolute;
+  transform: translate(-50%, 6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.empresa-logo-field__preview:hover .empresa-logo-field__upload,
+.empresa-logo-field__upload:focus-visible,
+.empresa-logo-field__preview.is-dragging .empresa-logo-field__upload,
+.empresa-logo-field__preview:not(:has(img)) .empresa-logo-field__upload {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.empresa-logo-field__upload:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.empresa-logo-field__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.empresa-logo-field__info h3 {
+  color: #1e293b;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.empresa-logo-field__info p {
+  color: #667085;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 5px 0 2px;
+}
+
+.empresa-logo-field__info > div:first-child > span {
+  color: #98a2b3;
+  font-size: 0.7rem;
+}
+
+.empresa-logo-field__size-control {
+  max-width: 430px;
+}
+
+.empresa-logo-field__size-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.empresa-logo-field__size-heading label {
+  color: #475467;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.empresa-logo-field__size-heading output {
+  background: #fff7e7;
+  border: 1px solid #ecd7aa;
+  border-radius: 6px;
+  color: #996814;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-width: 48px;
+  padding: 4px 7px;
+  text-align: center;
+}
+
+.empresa-logo-field__size-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 34px minmax(140px, 1fr) 34px;
+}
+
+.empresa-logo-field__size-row button {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d8dce3;
+  border-radius: 8px;
+  color: #475467;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+}
+
+.empresa-logo-field__size-row input {
+  accent-color: #c59235;
+  cursor: pointer;
+  width: 100%;
+}
+
+.empresa-logo-field__size-meta {
+  align-items: center;
+  color: #98a2b3;
+  display: flex;
+  font-size: 0.66rem;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+
+.empresa-logo-field__size-meta button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #996814;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 4px;
+}
+
+.empresa-logo-field button:focus-visible,
+.empresa-logo-field input:focus-visible {
+  outline: 3px solid rgba(197, 146, 53, 0.28);
+  outline-offset: 2px;
+}
+
+.empresa-logo-field button:disabled,
+.empresa-logo-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.empresa-logo-field__error {
+  background: #fff2f0;
+  border: 1px solid #f5b8af;
+  border-radius: 8px;
+  color: #b42318;
+  font-size: 0.74rem;
+  padding: 9px 11px;
+}
+
+@media (max-width: 760px) {
+  .empresa-logo-field {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .empresa-logo-field__preview {
+    flex-basis: auto;
+    height: 250px;
+    width: 100%;
+  }
+
+  .empresa-logo-field__size-control {
+    max-width: none;
+  }
+}

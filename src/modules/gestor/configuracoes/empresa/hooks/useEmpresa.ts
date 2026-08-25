@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { empresaService } from '../services/empresaService';
+import { useState, useEffect, useRef } from 'react';
+import { empresaService, mergeCnpjLookupIntoEmpresa } from '../services/empresaService';
 import type { EmpresaDados } from '../services/empresaService';
 import { useEmpresaQuery, useUpdateEmpresaMutation } from '../queries/useEmpresaQueries';
 import { uploadImageAsset } from '../../../shared/uploadImageAsset';
@@ -11,10 +11,12 @@ export const useEmpresa = () => {
   const [isSearchingCnpj, setIsSearchingCnpj] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const resolvedCnpjRef = useRef('');
 
   useEffect(() => {
     if (empresaQuery.data) {
       setDados(empresaQuery.data);
+      resolvedCnpjRef.current = empresaQuery.data.cnpj.replace(/\D/g, '');
     }
   }, [empresaQuery.data]);
 
@@ -41,16 +43,19 @@ export const useEmpresa = () => {
 
     try {
       const result = await empresaService.buscarCnpj(dados.cnpj);
+      const requestedCnpj = dados.cnpj.replace(/\D/g, '');
+      const isDifferentCnpj = resolvedCnpjRef.current !== requestedCnpj;
       
       setDados((prev) => {
         if (!prev) return null;
-        return {
-          ...prev,
-          ...result,
-        } as EmpresaDados;
+        return mergeCnpjLookupIntoEmpresa(prev, result, isDifferentCnpj);
       });
+      resolvedCnpjRef.current = requestedCnpj;
 
-      setSuccessMsg('Dados cadastrais do CNPJ recuperados com sucesso!');
+      const hasCompleteAddress = Boolean(result.cep && result.endereco && result.cidade && result.estado);
+      setSuccessMsg(hasCompleteAddress
+        ? 'Dados cadastrais e endereço do CNPJ recuperados com sucesso!'
+        : 'Dados cadastrais recuperados. A consulta não informou o endereço completo; revise os campos.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao buscar CNPJ.');
@@ -60,8 +65,8 @@ export const useEmpresa = () => {
     }
   };
 
-  const handleLogoUpload = async (file?: File) => {
-    if (!dados || !file) return;
+  const handleLogoUpload = async (file: File) => {
+    if (!dados) return;
 
     setSuccessMsg(null);
     setErrorMsg(null);
@@ -70,9 +75,11 @@ export const useEmpresa = () => {
       handleInputChange('logoUrl', publicUrl);
       setSuccessMsg('Logo enviada. Salve os dados da empresa para confirmar.');
       setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao enviar logo.');
+    } catch (err: unknown) {
+      const uploadError = err instanceof Error ? err : new Error('Erro ao enviar logo.');
+      setErrorMsg(uploadError.message);
       setTimeout(() => setErrorMsg(null), 4000);
+      throw uploadError;
     }
   };
 

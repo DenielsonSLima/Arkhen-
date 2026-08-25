@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { Search, Upload } from 'lucide-react';
+import React from 'react';
+import { Search } from 'lucide-react';
 import type { EmpresaDados } from '../services/empresaService';
+import { EmpresaLogoField } from '../components/EmpresaLogoField';
 
 interface EmpresaFormProps {
   dados: EmpresaDados;
@@ -8,7 +9,7 @@ interface EmpresaFormProps {
   isSearchingCnpj: boolean;
   onInputChange: (field: keyof EmpresaDados, value: string | number | null) => void;
   onLookupCnpj: () => void;
-  onLogoUpload: (file?: File) => void;
+  onLogoUpload: (file: File) => Promise<void> | void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -21,106 +22,16 @@ export const EmpresaForm: React.FC<EmpresaFormProps> = ({
   onLogoUpload,
   onSubmit,
 }) => {
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-
   return (
     <form onSubmit={onSubmit} className="config-form">
-      
-      {/* Brand Logo Uploader Section */}
-      <div className="logo-uploader-section" style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px' }}>
-        <div 
-          className="logo-preview-container"
-          style={{
-            position: 'relative',
-            width: '120px',
-            height: '120px',
-            borderRadius: '12px',
-            border: isDragging ? '2px dashed #c59235' : '1px solid #e2e8f0',
-            background: isDragging ? '#fffdf7' : '#fafbfc',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            transition: 'all 0.2s',
-            flexShrink: 0,
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setIsDragging(false);
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-              onLogoUpload(file);
-            }
-          }}
-        >
-          {dados.logoUrl ? (
-            <img 
-              src={dados.logoUrl} 
-              alt="Logo da empresa" 
-              style={{ 
-                maxHeight: '100%', 
-                maxWidth: '100%', 
-                height: `${dados.logoTamanho ?? 80}px`,
-                width: 'auto', 
-                objectFit: 'contain',
-                transition: 'height 0.15s ease'
-              }} 
-            />
-          ) : (
-            <div className="logo-placeholder-text">Sem Logo</div>
-          )}
-          <button
-            type="button"
-            className="btn-upload-logo-overlay"
-            onClick={() => logoInputRef.current?.click()}
-            disabled={isSaving}
-          >
-            <Upload size={16} />
-            <span>Alterar</span>
-          </button>
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            hidden
-            onChange={(event) => {
-              onLogoUpload(event.target.files?.[0]);
-              event.currentTarget.value = '';
-            }}
-          />
-        </div>
-        <div className="logo-uploader-info" style={{ flex: 1 }}>
-          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e293b' }}>Logotipo da Empresa</h4>
-          <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-            Arraste um arquivo de imagem aqui ou clique para selecionar.
-          </p>
-          
-          {dados.logoUrl && (
-            <div style={{ marginTop: '12px', maxWidth: '280px' }}>
-              <label style={{ fontWeight: 600, fontSize: '0.78rem', display: 'block', marginBottom: '6px', color: '#475569' }}>
-                Ajustar Altura do Logo ({dados.logoTamanho ?? 80}px)
-              </label>
-              <div className="opacity-slider-wrapper">
-                <input
-                  type="range"
-                  min="30"
-                  max="110"
-                  value={dados.logoTamanho ?? 80}
-                  onChange={(e) => onInputChange('logoTamanho', parseInt(e.target.value))}
-                  disabled={isSaving}
-                  className="opacity-slider"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+
+      <EmpresaLogoField
+        previewUrl={dados.logoUrl}
+        displaySize={dados.logoTamanho}
+        disabled={isSaving}
+        onDisplaySizeChange={(value) => onInputChange('logoTamanho', value)}
+        onLogoUpload={onLogoUpload}
+      />
 
       <div className="form-row-grid">
         {/* CNPJ Field with Inline Search Action */}

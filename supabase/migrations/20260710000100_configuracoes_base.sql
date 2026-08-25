@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS public.configuracoes_empresa (
   cidade varchar(120) NOT NULL DEFAULT '',
   estado char(2) NOT NULL DEFAULT '',
   logo_url text,
+  logo_tamanho integer NOT NULL DEFAULT 80
+    CHECK (logo_tamanho BETWEEN 30 AND 240),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );

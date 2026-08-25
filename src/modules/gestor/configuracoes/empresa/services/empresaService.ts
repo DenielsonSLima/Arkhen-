@@ -32,6 +32,20 @@ interface EmpresaRow {
   logo_tamanho: number;
 }
 
+interface BrasilApiCnpjResponse {
+  razao_social?: unknown;
+  nome_fantasia?: unknown;
+  email?: unknown;
+  ddd_telefone_1?: unknown;
+  ddd_telefone1?: unknown;
+  cep?: unknown;
+  descricao_tipo_de_logradouro?: unknown;
+  logradouro?: unknown;
+  numero?: unknown;
+  municipio?: unknown;
+  uf?: unknown;
+}
+
 const emptyEmpresaDados: EmpresaDados = {
   razaoSocial: '',
   nomeFantasia: '',
@@ -84,6 +98,107 @@ const toPayload = (dados: EmpresaDados) => ({
   logo_tamanho: dados.logoTamanho ?? 80,
 });
 
+const asText = (value: unknown) => {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value).trim();
+  }
+
+  return '';
+};
+
+const formatCep = (value: unknown) => {
+  const digits = asText(value).replace(/\D/g, '');
+  return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : asText(value);
+};
+
+const formatPhone = (value: unknown) => {
+  const digits = asText(value).replace(/\D/g, '');
+
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return asText(value);
+};
+
+const buildStreet = (data: BrasilApiCnpjResponse) => {
+  const street = asText(data.logradouro);
+  const streetType = asText(data.descricao_tipo_de_logradouro);
+  const normalizedStreet = street.toLocaleUpperCase('pt-BR');
+  const normalizedStreetType = streetType.toLocaleUpperCase('pt-BR');
+
+  if (
+    !street
+    || !streetType
+    || normalizedStreet === normalizedStreetType
+    || normalizedStreet.startsWith(`${normalizedStreetType} `)
+  ) {
+    return street;
+  }
+
+  return `${streetType} ${street}`;
+};
+
+export const mapBrasilApiCnpjToEmpresa = (data: BrasilApiCnpjResponse): Partial<EmpresaDados> => {
+  const mappedValues: Array<[keyof EmpresaDados, string]> = [
+    ['razaoSocial', asText(data.razao_social)],
+    ['nomeFantasia', asText(data.nome_fantasia)],
+    ['email', asText(data.email)],
+    ['telefone', formatPhone(data.ddd_telefone_1 ?? data.ddd_telefone1)],
+    ['cep', formatCep(data.cep)],
+    ['endereco', buildStreet(data)],
+    ['numero', asText(data.numero)],
+    ['cidade', asText(data.municipio)],
+    ['estado', asText(data.uf).toLocaleUpperCase('pt-BR')],
+  ];
+
+  return mappedValues.reduce<Partial<EmpresaDados>>((result, [field, value]) => {
+    if (value) {
+      Object.assign(result, { [field]: value });
+    }
+    return result;
+  }, {});
+};
+
+const emptyCompanyLookupFields: Pick<
+  EmpresaDados,
+  | 'razaoSocial'
+  | 'nomeFantasia'
+  | 'inscricaoEstadual'
+  | 'email'
+  | 'telefone'
+  | 'cep'
+  | 'endereco'
+  | 'numero'
+  | 'cidade'
+  | 'estado'
+> = {
+  razaoSocial: '',
+  nomeFantasia: '',
+  inscricaoEstadual: '',
+  email: '',
+  telefone: '',
+  cep: '',
+  endereco: '',
+  numero: '',
+  cidade: '',
+  estado: '',
+};
+
+export const mergeCnpjLookupIntoEmpresa = (
+  current: EmpresaDados,
+  lookup: Partial<EmpresaDados>,
+  isDifferentCnpj: boolean,
+): EmpresaDados => ({
+  ...current,
+  ...(isDifferentCnpj ? emptyCompanyLookupFields : {}),
+  ...lookup,
+});
+
 export const empresaService = {
   async getDadosEmpresa(): Promise<EmpresaDados> {
     const { data, error } = await supabase
@@ -113,25 +228,21 @@ export const empresaService = {
       throw new Error('O CNPJ deve conter 14 dígitos.');
     }
 
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
+    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
     if (!response.ok) {
       throw new Error('Não foi possível encontrar dados para este CNPJ.');
     }
 
-    const data = await response.json();
+    const data = await response.json() as BrasilApiCnpjResponse;
+    const mapped = mapBrasilApiCnpjToEmpresa(data);
 
-    return {
-      razaoSocial: data.razao_social || '',
-      nomeFantasia: data.nome_fantasia || '',
-      email: data.email || '',
-      telefone: data.ddd_telefone1 
-        ? `(${data.ddd_telefone1.substring(0, 2)}) ${data.ddd_telefone1.substring(2)}` 
-        : '',
-      cep: data.cep || '',
-      endereco: data.logradouro || '',
-      numero: data.numero || '',
-      cidade: data.municipio || '',
-      estado: data.uf || '',
-    };
+    if (!mapped.razaoSocial && !mapped.endereco) {
+      throw new Error('A consulta retornou dados incompletos para este CNPJ.');
+    }
+
+    return mapped;
   },
 };
