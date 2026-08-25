@@ -114,14 +114,15 @@ const getBrowserLegacyKeys = (): string[] => {
   return keys.filter(isKnownLegacyKey);
 };
 
-const getContext = async (): Promise<StorageContext | null> => {
+const getContext = async (expectedGeneration = contextGeneration): Promise<StorageContext | null> => {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
+    if (expectedGeneration !== contextGeneration) return null;
     const userId = sessionData.session?.user.id;
     if (!userId) return null;
 
     const { data, error } = await supabase.rpc('current_empresa_id');
-    if (error || !data) return null;
+    if (error || !data || expectedGeneration !== contextGeneration) return null;
 
     return {
       empresa_id: String(data),
@@ -132,9 +133,13 @@ const getContext = async (): Promise<StorageContext | null> => {
   }
 };
 
-const persistToSupabase = async (key: string, value: string): Promise<boolean> => {
-  const context = await getContext();
-  if (!context) return false;
+const persistToSupabase = async (
+  key: string,
+  value: string,
+  generation = contextGeneration,
+): Promise<boolean> => {
+  const context = await getContext(generation);
+  if (!context || generation !== contextGeneration) return false;
   try {
     const { error } = await supabase.from(STORAGE_TABLE).upsert(
       {
@@ -158,9 +163,9 @@ const persistToSupabase = async (key: string, value: string): Promise<boolean> =
   }
 };
 
-const removeFromSupabase = async (key: string): Promise<boolean> => {
-  const context = await getContext();
-  if (!context) return false;
+const removeFromSupabase = async (key: string, generation = contextGeneration): Promise<boolean> => {
+  const context = await getContext(generation);
+  if (!context || generation !== contextGeneration) return false;
   try {
     const { error } = await supabase
       .from(STORAGE_TABLE)
@@ -185,7 +190,7 @@ const bootstrap = async () => {
   const legacyKeys = getBrowserLegacyKeys();
   hydrateFromLegacy(legacyKeys);
 
-  const context = await getContext();
+  const context = await getContext(generation);
   if (!context || generation !== contextGeneration) return;
   currentContext = context;
   const changedKeys = new Set<string>();
@@ -196,6 +201,7 @@ const bootstrap = async () => {
     .eq('empresa_id', context.empresa_id)
     .eq('user_id', context.user_id)
     .eq('modulo', STORAGE_MODULE);
+  if (generation !== contextGeneration) return;
   if (!error && Array.isArray(data)) {
     const persisted = data as RawPreferenceRow[];
     for (const row of persisted) {
@@ -211,7 +217,7 @@ const bootstrap = async () => {
     const remote = cache.get(key);
     if (legacy !== null && remote === undefined) {
       cache.set(key, legacy);
-      if (await persistToSupabase(key, legacy)) dirtyKeys.delete(key);
+      if (await persistToSupabase(key, legacy, generation)) dirtyKeys.delete(key);
     }
     if (legacy !== null) {
       window.localStorage.removeItem(key);
@@ -236,7 +242,10 @@ const resetContext = () => {
 };
 
 supabase.auth.onAuthStateChange((event) => {
-  if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'USER_UPDATED') return;
+  if (event !== 'SIGNED_IN'
+    && event !== 'SIGNED_OUT'
+    && event !== 'USER_UPDATED'
+    && event !== 'PASSWORD_RECOVERY') return;
   window.setTimeout(resetContext, 0);
 });
 
@@ -296,6 +305,7 @@ export const persistedStorage = {
   },
 
   setItem(key: string, value: string) {
+    const generation = contextGeneration;
     const normalized = String(value);
     if (cache.get(key) === normalized && !dirtyKeys.has(key)) return;
     cache.set(key, normalized);
@@ -307,19 +317,33 @@ export const persistedStorage = {
         // ignore
       }
       notify(key);
-      void persistToSupabase(key, normalized).then((success) => {
-        if (success && cache.get(key) === normalized) dirtyKeys.delete(key);
+      void persistToSupabase(key, normalized, generation).then((success) => {
+        if (success && generation === contextGeneration && cache.get(key) === normalized) dirtyKeys.delete(key);
       });
     }
   },
 
   removeItem(key: string) {
+    const generation = contextGeneration;
     cache.delete(key);
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(key);
       notify(key);
-      void removeFromSupabase(key);
+      void removeFromSupabase(key, generation);
     }
+  },
+
+  removeLocalItem(key: string) {
+    cache.delete(key);
+    dirtyKeys.delete(key);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key);
+      notify(key);
+    }
+  },
+
+  resetLocalContext() {
+    resetContext();
   },
 
   subscribe(listener: Listener) {
