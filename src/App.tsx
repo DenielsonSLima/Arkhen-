@@ -20,6 +20,7 @@ import { queryClient } from './lib/queryClient';
 import { useCurrentPath } from './hooks/useCurrentPath';
 import {
   inspectPasswordRecoveryCallback,
+  isPasswordRecoveryPath,
   passwordRecoveryService,
   PASSWORD_RECOVERY_PATH,
   PASSWORD_RECOVERY_SESSION_ERROR,
@@ -36,7 +37,7 @@ function App() {
   const isSharedDocumentRoute = /^(?:\/shared|\/s)(?:\/|$)/.test(currentPath);
   const isPublicCobrancaRoute = /^\/cobranca(?:\/|$)/.test(currentPath);
   const isLoginOrSignupRoute = currentPath === '/login' || currentPath === '/signup';
-  const isPasswordResetRoute = currentPath === PASSWORD_RECOVERY_PATH;
+  const isPasswordResetRoute = isPasswordRecoveryPath(currentPath);
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
   const [view, setView] = useState<'loading' | 'login' | 'password-reset' | 'gestor'>('loading');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -114,14 +115,14 @@ function App() {
     const activateAuthenticatedUser = async (user: User, generation: number) => {
       if (generation !== authFlowGenerationRef.current
         || passwordRecoveryContextRef.current
-        || window.location.pathname === PASSWORD_RECOVERY_PATH) return;
+        || isPasswordRecoveryPath(window.location.pathname)) return;
       authenticatedUserIdRef.current = user.id;
       queryClient.clear();
       const authorization = await loginService.authorizeAuthenticatedUser(user);
       if (!mounted
         || generation !== authFlowGenerationRef.current
         || passwordRecoveryContextRef.current
-        || window.location.pathname === PASSWORD_RECOVERY_PATH
+        || isPasswordRecoveryPath(window.location.pathname)
         || authenticatedUserIdRef.current !== user.id) return;
       if (!authorization.allowed) {
         throw new Error(authorization.message);
@@ -196,7 +197,7 @@ function App() {
     };
 
     if (initialPasswordRecovery.current.isRecovery
-      || window.location.pathname === PASSWORD_RECOVERY_PATH) {
+      || isPasswordRecoveryPath(window.location.pathname)) {
       void preparePasswordRecovery();
     } else {
       void bootstrapMainSession();
@@ -204,7 +205,7 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (passwordRecoveryContextRef.current
-        || window.location.pathname === PASSWORD_RECOVERY_PATH
+        || isPasswordRecoveryPath(window.location.pathname)
         || event === 'PASSWORD_RECOVERY') return;
 
       if (event === 'SIGNED_IN' && session) {
@@ -233,7 +234,7 @@ function App() {
         setPasswordRecoveryStatus('error');
         setAuthError(null);
         sessionStorage.removeItem('contabil_config_active_subtab');
-        if (window.location.pathname === PASSWORD_RECOVERY_PATH) navigate('/login');
+        if (isPasswordRecoveryPath(window.location.pathname)) navigate('/login');
         viewRef.current = 'login';
         setView('login');
       }
@@ -297,7 +298,18 @@ function App() {
   const handlePasswordUpdate = async (password: string) => {
     const recoverySession = passwordRecoverySessionRef.current;
     if (!recoverySession) throw new Error(PASSWORD_RECOVERY_SESSION_ERROR);
-    await recoverySession.updatePassword(password);
+    try {
+      await recoverySession.updatePassword(password);
+    } catch (error) {
+      if (passwordRecoverySessionRef.current === recoverySession) {
+        passwordRecoverySessionRef.current = null;
+        setPasswordRecoveryStatus('error');
+        setPasswordRecoveryError(
+          error instanceof Error ? error.message : PASSWORD_RECOVERY_SESSION_ERROR,
+        );
+      }
+      throw error;
+    }
     passwordRecoverySessionRef.current = null;
     setPasswordRecoveryError(null);
     setPasswordRecoveryStatus('complete');

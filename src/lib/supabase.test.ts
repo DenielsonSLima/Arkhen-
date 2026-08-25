@@ -83,13 +83,16 @@ describe('Supabase recovery bootstrap', () => {
   });
 
   it('não permite que o cliente global troque um código PKCE na rota de recuperação', async () => {
-    window.history.replaceState({}, '', '/redefinir-senha?code=pkce-secret&origem=email');
+    window.history.replaceState({}, '', '/redefinir-senha/?code=pkce-secret&origem=email');
 
     const module = await import('./supabase');
     const globalOptions = mocks.createClient.mock.calls[0]?.[2] as { auth: Record<string, unknown> };
 
     expect(globalOptions.auth.detectSessionInUrl).toBe(false);
-    expect(module.getInitialAuthLocation()?.search).toBe('?code=present');
+    expect(module.getInitialAuthLocation()).toMatchObject({
+      pathname: '/redefinir-senha/',
+      search: '?code=present',
+    });
     expect(window.location.search).toBe('?origem=email');
     expect(module.takeInitialPasswordRecoveryTokens()).toBeNull();
   });
