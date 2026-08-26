@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import advisorExpand from '../../supabase/migrations/20260826181600_corrigir_advisors_expand_operacional.sql?raw';
 import canonicalLockdown from '../../supabase/migrations/20260826182500_lockdown_fluxo_operacional_canonico.sql?raw';
+import consolidatedLockdown from '../../supabase/migrations/20260826182600_consolidar_lockdown_operacional.sql?raw';
+import deniedLegacyInstances from '../../supabase/migrations/20260826182700_negar_instancias_legadas_explicito.sql?raw';
 
 const EXPECTED_FK_INDEXES = [
   'atividades_tarefas_revisor_user_fk_idx',
@@ -50,5 +52,34 @@ describe('operational EXPAND advisor corrections', () => {
     const lockdownWithoutInitPlans = canonicalLockdown.replaceAll('(SELECT auth.uid())', '');
     expect(expandWithoutInitPlans).not.toContain('auth.uid()');
     expect(lockdownWithoutInitPlans).not.toContain('auth.uid()');
+  });
+
+  it('remove policies legadas de escrita e otimiza a leitura documental', () => {
+    expect(consolidatedLockdown).toContain(
+      'DROP POLICY IF EXISTS atividades_tarefas_insert_scope',
+    );
+    expect(consolidatedLockdown).toContain(
+      'DROP POLICY IF EXISTS atividades_tarefas_update_scope',
+    );
+    expect(consolidatedLockdown).toContain(
+      'DROP POLICY IF EXISTS atividades_tarefas_delete_manager',
+    );
+    expect(consolidatedLockdown).toContain(
+      'DROP POLICY IF EXISTS atividades_instancias_select_scope',
+    );
+    expect(consolidatedLockdown).toContain(
+      'CREATE POLICY documentos_solicitacoes_select',
+    );
+    const withoutInitPlans = consolidatedLockdown.replaceAll('(SELECT auth.uid())', '');
+    expect(withoutInitPlans).not.toContain('auth.uid()');
+  });
+
+  it('mantém a projeção legada explicitamente fail-closed', () => {
+    expect(deniedLegacyInstances).toContain(
+      'CREATE POLICY atividades_instancias_legacy_denied',
+    );
+    expect(deniedLegacyInstances).toContain('AS RESTRICTIVE');
+    expect(deniedLegacyInstances).toContain('USING (false)');
+    expect(deniedLegacyInstances).toContain('WITH CHECK (false)');
   });
 });
