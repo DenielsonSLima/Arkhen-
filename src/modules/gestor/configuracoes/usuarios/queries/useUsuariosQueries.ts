@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { configuracoesKeys } from '../../queries/configuracoesKeys';
 import { usuariosService, type SaveUsuarioInput, type Usuario } from '../services/usuariosService';
+import { invalidateAfterMutation } from '../../../shared/mutationInvalidation';
 
 export const useUsuariosQuery = () => (
   useQuery({
@@ -14,7 +15,7 @@ export const useSaveUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (input: SaveUsuarioInput) => usuariosService.saveUsuario(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+    onSuccess: () => invalidateAfterMutation(queryClient, 'usuarios'),
   });
 };
 
@@ -23,7 +24,7 @@ export const useInativarUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (id: string) => usuariosService.inativarUsuario(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+    onSuccess: () => invalidateAfterMutation(queryClient, 'usuarios'),
   });
 };
 
@@ -32,6 +33,6 @@ export const useExcluirUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (usuario: Usuario) => usuariosService.excluirUsuario(usuario),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+    onSuccess: () => invalidateAfterMutation(queryClient, 'usuarios'),
   });
 };

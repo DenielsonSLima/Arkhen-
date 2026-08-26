@@ -1,0 +1,176 @@
+/* 5. Painel de Filiais */
+.filiais-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+}
+
+.filiais-header-row h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.filiais-header-row p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.btn-add-filial {
+  background: var(--color-gold-gradient);
+  border: none;
+  color: #ffffff;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 5px rgba(197, 146, 53, 0.2);
+}
+
+.btn-add-filial:hover {
+  box-shadow: 0 4px 10px rgba(197, 146, 53, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Grid de Filiais */
+.filiais-cards-grid-clear {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.filial-card-clear {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition-normal);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.filial-card-clear:hover {
+  border-color: rgba(197, 146, 53, 0.3);
+  box-shadow: 0 4px 12px rgba(197, 146, 53, 0.05);
+}
+
+.filial-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.filial-card-header-row h5 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.filial-cnpj {
+  font-size: 0.75rem;
+  color: #64748b;
+  display: block;
+  margin-top: 1px;
+}
+
+.filial-card-body-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.filial-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filial-info-row svg {
+  color: var(--color-gold-primary);
+  flex-shrink: 0;
+}
+
+.filial-card-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+.btn-action-small {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.btn-action-small:hover {
+  background-color: rgba(197, 146, 53, 0.08);
+  border-color: rgba(197, 146, 53, 0.3);
+  color: var(--color-gold-dark);
+}
+
+.btn-action-small.btn-delete:hover {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: var(--color-error);
+}
+
+/* Empty State */
+.filiais-empty-state-clear {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-color: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 40px 20px;
+  color: #64748b;
+  gap: 8px;
+}
+
+.filiais-empty-state-clear svg {
+  color: var(--color-gold-primary);
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.filiais-empty-state-clear h4 {
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.filiais-empty-state-clear p {
+  font-size: 0.8rem;
+  max-width: 320px;
+}

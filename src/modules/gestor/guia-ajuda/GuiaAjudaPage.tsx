@@ -12,7 +12,7 @@ export const GuiaAjudaPage: React.FC = () => {
           <div>
             <h2 style={{ margin: 0, fontSize: '1.45rem', fontFamily: 'var(--font-serif)' }}>Guia de Navegação do Sistema</h2>
             <p style={{ fontSize: '0.86rem', color: '#94a3b8', marginTop: '4px' }}>
-              Manual rápido para o contador iniciar, usar os módulos e localizar funcionalidades.
+              Um caminho direto para configurar o escritório, organizar a carteira e executar a rotina.
             </p>
           </div>
         </div>
@@ -21,10 +21,11 @@ export const GuiaAjudaPage: React.FC = () => {
         <section className="help-intro">
           <h3>Como usar no dia a dia</h3>
           <ol>
-            <li>Comece no <strong>Início</strong> para mapear pendências do dia.</li>
-            <li>Abra <strong>Clientes</strong> para validar empresa e situação fiscal.</li>
-            <li>Depois use <strong>Atividades</strong> e <strong>Agenda</strong> para distribuir e acompanhar execução.</li>
-            <li>Confirme progresso em <strong>Protocolos</strong>, <strong>Documentos</strong> e <strong>Faturamento/Financeiro</strong>.</li>
+            <li>Conclua os <strong>Primeiros passos</strong> no Início e revise atrasos e vencimentos de hoje.</li>
+            <li>Cadastre e confira a carteira em <strong>Clientes</strong>.</li>
+            <li>Crie o checklist em <strong>Parametrização › Modelos de fechamento</strong> e vincule-o em <strong>Atividades › Rotinas programadas</strong>.</li>
+            <li>Execute o dia pela <strong>Minha Fila</strong> e acompanhe a equipe no <strong>Painel Operacional</strong>.</li>
+            <li>Use <strong>Documentos</strong>, <strong>Protocolos</strong> e <strong>Faturamento</strong> conforme a etapa do atendimento.</li>
           </ol>
         </section>
 

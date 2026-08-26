@@ -20,6 +20,8 @@ export interface EmpresaProtocolosGrupo {
   items: ProtocoloEntrega[];
 }
 
+const EMPTY_PROTOCOLOS: ProtocoloEntrega[] = [];
+
 export const useProtocolos = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProtocoloTab>('pendentes');
@@ -29,7 +31,7 @@ export const useProtocolos = () => {
   const [dataFinal, setDataFinal] = useState('');
 
   const protocolosQuery = useQuery(protocolosQueries.list());
-  const protocolos = protocolosQuery.data || [];
+  const protocolos = protocolosQuery.data || EMPTY_PROTOCOLOS;
 
   const invalidateProtocolos = () => {
     queryClient.invalidateQueries({ queryKey: protocolosKeys.all });
@@ -138,7 +140,8 @@ export const useProtocolos = () => {
   }, [activeEmpresaTab, dataFinal, dataInicial, protocolos, searchTerm]);
 
   const updateProtocolo = async (id: string, updates: ProtocoloUpdate) => {
-    await updateProtocoloMutation.mutateAsync({ id, updates });
+    const savedList = await updateProtocoloMutation.mutateAsync({ id, updates });
+    return savedList.find((item) => item.id === id);
   };
 
   const updateStatus = (id: string, status: ProtocoloStatus) => updateProtocolo(id, { status });

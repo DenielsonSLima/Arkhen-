@@ -3,10 +3,11 @@ import { Building2, FileCheck2, User, Lock, Eye, EyeOff, LockKeyhole, Mail, Arro
 import { useLogin } from '../hooks/useLogin';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
+import type { LoginResponse } from '../services/loginService';
 
 interface SignupFormProps {
   loginState: ReturnType<typeof useLogin>;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (profile?: LoginResponse['user']) => void;
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSuccess }) => {
@@ -41,7 +42,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
   const handleSubmit = async (e: React.FormEvent) => {
     const res = await handleSignupSubmit(e);
     if (res && res.success && !res.needsConfirmation) {
-      onLoginSuccess();
+      onLoginSuccess(res.user);
     }
   };
 

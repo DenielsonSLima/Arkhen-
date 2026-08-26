@@ -45,6 +45,12 @@ describe('password recovery callback', () => {
     })).toEqual({ isRecovery: true, hasRecoveryProof: true, errorMessage: null });
 
     expect(recoveryModule.inspectPasswordRecoveryCallback({
+      pathname: '/login',
+      search: '',
+      hash: '#type=invite',
+    })).toEqual({ isRecovery: true, hasRecoveryProof: true, errorMessage: null });
+
+    expect(recoveryModule.inspectPasswordRecoveryCallback({
       pathname: recoveryModule.PASSWORD_RECOVERY_PATH,
       search: '',
       hash: '',

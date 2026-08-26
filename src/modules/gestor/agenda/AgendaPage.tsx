@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import { inicioService } from '../inicio/services/inicioService';
+import { inicioKeys } from '../inicio/queries/inicioKeys';
 import type { NavigationContext } from '../shared/operationalTypes';
 import { AgendaConfigListModal } from './components/AgendaConfigListModal';
 import { AgendaDeleteEventModal } from './components/AgendaDeleteEventModal';
@@ -17,6 +19,7 @@ import { EventoModal } from './components/EventoModal';
 import { useAgenda } from './hooks/useAgenda';
 import { useAgendaRealtime } from './hooks/useAgendaRealtime';
 import { getEventoOrigem, type Evento } from './services/agenda.service';
+import { toBusinessDateKey } from '../shared/businessDate';
 import './Agenda.css';
 import './styles/AgendaPart05.css';
 
@@ -26,7 +29,12 @@ export const AgendaPage: React.FC = () => {
   useAgendaRealtime(true);
   const { openTab } = useInternalTabs();
   const agenda = useAgenda();
-  const vencimentos = useMemo(() => inicioService.getVencimentosProximos(), []);
+  const vencimentosQuery = useQuery({
+    queryKey: inicioKeys.vencimentos(),
+    queryFn: () => inicioService.getVencimentosProximos(),
+    staleTime: 5 * 60_000,
+  });
+  const vencimentos = vencimentosQuery.data ?? [];
 
   const [abaAgenda, setAbaAgenda] = useState<AgendaAba>('calendario');
   const [filtroTipoAberto, setFiltroTipoAberto] = useState(false);
@@ -86,7 +94,7 @@ export const AgendaPage: React.FC = () => {
   );
 
   const eventosPorOrigem = useMemo(() => {
-    const hojeIso = new Date().toISOString().split('T')[0];
+    const hojeIso = toBusinessDateKey();
     const futurosOrdenados = agenda.eventosFiltrados
       .filter((evento) => evento.data >= hojeIso)
       .sort((a, b) => a.data.localeCompare(b.data));

@@ -43,10 +43,8 @@ export const DocumentMoveDrawer: React.FC<DocumentMoveDrawerProps> = ({
       } catch {
         if (!mounted) return;
         setIsOpen(true);
-      } finally {
-        if (!mounted) return;
-        setInitialized(true);
       }
+      if (mounted) setInitialized(true);
     })();
 
     return () => {

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, CalendarDays, HelpCircle } from 'lucide-react';
-import type { RotinaAtividade } from '../services/rotinasAtividadesService';
+import { todayKey, type RotinaAtividade } from '../services/rotinasAtividadesService';
 
 interface ModalVincularRotinaProps {
   aberto: boolean;
   onClose: () => void;
   rotinas: RotinaAtividade[];
-  onVincular: (rotinaId: string, incluirFinaisDeSemana: boolean) => void;
+  onVincular: (rotinaId: string, incluirFinaisDeSemana: boolean, primeiraExecucao: string) => void;
   usuarioNome: string;
 }
 
@@ -19,34 +19,37 @@ export const ModalVincularRotina: React.FC<ModalVincularRotinaProps> = ({
 }) => {
   const [selectedRotinaId, setSelectedRotinaId] = useState('');
   const [incluirFinaisDeSemana, setIncluirFinaisDeSemana] = useState(false);
+  const [primeiraExecucao, setPrimeiraExecucao] = useState('');
 
   if (!aberto) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRotinaId) return;
-    onVincular(selectedRotinaId, incluirFinaisDeSemana);
+    if (!selectedRotinaId || !primeiraExecucao) return;
+    onVincular(selectedRotinaId, incluirFinaisDeSemana, primeiraExecucao);
     setSelectedRotinaId('');
     setIncluirFinaisDeSemana(false);
+    setPrimeiraExecucao('');
   };
 
   return (
     <div className="modal-overlay animate-fade-in" style={styles.overlay}>
-      <div className="modal-content" style={styles.modal}>
+      <div className="modal-content" style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="vincular-rotina-title">
         <div style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CalendarDays size={20} color="var(--color-gold-primary)" />
-            <h3 style={styles.title}>Vincular Rotina a {usuarioNome}</h3>
+            <h3 id="vincular-rotina-title" style={styles.title}>Vincular rotina a {usuarioNome}</h3>
           </div>
-          <button onClick={onClose} style={styles.closeBtn} type="button">
+          <button onClick={onClose} style={styles.closeBtn} type="button" aria-label="Fechar vínculo de rotina">
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div className="calc-field" style={styles.field}>
-            <label style={styles.label}>Selecione a Rotina Modelo</label>
+            <label htmlFor="rotina-vinculo-equipe" style={styles.label}>Rotina programada existente</label>
             <select
+              id="rotina-vinculo-equipe"
               value={selectedRotinaId}
               onChange={(e) => setSelectedRotinaId(e.target.value)}
               required
@@ -59,6 +62,19 @@ export const ModalVincularRotina: React.FC<ModalVincularRotinaProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="calc-field" style={styles.field}>
+            <label htmlFor="rotina-vinculo-data" style={styles.label}>Primeira execução para este responsável</label>
+            <input
+              id="rotina-vinculo-data"
+              type="date"
+              min={todayKey()}
+              value={primeiraExecucao}
+              onChange={(event) => setPrimeiraExecucao(event.target.value)}
+              required
+              style={styles.select}
+            />
           </div>
 
           <div style={styles.weekendBox}>
@@ -90,8 +106,12 @@ export const ModalVincularRotina: React.FC<ModalVincularRotinaProps> = ({
             <button onClick={onClose} style={styles.cancelBtn} type="button">
               Cancelar
             </button>
-            <button type="submit" disabled={!selectedRotinaId} style={!selectedRotinaId ? styles.disabledBtn : styles.submitBtn}>
-              Vincular Rotina
+            <button
+              type="submit"
+              disabled={!selectedRotinaId || !primeiraExecucao}
+              style={!selectedRotinaId || !primeiraExecucao ? styles.disabledBtn : styles.submitBtn}
+            >
+              Vincular rotina
             </button>
           </div>
         </form>

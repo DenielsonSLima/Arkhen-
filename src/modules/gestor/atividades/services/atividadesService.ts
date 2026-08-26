@@ -104,7 +104,7 @@ const toCliente = (row: ClienteRow): ClienteEmpresa => ({
   id: row.id,
   nome: row.nome || 'Cliente sem nome',
   cnpj: row.cnpj || '',
-  regime: row.tipo || 'Simples Nacional',
+  regime: row.tipo || 'Não informado',
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
   logo: row.logo || '',
   modelosAtivos: Array.isArray(row.modelos_ativos) ? row.modelos_ativos : [],
@@ -166,7 +166,7 @@ export const atividadesService = {
       empresa_id: empresaId,
       nome: cliente.nome,
       cnpj: cliente.cnpj,
-      tipo: cliente.regime || 'Simples Nacional',
+      tipo: cliente.regime || 'Não informado',
       tipo_estabelecimento: cliente.tipoEstabelecimento || 'Matriz',
       logo: cliente.logo || '',
       modelos_ativos: cliente.modelosAtivos || [],
@@ -183,9 +183,11 @@ export const atividadesService = {
   },
 
   async getModelos(): Promise<ModeloAtividade[]> {
+    const empresaId = await getCurrentEmpresaId();
     const { data, error } = await supabase
       .from('atividades_modelos')
       .select('id,codigo,nome,descricao,etapas,tipos')
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .order('ordem', { ascending: true });
 

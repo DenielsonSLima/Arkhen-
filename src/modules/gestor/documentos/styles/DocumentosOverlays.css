@@ -1,0 +1,29 @@
+.documents-success-toast {
+  align-items: center;
+  background: #0f172a;
+  border: 1px solid rgba(197, 146, 53, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.28);
+  color: #ffffff;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 750;
+  gap: 10px;
+  padding: 12px 14px;
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 2200;
+}
+
+.documents-success-toast svg {
+  color: #d9a441;
+  flex-shrink: 0;
+}
+
+.documents-success-toast span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

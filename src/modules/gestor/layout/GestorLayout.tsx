@@ -28,7 +28,7 @@ const INITIAL_MODULE_IDS = new Set<SystemModuleId>(['inicio']);
 const DEFAULT_PROFILE = {
   nome: 'Usuário',
   email: '',
-  perfil: 'Administrador',
+  perfil: 'Usuário',
   avatar: '',
   googleLinked: false,
 };
@@ -227,15 +227,19 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     context?: InternalTabContext,
     contextVersion = 0,
   ) => (
-    <GestorModuleContent
+    <React.Suspense
       key={`${workspaceId}:${contextVersion}`}
-      id={id}
-      workspaceId={workspaceId}
-      initialContext={context}
-      updateTabContext={updateTabContext}
-      onModuleContextChange={handleModuleContextChange}
-      onInitialReady={id === 'inicio' && workspaceId === 'inicio' ? handleInitialContentReady : undefined}
-    />
+      fallback={<div className="submodule-content-card" role="status">Carregando módulo...</div>}
+    >
+      <GestorModuleContent
+        id={id}
+        workspaceId={workspaceId}
+        initialContext={context}
+        updateTabContext={updateTabContext}
+        onModuleContextChange={handleModuleContextChange}
+        onInitialReady={id === 'inicio' && workspaceId === 'inicio' ? handleInitialContentReady : undefined}
+      />
+    </React.Suspense>
   );
 
   if (modulesQuery.isPending || (modulesQuery.isError && modulesQuery.isFetching)) {

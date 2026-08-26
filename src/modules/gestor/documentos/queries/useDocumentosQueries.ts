@@ -2,6 +2,7 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tansta
 import { documentosService, type DocumentScope, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
 import type { DocumentCategory, MeusDocumentosData } from '../services/documentosService';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
 export const documentosKeys = {
   all: ['documentos'] as const,
@@ -21,7 +22,7 @@ interface DocumentosInvalidationTarget {
   includeSettings?: boolean;
 }
 
-type DocumentosQueryTab = 'meus' | 'empresas' | 'inativas' | 'todos' | 'compartilhados';
+type DocumentosQueryTab = 'meus' | 'empresas' | 'inativas' | 'solicitacoes' | 'todos' | 'compartilhados';
 
 const reconcileDocumentChanges = async (previous: CompanyDocument[], next: CompanyDocument[]) => {
   const nextById = new Map(next.map((doc) => [doc.id, doc]));
@@ -78,12 +79,14 @@ export const invalidateDocumentosQueries = (
 };
 
 export const useDocumentosBaseQueries = (activeTab: DocumentosQueryTab) => {
+  const shouldLoadSettings = activeTab !== 'solicitacoes' && activeTab !== 'compartilhados';
   const shouldLoadPersonalDocs = activeTab === 'meus' || activeTab === 'todos';
   const shouldLoadCompanyDocs = activeTab === 'empresas' || activeTab === 'inativas' || activeTab === 'todos';
 
   const settingsQuery = useQuery({
     queryKey: documentosKeys.settings(),
     queryFn: documentosService.getMeusDocumentos,
+    enabled: shouldLoadSettings,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -116,18 +119,16 @@ export const useDocumentosMutations = (
   companies: Company[],
 ) => {
   const queryClient = useQueryClient();
+  const invalidateDocumentosMutation = () => invalidateAfterMutation(queryClient, 'documentos');
 
   const uploadPersonalMutation = useMutation({
     mutationFn: (input: UploadDocumentInput) => documentosService.uploadPersonalDocument(input),
-    onSuccess: () => invalidateDocumentosQueries(queryClient, { scope: 'pessoal' }),
+    onSuccess: invalidateDocumentosMutation,
   });
 
   const uploadCompanyMutation = useMutation({
     mutationFn: (input: UploadCompanyDocumentInput) => documentosService.uploadCompanyDocument(input),
-    onSuccess: (_data, variables) => invalidateDocumentosQueries(queryClient, {
-      scope: 'empresa',
-      companyId: variables.companyId,
-    }),
+    onSuccess: invalidateDocumentosMutation,
   });
 
   const saveSettingsMutation = useMutation({
@@ -144,6 +145,7 @@ export const useDocumentosMutations = (
       if (data.changedDocuments) {
         invalidateDocumentosQueries(queryClient, { scope: 'pessoal' });
       }
+      return invalidateDocumentosMutation();
     },
   });
 
@@ -155,6 +157,7 @@ export const useDocumentosMutations = (
     },
     onSuccess: (data) => {
       queryClient.setQueryData(documentosKeys.settings(), data);
+      return invalidateDocumentosMutation();
     },
   });
 
@@ -180,6 +183,7 @@ export const useDocumentosMutations = (
           companyId: data.companyId,
         });
       }
+      return invalidateDocumentosMutation();
     },
   });
 

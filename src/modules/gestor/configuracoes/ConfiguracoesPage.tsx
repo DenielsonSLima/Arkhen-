@@ -1,14 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Building2, Users, Activity, History, CreditCard, FileText, ArrowLeft,
+  Building2, Users, History, CreditCard, FileText, ArrowLeft,
   UserCheck, Landmark, Calculator, Shield, ShieldCheck, FolderLock, User, Share2, FileCode2, Boxes
 } from 'lucide-react';
 
 // Import submodules
 import { EmpresaConfig } from './empresa/EmpresaConfig';
 import { UsuariosConfig } from './usuarios/UsuariosConfig';
-import { ApiStatusConfig } from './api-status/ApiStatusConfig';
 import { LogsEventosConfig } from './logs-eventos/LogsEventosConfig';
 import { BancariaConfig } from './integracao-bancaria/BancariaConfig';
 import { ContasBancariasConfig } from './contas-bancarias/ContasBancariasConfig';
@@ -26,6 +25,7 @@ import { ModulosSistemaConfig } from './modulos-sistema/ModulosSistemaConfig';
 import { supabase } from '../../../lib/supabase';
 
 import './Configuracoes.css';
+import './ConfiguracoesGroups.css';
 
 const ACTIVE_CONFIG_SUBTAB_KEY = 'contabil_config_active_subtab';
 
@@ -44,9 +44,35 @@ const CONFIG_CARD_PERMISSIONS: Record<string, string[]> = {
   'integracao-fiscal': ['integracao-fiscal:manage'],
   'visualizadores-xml': ['integracao-fiscal:manage'],
   'calculator-prefs': ['configuracoes:view'],
-  'api-status': ['configuracoes:manage'],
   'logs-eventos': ['configuracoes:manage'],
 };
+
+const ADMIN_ONLY_CONFIG_CARDS = new Set(['usuarios', 'perfis', 'permissoes']);
+
+type ConfigSectionId = 'essencial' | 'acessos' | 'integracoes';
+
+const CONFIG_SECTIONS: Array<{
+  id: ConfigSectionId;
+  title: string;
+  description: string;
+}> = [
+  {
+    id: 'essencial',
+    title: 'Comece por aqui',
+    description: 'Identidade do escritório, equipe e responsáveis pela operação.',
+  },
+  {
+    id: 'acessos',
+    title: 'Acessos e governança',
+    description: 'Permissões, módulos, compartilhamento e rastreabilidade.',
+  },
+  {
+    id: 'integracoes',
+    title: 'Integrações e ferramentas',
+    description: 'Conexões bancárias e fiscais, XML e preferências de uso.',
+  },
+];
+
 interface ConfigError {
   hasError: boolean;
   message: string;
@@ -101,22 +127,35 @@ export const ConfiguracoesPage: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('current_user_permissions');
       if (error) throw error;
-      return Array.isArray(data) ? data as string[] : [];
+      const { data: isAdmin, error: adminError } = await supabase.rpc(
+        'current_user_is_active_empresa_admin',
+      );
+      if (adminError) throw adminError;
+      return {
+        permissions: Array.isArray(data) ? data as string[] : [],
+        isAdmin: isAdmin === true,
+      };
     },
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: 'always',
   });
   const permissoesAtuais = useMemo(
-    () => permissaoConfigQuery.data || [],
+    () => permissaoConfigQuery.data?.permissions || [],
     [permissaoConfigQuery.data],
   );
   const podeAcessarCard = useCallback((cardId: string) => {
     if (cardId === 'meu-perfil') return true;
-    if (permissaoConfigQuery.isFetching || permissaoConfigQuery.isError) return false;
+    if (permissaoConfigQuery.isLoading || permissaoConfigQuery.isError) return false;
+    if (ADMIN_ONLY_CONFIG_CARDS.has(cardId) && !permissaoConfigQuery.data?.isAdmin) return false;
     if (permissoesAtuais.includes('*')) return true;
     return (CONFIG_CARD_PERMISSIONS[cardId] || []).some((permissao) => permissoesAtuais.includes(permissao));
-  }, [permissaoConfigQuery.isError, permissaoConfigQuery.isFetching, permissoesAtuais]);
+  }, [
+    permissaoConfigQuery.data?.isAdmin,
+    permissaoConfigQuery.isError,
+    permissaoConfigQuery.isLoading,
+    permissoesAtuais,
+  ]);
   const [activeSubTab, setActiveSubTab] = useState<string | null>(() => {
     const initial = sessionStorage.getItem('contabil_config_initial_subtab');
     if (initial) {
@@ -132,13 +171,13 @@ export const ConfiguracoesPage: React.FC = () => {
   }, [activeSubTab]);
 
   useEffect(() => {
-    if (permissaoConfigQuery.isLoading || permissaoConfigQuery.isFetching) return;
+    if (permissaoConfigQuery.isLoading || permissaoConfigQuery.isError) return;
     if (activeSubTab && !podeAcessarCard(activeSubTab)) {
       setActiveSubTab('meu-perfil');
     }
   }, [
     activeSubTab,
-    permissaoConfigQuery.isFetching,
+    permissaoConfigQuery.isError,
     permissaoConfigQuery.isLoading,
     podeAcessarCard,
   ]);
@@ -159,85 +198,99 @@ export const ConfiguracoesPage: React.FC = () => {
   const cards = [
     {
       id: 'meu-perfil',
+      section: 'essencial' as ConfigSectionId,
       title: 'Meu Perfil',
       desc: 'Altere sua foto de perfil, dados pessoais, e-mail, senha e conta Google.',
       icon: <User size={28} />,
     },
     {
       id: 'empresa',
-      title: 'Dados da Empresa',
-      desc: 'Razão social, CNPJ, dados de contato e endereço principal.',
+      section: 'essencial' as ConfigSectionId,
+      title: 'Dados do Escritório',
+      desc: 'Razão social, CNPJ, contatos, endereço e identidade do escritório.',
       icon: <Building2 size={28} />,
     },
     {
       id: 'usuarios',
-      title: 'Gestão de Usuários',
-      desc: 'Níveis de acesso, convites para novos funcionários e controle de cargos.',
+      section: 'essencial' as ConfigSectionId,
+      title: 'Equipe e Usuários',
+      desc: 'Convide funcionários, acompanhe acessos e organize os cargos da equipe.',
       icon: <Users size={28} />,
     },
     {
       id: 'perfis',
+      section: 'acessos' as ConfigSectionId,
       title: 'Perfis de Acesso',
       desc: 'Crie e edite perfis de segurança (Administrador, Analista, Auxiliar, Cliente).',
       icon: <ShieldCheck size={28} />,
     },
     {
       id: 'permissoes',
+      section: 'acessos' as ConfigSectionId,
       title: 'Permissões do Sistema',
       desc: 'Gerencie detalhadamente privilégios e recursos acessíveis por perfil.',
       icon: <FolderLock size={28} />,
     },
     {
       id: 'modulos-sistema',
+      section: 'acessos' as ConfigSectionId,
       title: 'Módulos do Sistema',
       desc: 'Ative ou desative funcionalidades para toda a equipe do escritório.',
       icon: <Boxes size={28} />,
     },
     {
       id: 'contadores',
+      section: 'essencial' as ConfigSectionId,
       title: 'Contadores Responsáveis',
       desc: 'Cadastre os contadores do escritório e defina quem assina os relatórios.',
       icon: <UserCheck size={28} />,
     },
     {
       id: 'compartilhamento',
-      title: 'Compartilhamento de Docs',
-      desc: 'Pré-configurações de expiração automática, senhas e links para compartilhamento externo.',
+      section: 'acessos' as ConfigSectionId,
+      title: 'Compartilhamento de Documentos',
+      desc: 'Defina expiração, senhas e regras para links de compartilhamento externo.',
       icon: <Share2 size={28} />,
     },
     {
       id: 'marca-dagua',
-      title: "Marca d'Água",
+      section: 'essencial' as ConfigSectionId,
+      title: 'Marca-d’água',
       desc: 'Carregue logotipos e gerencie a identidade visual de relatórios em PDF.',
       icon: <FileText size={28} />,
     },
     {
       id: 'contas-bancarias',
+      section: 'integracoes' as ConfigSectionId,
       title: 'Contas Bancárias',
       desc: 'Cadastre bancos, agências, contas e saldos do escritório.',
       icon: <Landmark size={28} />,
     },
     {
       id: 'integracao-bancaria',
+      section: 'integracoes' as ConfigSectionId,
       title: 'Integrações Bancárias',
       desc: 'Configure chaves de API, ambiente e webhooks de gateways financeiros.',
       icon: <CreditCard size={28} />,
     },
     {
       id: 'integracao-fiscal',
+      section: 'integracoes' as ConfigSectionId,
       title: 'Integração Fiscal (NFS-e)',
       desc: 'Configure o ambiente de emissão, provedores WebISS, certificados e credenciais.',
       icon: <Shield size={28} />,
     },
     {
       id: 'visualizadores-xml',
-      title: 'Modelos de XML',
+      section: 'integracoes' as ConfigSectionId,
+      title: 'Visualização de XML',
       desc: 'Configure visualizadores para NFS-e, NFC-e, NF-e, CT-e, MDF-e e arquivos cancelados.',
       icon: <FileCode2 size={28} />,
     },
     {
       id: 'calculator-prefs',
-      title: 'Modelo da Calculadora',
+      section: 'integracoes' as ConfigSectionId,
+      title: 'Preferências da Calculadora',
       desc: 'Defina o modelo da calculadora padrão e gerencie preferências de abas.',
       icon: <Calculator size={28} />,
     },
@@ -250,14 +303,9 @@ export const ConfiguracoesPage: React.FC = () => {
     },
     */
     {
-      id: 'api-status',
-      title: 'Status das APIs',
-      desc: 'Monitore latência, uptime e disponibilidade dos serviços integrados.',
-      icon: <Activity size={28} />,
-    },
-    {
       id: 'logs-eventos',
-      title: 'Logs e Eventos',
+      section: 'acessos' as ConfigSectionId,
+      title: 'Logs de Auditoria',
       desc: 'Auditoria de segurança e histórico detalhado de ações dos usuários.',
       icon: <History size={28} />,
     },
@@ -265,10 +313,21 @@ export const ConfiguracoesPage: React.FC = () => {
   const cardsVisiveis = cards.filter((card) => podeAcessarCard(card.id));
 
   const renderActiveSubModule = () => {
-    if (activeSubTab && (permissaoConfigQuery.isLoading || permissaoConfigQuery.isFetching)) {
+    if (activeSubTab && permissaoConfigQuery.isLoading) {
       return (
         <div className="submodule-content-card" role="status" aria-live="polite">
           <p style={{ margin: 0, color: '#64748b' }}>Validando seu acesso...</p>
+        </div>
+      );
+    }
+    if (activeSubTab && permissaoConfigQuery.isError) {
+      return (
+        <div className="config-access-state config-access-state--error" role="alert">
+          <strong>Não foi possível validar seu acesso.</strong>
+          <p>Verifique sua conexão e tente novamente antes de abrir esta configuração.</p>
+          <button type="button" onClick={() => { void permissaoConfigQuery.refetch(); }}>
+            Tentar novamente
+          </button>
         </div>
       );
     }
@@ -288,8 +347,6 @@ export const ConfiguracoesPage: React.FC = () => {
         return <UsuariosConfig />;
       case 'contadores':
         return <ContadoresConfig />;
-      case 'api-status':
-        return <ApiStatusConfig />;
       case 'logs-eventos':
         return <LogsEventosConfig />;
       case 'contas-bancarias':
@@ -347,26 +404,50 @@ export const ConfiguracoesPage: React.FC = () => {
             <p>Gerencie as preferências, permissões e chaves de integrações do escritório.</p>
           </div>
 
-          {/* Cards Grid */}
-          <div className="config-cards-grid animate-slide-up">
-            {cardsVisiveis.map((card) => (
-              <button
-                type="button"
-                className="config-sub-card"
-                key={card.id}
-                onClick={() => setActiveSubTab(card.id)}
-                style={{ textAlign: 'left' }}
-              >
-                <div className="config-sub-card-icon-wrapper">
-                  {card.icon}
-                </div>
-                <div className="config-sub-card-info">
-                  <h3>{card.title}</h3>
-                  <p>{card.desc}</p>
-                </div>
+          {permissaoConfigQuery.isLoading ? (
+            <div className="config-access-state" role="status" aria-live="polite">
+              <strong>Carregando configurações disponíveis...</strong>
+            </div>
+          ) : permissaoConfigQuery.isError ? (
+            <div className="config-access-state config-access-state--error" role="alert">
+              <strong>Não foi possível carregar seus acessos.</strong>
+              <p>As configurações foram ocultadas para evitar mostrar opções sem autorização confirmada.</p>
+              <button type="button" onClick={() => { void permissaoConfigQuery.refetch(); }}>
+                Tentar novamente
               </button>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="config-groups animate-slide-up">
+              {CONFIG_SECTIONS.map((section) => {
+                const sectionCards = cardsVisiveis.filter((card) => card.section === section.id);
+                if (sectionCards.length === 0) return null;
+                return (
+                  <section className="config-group" key={section.id} aria-labelledby={`config-section-${section.id}`}>
+                    <div className="config-group-heading">
+                      <h2 id={`config-section-${section.id}`}>{section.title}</h2>
+                      <p>{section.description}</p>
+                    </div>
+                    <div className="config-cards-grid">
+                      {sectionCards.map((card) => (
+                        <button
+                          type="button"
+                          className="config-sub-card"
+                          key={card.id}
+                          onClick={() => setActiveSubTab(card.id)}
+                        >
+                          <div className="config-sub-card-icon-wrapper">{card.icon}</div>
+                          <div className="config-sub-card-info">
+                            <h3>{card.title}</h3>
+                            <p>{card.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

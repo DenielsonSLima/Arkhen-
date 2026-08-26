@@ -96,7 +96,7 @@ export interface Company {
   cnpj: string;
   cnae?: string;
   cnaeDescricao?: string;
-  tipo: 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
+  tipo: 'Não informado' | 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
   categoriaCliente?: string;
   tipoEstabelecimento: 'Matriz' | 'Filial';
   logo?: string;
@@ -206,7 +206,7 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   cnpj: row.cnpj || '',
   cnae: row.cnae || undefined,
   cnaeDescricao: row.cnae_descricao || undefined,
-  tipo: row.tipo || 'Simples Nacional',
+  tipo: row.tipo || 'Não informado',
   categoriaCliente: row.categoria_cliente || undefined,
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
   logo: row.logo || undefined,
@@ -240,7 +240,7 @@ const mapCompanyToPayload = (company: Company) => ({
   cnae: company.cnae || null,
   cnae_descricao: company.cnaeDescricao || null,
   cnpj: company.cnpj || '',
-  tipo: company.tipo || 'Simples Nacional',
+  tipo: company.tipo || 'Não informado',
   categoria_cliente: company.categoriaCliente || null,
   tipo_estabelecimento: company.tipoEstabelecimento || 'Matriz',
   logo: company.logo || null,

@@ -228,8 +228,12 @@ export const ProtocolosPage: React.FC = () => {
       ) : companyGroups.length === 0 ? (
         <div className="protocolos-empty">
           <FileSearch size={38} />
-          <h3>Nenhuma empresa encontrada</h3>
-          <p>Ajuste os filtros ou selecione a aba Ativas.</p>
+          <h3>{protocolos.length === 0 ? 'Nenhum protocolo configurado' : 'Nenhuma empresa encontrada'}</h3>
+          <p>
+            {protocolos.length === 0
+              ? 'Ative as entregas em Rotinas e Obrigações no cadastro de cada cliente.'
+              : 'Ajuste os filtros ou selecione a aba Ativas.'}
+          </p>
         </div>
       ) : (
         <div className="protocolos-regime-groups animate-fade-in">
@@ -260,7 +264,7 @@ interface DetailProps {
   items: ProtocoloEntrega[];
   allCompanyItems: ProtocoloEntrega[];
   onBack: () => void;
-  updateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<void>;
+  updateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<ProtocoloEntrega | undefined>;
 }
 
 const EmpresaProtocolosDetail: React.FC<DetailProps> = ({

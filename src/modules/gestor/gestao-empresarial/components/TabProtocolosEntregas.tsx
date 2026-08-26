@@ -15,6 +15,7 @@ import {
 import type { Company } from '../services/gestaoEmpresarialService';
 import { protocolosService } from '../../protocolos/services/protocolosService';
 import type { ProtocoloEmpresaConfig } from '../../protocolos/services/protocolosService';
+import type { ProtocoloTipoConfig } from '../../protocolos/services/protocolosCatalogoService';
 import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
 import './TabProtocolosEntregas.css';
@@ -42,19 +43,28 @@ const periodicidadeOptions: Array<{ value: TipoFechamentoEntrega; label: string 
 
 export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ company }) => {
   const { openTab } = useInternalTabs();
-  const catalogo = useMemo(() => protocolosService.getCatalogoPorRegime(company), [company.id, company.tipo]);
+  const [catalogo, setCatalogo] = useState<ProtocoloTipoConfig[]>([]);
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let mounted = true;
     setIsLoading(true);
+    setLoadError('');
 
-    protocolosService.getEntregasEmpresaConfig(company)
-      .then((nextConfigs) => {
+    protocolosService.getConfiguracaoEmpresa(company)
+      .then((setup) => {
         if (!mounted) return;
-        setConfigs(nextConfigs);
+        setCatalogo(setup.catalogo);
+        setConfigs(setup.configs);
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setCatalogo([]);
+        setConfigs([]);
+        setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar as obrigações.');
       })
       .finally(() => {
         if (!mounted) return;
@@ -64,7 +74,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     return () => {
       mounted = false;
     };
-  }, [company.id, company.tipo]);
+  }, [company]);
 
   const configById = useMemo(() => {
     const map = new Map<string, ProtocoloEmpresaConfig>();
@@ -144,6 +154,8 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
           <span style={{ fontSize: '0.82rem' }}>Carregando obrigações da empresa...</span>
         </div>
       ) : null}
+
+      {loadError ? <div className="error-banner" role="alert">{loadError}</div> : null}
 
       <div className="protocolos-config-header">
         <div>

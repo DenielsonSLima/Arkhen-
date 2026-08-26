@@ -15,41 +15,46 @@ import {
 } from 'lucide-react';
 import { useConformidade } from './hooks/useConformidade';
 import { useConformidadeRealtime } from './hooks/useConformidadeRealtime';
-import type { ConformidadeTipo } from './services/conformidadeService';
+import type { ConformidadeTipo } from './services/conformidadeOperationalService';
 import './ConformidadePage.css';
+import './ConformidadeDetails.css';
 
 interface ConformidadePageProps {
   initialCompanyId?: string;
 }
 
 const TIME_WINDOW_OPTIONS = [
+  { value: 'todos' as const, label: 'Todos' },
   { value: 'hoje' as const, label: 'Hoje' },
   { value: 'semana' as const, label: 'Essa semana' },
   { value: 'atrasados' as const, label: 'Atrasados' },
+  { value: 'sem-prazo' as const, label: 'Sem prazo' },
 ] as const;
 
-const TYPE_OPTIONS: Array<{ id: ConformidadeTipo; label: string }> = [
-  { id: 'fiscal', label: 'Fiscal' },
-  { id: 'folha', label: 'Folha' },
-  { id: 'documentos', label: 'Documentos' },
-  { id: 'protocolo', label: 'Protocolo' },
-  { id: 'atendimento', label: 'Atendimento' },
-];
+const TYPE_LABEL: Record<ConformidadeTipo, string> = {
+  fiscal: 'Fiscal',
+  folha: 'Folha',
+  contabil: 'Contábil',
+  atendimento: 'Atendimento',
+  atividade: 'Atividade',
+};
 
-const PRIORITY_LABEL: Record<'verde' | 'amarelo' | 'vermelho', string> = {
+const PRIORITY_LABEL: Record<'verde' | 'amarelo' | 'vermelho' | 'sem-prazo', string> = {
   verde: 'Verde',
   amarelo: 'Amarelo',
   vermelho: 'Vermelho',
+  'sem-prazo': 'Sem prazo',
 };
 
-const PRIORITY_CLASS: Record<'verde' | 'amarelo' | 'vermelho', string> = {
+const PRIORITY_CLASS: Record<'verde' | 'amarelo' | 'vermelho' | 'sem-prazo', string> = {
   verde: 'prioridade-verde',
   amarelo: 'prioridade-amarelo',
   vermelho: 'prioridade-vermelho',
+  'sem-prazo': 'prioridade-sem-prazo',
 };
 
 const formatDate = (value: string) => {
-  const [year, month, day] = value.split('-');
+  const [year, month, day] = value.slice(0, 10).split('-');
   if (!year || !month || !day) return '-';
   return `${day}/${month}/${year}`;
 };
@@ -58,12 +63,6 @@ const formatCompetencia = (competencia: string) => {
   const [year, month] = competencia.split('-');
   if (!year || !month) return '-';
   return `${month}/${year}`;
-};
-
-const getDaysTo = (dueDate: string, ref = new Date()) => {
-  const due = new Date(`${dueDate}T00:00:00`);
-  const base = new Date(ref.toISOString().slice(0, 10));
-  return Math.floor((due.getTime() - base.getTime()) / (24 * 60 * 60 * 1000));
 };
 
 const getStatusClass = (status: string) => {
@@ -80,9 +79,14 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
     responsavelFiltro,
     searchTerm,
     isLoading,
+    errorMessage,
+    updateErrorMessage,
+    isUpdating,
     obrSorted,
+    totalDisponivel,
+    solicitacoesDocumentaisVisiveis,
     metricas,
-    referenceSteps,
+    typeOptions,
     setTimeWindow,
     setTipoFiltro,
     setResponsavelFiltro,
@@ -112,18 +116,47 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
     );
   }
 
+  if (errorMessage) {
+    return (
+      <div className="conformidade-page">
+        <div className="conformidade-empty" role="alert">
+          <AlertCircle size={28} />
+          <h3>Não foi possível carregar a conformidade</h3>
+          <p>{errorMessage}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="conformidade-page animate-fade-in">
       <header className="conformidade-page-header">
         <div>
           <h1>Conformidade</h1>
-          <p>Painel derivado de riscos, atrasos, SLA e gargalos calculados sobre atividades, protocolos e prazos.</p>
+          <p>Painel baseado nas atividades e solicitações documentais que seu perfil pode consultar.</p>
         </div>
         <div className="conformidade-page-kpi">
           <ShieldCheck size={18} />
-          <span>{metricas.total} riscos monitorados</span>
+          <span>{metricas.total} riscos visíveis monitorados</span>
         </div>
       </header>
+
+      {!solicitacoesDocumentaisVisiveis && (
+        <div className="conformidade-data-scope" role="status">
+          <AlertTriangle size={18} />
+          <span>
+            Este painel mostra somente atividades. Solicitações documentais não estão incluídas
+            porque seu perfil não possui acesso ao módulo Documentos.
+          </span>
+        </div>
+      )}
+
+      {updateErrorMessage && (
+        <div className="conformidade-data-scope" role="alert">
+          <AlertCircle size={18} />
+          <span>{updateErrorMessage}</span>
+        </div>
+      )}
 
       <section className="conformidade-toolbar">
         <div className="conformidade-tab-block">
@@ -153,14 +186,14 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
             >
               Todos
             </button>
-            {TYPE_OPTIONS.map((type) => (
+            {typeOptions.map((type) => (
               <button
-                key={type.id}
+                key={type}
                 type="button"
-                className={`conformidade-tab tipo ${tipoFiltro === type.id ? 'active' : ''}`}
-                onClick={() => setTipoFiltro(type.id)}
+                className={`conformidade-tab tipo ${tipoFiltro === type ? 'active' : ''}`}
+                onClick={() => setTipoFiltro(type)}
               >
-                {type.label}
+                {TYPE_LABEL[type]}
               </button>
             ))}
           </div>
@@ -196,16 +229,16 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
 
       <section className="conformidade-metrics-grid">
         <div className="conformidade-metric-card">
-          <p>Taxa de entrega no prazo</p>
-          <strong>{metricas.taxaPrazo}%</strong>
+          <p>Com prazo definido</p>
+          <strong>{metricas.comPrazoDefinido}</strong>
+        </div>
+        <div className="conformidade-metric-card">
+          <p>Sem prazo configurado</p>
+          <strong>{metricas.semPrazo}</strong>
         </div>
         <div className="conformidade-metric-card">
           <p>Em andamento</p>
           <strong>{metricas.andamento}</strong>
-        </div>
-        <div className="conformidade-metric-card">
-          <p>Concluídas</p>
-          <strong>{metricas.concluidas}</strong>
         </div>
         <div className="conformidade-metric-card">
           <p>Atrasadas</p>
@@ -256,13 +289,19 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
         <div className="conformidade-empty">
           <AlertCircle size={28} />
           <h3>Nenhuma obrigação no recorte selecionado</h3>
-          <p>Ajuste janela, tipo ou termo de busca.</p>
+          <p>
+            {totalDisponivel === 0
+              ? solicitacoesDocumentaisVisiveis
+                ? 'Nenhuma atividade ou solicitação documental aberta foi encontrada. Configure rotinas ou crie solicitações em Documentos para acompanhar a conformidade.'
+                : 'Nenhuma atividade aberta foi encontrada. Solicitações documentais não foram consultadas por falta de permissão no módulo Documentos.'
+              : 'Ajuste janela, tipo ou termo de busca.'}
+          </p>
         </div>
       ) : (
         <section className="conformidade-obrigacoes-list">
           {obrSorted.map((item) => {
-            const diasParaVencimento = getDaysTo(item.vencimento);
-            const isVencido = diasParaVencimento < 0;
+            const diasParaVencimento = item.diasParaVencimento;
+            const isVencido = item.atrasoDias > 0;
             const dataVenc = formatDate(item.vencimento);
             const isExpanded = !!expandedCards[item.id];
 
@@ -276,7 +315,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
                     </p>
                   </div>
                   <div className="conformidade-obrigacao-chips">
-                    <span className={`conformidade-badge tipo ${item.tipo}`}>{item.tipo}</span>
+                    <span className={`conformidade-badge tipo ${item.tipo}`}>{TYPE_LABEL[item.tipo]}</span>
                     <span className={`conformidade-badge status ${getStatusClass(item.status)}`}>{item.status}</span>
                     <span className={`conformidade-badge prioridade ${PRIORITY_CLASS[item.prioridade]}`}>
                       Prioridade {PRIORITY_LABEL[item.prioridade]}
@@ -285,12 +324,16 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
                 </header>
 
                 <div className="conformidade-obrigacao-meta">
-                  <span><FileText size={14} />{item.descricao}</span>
-                  <span><User size={14} />Responsável: {item.responsavel}</span>
-                  <span><CalendarDays size={14} />Vencimento: {dataVenc}</span>
+                  {item.descricao ? <span><FileText size={14} />{item.descricao}</span> : null}
+                  <span><User size={14} />Responsável: {item.responsavel || 'Não atribuído'}</span>
+                  <span><CalendarDays size={14} />Vencimento: {item.vencimento ? dataVenc : 'Não definido'}</span>
                   <span>
                     <AlertTriangle size={14} />
-                    {isVencido ? `${item.atrasoDias} dia(s) em atraso` : `Vence em ${diasParaVencimento} dia(s)`}
+                    {diasParaVencimento === null
+                      ? 'Prazo pendente de configuração'
+                      : isVencido
+                        ? `${item.atrasoDias} dia(s) em atraso`
+                        : `Vence em ${diasParaVencimento} dia(s)`}
                   </span>
                 </div>
 
@@ -327,60 +370,71 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
 
                 {isExpanded && (
                   <>
-                    <div className="conformidade-regra-box" style={{ marginTop: '12px' }}>
-                      <p>Contrato: entrega em até {item.regraContrato.prazoDias} dias</p>
-                      <p>Impacto: {item.regraContrato.impacto}/5</p>
-                      <p>Consequência: {item.regraContrato.consequencia}</p>
-                    </div>
-
-                    <div className="conformidade-checklist">
-                      <h4>Checklist de competência</h4>
-                      <div className="conformidade-checklist-steps">
-                        {referenceSteps.map((step, stepIndex) => {
-                          const stepState = item.etapas.find((itemStep) => itemStep.id === step.id);
-                          const isCompleted = !!stepState?.concluida;
-                          const isLocked = stepIndex > 0 && !item.etapas[stepIndex - 1]?.concluida;
-
-                          return (
-                            <label
-                              key={`${item.id}-${step.id}`}
-                              className={`conformidade-step-row ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isCompleted}
-                                disabled={isLocked}
-                                onChange={(event) => handleToggleStep(item.id, step.id, event.target.checked)}
-                              />
-                              <div>
-                                <strong>{step.label}</strong>
-                                <span>
-                                  {isCompleted && stepState?.responsavel
-                                    ? `Concluído por ${stepState.responsavel}${stepState.concluidaEm ? ` • ${formatDate(stepState.concluidaEm.slice(0, 10))}` : ''}`
-                                    : isLocked ? 'Bloqueado até etapa anterior concluir' : 'Pendente'}
-                                </span>
-                              </div>
-                              {isCompleted ? <CheckCircle2 size={15} /> : <Clock size={15} />}
-                            </label>
-                          );
-                        })}
+                    {item.regraContrato ? (
+                      <div className="conformidade-regra-box" style={{ marginTop: '12px' }}>
+                        <p>Contrato: entrega em até {item.regraContrato.prazoDias} dias</p>
+                        <p>Impacto: {item.regraContrato.impacto}/5</p>
+                        <p>Consequência: {item.regraContrato.consequencia}</p>
                       </div>
-                    </div>
+                    ) : null}
 
-                    <div className="conformidade-documentos">
-                      <h4>Canal de controle de documentos</h4>
-                      {item.documentosPendentes.length === 0 && <p>Nenhuma pendência documental cadastrada.</p>}
-                      {item.documentosPendentes.length > 0 && (
+                    {item.etapas.length > 0 && (
+                      <div className="conformidade-checklist">
+                        <h4>Checklist de competência</h4>
+                        <div className="conformidade-checklist-steps">
+                          {item.etapas.map((step) => {
+                            const isCompleted = step.concluida;
+
+                            return (
+                              <label
+                                key={`${item.id}-${step.id}`}
+                                className={`conformidade-step-row ${isCompleted ? 'completed' : ''}`}
+                                title={item.podeAtualizar
+                                  ? undefined
+                                  : 'Seu perfil possui acesso somente para consulta desta atividade.'}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isCompleted}
+                                  disabled={isUpdating || !item.podeAtualizar}
+                                  onChange={(event) => {
+                                    void handleToggleStep(item.id, step.id, event.target.checked);
+                                  }}
+                                />
+                                <div>
+                                  <strong>{step.label}</strong>
+                                  <span>
+                                    {isCompleted
+                                      ? `Concluído${step.responsavel ? ` por ${step.responsavel}` : ''}${step.concluidaEm ? ` • ${formatDate(step.concluidaEm)}` : ''}`
+                                      : 'Pendente'}
+                                  </span>
+                                </div>
+                                {isCompleted ? <CheckCircle2 size={15} /> : <Clock size={15} />}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {item.origem === 'solicitacoes-documentos' && (
+                      <div className="conformidade-documentos">
+                        <h4>Solicitações abertas para o cliente nesta competência</h4>
                         <ul>
-                          {item.documentosPendentes.map((doc) => (
+                          {item.solicitacoesDocumentos.map((doc) => (
                             <li key={doc.id}>
                               <span>{doc.nome}</span>
-                              <span className="faltando-desde">em falta desde {formatDate(doc.faltaDesde)}</span>
+                              <span className="faltando-desde">
+                                {doc.status}
+                                {doc.dataLimite
+                                  ? ` • prazo ${formatDate(doc.dataLimite)}`
+                                  : ' • sem prazo definido'}
+                              </span>
                             </li>
                           ))}
                         </ul>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
               </article>

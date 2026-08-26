@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { inicioService } from '../services/inicioService';
 import { inicioKeys } from '../queries/inicioKeys';
+import { EMPTY_INICIO_DASHBOARD_SUMMARY } from '../services/inicioDashboardSummary';
 
 export const useInicio = () => {
   const dashboardQuery = useQuery({
@@ -10,16 +11,11 @@ export const useInicio = () => {
     gcTime: 30 * 60_000,
   });
 
-  const vencimentosQuery = useQuery({
-    queryKey: inicioKeys.vencimentos(),
-    queryFn: () => inicioService.getVencimentosProximos(),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
-  });
-
   return {
     stats: dashboardQuery.data?.stats ?? null,
-    vencimentosProximos: vencimentosQuery.data ?? [],
+    summary: dashboardQuery.data?.summary ?? EMPTY_INICIO_DASHBOARD_SUMMARY,
     isLoading: dashboardQuery.isLoading,
+    dashboardError: dashboardQuery.isError,
+    retryDashboard: dashboardQuery.refetch,
   };
 };

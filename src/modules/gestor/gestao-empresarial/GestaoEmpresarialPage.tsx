@@ -93,7 +93,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     });
   }, [activeDetailTab, onViewContextChange, selectedCompany, isLoading]);
 
-  const orderedRegimes = ['Lucro Real', 'Lucro Presumido', 'Simples Nacional', 'MEI', 'PF', 'Isenta'] as const;
+  const orderedRegimes = ['Não informado', 'Lucro Real', 'Lucro Presumido', 'Simples Nacional', 'MEI', 'PF', 'Isenta'] as const;
 
   const groupedCompanies = useMemo(() => {
     return filteredCompanies.reduce<Record<string, Company[]>>((acc, company) => {
@@ -158,7 +158,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     );
   }
 
-  const regimes = ['Todos', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+  const regimes = ['Todos', 'Não informado', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
 
   return (
     <div className="gestao-empresarial-container animate-fade-in">

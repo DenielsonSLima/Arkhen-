@@ -17,6 +17,8 @@ export const clientesKeys = {
   all: ['clientes'] as const,
 };
 
+const EMPTY_COMPANIES: Company[] = [];
+
 export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +39,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     staleTime: 30_000,
   });
 
-  const companies = companiesQuery.data || [];
+  const companies = companiesQuery.data || EMPTY_COMPANIES;
   const isLoading = companiesQuery.isLoading;
 
   useEffect(() => {
@@ -126,7 +128,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
             cnae: company.cnae || lookup.cnae,
             cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
           };
-        } catch (error) {
+        } catch {
           // Mantém o fluxo de salvamento sem bloquear caso a consulta CNPJ esteja indisponível.
         }
       }

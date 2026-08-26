@@ -4,9 +4,10 @@ import { documentosService, type UploadCompanyDocumentInput, type UploadDocument
 import type { DocumentCategory, MeusDocumentosData } from '../services/documentosService';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { useDocumentosRealtime } from './useDocumentosRealtime';
-import { useDocumentosBaseQueries, useDocumentosMutations, documentosKeys } from '../queries/useDocumentosQueries';
+import { useDocumentosBaseQueries, useDocumentosMutations } from '../queries/useDocumentosQueries';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
-export type DocumentosTab = 'meus' | 'empresas' | 'inativas' | 'todos' | 'compartilhados';
+export type DocumentosTab = 'meus' | 'empresas' | 'inativas' | 'solicitacoes' | 'todos' | 'compartilhados';
 
 interface UseDocumentosOptions {
   initialActiveTab?: DocumentosTab;
@@ -84,14 +85,13 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
 
   const uploadPersonalDocument = useCallback(async (input: UploadDocumentInput) => {
     const doc = await documentosService.uploadPersonalDocument(input);
-    queryClient.invalidateQueries({ queryKey: documentosKeys.personal(), exact: true });
+    await invalidateAfterMutation(queryClient, 'documentos');
     return doc;
   }, [queryClient]);
 
   const uploadCompanyDocument = useCallback(async (input: UploadCompanyDocumentInput) => {
     const doc = await documentosService.uploadCompanyDocument(input);
-    queryClient.invalidateQueries({ queryKey: documentosKeys.companyDocs(), exact: true });
-    queryClient.invalidateQueries({ queryKey: documentosKeys.company(input.companyId) });
+    await invalidateAfterMutation(queryClient, 'documentos');
     return doc;
   }, [queryClient]);
 

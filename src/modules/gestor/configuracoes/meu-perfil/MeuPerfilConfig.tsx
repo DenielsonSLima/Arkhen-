@@ -25,6 +25,7 @@ interface UserProfile {
   email: string;
   perfil: string;
   avatar: string;
+  avatarSelectedByUser?: boolean;
   cpf: string;
   dataNascimento: string;
   googleLinked: boolean;
@@ -34,13 +35,12 @@ interface UserProfile {
 const DEFAULT_USER: UserProfile = {
   nome: 'Usuário',
   email: '',
-  perfil: 'Administrador',
+  perfil: 'Usuário',
   avatar: '',
   cpf: '',
   dataNascimento: '',
   googleLinked: false,
 };
-
 const sanitizeAvatar = (avatar: unknown) => typeof avatar === 'string'
   && !avatar.includes('images.unsplash.com')
   && !avatar.startsWith('data:image/svg+xml') ? avatar : '';
@@ -63,7 +63,6 @@ const getStoredProfile = (): UserProfile => {
     return DEFAULT_USER;
   }
 };
-
 export const MeuPerfilConfig: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'dados' | 'seguranca'>('dados');
@@ -117,7 +116,7 @@ export const MeuPerfilConfig: React.FC = () => {
         ...localProfile,
         nome: metadata.nome || metadata.name || localProfile.nome,
         email: user.email || localProfile.email,
-        avatar: sanitizeAvatar(metadata.avatar_url || metadata.picture || localProfile.avatar),
+        avatar: localProfile.avatarSelectedByUser ? sanitizeAvatar(localProfile.avatar) : '',
         cpf: metadata.cpf || localProfile.cpf || '',
         dataNascimento: metadata.data_nascimento || localProfile.dataNascimento || '',
         googleLinked: Boolean(googleIdentity),
@@ -138,7 +137,7 @@ export const MeuPerfilConfig: React.FC = () => {
 
   const handleUpdateInfo = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!nome.trim() || !email.trim()) {
+    if (!nome.trim() || !profile.email.trim()) {
       showError('Preencha nome e e-mail.');
       return;
     }
@@ -151,9 +150,7 @@ export const MeuPerfilConfig: React.FC = () => {
         data_nascimento: dataNascimento,
         ...(profile.avatar ? { avatar_url: profile.avatar } : {}),
       };
-      const payload = email.trim() !== profile.email
-        ? { email: email.trim(), data: nextMetadata }
-        : { data: nextMetadata };
+      const payload = { data: nextMetadata };
       const { data, error } = await supabase.auth.updateUser(payload);
 
       if (error) throw error;
@@ -161,12 +158,12 @@ export const MeuPerfilConfig: React.FC = () => {
       const updated = {
         ...profile,
         nome: nome.trim(),
-        email: data.user.email || email.trim(),
+        email: data.user.email || profile.email,
         cpf: cpf.trim(),
         dataNascimento,
       };
       updateProfileData(updated);
-      showSuccess(email.trim() !== profile.email ? 'Dados salvos. Confirme o novo e-mail se solicitado.' : 'Dados cadastrais atualizados.');
+      showSuccess('Dados cadastrais atualizados.');
     } catch (error: any) {
       showError(error.message || 'Erro ao salvar os dados cadastrais.');
     } finally {
@@ -275,7 +272,7 @@ export const MeuPerfilConfig: React.FC = () => {
         },
       });
       if (updateError) throw updateError;
-      updateProfileData({ ...profile, avatar: publicUrl });
+      updateProfileData({ ...profile, avatar: publicUrl, avatarSelectedByUser: true });
       showSuccess('Foto de perfil atualizada.');
     } catch (error: any) {
       showError(error.message || 'Erro ao enviar foto de perfil.');
@@ -394,16 +391,16 @@ export const MeuPerfilConfig: React.FC = () => {
             </h4>
 
             {[
-              { label: 'Nome Completo', value: nome, setter: setNome, type: 'text', icon: <User size={15} />, required: true },
-              { label: 'E-mail corporativo', value: email, setter: setEmail, type: 'email', icon: <Mail size={15} />, required: true },
-              { label: 'CPF', value: cpf, setter: setCpf, type: 'text', icon: <IdCard size={15} />, required: false },
-              { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, type: 'date', icon: <Calendar size={15} />, required: false },
+              { label: 'Nome Completo', value: nome, setter: setNome, type: 'text', icon: <User size={15} />, required: true, readOnly: false },
+              { label: 'E-mail corporativo', value: email, setter: setEmail, type: 'email', icon: <Mail size={15} />, required: true, readOnly: true },
+              { label: 'CPF', value: cpf, setter: setCpf, type: 'text', icon: <IdCard size={15} />, required: false, readOnly: false },
+              { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, type: 'date', icon: <Calendar size={15} />, required: false, readOnly: false },
             ].map((field) => (
               <div key={field.label} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{field.label}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'flex' }}>{field.icon}</span>
-                  <input type={field.type} value={field.value} onChange={(event) => field.setter(event.target.value)} style={inputStyle} required={field.required} disabled={isSavingInfo} />
+                  <input type={field.type} value={field.value} onChange={(event) => field.setter(event.target.value)} style={inputStyle} required={field.required} disabled={isSavingInfo || field.readOnly} />
                 </div>
               </div>
             ))}

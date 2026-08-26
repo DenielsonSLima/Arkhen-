@@ -1,0 +1,26 @@
+.btn-action-responsavel.active {
+  color: var(--color-gold-primary);
+  cursor: default;
+}
+
+/* Responsive configurations layout */
+@media (max-width: 1200px) {
+  .config-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .config-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-row-grid, .api-status-grid {
+    grid-template-columns: 1fr;
+  }
+  .address-grid {
+    grid-template-columns: 1fr;
+  }
+  .submodule-content-card {
+    padding: 20px 16px;
+  }
+}

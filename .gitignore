@@ -17,6 +17,7 @@ tmp/
 supabase/.temp/
 
 # Materiais privados de clientes (o repositório é público)
+/BeM/
 /*/ROTINA FIXA*.xlsx
 /*/WhatsApp Image*.jp*g
 /*/*marca dagua*.png
@@ -32,3 +33,4 @@ supabase/migrations/20260802152920_*_rotina_*.sql
 *.njsproj
 *.sln
 *.sw?
+.vercel

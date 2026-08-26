@@ -13,11 +13,6 @@ interface XmlFiscalViewerProps {
   document: CompanyDocument;
 }
 
-export const isXmlDocument = (document: Pick<CompanyDocument, 'nome' | 'mimeType'>) => {
-  const ext = document.nome.split('.').pop()?.toLowerCase();
-  return ext === 'xml' || document.mimeType === 'application/xml' || document.mimeType === 'text/xml';
-};
-
 export const XmlFiscalViewer: React.FC<XmlFiscalViewerProps> = ({ document }) => {
   const [xmlText, setXmlText] = useState('');
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');

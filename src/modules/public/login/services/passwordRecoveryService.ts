@@ -40,7 +40,7 @@ export const inspectPasswordRecoveryCallback = (
   location: Pick<Location, 'pathname' | 'search' | 'hash'> = window.location,
 ): PasswordRecoveryCallback => {
   const params = readAuthParams(location.search, location.hash);
-  const hasRecoveryProof = params.type === 'recovery';
+  const hasRecoveryProof = params.type === 'recovery' || params.type === 'invite';
   const isRecovery = isPasswordRecoveryPath(location.pathname) || hasRecoveryProof;
 
   if (!isRecovery) {

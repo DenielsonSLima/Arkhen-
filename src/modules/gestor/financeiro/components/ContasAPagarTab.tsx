@@ -496,5 +496,4 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
         />
       )}
     </div>
-  );
-};
+  ); };

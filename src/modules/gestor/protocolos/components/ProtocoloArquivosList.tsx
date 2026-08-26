@@ -10,7 +10,6 @@ import {
   X,
 } from 'lucide-react';
 import type { ProtocoloEntrega, ProtocoloUpdate } from '../services/protocolosService';
-import { persistedStorage } from '../../../../lib/persistedStorage';
 import './ProtocoloArquivosList.css';
 
 type AbaProtocolo = 'recebidos' | 'enviados' | 'pendencias' | 'historico';
@@ -18,7 +17,7 @@ type AbaProtocolo = 'recebidos' | 'enviados' | 'pendencias' | 'historico';
 interface ProtocoloArquivosListProps {
   items: ProtocoloEntrega[];
   formatDate: (value: string) => string;
-  onUpdateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<void>;
+  onUpdateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<ProtocoloEntrega | undefined>;
 }
 
 const ABA_CONFIG: { key: AbaProtocolo; label: string; icon: React.ElementType }[] = [
@@ -39,17 +38,6 @@ const getFlowLabel = (origem: ProtocoloEntrega['origemPadrao']) => {
   if (origem === 'Ambos') return 'Cliente e Escritório';
   if (origem === 'Escritório envia') return 'Enviado';
   return 'Recebido';
-};
-
-const getCurrentUserName = () => {
-  try {
-    const savedProfile = persistedStorage.getItem('gestor_user_profile');
-    if (!savedProfile) return 'Administrador';
-    const profile = JSON.parse(savedProfile) as { nome?: unknown };
-    return typeof profile.nome === 'string' && profile.nome.trim() ? profile.nome.trim() : 'Administrador';
-  } catch {
-    return 'Administrador';
-  }
 };
 
 export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
@@ -87,15 +75,13 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
   const handleStatusToggle = async (item: ProtocoloEntrega) => {
     const newStatus = item.status === 'Concluído' ? 'Pendente' : 'Concluído';
-    const updates: ProtocoloUpdate = newStatus === 'Concluído'
-      ? { status: newStatus, recebidoEm: item.recebidoEm || new Date().toISOString(), concluidoPor: item.concluidoPor || getCurrentUserName() }
-      : { status: newStatus, recebidoEm: '', concluidoPor: '' };
+    const updates: ProtocoloUpdate = { status: newStatus };
     setUpdatingId(item.id);
     setOperationError('');
     try {
-      await onUpdateProtocolo(item.id, updates);
-      if (previewFile?.id === item.id) {
-        setPreviewFile({ ...previewFile, ...updates });
+      const saved = await onUpdateProtocolo(item.id, updates);
+      if (saved && previewFile?.id === item.id) {
+        setPreviewFile(saved);
       }
     } catch (error) {
       console.error('Falha ao atualizar protocolo.', error);
@@ -108,25 +94,11 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const handleAddAnotacao = async () => {
     if (!previewFile || !novaAnotacao.trim()) return;
 
-    const newAnotacao = {
-      id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            const v = c === 'x' ? r : (r & 0x3) | 0x8;
-            return v.toString(16);
-          }),
-      data: new Date().toISOString(),
-      texto: novaAnotacao.trim(),
-    };
-
-    const updatedAnotacoes = [...(previewFile.anotacoesList || []), newAnotacao];
-
     setUpdatingId(previewFile.id);
     setOperationError('');
     try {
-      await onUpdateProtocolo(previewFile.id, { anotacoesList: updatedAnotacoes });
-      setPreviewFile({ ...previewFile, anotacoesList: updatedAnotacoes });
+      const saved = await onUpdateProtocolo(previewFile.id, { anotacao: novaAnotacao.trim() });
+      if (saved) setPreviewFile(saved);
       setNovaAnotacao('');
     } catch (error) {
       console.error('Falha ao adicionar anotação ao protocolo.', error);
@@ -238,7 +210,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                           {getShortTime(item.recebidoEm) ? <em>{getShortTime(item.recebidoEm)}</em> : null}
                         </span>
                         <span className="protocolo-file-cell protocolo-completed-by">
-                          {item.status === 'Concluído' ? item.concluidoPor || 'Administrador' : '-'}
+                          {item.status === 'Concluído' ? item.concluidoPor || 'Não registrado' : '-'}
                         </span>
                         <span className="protocolo-date-cell">
                           <span className={`protocolo-file-status ${statusClasses}`}>
@@ -313,7 +285,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                     {getShortTime(previewFile.recebidoEm) ? <small>{getShortTime(previewFile.recebidoEm)}</small> : null}
                   </dd>
                 </div>
-                <div><dt>Concluído por</dt><dd>{previewFile.status === 'Concluído' ? previewFile.concluidoPor || 'Administrador' : '-'}</dd></div>
+                <div><dt>Concluído por</dt><dd>{previewFile.status === 'Concluído' ? previewFile.concluidoPor || 'Não registrado' : '-'}</dd></div>
                 <div><dt>Total Anotações</dt><dd>{previewFile.anotacoesList?.length || 0}</dd></div>
               </dl>
 
@@ -336,6 +308,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                     previewFile.anotacoesList.map((a) => (
                       <div key={a.id} className="anotacao-item">
                         <small>{new Date(a.data).toLocaleString('pt-BR')}</small>
+                        {a.autor ? <small>{a.autor}</small> : null}
                         <p>{a.texto}</p>
                       </div>
                     ))

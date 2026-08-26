@@ -78,7 +78,7 @@ export const useUsuarios = () => {
     setErrorMsg(null);
     try {
       await saveMutation.mutateAsync(formValue);
-      setSuccessMsg(formValue.id ? 'Usuário atualizado com sucesso.' : 'Usuário cadastrado com sucesso.');
+      setSuccessMsg(formValue.id ? 'Usuário atualizado com sucesso.' : 'Convite enviado por e-mail com sucesso.');
       closeForm();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {

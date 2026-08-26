@@ -8,6 +8,8 @@ import {
 } from '../services/categoriaClienteService';
 import './ParametrizacaoPlaceholder.css'; // Usando os mesmos estilos comuns de parametrização
 
+const EMPTY_CATEGORIES: CategoriaCliente[] = [];
+
 export const CategoriaClientePage: React.FC = () => {
   const queryClient = useQueryClient();
   const categoriasQuery = useQuery({
@@ -15,7 +17,7 @@ export const CategoriaClientePage: React.FC = () => {
     queryFn: categoriaClienteService.getAll,
     staleTime: 5 * 60 * 1000,
   });
-  const categories = categoriasQuery.data || [];
+  const categories = categoriasQuery.data || EMPTY_CATEGORIES;
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoriaCliente | null>(null);

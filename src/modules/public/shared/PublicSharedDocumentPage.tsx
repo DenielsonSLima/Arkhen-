@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Loader2, Timer, Calendar, Building2, Shield, Info, FileText } from 'lucide-react';
+import { Download, Loader2, Shield, FileText } from 'lucide-react';
 import signatureLogoImg from '../../../assets/chatgpt-login.png';
 import loginLogoImg from '../../../assets/camada-o.png';
 import {
@@ -13,6 +13,7 @@ import { usePublicSharedDownloads } from './hooks/usePublicSharedDownloads';
 import { usePublicSharedRealtime } from './hooks/usePublicSharedRealtime';
 import { usePublicSharedDocumentQuery } from './queries/usePublicSharedDocumentQuery';
 import { SharedDocumentViewer } from './components/SharedDocumentViewer';
+import { PublicShareDetailsSidebar } from './components/PublicShareDetailsSidebar';
 import './PublicSharedDocument.css';
 
 // Subcomponentes modulares
@@ -47,6 +48,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   const [previewError, setPreviewError] = useState(false);
   const expiredRefetchDoneRef = React.useRef(false);
   const publicShareQuery = usePublicSharedDocumentQuery(passwordHash);
+  const { refetch: refetchPublicShare } = publicShareQuery;
   usePublicSharedRealtime();
 
   const documents = useMemo(() => {
@@ -60,7 +62,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
   }, [shareData?.documents]);
 
   const canDownloadDocument = (documentId: string) => (
-    !isExpired && (shareData?.isLegacy ? Boolean(shareData?.legacyUrl) : Boolean(documentUrls[documentId]))
+    !isExpired && Boolean(documentUrls[documentId])
   );
 
   const isExpired = remaining !== null && remaining <= 0;
@@ -79,18 +81,9 @@ export const PublicSharedDocumentPage: React.FC = () => {
     canDownloadDocument,
   });
 
-  const sanitizeShare = (share: PublicSharedDocumentPayload | null): PublicSharedDocumentPayload | null => {
-    if (!share) return null;
-    return {
-      ...share,
-      empresa: share.empresa === 'Biblioteca pessoal' ? 'Empresa Fictícia Contábil' : share.empresa,
-      empresaCnpj: share.empresa === 'Biblioteca pessoal' ? '12.345.678/0001-90' : share.empresaCnpj,
-    };
-  };
-
   useEffect(() => {
     if (publicShareQuery.isLoading) return;
-    const cleanShare = sanitizeShare(publicShareQuery.data || null);
+    const cleanShare = publicShareQuery.data || null;
     setShareData(cleanShare);
     setIsUnlocked(Boolean(cleanShare && (!cleanShare.senhaObrigatoria || passwordHash)));
 
@@ -152,36 +145,40 @@ export const PublicSharedDocumentPage: React.FC = () => {
     expiredRefetchDoneRef.current = true;
     setDocumentUrls({});
     setPreviewError(false);
-    void publicShareQuery.refetch();
-  }, [isExpired, publicShareQuery.refetch]);
+    void refetchPublicShare();
+  }, [isExpired, refetchPublicShare]);
 
   // Carrega links assinados para download temporário seguro
   useEffect(() => {
-    if (!shareData || !isUnlocked || shareData.isLegacy || isExpired) {
+    if (!shareData || !isUnlocked || isExpired) {
       setDocumentUrls({});
       return;
     }
     let mounted = true;
     const expiry = new Date(shareData.dataExpiracaoIso).getTime();
-    const durationSeconds = Math.floor((expiry - Date.now()) / 1000);
 
-    if (Number.isNaN(expiry) || durationSeconds <= 0) {
+    if (Number.isNaN(expiry) || expiry <= Date.now()) {
       setDocumentUrls({});
       return;
     }
 
     const load = async () => {
       const entries = await Promise.all(
-        documents.map(async (doc) => [doc.id, await createDocumentAccessUrl(doc, durationSeconds)] as const),
+        documents.map(async (doc) => [
+          doc.id,
+          await createDocumentAccessUrl(doc, shareData.shareGroupId, passwordHash),
+        ] as const),
       );
       if (mounted) setDocumentUrls(Object.fromEntries(entries));
     };
     setDocumentUrls({});
-    load();
+    void load();
+    const refreshInterval = window.setInterval(() => void load(), 4 * 60 * 1000);
     return () => {
       mounted = false;
+      window.clearInterval(refreshInterval);
     };
-  }, [shareData, isUnlocked, isExpired, documents]);
+  }, [shareData, isUnlocked, isExpired, documents, passwordHash]);
 
   const remainingLabel = useMemo(() => formatCountdownLabel(remaining), [remaining]);
   const activeDocument = documents.find((doc) => doc.id === activeId) || documents[0] || null;
@@ -207,11 +204,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
       setPasswordError('Senha inválida ou compartilhamento indisponível.');
       return;
     }
-    if (!result.share.documents.some((doc) => doc.storage_bucket && doc.storage_path)) {
-      setPasswordError('Senha correta, mas não foi possível localizar os arquivos.');
-      return;
-    }
-    const cleanShare = sanitizeShare(result.share);
+    const cleanShare = result.share;
     setPasswordError('');
     setPasswordHash(result.passwordHash || null);
     setShareData(cleanShare);
@@ -329,7 +322,7 @@ export const PublicSharedDocumentPage: React.FC = () => {
                 <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                   <SharedDocumentViewer
                     activeDocument={activeDocument}
-                    activePreviewUrl={isExpired ? null : (shareData.isLegacy ? shareData.legacyUrl || null : (activeDocument ? documentUrls[activeDocument.id] : null))}
+                    activePreviewUrl={isExpired ? null : (activeDocument ? documentUrls[activeDocument.id] : null)}
                     activeMode={activeDocument ? getDocumentMode(activeDocument.documento) : 'generic'}
                     activePreviewUnavailable={previewError}
                     isAccessBlocked={isExpired}
@@ -415,165 +408,16 @@ export const PublicSharedDocumentPage: React.FC = () => {
             )}
           </div>
 
-          {/* ================= COLUNA DIREITA ================= */}
-          <div className="public-shared-body-right">
-            <div className="sidebar-scroll-content">
-              {/* 1. Empresa Emissora Destacada */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px', marginBottom: '16px', textAlign: 'left' }}>
-                {shareData.empresaLogo ? (
-                  <img 
-                    src={shareData.empresaLogo} 
-                    alt={shareData.empresa} 
-                    style={{ 
-                      width: '82px', 
-                      height: '82px', 
-                      objectFit: 'contain', 
-                      borderRadius: '50%', 
-                      background: '#ffffff', 
-                      border: '1px solid #e2e8f0', 
-                      padding: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-                      minWidth: '82px'
-                    }} 
-                  />
-                ) : (
-                  <div 
-                    style={{ 
-                      width: '82px', 
-                      height: '82px', 
-                      borderRadius: '50%', 
-                      background: '#eff6ff', 
-                      border: '1px solid #bfdbfe', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: '#2563eb',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-                      minWidth: '82px'
-                    }}
-                  >
-                    <Building2 size={40} />
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Empresa Emissora
-                  </span>
-                  <strong style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>
-                    {shareData.empresa}
-                  </strong>
-                  {shareData.empresaCnpj && (
-                    <span style={{ fontSize: '0.72rem', color: '#c59235', fontWeight: 700, marginTop: '1px' }}>
-                      CNPJ {shareData.empresaCnpj}
-                    </span>
-                  )}
-                  {/* Mensagem de Responsabilidade da Empresa */}
-                  <span style={{ fontSize: '0.66rem', color: '#64748b', marginTop: '4px', lineHeight: 1.3, fontWeight: 500 }}>
-                    A responsabilidade pelo conteúdo e integridade deste arquivo é exclusiva da empresa emissora.
-                  </span>
-                </div>
-              </div>
-
-              {/* 2. Compartilhado em */}
-              <div className="info-row" style={{ marginBottom: '14px' }}>
-                <div className="info-icon-wrapper">
-                  <Calendar size={18} />
-                </div>
-                <div className="info-text-group">
-                  <span className="info-title">Compartilhado em</span>
-                  <strong className="info-value" style={{ color: '#334155' }}>{shareData.dataGeracao}</strong>
-                </div>
-              </div>
-
-              {/* 3. Prazo de acesso */}
-              <div className="info-row" style={{ marginBottom: '14px' }}>
-                <div className="info-icon-wrapper">
-                  <Timer size={18} />
-                </div>
-                <div className="info-text-group">
-                  <span className="info-title">Prazo de acesso</span>
-                  <strong className="info-value" style={{ color: '#334155' }}>{shareData.tempoLimite}</strong>
-                </div>
-              </div>
-
-              {/* 4. Tempo restante (Azul para único e Vermelho para lote, tamanho grande) */}
-              <div className="info-row" style={{ marginBottom: '14px' }}>
-                <div className="info-icon-wrapper">
-                  <Timer size={18} />
-                </div>
-                <div className="info-text-group">
-                  <span className="info-title">Tempo restante</span>
-                  <strong 
-                    className="info-value" 
-                    style={{ 
-                      color: isExpired ? '#ef4444' : (isSingleFile ? '#2563eb' : '#ef4444'), 
-                      fontSize: '1.25rem', 
-                      fontFamily: 'monospace', 
-                      fontWeight: 800, 
-                      marginTop: '2px' 
-                    }}
-                  >
-                    {remainingLabel || '...'}
-                  </strong>
-                </div>
-              </div>
-
-              {/* 5. Expira em (Vermelho) */}
-              <div className="info-row" style={{ marginBottom: '20px' }}>
-                <div className="info-icon-wrapper danger">
-                  <Calendar size={18} />
-                </div>
-                <div className="info-text-group">
-                  <span className="info-title">Expira em</span>
-                  <strong className="info-value" style={{ color: '#ef4444' }}>{shareData.dataExpiracao}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* BOTÃO DE BAIXAR E AVISOS (Renderizados acima do aviso final) */}
-            {isSingleFile ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
-                <button
-                  type="button"
-                  className="btn-primary-blue"
-                  onClick={handleDownloadSelected}
-                  disabled={isExpired || isBatchDownloading}
-                >
-                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                  Baixar arquivo
-                </button>
-
-                <div className="sidebar-warning-box info" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-                  <Info size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-                  <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                    Após o vencimento, o link e o arquivo <strong style={{ color: '#2563eb' }}>não estarão mais disponíveis</strong>.
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
-                <button
-                  type="button"
-                  className="btn-primary-blue"
-                  onClick={handleDownloadAll}
-                  disabled={isExpired || !canDownloadAll || isBatchDownloading}
-                >
-                  {isBatchDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                  Baixar todos os arquivos (.zip)
-                </button>
-                <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: '-6px', textAlign: 'center' }}>
-                  Todos os arquivos serão baixados compactados em um único arquivo .zip
-                </span>
-
-                <div className="sidebar-warning-box">
-                  <Shield size={18} style={{ color: '#2563eb', minWidth: '18px', marginTop: '2px' }} />
-                  <span className="sidebar-warning-text" style={{ color: '#1e3a8a' }}>
-                    <strong style={{ color: '#2563eb' }}>Compartilhamento seguro.</strong> Este link é seguro e não requer login. Não compartilhe com pessoas não autorizadas.
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+          <PublicShareDetailsSidebar
+            shareData={shareData}
+            isExpired={isExpired}
+            isSingleFile={isSingleFile}
+            remainingLabel={remainingLabel ?? '...'}
+            isBatchDownloading={isBatchDownloading}
+            canDownloadAll={canDownloadAll}
+            onDownloadSelected={handleDownloadSelected}
+            onDownloadAll={handleDownloadAll}
+          />
         </div>
       </div>
 

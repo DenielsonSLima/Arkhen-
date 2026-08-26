@@ -1,8 +1,7 @@
 import React from 'react';
 import type { XmlFiscalSection, XmlFiscalSummary } from './xmlFiscalTypes';
+import { fiscalSafeValue } from './fiscalPdfHelpers';
 import './FiscalPdfDocument.css';
-
-export const fiscalSafeValue = (value?: string) => value || '-';
 
 export const FiscalBarcode: React.FC<{ value: string }> = ({ value }) => {
   const source = value || '00000000000000000000000000000000000000000000';

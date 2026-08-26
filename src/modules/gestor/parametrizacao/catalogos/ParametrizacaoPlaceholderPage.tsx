@@ -31,6 +31,8 @@ interface ParametrizacaoItem {
   sistema?: boolean;
 }
 
+const EMPTY_PARAMETRIZACAO_ITEMS: ParametrizacaoItem[] = [];
+
 interface ParametrizacaoKindConfig {
   title: string;
   description: string;
@@ -146,7 +148,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
   const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState<'Ativo' | 'Inativo' | 'Padrão'>('Ativo');
   const [error, setError] = useState('');
-  const items = catalogosQuery.data || [];
+  const items = catalogosQuery.data || EMPTY_PARAMETRIZACAO_ITEMS;
   const saveMutation = useMutation({
     mutationFn: () => catalogosService.save({
       id: editingItem?.id,

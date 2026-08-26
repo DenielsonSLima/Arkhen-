@@ -17,6 +17,7 @@ import type {
   EventoOrigem,
   TipoEventoConfig,
 } from './agenda.types';
+import { businessDateTimeIso, toBusinessDateKey, toBusinessTimeKey } from '../../shared/businessDate';
 
 export function getTipoEventoConfig(
   tipo: string,
@@ -113,7 +114,7 @@ export async function getEventosPorIntervalo(anoInicio: number, mesInicio: numbe
 
 export async function adicionarEvento(evento: Omit<Evento, 'id'>): Promise<Evento> {
   const empresaId = await getCurrentEmpresaId();
-  const dataInicio = `${evento.data}T${evento.hora || '00:00'}:00`;
+  const dataInicio = businessDateTimeIso(evento.data, evento.hora || '00:00');
   const { data, error } = await supabase
     .from('agenda_eventos')
     .insert({
@@ -174,10 +175,11 @@ export async function editarEvento(id: string, dados: Partial<Evento>): Promise<
     payload.cliente_id = isUuid(dados.empresaId) ? dados.empresaId : null;
   }
   if (dados.data !== undefined || dados.hora !== undefined) {
-    const dataAtual = atual.data_inicio.slice(0, 10);
-    const horaAtual = new Date(atual.data_inicio).toISOString().slice(11, 16);
+    const instanteAtual = new Date(atual.data_inicio);
+    const dataAtual = toBusinessDateKey(instanteAtual);
+    const horaAtual = toBusinessTimeKey(instanteAtual);
     const horaDestino = dados.hora !== undefined ? (dados.hora || '00:00') : horaAtual;
-    payload.data_inicio = `${dados.data || dataAtual}T${horaDestino}:00`;
+    payload.data_inicio = businessDateTimeIso(dados.data || dataAtual, horaDestino);
   }
 
   const metadadosAtuais = (atual.metadados || {}) as Record<string, unknown>;

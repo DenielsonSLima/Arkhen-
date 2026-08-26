@@ -4,9 +4,35 @@ import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { addDaysKey, formatDateBR, todayKey, toLocalDateKey, type TarefaGestor } from '../services/rotinasAtividadesService';
 import { MinhaFilaEmptyState } from './MinhaFilaEmptyState';
 import { MinhaFilaToolbar } from './MinhaFilaToolbar';
-import { MINHA_FILA_FILTROS, type MinhaFilaFiltro } from './minhaFilaFilters';
+import {
+  MINHA_FILA_FILTROS,
+  tarefasDoUsuario,
+  type MinhaFilaFiltro,
+} from './minhaFilaFilters';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
+import {
+  blockChipStyle,
+  checkBtnStyle,
+  clearSearchBtnStyle,
+  dangerChipStyle,
+  dateInputStyle,
+  dateLabelStyle,
+  dateNavBtnStyle,
+  dateNavContainerStyle,
+  listStyle,
+  metaGridStyle,
+  pageStyle,
+  personalContextStyle,
+  searchIconStyle,
+  searchInputStyle,
+  searchWrapperStyle,
+  subToolbarStyle,
+  taskCardStyle,
+  taskMainBtnStyle,
+  taskTitleRowStyle,
+  todayBtnStyle,
+} from './MinhaFilaAtividades.styles';
 
 const getMonday = (dateKey: string) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -65,7 +91,17 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
   initialFilter = 'hoje',
   onConfigureRotinas,
 }) => {
-  const { tarefas, usuarioAtual, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
+  const {
+    tarefas,
+    authUserId,
+    usuarioAtual,
+    updateTarefa,
+    saveTarefaAsync,
+    toggleChecklist,
+    isLoading,
+    isWorkspaceError,
+    reloadWorkspace,
+  } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
@@ -73,6 +109,10 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [referenceDate, setReferenceDate] = useState(todayKey());
   const usuarioLogado = usuarioAtual?.nome || 'Usuário';
+  const personalTasks = useMemo(
+    () => tarefasDoUsuario(tarefas, authUserId, usuarioAtual),
+    [authUserId, tarefas, usuarioAtual],
+  );
 
   const handlePrevPeriod = () => {
     if (activeFilter === 'hoje') {
@@ -96,12 +136,12 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
 
   // Se o filtro mudar, sincroniza ou reseta datas adequadas se necessário
   const counts = useMemo(() => MINHA_FILA_FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
-    acc[filtro.id] = tarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
+    acc[filtro.id] = personalTasks.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
     return acc;
-  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [tarefas, referenceDate]);
+  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [personalTasks, referenceDate]);
 
   const filteredTasks = useMemo(() => (
-    tarefas
+    personalTasks
       .filter((tarefa) => {
         const matchesDate = matchesFilter(tarefa, activeFilter, referenceDate);
         if (!matchesDate) return false;
@@ -121,11 +161,11 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
         if (isBlocked(a) !== isBlocked(b)) return isBlocked(a) ? -1 : 1;
         return a.vencimento.localeCompare(b.vencimento);
       })
-  ), [activeFilter, referenceDate, searchTerm, tarefas]);
+  ), [activeFilter, personalTasks, referenceDate, searchTerm]);
 
   const selectedTask = useMemo(() => (
-    tarefas.find((tarefa) => tarefa.id === selectedTaskId) || null
-  ), [tarefas, selectedTaskId]);
+    personalTasks.find((tarefa) => tarefa.id === selectedTaskId) || null
+  ), [personalTasks, selectedTaskId]);
 
   const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
     setFeedback({ texto, tipo });
@@ -161,8 +201,27 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
       .catch(() => showFeedback('Não foi possível salvar a tarefa. Tente novamente.', 'erro'));
   };
 
+  if (isLoading) {
+    return <MinhaFilaEmptyState kind="loading" />;
+  }
+
+  if (isWorkspaceError) {
+    return <MinhaFilaEmptyState kind="error" onRetry={() => void reloadWorkspace()} />;
+  }
+
+  if (!authUserId) {
+    return <MinhaFilaEmptyState kind="session" onRetry={() => void reloadWorkspace()} />;
+  }
+
+  if (!usuarioAtual) {
+    return <MinhaFilaEmptyState kind="unlinked" />;
+  }
+
   return (
     <div style={pageStyle}>
+      <div style={personalContextStyle} role="status">
+        Exibindo somente tarefas atribuídas a <strong>{usuarioAtual.nome}</strong>.
+      </div>
       <MinhaFilaToolbar
         activeFilter={activeFilter}
         counts={counts}
@@ -183,7 +242,12 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
             style={searchInputStyle}
           />
           {searchTerm && (
-            <button type="button" onClick={() => setSearchTerm('')} style={clearSearchBtnStyle}>
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              style={clearSearchBtnStyle}
+              aria-label="Limpar busca"
+            >
               <X size={14} />
             </button>
           )}
@@ -243,7 +307,12 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
       )}
 
       {filteredTasks.length === 0 ? (
-        <MinhaFilaEmptyState taskCount={tarefas.length} onConfigureRotinas={onConfigureRotinas} />
+        <MinhaFilaEmptyState
+          kind={personalTasks.length === 0
+            ? tarefas.length === 0 ? 'company-empty' : 'no-assignment'
+            : 'no-results'}
+          onConfigureRotinas={onConfigureRotinas}
+        />
       ) : (
         <div style={listStyle}>
           {filteredTasks.map((tarefa) => (
@@ -289,126 +358,4 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
       />
     </div>
   );
-};
-
-const pageStyle = { display: 'flex', flexDirection: 'column' as const, gap: '18px' };
-const listStyle = { display: 'flex', flexDirection: 'column' as const, gap: '10px' };
-const taskCardStyle = {
-  display: 'grid',
-  gridTemplateColumns: '28px 1fr',
-  gap: '10px',
-  alignItems: 'start',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '12px',
-};
-const checkBtnStyle = { border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px' };
-const taskMainBtnStyle = { border: 'none', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', padding: 0 };
-const taskTitleRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const, color: '#0f172a' };
-const metaGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-  gap: '4px 12px',
-  marginTop: '7px',
-  color: '#64748b',
-  fontSize: '0.76rem',
-};
-const chipBaseStyle = { borderRadius: '999px', padding: '2px 7px', fontSize: '0.66rem', fontWeight: 800 };
-const dangerChipStyle = { ...chipBaseStyle, background: '#fee2e2', color: '#b91c1c' };
-const blockChipStyle = { ...chipBaseStyle, background: '#fff7ed', color: '#c2410c' };
-
-// Sub-toolbar and search styles
-const subToolbarStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: '12px',
-  flexWrap: 'wrap' as const,
-  backgroundColor: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '10px',
-  padding: '12px 16px',
-  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
-};
-const searchWrapperStyle = {
-  position: 'relative' as const,
-  flex: '1 1 300px',
-  display: 'flex',
-  alignItems: 'center',
-};
-const searchInputStyle = {
-  width: '100%',
-  padding: '9px 12px 9px 36px',
-  border: '1px solid #cbd5e1',
-  borderRadius: '8px',
-  fontSize: '0.84rem',
-  color: '#0f172a',
-  outline: 'none',
-  background: '#ffffff',
-};
-const searchIconStyle = {
-  position: 'absolute' as const,
-  left: '12px',
-  pointerEvents: 'none' as const,
-};
-const clearSearchBtnStyle = {
-  position: 'absolute' as const,
-  right: '10px',
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  color: '#94a3b8',
-  padding: '4px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-const dateNavContainerStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  flexWrap: 'wrap' as const,
-};
-const dateNavBtnStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '34px',
-  height: '34px',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  background: '#ffffff',
-  color: '#475569',
-  cursor: 'pointer',
-  transition: 'all 0.18s ease',
-};
-const dateLabelStyle = {
-  fontSize: '0.86rem',
-  fontWeight: 700,
-  color: '#0f172a',
-  minWidth: '180px',
-  textAlign: 'center' as const,
-};
-const dateInputStyle = {
-  padding: '8px 10px',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  color: '#334155',
-  cursor: 'pointer',
-  outline: 'none',
-  background: '#ffffff',
-};
-const todayBtnStyle = {
-  padding: '8px 12px',
-  border: '1px solid rgba(197, 146, 53, 0.3)',
-  borderRadius: '8px',
-  background: 'rgba(197, 146, 53, 0.08)',
-  color: '#aa7c28',
-  fontSize: '0.8rem',
-  fontWeight: 700,
-  cursor: 'pointer',
-  transition: 'all 0.18s ease',
 };

@@ -1,4 +1,18 @@
 /* Documents module shared folder layout */
+.documentos-loading-state {
+  color: #64748b;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.documentos-loading-state .loading-spinner {
+  margin: 0 auto 12px;
+}
+
+.documentos-loading-state p {
+  font-size: 0.85rem;
+}
+
 .docs-folders-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

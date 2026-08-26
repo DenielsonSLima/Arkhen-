@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Building2, Calculator, CalendarDays, ChevronDown, ChevronRight,
   ClipboardList, Database, FileCheck, FolderOpen, GripVertical,
-  Landmark, LayoutDashboard, LogOut, Plus, Receipt, Scale, Settings,
-  ShieldCheck,
+  Landmark, LayoutDashboard, LogOut, Menu, Plus, Receipt, Scale, Settings,
+  ShieldCheck, X,
 } from 'lucide-react';
 import { persistedStorage } from '../../../lib/persistedStorage';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
@@ -82,6 +82,8 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [readyToDrag, setReadyToDrag] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const [menuOrder, setMenuOrder] = useState<string[]>(() => {
     const saved = persistedStorage.getItem('arkhen_sidebar_menu_order');
     if (!saved) return DEFAULT_MENU_ORDER;
@@ -124,6 +126,21 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
       window.removeEventListener('dragend', reset);
     };
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [activeModuleId]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setMobileMenuOpen(false);
+      mobileToggleRef.current?.focus();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [mobileMenuOpen]);
 
   const startDrag = (event: React.DragEvent, itemId: string) => {
     if (!readyToDrag) return;
@@ -172,22 +189,39 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
     cursor: draggedItemId !== null ? 'grabbing' : 'grab',
   });
 
-  const renderSubmenu = (items: typeof ATIVIDADES_ITEMS) => (
-    <div className="sidebar-submenu-list animate-slide-down">
+  const navigateAndCloseMobileMenu = (id: string) => {
+    onNavigate(id);
+    setMobileMenuOpen(false);
+  };
+
+  const renderSubmenu = (parentId: 'parametrizacao' | 'atividades', items: typeof ATIVIDADES_ITEMS) => (
+    <div
+      id={`sidebar-${parentId}-submenu`}
+      className="sidebar-submenu-list animate-slide-down"
+      role="group"
+      aria-label={`Opções de ${MENU_ITEMS[parentId].label}`}
+    >
       {items.map((subItem) => (
         <div key={subItem.id} className="submenu-action-row">
           <button
             type="button"
-            onClick={() => onNavigate(subItem.id)}
+            onClick={() => navigateAndCloseMobileMenu(subItem.id)}
             draggable
             onDragStart={(event) => dragModule(event, subItem.id)}
             className={`submenu-btn ${activeModuleId === subItem.id ? 'active' : ''}`}
+            aria-current={activeModuleId === subItem.id ? 'page' : undefined}
           >
-            <span className="submenu-dot" />
+            <span className="submenu-dot" aria-hidden="true" />
             <span>{subItem.label}</span>
           </button>
-          <button type="button" className="sidebar-open-tab-btn submenu-open-tab-btn" title="Abrir em nova aba" onClick={(event) => onOpenTab(event, subItem.id)}>
-            <Plus size={13} />
+          <button
+            type="button"
+            className="sidebar-open-tab-btn submenu-open-tab-btn"
+            title={`Abrir ${subItem.label} em nova aba`}
+            aria-label={`Abrir ${subItem.label} em nova aba`}
+            onClick={(event) => onOpenTab(event, subItem.id)}
+          >
+            <Plus size={13} aria-hidden="true" />
           </button>
         </div>
       ))}
@@ -199,12 +233,27 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
     .filter((item) => item && enabledModuleIds.has(item.id as SystemModuleId));
 
   return (
-    <aside className="gestor-sidebar">
+    <aside className="gestor-sidebar" aria-label="Navegação do sistema">
       <div className="sidebar-brand">
-        <img src={systemLogoImg} alt="Brand logo" className="sidebar-logo" />
+        <img src={systemLogoImg} alt="" aria-hidden="true" className="sidebar-logo" />
         <div className="sidebar-brand-text"><h3>Arkhen</h3><span>Gestão Contábil</span></div>
+        <button
+          ref={mobileToggleRef}
+          type="button"
+          className="sidebar-mobile-toggle"
+          aria-controls="gestor-primary-navigation"
+          aria-expanded={mobileMenuOpen}
+          aria-label={mobileMenuOpen ? 'Fechar menu principal' : 'Abrir menu principal'}
+          onClick={() => setMobileMenuOpen((current) => !current)}
+        >
+          {mobileMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+        </button>
       </div>
-      <nav className={`sidebar-menu ${draggedItemId !== null ? 'dragging-active' : ''}`}>
+      <nav
+        id="gestor-primary-navigation"
+        aria-label="Módulos principais"
+        className={`sidebar-menu${draggedItemId !== null ? ' dragging-active' : ''}${mobileMenuOpen ? ' is-mobile-open' : ''}`}
+      >
         {items.map((item) => {
           const Icon = item.icon;
           const collapsible = item.id === 'parametrizacao' || item.id === 'atividades';
@@ -216,35 +265,46 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
               : activeModuleId === item.id;
           const menuRow = (
             <>
-              <div className="sidebar-drag-handle" onMouseDown={() => setReadyToDrag(true)} onMouseUp={() => setReadyToDrag(false)} onMouseLeave={() => setReadyToDrag(false)}>
-                <GripVertical size={14} />
+              <div
+                className="sidebar-drag-handle"
+                title="Arraste para reordenar"
+                aria-hidden="true"
+                onMouseDown={() => setReadyToDrag(true)}
+                onMouseUp={() => setReadyToDrag(false)}
+                onMouseLeave={() => setReadyToDrag(false)}
+              >
+                <GripVertical size={14} aria-hidden="true" />
               </div>
               <button
                 type="button"
                 onClick={() => collapsible
                   ? setExpanded((value) => ({ ...value, [item.id]: !value[item.id] }))
-                  : onNavigate(item.id)}
+                  : navigateAndCloseMobileMenu(item.id)}
                 draggable={!collapsible}
                 onDragStart={collapsible ? undefined : (event) => dragModule(event, item.id)}
                 className={`menu-btn ${isActive ? 'active' : ''}`}
+                aria-current={!collapsible && isActive ? 'page' : undefined}
+                aria-expanded={collapsible ? isExpanded : undefined}
+                aria-controls={collapsible ? `sidebar-${item.id}-submenu` : undefined}
               >
-                <Icon size={20} /><span>{item.label}</span>
+                <Icon size={20} aria-hidden="true" /><span>{item.label}</span>
                 {collapsible && (
-                  <span className="expand-chevron">
-                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  <span className="expand-chevron" aria-hidden="true">
+                    {isExpanded ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
                   </span>
                 )}
               </button>
               <button
                 type="button"
                 className="sidebar-open-tab-btn menu-open-tab-btn"
-                title="Abrir em nova aba"
+                title={`Abrir ${item.label} em nova aba`}
+                aria-label={`Abrir ${item.label} em nova aba`}
                 onClick={(event) => onOpenTab(
                   event,
                   item.id === 'parametrizacao' ? 'parametrizacao-regimes' : item.id,
                 )}
               >
-                <Plus size={14} />
+                <Plus size={14} aria-hidden="true" />
               </button>
             </>
           );
@@ -260,19 +320,25 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
               style={itemStyle(item.id)}
             >
               {collapsible ? <div className="menu-action-row">{menuRow}</div> : menuRow}
-              {item.id === 'parametrizacao' && isExpanded && renderSubmenu(PARAMETRIZACAO_ITEMS)}
-              {item.id === 'atividades' && isExpanded && renderSubmenu(ATIVIDADES_ITEMS)}
+              {item.id === 'parametrizacao' && isExpanded && renderSubmenu('parametrizacao', PARAMETRIZACAO_ITEMS)}
+              {item.id === 'atividades' && isExpanded && renderSubmenu('atividades', ATIVIDADES_ITEMS)}
             </div>
           );
         })}
       </nav>
       <div className="sidebar-footer">
-        <div role="button" tabIndex={0} className="sidebar-profile" onClick={onOpenProfile} onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenProfile(); }
-        }} title="Abrir meu perfil">
-          <img src={userProfile.avatar} alt="Profile Avatar" className="profile-avatar" referrerPolicy="no-referrer" />
-          <div className="profile-info"><h4>{userProfile.nome}</h4><div className="profile-role-status"><span className="profile-role">{userProfile.perfil}</span><span className="profile-status-dot" /><span className="profile-status-text">Online</span></div></div>
-          <button type="button" onClick={(event) => { event.stopPropagation(); onLogout(); }} className="sidebar-logout-btn" title="Sair do Sistema"><LogOut size={18} /></button>
+        <div className="sidebar-profile">
+          <button
+            type="button"
+            className="sidebar-profile-main"
+            onClick={onOpenProfile}
+            title="Abrir meu perfil"
+            aria-label={`Abrir meu perfil: ${userProfile.nome}`}
+          >
+            <img src={userProfile.avatar} alt="" className="profile-avatar" referrerPolicy="no-referrer" />
+            <span className="profile-info"><span className="profile-name">{userProfile.nome}</span><span className="profile-role-status"><span className="profile-role">{userProfile.perfil}</span><span className="profile-status-dot" aria-hidden="true" /><span className="profile-status-text">Online</span></span></span>
+          </button>
+          <button type="button" onClick={onLogout} className="sidebar-logout-btn" title="Sair do sistema" aria-label="Sair do sistema"><LogOut size={18} aria-hidden="true" /></button>
         </div>
       </div>
     </aside>

@@ -61,9 +61,10 @@ const initialBrowserLocation = typeof window === 'undefined' ? null : {
 const initialSearchParams = new URLSearchParams(initialBrowserLocation?.search || '');
 const initialHashParams = new URLSearchParams((initialBrowserLocation?.hash || '').replace(/^#/, ''));
 const initialAuthType = initialHashParams.get('type') || initialSearchParams.get('type');
+const isPasswordSetupType = initialAuthType === 'recovery' || initialAuthType === 'invite';
 const isPasswordRecoveryLoad = Boolean(
   initialBrowserLocation
-  && (isPasswordRecoveryPath(initialBrowserLocation.pathname) || initialAuthType === 'recovery'),
+  && (isPasswordRecoveryPath(initialBrowserLocation.pathname) || isPasswordSetupType),
 );
 const hasInitialAuthError = Boolean(
   initialHashParams.get('error')
@@ -76,7 +77,7 @@ const hasInitialAuthError = Boolean(
 const initialAccessToken = initialHashParams.get('access_token');
 const initialRefreshToken = initialHashParams.get('refresh_token');
 let initialPasswordRecoveryTokens: InitialPasswordRecoveryTokens | null = (
-  initialAuthType === 'recovery'
+  isPasswordSetupType
   && !hasInitialAuthError
   && initialAccessToken
   && initialRefreshToken

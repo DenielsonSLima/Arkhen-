@@ -5,8 +5,10 @@ import {
   documentShareService,
   formatShareDateTime,
   generateSharePassword,
+  isSharePasswordRequired,
   parseShareDurationMs,
   SHARE_EXPIRATION_OPTIONS,
+  type ShareConfiguration,
   type ShareableDocument,
   type SharedDocumentLink,
 } from '../services/documentShareService';
@@ -26,14 +28,21 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 }) => {
   const [tempoLimite, setTempoLimite] = useState<string>(SHARE_EXPIRATION_OPTIONS[2]);
   const [exigirSenha, setExigirSenha] = useState(false);
+  const [sharePolicy, setSharePolicy] = useState<ShareConfiguration | null>(null);
   const [senha, setSenha] = useState(() => generateSharePassword());
   const [createdLinks, setCreatedLinks] = useState<SharedDocumentLink[]>([]);
   const [copied, setCopied] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPolicyLoading, setIsPolicyLoading] = useState(false);
+  const [policyReloadKey, setPolicyReloadKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const canCreate = documents.length > 0;
+  const canCreate = documents.length > 0 && sharePolicy !== null;
+  const passwordRequiredByPolicy = sharePolicy
+    ? isSharePasswordRequired(sharePolicy, tempoLimite)
+    : false;
+  const effectivePasswordProtection = exigirSenha || passwordRequiredByPolicy;
   const title = useMemo(() => (
     documents.length === 1 ? 'Compartilhar arquivo' : `Compartilhar ${documents.length} arquivos`
   ), [documents.length]);
@@ -50,17 +59,37 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    documentShareService.getConfiguracaoCompartilhamento().then((config) => {
-      setTempoLimite(config.tempoPadrao);
-      setExigirSenha(config.exigirSenhaPadrao);
-    });
+    let mounted = true;
     setSenha(generateSharePassword());
     setCreatedLinks([]);
     setCopied(false);
     setCopiedLinkId(null);
     setIsCreating(false);
     setErrorMessage('');
-  }, [isOpen]);
+    setSharePolicy(null);
+    setIsPolicyLoading(true);
+
+    documentShareService.getConfiguracaoCompartilhamento()
+      .then((config) => {
+        if (!mounted) return;
+        setSharePolicy(config);
+        setTempoLimite(config.tempoPadrao);
+        setExigirSenha(isSharePasswordRequired(config, config.tempoPadrao));
+      })
+      .catch((error) => {
+        if (!mounted) return;
+        setErrorMessage(error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as políticas de compartilhamento.');
+      })
+      .finally(() => {
+        if (mounted) setIsPolicyLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen, policyReloadKey]);
 
   if (!isOpen) return null;
 
@@ -72,7 +101,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
       const links = await documentShareService.createLinks({
         documents,
         tempoLimite,
-        exigirSenha,
+        exigirSenha: effectivePasswordProtection,
         senha,
       });
       setCreatedLinks(links);
@@ -175,31 +204,31 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
             <button
               type="button"
               onClick={() => setExigirSenha((current) => !current)}
-              disabled={createdLinks.length > 0 || isCreating}
-              style={{ 
-                border: exigirSenha ? '1px solid #d9a441' : '1px solid #d8e0ea', 
-                background: exigirSenha ? '#fffbeb' : '#ffffff', 
-                borderRadius: '8px', 
-                padding: '11px', 
-                cursor: createdLinks.length > 0 ? 'not-allowed' : 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                gap: '12px', 
+              disabled={createdLinks.length > 0 || isCreating || isPolicyLoading || passwordRequiredByPolicy}
+              style={{
+                border: effectivePasswordProtection ? '1px solid #d9a441' : '1px solid #d8e0ea',
+                background: effectivePasswordProtection ? '#fffbeb' : '#ffffff',
+                borderRadius: '8px',
+                padding: '11px',
+                cursor: createdLinks.length > 0 || passwordRequiredByPolicy ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
                 color: '#0f172a',
-                opacity: createdLinks.length > 0 ? 0.75 : 1 
+                opacity: createdLinks.length > 0 ? 0.75 : 1,
               }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 850, fontSize: '0.82rem' }}>
-                <Key size={16} color={exigirSenha ? '#b45309' : '#94a3b8'} />
-                Proteger com senha
+                <Key size={16} color={effectivePasswordProtection ? '#b45309' : '#94a3b8'} />
+                {passwordRequiredByPolicy ? 'Senha exigida pela política' : 'Proteger com senha'}
               </span>
-              <span style={{ width: '34px', height: '20px', borderRadius: '999px', background: exigirSenha ? '#d9a441' : '#cbd5e1', display: 'inline-flex', alignItems: 'center', justifyContent: exigirSenha ? 'flex-end' : 'flex-start', padding: '2px', boxSizing: 'border-box' }}>
+              <span style={{ width: '34px', height: '20px', borderRadius: '999px', background: effectivePasswordProtection ? '#d9a441' : '#cbd5e1', display: 'inline-flex', alignItems: 'center', justifyContent: effectivePasswordProtection ? 'flex-end' : 'flex-start', padding: '2px', boxSizing: 'border-box' }}>
                 <i style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#ffffff', display: 'block' }} />
               </span>
             </button>
 
-            {exigirSenha && (
+            {effectivePasswordProtection && (
               <div>
                 <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
                   Senha temporária
@@ -244,15 +273,20 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
         </div>
 
         {errorMessage && (
-          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.76rem', fontWeight: 750 }}>
-            {errorMessage}
+          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.76rem', fontWeight: 750, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+            <span>{errorMessage}</span>
+            {!sharePolicy && (
+              <button type="button" onClick={() => setPolicyReloadKey((current) => current + 1)} disabled={isPolicyLoading} style={{ border: '1px solid #fca5a5', background: '#ffffff', color: '#991b1b', borderRadius: '6px', padding: '6px 9px', cursor: isPolicyLoading ? 'not-allowed' : 'pointer', fontWeight: 800 }}>
+                Tentar novamente
+              </button>
+            )}
           </div>
         )}
 
         {createdLinks.length > 0 && (
           <div style={{ margin: '0 18px 16px', display: 'grid', gap: '8px' }}>
             <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
-              {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
+              {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {effectivePasswordProtection ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
             </div>
 
             {hasUniqueLink && createdLinks.length > 1 ? (
@@ -339,9 +373,15 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
               {copied ? 'Copiado' : 'Copiar links'}
             </button>
           )}
-          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate || isCreating} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate && !isCreating ? 'pointer' : 'not-allowed', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isCreating ? 0.72 : 1 }}>
+          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate || isCreating || isPolicyLoading} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate && !isCreating && !isPolicyLoading ? 'pointer' : 'not-allowed', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isCreating || isPolicyLoading ? 0.72 : 1 }}>
             <Share2 size={15} />
-            {createdLinks.length > 0 ? 'Concluir' : isCreating ? 'Gerando...' : 'Gerar compartilhamento'}
+            {createdLinks.length > 0
+              ? 'Concluir'
+              : isPolicyLoading
+                ? 'Carregando políticas...'
+                : isCreating
+                  ? 'Gerando...'
+                  : 'Gerar compartilhamento'}
           </button>
         </div>
       </div>

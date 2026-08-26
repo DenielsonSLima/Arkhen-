@@ -35,10 +35,11 @@ interface PrazoEntregaRow {
 }
 
 const TABLE = 'parametrizacao_prazos_entrega';
-const REGIMES: RegimeEmpresa[] = ['PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+const REGIMES: RegimeEmpresa[] = ['Não informado', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
 
 const getDefaultEntregasByRegime = (regime: RegimeEmpresa) => {
   const base = ['xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas', 'decred-semestral'];
+  if (regime === 'Não informado') return [];
   if (regime === 'PF') return ['notas-fiscais', 'extrato-bancario', 'guias-pagas'];
   if (regime === 'MEI') return ['pgdas', ...base.filter((id) => id !== 'folha-pagamento' && id !== 'decred-semestral')];
   if (regime === 'Simples Nacional') return ['pgdas', 'dctfweb', 'esocial', 'reinf', ...base.filter((id) => id !== 'decred-semestral')];

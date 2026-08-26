@@ -120,7 +120,7 @@ export const ProtocoloEmpresaCard: React.FC<ProtocoloEmpresaCardProps> = ({ grou
       <div className="protocolo-company-card-footer">
         <span>
           <User size={12} />
-          <span>Resp: <strong>{proximoItem?.responsavel || 'Administrador'}</strong></span>
+          <span>Resp: <strong>{proximoItem?.responsavel || 'Não atribuído'}</strong></span>
         </span>
         <strong>
           {proximoItem ? `Prazo ${formatDate(proximoItem.prazo)}` : 'Detalhes'}

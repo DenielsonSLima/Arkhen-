@@ -19,6 +19,4 @@ export interface PublicSharedDocumentPayload {
   dataExpiracaoIso: string;
   senhaObrigatoria: boolean;
   documents: SharedDocumentForPublicView[];
-  legacyUrl?: string;
-  isLegacy?: boolean;
 }

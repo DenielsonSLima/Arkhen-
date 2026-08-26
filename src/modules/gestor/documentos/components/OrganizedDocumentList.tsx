@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useEffect, useState } from 'react';
 import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentGridView } from '../../gestao-empresarial/components/DocumentGridView';
@@ -39,7 +39,7 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
   selectedDocIds,
   onToggleSelect,
 }) => {
-  const [documentAccessVersion, setDocumentAccessVersion] = useState(0);
+  const [, setDocumentAccessVersion] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -57,7 +57,7 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
     };
   }, []);
 
-  const groups = useMemo(() => organizeDocuments(documents, groupBy, sortBy), [documents, groupBy, sortBy, documentAccessVersion]);
+  const groups = organizeDocuments(documents, groupBy, sortBy);
 
   const handlePreview = (document: CompanyDocument) => {
     recordDocumentAccess(document.id);

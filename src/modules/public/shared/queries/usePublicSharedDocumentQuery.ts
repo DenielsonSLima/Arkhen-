@@ -4,7 +4,7 @@ import { fetchPublicShare, getShareIdFromPath } from '../publicSharedDocumentHel
 export const publicSharedDocumentKeys = {
   all: ['public-shared-document'] as const,
   detail: (shareId: string | null, passwordHash?: string | null) => (
-    [...publicSharedDocumentKeys.all, shareId || 'legacy', passwordHash || 'locked'] as const
+    [...publicSharedDocumentKeys.all, shareId || 'missing', passwordHash || 'locked'] as const
   ),
 };
 

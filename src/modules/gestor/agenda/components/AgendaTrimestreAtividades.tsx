@@ -8,6 +8,7 @@ import {
   type Evento,
   type UsuarioAgenda,
 } from '../services/agenda.service';
+import { toBusinessDateKey, toCalendarDateKey } from '../../shared/businessDate';
 
 interface AgendaTrimestreAtividadesProps {
   ano: number;
@@ -63,7 +64,7 @@ const getMonthCells = (ano: number, mes: number) => {
     const date = new Date(ano, mes - 1, d);
     cells.push({
       dia: d,
-      dataStr: date.toISOString().split('T')[0],
+      dataStr: toCalendarDateKey(date),
       outroMes: true,
       weekDay: date.getDay(),
     });
@@ -73,7 +74,7 @@ const getMonthCells = (ano: number, mes: number) => {
     const date = new Date(ano, mes, d);
     cells.push({
       dia: d,
-      dataStr: date.toISOString().split('T')[0],
+      dataStr: toCalendarDateKey(date),
       outroMes: false,
       weekDay: date.getDay(),
     });
@@ -84,7 +85,7 @@ const getMonthCells = (ano: number, mes: number) => {
     const date = new Date(ano, mes + 1, d);
     cells.push({
       dia: d,
-      dataStr: date.toISOString().split('T')[0],
+      dataStr: toCalendarDateKey(date),
       outroMes: true,
       weekDay: date.getDay(),
     });
@@ -110,7 +111,7 @@ export const AgendaTrimestreAtividades: React.FC<AgendaTrimestreAtividadesProps>
   usuariosCores = [],
   prazosFixosMes = [],
 }) => {
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = toBusinessDateKey();
   const totalMeses = Math.max(3, Number.isInteger(mesesVisiveis) ? mesesVisiveis : 3);
   const gridColumns = totalMeses > 3 ? 6 : totalMeses;
   const metadeParaTras = Math.floor((totalMeses - 1) / 2);

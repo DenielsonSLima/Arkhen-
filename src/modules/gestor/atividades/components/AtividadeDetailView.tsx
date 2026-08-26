@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ShieldCheck, Users, UserCheck, Receipt, Calendar as CalendarIcon, Hammer, ClipboardList } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import type { CompanyActivityGroup } from '../hooks/useAtividades';
 import type { ValoresCompetenciaAtividade } from '../services/atividadesService';
-import { renderCompanyLogo } from '../por-empresa/CompanyActivityCard';
+import { renderCompanyLogo } from '../por-empresa/companyActivityPresentation';
 import { ResumoAuditoriaTab } from './ResumoAuditoriaTab';
 import { ChecklistTab } from './ChecklistTab';
+import { getActivityIcon } from './activityIcons';
 
 interface AtividadeDetailViewProps {
   selectedGroup: CompanyActivityGroup;
@@ -15,32 +16,6 @@ interface AtividadeDetailViewProps {
   handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
   handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
-
-export const getActivityIcon = (modeloId: string, status: string, size = 15) => {
-  let color = '#94a3b8'; // pending gray
-  if (status === 'Concluída') color = '#10b981'; // emerald green
-  else if (status === 'Em andamento') color = '#f59e0b'; // amber orange
-  else if (status === 'Pendente') color = '#ef4444'; // rose red
-
-  switch (modeloId) {
-    case 'folha':
-    case 'folha-pagamento':
-      return <Users size={size} style={{ color }} />;
-    case 'prolabore':
-    case 'pro-labore':
-      return <UserCheck size={size} style={{ color }} />;
-    case 'dctfweb':
-    case 'dctfweb-tributos-federais':
-      return <Receipt size={size} style={{ color }} />;
-    case 'obrigacoes':
-    case 'obrigacoes-mensais':
-      return <CalendarIcon size={size} style={{ color }} />;
-    case 'obras':
-      return <Hammer size={size} style={{ color }} />;
-    default:
-      return <ClipboardList size={size} style={{ color }} />;
-  }
-};
 
 export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
   selectedGroup,

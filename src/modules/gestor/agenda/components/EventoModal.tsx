@@ -8,6 +8,7 @@ import {
   type TipoEventoConfig,
   type UsuarioAgenda,
 } from '../services/agenda.service';
+import { toBusinessDateKey } from '../../shared/businessDate';
 
 interface EventoModalProps {
   aberto: boolean;
@@ -119,7 +120,7 @@ export const EventoModal: React.FC<EventoModalProps> = ({
       setTitulo('');
       setTipo(tipoPadrao);
       setCategoriaId(categoriaPadrao as CategoriaEvento);
-      setData(dataInicial || new Date().toISOString().split('T')[0]);
+      setData(dataInicial || toBusinessDateKey());
       setHora('');
       setEmpresaId('');
       setDescricao('');

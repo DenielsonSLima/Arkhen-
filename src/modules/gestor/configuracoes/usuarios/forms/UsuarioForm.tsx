@@ -110,10 +110,10 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   const selectedPerfilObj = perfis.find((p) => p.nome === value.perfil);
 
   const isEdit = !!value.id;
-  const title = isEdit ? 'Editar Usuário' : 'Cadastrar Usuário';
+  const title = isEdit ? 'Editar Usuário' : 'Convidar Usuário';
   const subtitle = isEdit
     ? 'Clique em salvar para aplicar os dados e regras de acesso.'
-    : 'O usuário ficará pendente até confirmar o acesso no Supabase Auth.';
+    : 'Enviaremos um link para a pessoa criar a senha e confirmar o acesso ao Arkhen.';
 
   return (
     <div className="usuario-modal-wrapper animate-fade-in">
@@ -161,7 +161,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
                     type="email"
                     value={value.email}
                     onChange={(e) => setField('email', e.target.value)}
-                    disabled={isSaving}
+                    disabled={isSaving || isEdit}
                     required
                     placeholder="exemplo@email.com"
                   />
@@ -212,7 +212,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
                   <select
                     value={value.status}
                     onChange={(e) => setField('status', e.target.value as UsuarioStatus)}
-                    disabled={isSaving}
+                    disabled={isSaving || !isEdit}
                   >
                     <option value="Ativo">Ativo</option>
                     <option value="Pendente">Pendente</option>
@@ -477,7 +477,7 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
             Cancelar
           </button>
           <button type="submit" className="btn-invite" disabled={isSaving}>
-            {isSaving ? 'Salvando...' : 'Salvar Usuário'}
+            {isSaving ? 'Enviando...' : isEdit ? 'Salvar Usuário' : 'Enviar Convite'}
           </button>
         </div>
       </form>

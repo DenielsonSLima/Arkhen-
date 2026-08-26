@@ -1,3 +1,132 @@
+.gestor-sidebar {
+  isolation: isolate;
+}
+
+.sidebar-mobile-toggle {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #f8fafc;
+  cursor: pointer;
+  display: none;
+  height: 42px;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  width: 42px;
+}
+
+.menu-btn,
+.submenu-btn,
+.sidebar-open-tab-btn,
+.sidebar-mobile-toggle,
+.sidebar-profile-main,
+.sidebar-logout-btn {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu-btn,
+.submenu-btn {
+  text-shadow: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+}
+
+.menu-btn:focus-visible,
+.submenu-btn:focus-visible,
+.sidebar-open-tab-btn:focus-visible,
+.sidebar-mobile-toggle:focus-visible,
+.sidebar-profile-main:focus-visible,
+.sidebar-logout-btn:focus-visible {
+  box-shadow: 0 0 0 2px #f0c66f;
+  outline: none;
+}
+
+.menu-btn:hover,
+.submenu-btn:hover {
+  background-color: rgba(197, 146, 53, 0.1);
+  color: #ffffff;
+}
+
+.menu-btn.active,
+.submenu-btn.active {
+  background-color: rgba(197, 146, 53, 0.16);
+  color: #f2ca79;
+}
+
+.menu-btn.active:hover,
+.submenu-btn.active:hover {
+  background-color: rgba(197, 146, 53, 0.22);
+  color: #ffe0a3;
+}
+
+.submenu-dot {
+  background-color: #777d87;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.submenu-btn:hover .submenu-dot,
+.submenu-btn.active .submenu-dot {
+  background-color: #e4b85f;
+}
+
+.submenu-btn.active .submenu-dot {
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.16);
+}
+
+.sidebar-profile {
+  cursor: default;
+  padding: 8px;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transform: none;
+}
+
+.sidebar-profile:hover,
+.sidebar-profile:focus-within {
+  background-color: rgba(197, 146, 53, 0.1);
+  border-color: rgba(197, 146, 53, 0.38);
+  transform: none;
+}
+
+.sidebar-profile-main {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  gap: 9px;
+  min-width: 0;
+  padding: 2px;
+  text-align: left;
+}
+
+.profile-info {
+  min-width: 0;
+}
+
+.profile-name {
+  color: #f8fafc;
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-logout-btn:focus-visible {
+  color: #ff8a80;
+}
+
 @media (min-width: 769px) {
   .gestor-sidebar {
     padding: 18px 10px 12px;
@@ -14,37 +143,44 @@
     width: 36px;
   }
 
-  .sidebar-menu { gap: 5px; }
+  .sidebar-menu {
+    gap: 5px;
+  }
 
   .menu-action-row,
-  .submenu-action-row { gap: 2px; }
+  .submenu-action-row {
+    gap: 2px;
+  }
 
-  .menu-collapsible-container { gap: 4px; }
+  .menu-collapsible-container {
+    gap: 4px;
+  }
 
   .menu-btn {
-    color: #c9cbd0;
+    border-left: 3px solid transparent;
+    color: #d5d8de;
     font-size: 15px;
     font-weight: 600;
     gap: 10px;
     letter-spacing: 0;
     line-height: 20px;
     min-height: 42px;
-    padding: 9px 8px;
-  }
-
-  .menu-btn:hover {
-    color: #ffffff;
+    padding: 9px 8px 9px 7px;
   }
 
   .menu-btn.active {
-    color: #f0c66f;
+    border-left-color: #d6a441;
+    color: #f2ca79;
     font-weight: 700;
   }
 
-  .menu-btn > svg { height: 22px; width: 22px; }
+  .menu-btn > svg {
+    height: 22px;
+    width: 22px;
+  }
 
   .submenu-btn {
-    color: #bfc2c8;
+    color: #c8ccd3;
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0;
@@ -54,16 +190,16 @@
     padding-top: 9px;
   }
 
-  .submenu-btn:hover {
-    color: #ffffff;
-  }
-
   .submenu-btn.active {
-    color: #f0c66f;
+    color: #f2ca79;
     font-weight: 700;
   }
 
-  .sidebar-submenu-list { gap: 4px; margin-bottom: 6px; margin-top: 4px; }
+  .sidebar-submenu-list {
+    gap: 4px;
+    margin-bottom: 6px;
+    margin-top: 4px;
+  }
 
   .sidebar-brand-text h3 {
     font-size: 17px;
@@ -72,22 +208,15 @@
   }
 
   .sidebar-brand-text span {
-    color: #d6a441;
+    color: #dda942;
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 1px;
     line-height: 18px;
   }
 
-  .profile-info h4 {
-    color: #f8fafc;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 18px;
-  }
-
   .profile-role {
-    color: #c3c6cc;
+    color: #c8ccd3;
   }
 
   .profile-role,
@@ -99,22 +228,21 @@
 
   .expand-chevron,
   .sidebar-drag-handle {
-    color: #aeb2ba;
+    color: #b6bbc4;
   }
 
-  .sidebar-drag-handle { padding: 6px 0 6px 2px; }
+  .sidebar-drag-handle {
+    padding: 6px 0 6px 2px;
+  }
 
   .sidebar-open-tab-btn {
-    height: 24px;
-    width: 24px;
+    height: 26px;
+    width: 26px;
   }
 
   .menu-open-tab-btn,
-  .submenu-open-tab-btn { flex-basis: 24px; }
-
   .submenu-open-tab-btn {
-    height: 24px;
-    width: 24px;
+    flex-basis: 26px;
   }
 
   .sidebar-footer {
@@ -122,16 +250,168 @@
     padding-top: 10px;
   }
 
-  .sidebar-profile {
-    border-radius: 10px;
-    gap: 9px;
-    padding: 9px;
-  }
-
   .profile-avatar {
     height: 36px;
     width: 36px;
   }
 
-  .sidebar-logout-btn { padding: 6px; }
+  .sidebar-logout-btn {
+    padding: 7px;
+  }
+}
+
+@media (max-width: 768px) {
+  .gestor-sidebar {
+    border-bottom: 1px solid rgba(197, 146, 53, 0.22);
+    border-right: 0;
+    height: auto;
+    overflow: visible;
+    padding: 9px 12px;
+    position: relative;
+    width: 100%;
+    z-index: 120;
+  }
+
+  .sidebar-brand {
+    gap: 9px;
+    margin: 0;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .sidebar-logo {
+    height: 34px;
+    width: 34px;
+  }
+
+  .sidebar-brand-text h3 {
+    font-size: 16px;
+    line-height: 19px;
+  }
+
+  .sidebar-brand-text span {
+    color: #dda942;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    line-height: 15px;
+    margin-top: 0;
+  }
+
+  .sidebar-mobile-toggle {
+    display: inline-flex;
+  }
+
+  .sidebar-mobile-toggle:hover {
+    background-color: rgba(197, 146, 53, 0.14);
+    border-color: rgba(197, 146, 53, 0.42);
+    color: #f2ca79;
+  }
+
+  .sidebar-menu {
+    background: #161616;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.34);
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    left: 0;
+    margin-top: 0;
+    max-height: calc(100dvh - 82px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 12px 14px;
+    position: absolute;
+    right: 0;
+    scrollbar-color: rgba(197, 146, 53, 0.55) transparent;
+    top: 100%;
+  }
+
+  .sidebar-menu.is-mobile-open {
+    display: flex;
+  }
+
+  .menu-action-row,
+  .submenu-action-row,
+  .menu-collapsible-container {
+    gap: 4px;
+    width: 100%;
+  }
+
+  .sidebar-drag-handle {
+    display: none;
+  }
+
+  .menu-btn {
+    border-bottom: 0;
+    border-left: 3px solid transparent;
+    color: #d5d8de;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    min-height: 44px;
+    padding: 10px 11px;
+    white-space: normal;
+  }
+
+  .menu-btn.active {
+    border-bottom: 0;
+    border-left-color: #d6a441;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .submenu-btn {
+    color: #c8ccd3;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 19px;
+    min-height: 42px;
+    padding: 10px 12px;
+  }
+
+  .sidebar-submenu-list {
+    gap: 3px;
+    margin: 3px 0 7px;
+    padding-left: 22px;
+  }
+
+  .sidebar-open-tab-btn {
+    flex-basis: 40px;
+    height: 40px;
+    opacity: 0.88;
+    width: 40px;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .sidebar-open-tab-btn {
+    opacity: 0.88;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-btn,
+  .submenu-btn,
+  .sidebar-open-tab-btn,
+  .sidebar-mobile-toggle,
+  .sidebar-profile,
+  .sidebar-profile-main,
+  .sidebar-logout-btn,
+  .submenu-dot {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+}
+
+@media (forced-colors: active) {
+  .menu-btn.active,
+  .submenu-btn.active {
+    border: 2px solid Highlight;
+    color: HighlightText;
+  }
 }

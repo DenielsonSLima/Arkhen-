@@ -1,7 +1,8 @@
 import { supabase } from '../../../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { usuariosService, type UsuarioAccessConfig } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
+import { usuariosService } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
 import { passwordRecoveryService } from './passwordRecoveryService';
+import { validateAccessWindow } from './accessWindowPolicy';
 
 export interface LoginPayload {
   usuario: string;
@@ -34,6 +35,7 @@ export interface LoginResponse {
     email: string;
     empresaId: string;
     role: 'funcionario' | 'gestor';
+    perfil: string;
   };
 }
 
@@ -45,6 +47,11 @@ interface AccountAuthorizationResult {
   allowed: boolean;
   message: string;
   onboarding: OnboardingResult;
+  profile: {
+    nome: string;
+    email: string;
+    perfil: string;
+  } | null;
 }
 
 const onboardingRequests = new Map<string, Promise<OnboardingResult>>();
@@ -68,31 +75,6 @@ const buildOnboardingPayload = (payload?: Partial<SignupPayload>) => {
   append('estado', payload?.estado);
 
   return rpcPayload;
-};
-
-const timeToMinutes = (value: string) => {
-  const [hours, minutes] = value.split(':').map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-};
-
-const validateAccessWindow = (config: UsuarioAccessConfig) => {
-  if (!config.enabled) return { allowed: true, message: '' };
-
-  const now = new Date();
-  const currentDay = now.getDay();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const dayAllowed = config.days.includes(currentDay);
-  const timeAllowed = config.intervals.some((interval) => {
-    const start = timeToMinutes(interval.start);
-    const end = timeToMinutes(interval.end);
-    return currentMinutes >= start && currentMinutes <= end;
-  });
-
-  if (dayAllowed && timeAllowed) return { allowed: true, message: '' };
-  return {
-    allowed: false,
-    message: config.message || 'Seu acesso não está permitido neste dia ou horário. Entre em contato com o gestor.',
-  };
 };
 
 const completeOnboarding = (userId: string, payload?: Partial<SignupPayload>) => {
@@ -134,7 +116,12 @@ const authorizeAuthenticatedUser = async (
   const onboarding = await completeOnboarding(user.id, payload);
   const email = user.email?.trim().toLowerCase();
   if (!email) {
-    return { allowed: false, message: 'E-mail do usuário autenticado não encontrado.', onboarding };
+    return {
+      allowed: false,
+      message: 'E-mail do usuário autenticado não encontrado.',
+      onboarding,
+      profile: null,
+    };
   }
 
   const usuarioConfig = await usuariosService.vincularAuthUserPorEmail(email, user.id);
@@ -143,6 +130,7 @@ const authorizeAuthenticatedUser = async (
       allowed: false,
       message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
       onboarding,
+      profile: null,
     };
   }
 
@@ -151,15 +139,25 @@ const authorizeAuthenticatedUser = async (
       allowed: false,
       message: 'Seu usuário está inativo. Entre em contato com o gestor para reativar o acesso.',
       onboarding,
+      profile: null,
     };
   }
 
   const access = validateAccessWindow(usuarioConfig.accessConfig);
   if (!access.allowed) {
-    return { allowed: false, message: access.message, onboarding };
+    return { allowed: false, message: access.message, onboarding, profile: null };
   }
 
-  return { allowed: true, message: '', onboarding };
+  return {
+    allowed: true,
+    message: '',
+    onboarding,
+    profile: {
+      nome: usuarioConfig.nome,
+      email: usuarioConfig.email,
+      perfil: usuarioConfig.perfil || 'Usuário',
+    },
+  };
 };
 
 export const loginService = {
@@ -188,10 +186,11 @@ export const loginService = {
       message: 'Login realizado com sucesso!',
       user: {
         id: data.user.id,
-        nome: authorization.onboarding?.nome || data.user.user_metadata?.nome || data.user.email?.split('@')[0] || 'Usuário',
+        nome: authorization.profile?.nome || authorization.onboarding?.nome || data.user.user_metadata?.nome || data.user.email?.split('@')[0] || 'Usuário',
         email: data.user.email || payload.usuario,
         empresaId: authorization.onboarding?.empresa_id || '',
         role: payload.role,
+        perfil: authorization.profile?.perfil || 'Usuário',
       },
     };
   },
@@ -253,6 +252,7 @@ export const loginService = {
           email: data.user?.email || payload.email,
           empresaId: authorization.onboarding?.empresa_id || '',
           role: 'gestor',
+          perfil: authorization.profile?.perfil || 'Usuário',
         },
       };
     }

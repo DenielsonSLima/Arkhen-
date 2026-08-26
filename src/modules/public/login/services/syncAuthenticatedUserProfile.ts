@@ -5,6 +5,12 @@ const LEGACY_DEMO_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658
 const LEGACY_DEMO_NAMES = new Set(['João Silva', 'João Silva Demonstração']);
 const LEGACY_DEMO_EMAILS = new Set(['joao.silva@arkhen.com.br', 'demo@arkhen.com.br']);
 
+export interface AuthorizedUserProfile {
+  nome?: string | null;
+  email?: string | null;
+  perfil?: string | null;
+}
+
 const createInitialsAvatar = (name: string) => {
   const initials = name
     .normalize('NFD')
@@ -19,7 +25,10 @@ const createInitialsAvatar = (name: string) => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-export const syncAuthenticatedUserProfile = (user: User) => {
+export const syncAuthenticatedUserProfile = (
+  user: User,
+  authorizedProfile?: AuthorizedUserProfile | null,
+) => {
   try {
     const metadata = user.user_metadata || {};
     const saved = persistedStorage.getItem('gestor_user_profile');
@@ -37,12 +46,21 @@ export const syncAuthenticatedUserProfile = (user: User) => {
       || localProfile.avatar?.startsWith('data:image/svg+xml')
       ? ''
       : localProfile.avatar;
-    const nome = metadata.nome || metadata.name || storedName || 'Usuário';
+    const nome = authorizedProfile?.nome?.trim()
+      || metadata.nome
+      || metadata.name
+      || storedName
+      || 'Usuário';
+    const avatarWasExplicitlySelected = localProfile.avatarSelectedByUser === true;
+    const avatar = avatarWasExplicitlySelected && storedAvatar
+      ? storedAvatar
+      : createInitialsAvatar(nome);
     persistedStorage.setItem('gestor_user_profile', JSON.stringify({
       nome,
-      email: user.email || storedEmail || '',
-      perfil: localProfile.perfil || 'Administrador',
-      avatar: metadata.avatar_url || metadata.picture || storedAvatar || createInitialsAvatar(nome),
+      email: user.email || authorizedProfile?.email?.trim() || storedEmail || '',
+      perfil: authorizedProfile?.perfil?.trim() || 'Usuário',
+      avatar,
+      avatarSelectedByUser: avatarWasExplicitlySelected,
       googleLinked: localProfile.googleLinked || false,
       googleEmail: localProfile.googleEmail || undefined,
     }));

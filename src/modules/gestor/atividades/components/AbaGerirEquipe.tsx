@@ -24,7 +24,7 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   companyGroups = [],
   handleToggleStep,
 }) => {
-  const { rotinas, tarefas, usuarios, saveRotina, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
+  const { rotinas, tarefas, usuarios, saveRotinaAsync, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('semana');
   const [dataBase, setDataBase] = useState(todayKey());
@@ -108,21 +108,30 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
     resetSelection();
   };
 
-  const handleVincularRotina = (rotinaId: string, incluirFinaisDeSemana: boolean) => {
+  const handleVincularRotina = async (
+    rotinaId: string,
+    incluirFinaisDeSemana: boolean,
+    primeiraExecucao: string,
+  ) => {
     const rotina = rotinas.find((item) => item.id === rotinaId);
-    if (!rotina || !selectedUser) return;
+    if (!rotina || !selectedUser || !primeiraExecucao) return;
 
-    saveRotina({
-      ...rotina,
-      id: `rotina-vinculada-${Date.now()}`,
-      responsavel: selectedUser.nome,
-      responsavelUserId: selectedUser.userId,
-      responsavelConfigUsuarioId: selectedUser.configUsuarioId,
-      proximaExecucao: todayKey(),
-      incluirFinaisDeSemana,
-      ativa: true,
-    });
-    setModalVincularAberto(false);
+    try {
+      await saveRotinaAsync({
+        ...rotina,
+        id: `rotina-vinculada-${Date.now()}`,
+        responsavel: selectedUser.nome,
+        responsavelUserId: selectedUser.userId,
+        responsavelConfigUsuarioId: selectedUser.configUsuarioId,
+        proximaExecucao: primeiraExecucao,
+        incluirFinaisDeSemana,
+        ativa: true,
+      });
+      setModalVincularAberto(false);
+      showFeedback('Rotina vinculada ao responsável com sucesso.', 'sucesso');
+    } catch {
+      showFeedback('Não foi possível vincular a rotina. Revise o modelo e tente novamente.', 'erro');
+    }
   };
 
   const handleCriarTarefaManual = (dados: any) => {

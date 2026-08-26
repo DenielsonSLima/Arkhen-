@@ -4,6 +4,7 @@ import type { RegimeTributario } from '../types';
 import { regimesService } from '../services/regimesService';
 
 const regimesQueryKey = ['parametrizacao', 'regimes'];
+const EMPTY_REGIMES: RegimeTributario[] = [];
 
 export const useRegimes = () => {
   const queryClient = useQueryClient();
@@ -34,7 +35,7 @@ export const useRegimes = () => {
     },
   });
 
-  const regimes = regimesQuery.data ?? [];
+  const regimes = regimesQuery.data ?? EMPTY_REGIMES;
   const activeRegime = useMemo(
     () => regimes.find((regime) => regime.id === activeRegimeId) || regimes[0] || null,
     [activeRegimeId, regimes],

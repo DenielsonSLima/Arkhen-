@@ -124,16 +124,18 @@ export const UsuariosConfig: React.FC = () => {
                         <UserX size={14} />
                       </button>
                     )}
-                    <button
-                      className="btn-action-responsavel"
-                      title="Excluir se não houver histórico"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleExcluir(user);
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {!user.authUserId && (
+                      <button
+                        className="btn-action-responsavel"
+                        title="Excluir convite ainda não vinculado"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleExcluir(user);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

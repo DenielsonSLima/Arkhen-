@@ -1,25 +1,16 @@
 import {
   formatShareDateTime,
   hashSharePassword,
-  parseLegacySharedPayload,
 } from '../../gestor/documentos/services/documentShareService';
 import { supabase } from '../../../lib/supabase';
 import { isTextPreviewableFilename } from '../../../components/document-viewer/textDocumentFormats';
 import type { PublicSharedDocumentPayload, SharedDocumentForPublicView } from './types';
 
-const tryDecodeLegacyPayload = (value: string) => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-};
-
 type PublicShareRow = {
   id: string;
   share_group_id?: string;
   documento: string;
-  documento_id: string;
+  documento_id: string | null;
   empresa: string;
   empresa_cnpj: string | null;
   empresa_logo: string | null;
@@ -36,15 +27,6 @@ type PublicShareRow = {
 const parseDate = (value: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const parseLegacyDateTime = (value: string) => {
-  if (!value) return null;
-  const cleaned = value.replace(',', '').trim();
-  const [datePart, timePart = '00:00'] = cleaned.split(' ');
-  const [day, month, year] = datePart.split('/');
-  if (!day || !month || !year) return null;
-  return new Date(`${Number(year)}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}:00`);
 };
 
 const uniqueShareRows = (rows: PublicShareRow[]) => {
@@ -88,34 +70,6 @@ const buildPayloadFromRows = (rows: PublicShareRow[]): PublicSharedDocumentPaylo
       storage_path: row.storage_path,
       tamanho_bytes: row.tamanho_bytes,
     })),
-    isLegacy: false,
-  };
-};
-
-const buildPayloadFromLegacy = (legacy: ReturnType<typeof parseLegacySharedPayload>): PublicSharedDocumentPayload | null => {
-  if (!legacy) return null;
-  const created = parseLegacyDateTime(legacy.dataGeracao);
-  const expires = parseLegacyDateTime(legacy.dataExpiracao);
-
-  return {
-    shareGroupId: legacy.id,
-    empresa: legacy.empresa || 'Biblioteca pessoal',
-    empresaCnpj: null,
-    geradoPor: 'Responsável',
-    tempoLimite: legacy.tempoLimite || '1 hora',
-    dataGeracao: formatShareDateTime(created || new Date(), 'America/Sao_Paulo'),
-    dataGeracaoIso: created ? created.toISOString() : '',
-    dataExpiracao: formatShareDateTime(expires || new Date(), 'America/Sao_Paulo'),
-    dataExpiracaoIso: expires ? expires.toISOString() : '',
-    senhaObrigatoria: false,
-    documents: [{
-      id: legacy.id,
-      documento: legacy.documento,
-      storage_bucket: null,
-      storage_path: null,
-    }],
-    legacyUrl: legacy.arquivoUrl,
-    isLegacy: true,
   };
 };
 
@@ -136,18 +90,9 @@ export const getShareIdFromPath = () => {
   return segments.at(-1) || null;
 };
 
-const getLegacyPayloadFromHash = () => {
-  const hash = window.location.hash.replace(/^#/, '');
-  if (!hash) return null;
-
-  return parseLegacySharedPayload(tryDecodeLegacyPayload(hash));
-};
-
 export const fetchPublicShare = async (passwordHash?: string): Promise<PublicSharedDocumentPayload | null> => {
   const shareId = getShareIdFromPath();
-  if (!shareId) {
-    return buildPayloadFromLegacy(getLegacyPayloadFromHash());
-  }
+  if (!shareId) return null;
 
   const { data, error } = await supabase.rpc('get_public_document_share', {
     p_share_id: shareId,
@@ -158,32 +103,43 @@ export const fetchPublicShare = async (passwordHash?: string): Promise<PublicSha
     return buildPayloadFromRows(data as PublicShareRow[]);
   }
 
-  return buildPayloadFromLegacy(getLegacyPayloadFromHash());
+  return null;
 };
 
 export const createDocumentAccessUrl = async (
   document: SharedDocumentForPublicView,
-  expiresAtSeconds: number,
+  shareGroupId: string,
+  passwordHash?: string | null,
 ) => {
-  if (!document.storage_bucket || !document.storage_path) return null;
-  const { data, error } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, expiresAtSeconds);
-  return error ? null : (data?.signedUrl || null);
+  const { data, error } = await supabase.functions.invoke('get-shared-document-url', {
+    body: {
+      shareGroupId,
+      shareRowId: document.id,
+      passwordHash: passwordHash || null,
+    },
+  });
+  const response = data as { ok?: boolean; signedUrl?: string } | null;
+  return error || !response?.ok || !response.signedUrl ? null : response.signedUrl;
 };
 
 export const checkPassword = async (
   password: string,
   share: PublicSharedDocumentPayload,
 ) => {
-  if (!share.senhaObrigatoria || share.isLegacy) {
+  if (!share.senhaObrigatoria) {
     return {
       ok: true,
       share,
     };
   }
   const passwordHash = await hashSharePassword(password);
-  const unlocked = await fetchPublicShare(passwordHash);
+  const unlocked = await fetchPublicShare();
+  const firstDocument = unlocked?.documents[0];
+  const accessUrl = unlocked && firstDocument
+    ? await createDocumentAccessUrl(firstDocument, unlocked.shareGroupId, passwordHash)
+    : null;
   return {
-    ok: Boolean(unlocked && unlocked.documents.some((doc) => doc.storage_bucket && doc.storage_path)),
+    ok: Boolean(unlocked && accessUrl),
     share: unlocked,
     passwordHash,
   };

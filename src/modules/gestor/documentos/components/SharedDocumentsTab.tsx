@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Clipboard, ExternalLink, FileText, Key, Link2, RotateCcw, Search, ShieldX, UserRound } from 'lucide-react';
-import { documentShareService, type SharedDocumentLink } from '../services/documentShareService';
+import type { SharedDocumentLink } from '../services/documentShareService';
 import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { RenewShareModal } from './RenewShareModal';
 import { copyToClipboard } from '../../../../lib/clipboard';
+import { useSharedDocumentLinks } from '../hooks/useSharedDocumentLinks';
 
 interface SharedDocumentsTabProps {
   refreshKey: number;
@@ -50,36 +51,28 @@ const buildBatchSecondaryLabel = (batch: SharedDocumentBatch) => {
 };
 
 export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshKey, onNotify }) => {
-  const [links, setLinks] = useState<SharedDocumentLink[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Todos' | 'Ativo' | 'Expirado'>('Ativo');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
   const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [revokingGroupIds, setRevokingGroupIds] = useState<Set<string>>(new Set());
-  const [renewingGroupIds, setRenewingGroupIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; groupId: string }>({ isOpen: false, groupId: '' });
   const [renewModalBatch, setRenewModalBatch] = useState<SharedDocumentBatch | null>(null);
+  const {
+    links,
+    isLoading,
+    errorMessage,
+    revokingGroupIds,
+    renewingGroupIds,
+    retry,
+    revoke,
+    renew,
+  } = useSharedDocumentLinks({ refreshKey, onNotify });
 
   useEffect(() => {
-    let mounted = true;
-    if (refreshKey) {
-      setCurrentPage(1);
-    }
-    setIsLoading(true);
-    documentShareService.list()
-      .then((nextLinks) => {
-        if (mounted) setLinks(nextLinks);
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
+    if (refreshKey) setCurrentPage(1);
   }, [refreshKey]);
 
   const batches = useMemo(() => {
@@ -169,58 +162,11 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
   };
 
   const handleRevoke = async (groupId: string) => {
-    setRevokingGroupIds((current) => {
-      const next = new Set(current);
-      next.add(groupId);
-      return next;
-    });
-
-    setLinks((current) => current.map((link) => (
-      link.id === groupId || link.shareGroupId === groupId
-        ? { ...link, status: 'Expirado' }
-        : link
-    )));
-
-    const revoked = await documentShareService.revoke(groupId);
-    const latest = await documentShareService.list();
-    setLinks(latest);
-
-    if (!revoked) {
-      onNotify?.('Não foi possível revogar agora no servidor. Alteração salva localmente.');
-    } else {
-      onNotify?.('Link de compartilhamento revogado.');
-    }
-
-    setRevokingGroupIds((current) => {
-      const next = new Set(current);
-      next.delete(groupId);
-      return next;
-    });
+    await revoke(groupId);
   };
 
   const handleRenew = async (batch: SharedDocumentBatch, input: { tempoLimite: string; exigirSenha: boolean; senha?: string }) => {
-    setRenewingGroupIds((current) => {
-      const next = new Set(current);
-      next.add(batch.groupId);
-      return next;
-    });
-
-    const renewed = await documentShareService.renew(batch.groupId, input);
-    const latest = await documentShareService.list();
-    setLinks(latest);
-
-    if (!renewed) {
-      onNotify?.('Não foi possível renovar agora no servidor. Alteração salva localmente.');
-    } else {
-      onNotify?.('Link de compartilhamento renovado.');
-    }
-
-    setRenewingGroupIds((current) => {
-      const next = new Set(current);
-      next.delete(batch.groupId);
-      return next;
-    });
-    setRenewModalBatch(null);
+    if (await renew(batch.groupId, input)) setRenewModalBatch(null);
   };
 
   const handleRevokeClick = (groupId: string) => setConfirmModalState({ isOpen: true, groupId });
@@ -233,6 +179,19 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
     return (
       <div className="animate-fade-in" style={{ padding: '34px 20px', border: '1px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', textAlign: 'center', color: '#64748b', fontWeight: 750 }}>
         Carregando arquivos compartilhados...
+      </div>
+    );
+  }
+
+  if (errorMessage && links.length === 0) {
+    return (
+      <div role="alert" className="animate-fade-in" style={{ padding: '34px 20px', border: '1px solid #fecaca', borderRadius: '10px', background: '#fef2f2', textAlign: 'center', color: '#991b1b' }}>
+        <ShieldX size={34} style={{ marginBottom: '10px' }} />
+        <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 850 }}>Não foi possível carregar os compartilhamentos</h3>
+        <p style={{ margin: '6px auto 12px', maxWidth: '520px', fontSize: '0.8rem' }}>{errorMessage}</p>
+        <button type="button" onClick={retry} style={{ border: '1px solid #fca5a5', background: '#ffffff', color: '#991b1b', borderRadius: '7px', padding: '7px 11px', cursor: 'pointer', fontWeight: 800 }}>
+          Tentar novamente
+        </button>
       </div>
     );
   }
@@ -251,6 +210,14 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
 
   return (
     <div className="animate-fade-in" style={{ padding: '4px 0' }}>
+      {errorMessage && (
+        <div role="alert" style={{ marginBottom: '12px', padding: '10px 12px', border: '1px solid #fecaca', borderRadius: '8px', background: '#fef2f2', color: '#991b1b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '0.78rem', fontWeight: 750 }}>
+          <span>{errorMessage}</span>
+          <button type="button" onClick={retry} style={{ border: '1px solid #fca5a5', background: '#ffffff', color: '#991b1b', borderRadius: '7px', padding: '6px 9px', cursor: 'pointer', fontWeight: 800, whiteSpace: 'nowrap' }}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
           <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -474,7 +441,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
       <SystemQuickModal
         isOpen={confirmModalState.isOpen}
         title="Revogar Compartilhamento"
-        message="Tem certeza de que deseja revogar este link de compartilhamento? O acesso público aos arquivos correspondentes será bloqueado imediatamente."
+        message="Tem certeza de que deseja revogar este link? Novas autorizações serão bloqueadas imediatamente; downloads já autorizados podem permanecer válidos por até 5 minutos."
         confirmLabel="Revogar"
         cancelLabel="Cancelar"
         onConfirm={() => handleRevoke(confirmModalState.groupId)}

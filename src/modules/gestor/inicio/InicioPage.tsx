@@ -14,39 +14,17 @@ import {
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import officeBackground from '../../../assets/office-scene-meeting.png';
 import { getEventoOrigemConfig } from '../agenda/services/agenda.service';
-import {
-  formatDateBR,
-  todayKey,
-  type FrequenciaAtividade,
-  type TarefaGestor,
-} from '../atividades/services/rotinasAtividadesService';
+import { formatDateBR, todayKey } from '../atividades/services/rotinasAtividadesService';
 import { useInicio } from './hooks/useInicio';
 import { useInicioBootstrap } from './hooks/useInicioBootstrap';
 import { useInicioRealtime } from './hooks/useInicioRealtime';
 import { useInicioSetup } from './hooks/useInicioSetup';
+import { InicioDataErrorBanner } from './components/InicioDataErrorBanner';
 import { PrimeirosPassosCard } from './components/PrimeirosPassosCard';
+import { PERIODO_CONFIG } from './services/inicioDashboardSummary';
 import { navigateToInicioTarget, type InicioSetupTarget } from './services/inicioNavigation';
-import type { VencimentoAlerta } from './services/inicioService';
 import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
 import './InicioPage.css';
-
-const alertasPadrao: VencimentoAlerta[] = [];
-
-type PeriodoChave = 'diaria' | 'semanal' | 'mensal';
-
-const periodoConfig: Array<{ key: PeriodoChave; label: string; frequencias: FrequenciaAtividade[] }> = [
-  { key: 'diaria', label: 'Diaria', frequencias: ['Diária'] },
-  { key: 'semanal', label: 'Semanal', frequencias: ['Semanal', 'Quinzenal'] },
-  { key: 'mensal', label: 'Mensal', frequencias: ['Mensal'] },
-];
-
-const getPct = (done: number, total: number) => (total > 0 ? Math.round((done / total) * 100) : 0);
-
-const addDays = (dateKey: string, amount: number) => {
-  const date = new Date(`${dateKey}T00:00:00`);
-  date.setDate(date.getDate() + amount);
-  return date.toISOString().split('T')[0];
-};
 
 const getDayOfYear = (dateKey: string) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -54,13 +32,15 @@ const getDayOfYear = (dateKey: string) => {
   return Math.floor((date.getTime() - start.getTime()) / 86400000);
 };
 
-const getAlertaTexto = (alerta: VencimentoAlerta) => {
-  if (alerta.diasRestantes < 0) return 'Vencido';
-  if (alerta.diasRestantes === 0) return 'Vence hoje';
-  return `Vence em ${alerta.diasRestantes} dias`;
+const getAlertaTexto = (diasRestantes: number) => {
+  if (diasRestantes < 0) return 'Vencido';
+  if (diasRestantes === 0) return 'Vence hoje';
+  return `Vence em ${diasRestantes} dias`;
 };
 
-const isDone = (tarefa: TarefaGestor) => tarefa.status === 'Concluída';
+const quantidade = (total: number, singular: string, plural: string) => (
+  `${total} ${total === 1 ? singular : plural}`
+);
 
 type InicioPageProps = {
   onInitialReady?: () => void;
@@ -68,26 +48,29 @@ type InicioPageProps = {
 
 export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   useInicioRealtime(true);
-  const { stats, vencimentosProximos, isLoading } = useInicio();
+  const {
+    stats,
+    summary,
+    isLoading: dashboardLoading,
+    dashboardError,
+    retryDashboard,
+  } = useInicio();
   const setupQuery = useInicioSetup();
   const { activateModule } = useInternalTabs();
 
-  const hoje = todayKey();
-  const fimSemana = addDays(hoje, 6);
-  const alertasCriticos = vencimentosProximos.length > 0 ? vencimentosProximos.slice(0, 4) : alertasPadrao;
+  const dataMotivacional = todayKey();
+  const hoje = summary.dataReferencia || dataMotivacional;
 
   const fraseMotivacionalFallback: FraseMotivacional = useMemo(
-    () => frasesMotivacionais[(getDayOfYear(hoje) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length],
-    [hoje],
+    () => frasesMotivacionais[
+      (getDayOfYear(dataMotivacional) - 1 + frasesMotivacionais.length) % frasesMotivacionais.length
+    ],
+    [dataMotivacional],
   );
-  const {
-    tarefasWorkspace,
-    eventosAgenda,
-    fraseMotivacional,
-  } = useInicioBootstrap({
-    hoje,
+  const { fraseMotivacional } = useInicioBootstrap({
+    hoje: dataMotivacional,
     fraseFallback: fraseMotivacionalFallback,
-    dashboardReady: !isLoading,
+    dashboardReady: !dashboardLoading,
     onReady: onInitialReady,
   });
 
@@ -95,71 +78,15 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
     navigateToInicioTarget(target, activateModule);
   }, [activateModule]);
 
-  const agendaResumo = useMemo(() => {
-    const eventos = eventosAgenda
-      .filter((evento) => evento.data >= hoje && evento.data <= fimSemana)
-      .sort((a, b) => a.data.localeCompare(b.data));
+  const failedSources = dashboardError ? ['resumo operacional'] : [];
+  const riskDataUnavailable = dashboardError;
 
-    return {
-      hoje: eventos.filter((evento) => evento.data === hoje).slice(0, 5),
-      semana: eventos.filter((evento) => evento.data !== hoje).slice(0, 6),
-    };
-  }, [eventosAgenda, fimSemana, hoje]);
+  const handleRetryData = useCallback(() => {
+    if (dashboardError) void retryDashboard();
+  }, [dashboardError, retryDashboard]);
 
-  const tarefasResumo = useMemo(() => {
-    const tarefas = tarefasWorkspace;
-    const pendentes = tarefas
-      .filter((tarefa) => !isDone(tarefa))
-      .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
-      .slice(0, 6);
-
-    const atividadesHoje = tarefas
-      .filter((tarefa) => tarefa.vencimento === hoje)
-      .sort((a, b) => Number(isDone(a)) - Number(isDone(b)))
-      .slice(0, 5);
-
-    const responsaveis = Array.from(new Set(tarefas.map((tarefa) => tarefa.responsavel).filter(Boolean)));
-    const usuarios = responsaveis.map((usuario) => {
-      const userTasks = tarefas.filter((tarefa) => tarefa.responsavel === usuario);
-      const periodos = Object.fromEntries(periodoConfig.map((periodo) => {
-        const items = userTasks.filter((tarefa) => periodo.frequencias.includes(tarefa.frequencia as FrequenciaAtividade));
-        const done = items.filter(isDone).length;
-        return [periodo.key, { total: items.length, done, pct: getPct(done, items.length) }];
-      })) as Record<PeriodoChave, { total: number; done: number; pct: number }>;
-
-      const doneTotal = userTasks.filter(isDone).length;
-      const atrasadas = userTasks.filter((tarefa) => !isDone(tarefa) && tarefa.vencimento < hoje).length;
-      return {
-        usuario,
-        total: userTasks.length,
-        done: doneTotal,
-        atrasadas,
-        pct: getPct(doneTotal, userTasks.length),
-        periodos,
-      };
-    });
-
-    const total = tarefas.length;
-    const done = tarefas.filter(isDone).length;
-    const atrasadas = tarefas.filter((tarefa) => !isDone(tarefa) && tarefa.vencimento < hoje).length;
-
-    return {
-      total,
-      done,
-      atrasadas,
-      pct: getPct(done, total),
-      pendentes,
-      atividadesHoje,
-      usuarios,
-    };
-  }, [hoje, tarefasWorkspace]);
-
-  if (isLoading) {
+  if (dashboardLoading) {
     return <div className="inicio-loading">Carregando painel contábil...</div>;
-  }
-
-  if (!stats) {
-    return <div className="inicio-loading">Não foi possível carregar o painel contábil.</div>;
   }
 
   return (
@@ -172,45 +99,58 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         onRetry={() => { void setupQuery.refetch(); }}
       />
 
-      <section className="inicio-motivation-card">
-        <div
-          className="inicio-motivation-card__backdrop"
-          style={{ '--inicio-motivation-bg': `url(${officeBackground})` } as React.CSSProperties}
-        />
-        <div className="inicio-motivation-card__rays" aria-hidden="true" />
-        <div className="inicio-motivation-card__grain" aria-hidden="true" />
-        <MessageSquareQuote className="inicio-motivation-card__bg-icon" size={150} aria-hidden />
-        <div className="inicio-motivation-card__content">
-          <p className="inicio-motivation-card__eyebrow">Mensagem inspiradora</p>
-          <blockquote>"{fraseMotivacional.texto}"</blockquote>
-          <cite>— {fraseMotivacional.autor}</cite>
-        </div>
-      </section>
+      {failedSources.length > 0 && (
+        <InicioDataErrorBanner sources={failedSources} onRetry={handleRetryData} />
+      )}
 
-      <section className="inicio-metrics-grid">
-        <article className="inicio-metric-card">
-          <div className="inicio-metric-icon gold"><ListChecks size={22} /></div>
-          <span>Atividades gerais</span>
-          <strong>{tarefasResumo.pct}%</strong>
-          <small>{tarefasResumo.done}/{tarefasResumo.total} concluidas</small>
+      <section className="inicio-metrics-grid" aria-label="Prioridades operacionais">
+        <article className={`inicio-metric-card ${!riskDataUnavailable && summary.operacao.atrasosTotal > 0 ? 'is-critical' : ''}`}>
+          <div className="inicio-metric-icon orange"><AlertTriangle size={22} /></div>
+          <span>Em atraso</span>
+          <strong className={riskDataUnavailable ? 'inicio-metric-value-unavailable' : ''}>
+            {riskDataUnavailable ? '—' : summary.operacao.atrasosTotal}
+          </strong>
+          <small>
+            {riskDataUnavailable
+              ? 'Dados incompletos'
+              : quantidade(summary.operacao.pendenciasTotal, 'pendência aberta', 'pendências abertas')}
+          </small>
         </article>
         <article className="inicio-metric-card">
-          <div className="inicio-metric-icon orange"><AlertTriangle size={22} /></div>
-          <span>Prazos pendentes</span>
-          <strong>{tarefasResumo.pendentes.length + alertasCriticos.length}</strong>
-          <small>{tarefasResumo.atrasadas} atividades atrasadas</small>
+          <div className="inicio-metric-icon gold"><ListChecks size={22} /></div>
+          <span>Vencem hoje</span>
+          <strong className={riskDataUnavailable ? 'inicio-metric-value-unavailable' : ''}>
+            {riskDataUnavailable ? '—' : summary.operacao.vencemHojeTotal}
+          </strong>
+          <small>
+            {dashboardError
+              ? 'Atividades indisponíveis'
+              : quantidade(summary.tarefas.atividadesHojeTotal, 'atividade planejada', 'atividades planejadas')}
+          </small>
         </article>
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon blue"><CalendarRange size={22} /></div>
-          <span>Agenda da semana</span>
-          <strong>{agendaResumo.hoje.length + agendaResumo.semana.length}</strong>
-          <small>{agendaResumo.hoje.length} item hoje</small>
+          <span>Próximos 7 dias</span>
+          <strong className={dashboardError ? 'inicio-metric-value-unavailable' : ''}>
+            {dashboardError ? '—' : summary.agenda.total}
+          </strong>
+          <small>
+            {dashboardError
+              ? 'Agenda indisponível'
+              : quantidade(summary.agenda.hojeTotal, 'compromisso hoje', 'compromissos hoje')}
+          </small>
         </article>
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon green"><Users size={22} /></div>
-          <span>Equipe monitorada</span>
-          <strong>{tarefasResumo.usuarios.length}</strong>
-          <small>{stats.clientesAtivos} clientes ativos</small>
+          <span>Equipe ativa</span>
+          <strong className={dashboardError ? 'inicio-metric-value-unavailable' : ''}>
+            {dashboardError ? '—' : summary.usuarios.length}
+          </strong>
+          <small>
+            {dashboardError || !stats
+              ? 'Clientes indisponíveis'
+              : quantidade(stats.clientesAtivos, 'cliente ativo', 'clientes ativos')}
+          </small>
         </article>
       </section>
 
@@ -220,14 +160,21 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
             <div>
               <span className="inicio-kicker">Agenda</span>
               <h2>Hoje</h2>
+              {!dashboardError && (
+                <small className="inicio-panel-header-meta">
+                  {quantidade(summary.agenda.hojeTotal, 'compromisso', 'compromissos')}
+                </small>
+              )}
             </div>
             <Clock3 size={20} />
           </div>
 
           <div className="inicio-agenda-list">
-            {agendaResumo.hoje.length === 0 ? (
+            {dashboardError ? (
+              <div className="inicio-empty-row inicio-empty-row--error">Não foi possível carregar a agenda.</div>
+            ) : summary.agenda.hoje.length === 0 ? (
               <div className="inicio-empty-row">Nenhum compromisso para hoje.</div>
-            ) : agendaResumo.hoje.map((evento) => {
+            ) : summary.agenda.hoje.map((evento) => {
               const origem = getEventoOrigemConfig(evento);
               return (
                 <div className="inicio-agenda-item" key={evento.id}>
@@ -245,14 +192,20 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         <article className="inicio-panel inicio-panel-week">
           <div className="inicio-panel-header">
             <div>
-              <span className="inicio-kicker">Proximos dias</span>
+              <span className="inicio-kicker">Próximos dias</span>
               <h2>Semana operacional</h2>
             </div>
             <CalendarRange size={20} />
           </div>
 
           <div className="inicio-week-list">
-            {agendaResumo.semana.map((evento) => {
+            {dashboardError ? (
+              <div className="inicio-empty-row inicio-empty-row--error">
+                Não foi possível carregar os próximos compromissos.
+              </div>
+            ) : summary.agenda.semana.length === 0 ? (
+              <div className="inicio-empty-row">Nenhum compromisso nos próximos dias.</div>
+            ) : summary.agenda.semana.map((evento) => {
               const origem = getEventoOrigemConfig(evento);
               return (
                 <div className="inicio-week-row" key={evento.id}>
@@ -273,33 +226,48 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         <article className="inicio-panel inicio-panel-pending">
           <div className="inicio-panel-header">
             <div>
-              <span className="inicio-kicker">Pendencias</span>
+              <span className="inicio-kicker">Pendências</span>
               <h2>Prazos e riscos</h2>
+              {!riskDataUnavailable && (
+                <small className="inicio-panel-header-meta">
+                  {quantidade(summary.operacao.pendenciasTotal, 'pendência no total', 'pendências no total')}
+                </small>
+              )}
             </div>
             <ShieldAlert size={20} />
           </div>
 
           <div className="inicio-risk-list">
-            {alertasCriticos.map((alerta) => (
+            {riskDataUnavailable && (
+              <div className="inicio-empty-row inicio-empty-row--error inicio-empty-row--stacked">
+                Não foi possível carregar todos os prazos e riscos.
+              </div>
+            )}
+            {summary.alertas.criticos.map((alerta) => (
               <div className={`inicio-risk-row ${alerta.diasRestantes <= 0 ? 'late' : ''}`} key={alerta.id}>
                 {alerta.tipo === 'certificado' ? <ShieldAlert size={17} /> : <FileClock size={17} />}
                 <div>
                   <strong>{alerta.nome}</strong>
                   <small>{alerta.empresaNome} - {alerta.dataValidade}</small>
                 </div>
-                <span>{getAlertaTexto(alerta)}</span>
+                <span>{getAlertaTexto(alerta.diasRestantes)}</span>
               </div>
             ))}
-            {tarefasResumo.pendentes.slice(0, 3).map((tarefa) => (
+            {summary.tarefas.pendentes.slice(0, 3).map((tarefa) => (
               <div className={`inicio-risk-row ${tarefa.vencimento < hoje ? 'late' : ''}`} key={tarefa.id}>
                 <ListChecks size={17} />
                 <div>
                   <strong>{tarefa.titulo}</strong>
-                  <small>{tarefa.responsavel} - {tarefa.cliente}</small>
+                  <small>{tarefa.responsavel || 'Sem responsável'} - {tarefa.cliente}</small>
                 </div>
                 <span>{formatDateBR(tarefa.vencimento)}</span>
               </div>
             ))}
+            {!riskDataUnavailable && summary.operacao.pendenciasTotal === 0 && (
+              <div className="inicio-empty-row inicio-empty-row--success">
+                Nenhum prazo ou validade pendente no momento.
+              </div>
+            )}
           </div>
         </article>
 
@@ -307,22 +275,29 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
           <div className="inicio-panel-header">
             <div>
               <span className="inicio-kicker">Atividades</span>
-              <h2>Algumas tarefas de hoje</h2>
+              <h2>Tarefas com vencimento hoje</h2>
+              {!dashboardError && (
+                <small className="inicio-panel-header-meta">
+                  {quantidade(summary.tarefas.atividadesHojeTotal, 'atividade no total', 'atividades no total')}
+                </small>
+              )}
             </div>
             <CheckCircle2 size={20} />
           </div>
 
           <div className="inicio-task-list">
-            {tarefasResumo.atividadesHoje.length === 0 ? (
+            {dashboardError ? (
+              <div className="inicio-empty-row inicio-empty-row--error">Não foi possível carregar as atividades.</div>
+            ) : summary.tarefas.atividadesHoje.length === 0 ? (
               <div className="inicio-empty-row">Nenhuma atividade com vencimento hoje.</div>
-            ) : tarefasResumo.atividadesHoje.map((tarefa) => (
+            ) : summary.tarefas.atividadesHoje.map((tarefa) => (
               <div className="inicio-task-row" key={tarefa.id}>
                 <span className={`inicio-status-pill ${tarefa.status === 'Concluída' ? 'done' : tarefa.status === 'Em andamento' ? 'progress' : 'pending'}`}>
                   {tarefa.status}
                 </span>
                 <div>
                   <strong>{tarefa.titulo}</strong>
-                  <small>{tarefa.responsavel} - {tarefa.frequencia} - {tarefa.cliente}</small>
+                  <small>{tarefa.responsavel || 'Sem responsável'} - {tarefa.frequencia} - {tarefa.cliente}</small>
                 </div>
               </div>
             ))}
@@ -334,51 +309,77 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         <div className="inicio-panel-header">
           <div>
             <span className="inicio-kicker">Equipe</span>
-            <h2>Andamento por usuario</h2>
+            <h2>Andamento por usuário</h2>
           </div>
           <BarChart3 size={20} />
         </div>
 
-        <div className="inicio-user-grid">
-          {tarefasResumo.usuarios.map((usuario) => (
-            <article className="inicio-user-card" key={usuario.usuario}>
-              <div className="inicio-user-head">
-                <div className="inicio-avatar">{usuario.usuario.slice(0, 2).toUpperCase()}</div>
-                <div>
-                  <strong>{usuario.usuario}</strong>
-                  <small>{usuario.done}/{usuario.total} atividades</small>
-                </div>
-                <span>{usuario.pct}%</span>
-              </div>
-
-              <div className="inicio-progress-track">
-                <div style={{ width: `${usuario.pct}%` }} />
-              </div>
-
-              <div className="inicio-period-grid">
-                {periodoConfig.map((periodo) => {
-                  const data = usuario.periodos[periodo.key];
-                  return (
-                    <div className="inicio-period-box" key={periodo.key}>
-                      <span>{periodo.label}</span>
-                      <strong>{data.pct}%</strong>
-                      <small>{data.done}/{data.total}</small>
-                      <div className="inicio-mini-track">
-                        <div style={{ width: `${data.pct}%` }} />
-                      </div>
+        {dashboardError ? (
+          <div className="inicio-empty-row inicio-empty-row--error">
+            Não foi possível carregar o andamento da equipe.
+          </div>
+        ) : summary.usuarios.length === 0 ? (
+          <div className="inicio-empty-row">Nenhum usuário ativo encontrado para acompanhar.</div>
+        ) : (
+          <div className="inicio-user-grid">
+            {summary.usuarios.map((usuario) => {
+              const nomeUsuario = usuario.usuario || 'Usuário sem nome';
+              return (
+                <article className="inicio-user-card" key={usuario.key}>
+                  <div className="inicio-user-head">
+                    <div className="inicio-avatar">{nomeUsuario.slice(0, 2).toUpperCase()}</div>
+                    <div>
+                      <strong>{nomeUsuario}</strong>
+                      <small>{usuario.done}/{usuario.total} atividades concluídas</small>
                     </div>
-                  );
-                })}
-              </div>
+                    <span>{usuario.pct}%</span>
+                  </div>
 
-              {usuario.atrasadas > 0 && (
-                <div className="inicio-user-warning">
-                  <AlertTriangle size={14} />
-                  {usuario.atrasadas} atrasada(s)
-                </div>
-              )}
-            </article>
-          ))}
+                  <div className="inicio-progress-track">
+                    <div style={{ width: `${usuario.pct}%` }} />
+                  </div>
+
+                  <div className="inicio-period-grid">
+                    {PERIODO_CONFIG.map((periodo) => {
+                      const data = usuario.periodos[periodo.key];
+                      return (
+                        <div className="inicio-period-box" key={periodo.key}>
+                          <span>{periodo.label}</span>
+                          <strong>{data.pct}%</strong>
+                          <small>{data.done}/{data.total}</small>
+                          <div className="inicio-mini-track">
+                            <div style={{ width: `${data.pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {usuario.atrasadas > 0 && (
+                    <div className="inicio-user-warning">
+                      <AlertTriangle size={14} />
+                      {quantidade(usuario.atrasadas, 'atividade atrasada', 'atividades atrasadas')}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="inicio-motivation-card">
+        <div
+          className="inicio-motivation-card__backdrop"
+          style={{ '--inicio-motivation-bg': `url(${officeBackground})` } as React.CSSProperties}
+        />
+        <div className="inicio-motivation-card__rays" aria-hidden="true" />
+        <div className="inicio-motivation-card__grain" aria-hidden="true" />
+        <MessageSquareQuote className="inicio-motivation-card__bg-icon" size={150} aria-hidden />
+        <div className="inicio-motivation-card__content">
+          <p className="inicio-motivation-card__eyebrow">Mensagem inspiradora</p>
+          <blockquote>“{fraseMotivacional.texto}”</blockquote>
+          <cite>— {fraseMotivacional.autor}</cite>
         </div>
       </section>
     </div>

@@ -1,0 +1,35 @@
+{
+  "version": "5",
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.109.0": "52f53c2115605b17cc2d286dfa3f2863c9b78f90433a47e536449e01aea10074"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.109.0",
+        "npm:@tanstack/react-query@^5.101.2",
+        "npm:@testing-library/react@^16.3.0",
+        "npm:@types/jszip@^3.4.0",
+        "npm:@types/node@^24.13.2",
+        "npm:@types/react-dom@^19.2.3",
+        "npm:@types/react@^19.2.17",
+        "npm:@vitejs/plugin-react@^6.0.3",
+        "npm:docx-preview@0.4",
+        "npm:glob@^13.0.6",
+        "npm:html2canvas@^1.4.1",
+        "npm:jsdom@^26.1.0",
+        "npm:jspdf@^4.2.1",
+        "npm:jszip@^3.10.1",
+        "npm:lucide-react@^1.23.0",
+        "npm:oxlint@^1.71.0",
+        "npm:pdfjs-dist@^5.6.205",
+        "npm:react-dom@^19.2.7",
+        "npm:react@^19.2.7",
+        "npm:recharts@^3.9.2",
+        "npm:typescript@~6.0.2",
+        "npm:vite@^8.1.1",
+        "npm:vitest@^4.1.0"
+      ]
+    }
+  }
+}

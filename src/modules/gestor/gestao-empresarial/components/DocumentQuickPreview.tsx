@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, ExternalLink, FileText, Image as ImageIcon, Presentation, Sheet, X } from 'lucide-react';
 import type { CompanyDocument } from '../services/gestaoEmpresarialService';
-import { isXmlDocument, XmlFiscalViewer } from '../../documentos/xml/XmlFiscalViewer';
+import { XmlFiscalViewer } from '../../documentos/xml/XmlFiscalViewer';
+import { isXmlDocument } from '../../documentos/xml/xmlFiscalDocument';
 import { documentosService } from '../../documentos/services/documentosService';
 import { renderAsync } from 'docx-preview';
 import {

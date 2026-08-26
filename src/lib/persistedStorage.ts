@@ -14,7 +14,6 @@ const MIGRATION_LEGACY_KEYS = new Set([
   'contabil_calculator_size',
   'contabil_calculator_last_model',
   'arkhen_sidebar_menu_order',
-  'contabil_gestao_empresarial_companies',
   'contabil_atividade_period_tasks_v1',
   'contabil_atividade_period_notes_v1',
   'contabil_atividades_instancias',
@@ -26,6 +25,10 @@ const MIGRATION_LEGACY_KEYS = new Set([
   'arkhen_param_natureza-juridica',
   'contabil_plano_contratacao_empresa:',
   'contabil_config_xml_modelos',
+]);
+
+const DISCARDED_LEGACY_KEYS = new Set([
+  'contabil_gestao_empresarial_companies',
 ]);
 
 const hasPrefix = (key: string, prefixes: string[]) => prefixes.some((prefix) => key.startsWith(prefix));
@@ -187,6 +190,7 @@ const removeFromSupabase = async (key: string, generation = contextGeneration): 
 
 const bootstrap = async () => {
   const generation = contextGeneration;
+  DISCARDED_LEGACY_KEYS.forEach((key) => window.localStorage.removeItem(key));
   const legacyKeys = getBrowserLegacyKeys();
   hydrateFromLegacy(legacyKeys);
 
@@ -298,6 +302,10 @@ const ensureInitialized = () => {
 export const persistedStorage = {
   getItem(key: string): string | null {
     if (typeof window === 'undefined') return null;
+    if (DISCARDED_LEGACY_KEYS.has(key)) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
     ensureInitialized();
     const cached = cache.get(key);
     if (cached !== undefined) return cached;
@@ -305,6 +313,10 @@ export const persistedStorage = {
   },
 
   setItem(key: string, value: string) {
+    if (DISCARDED_LEGACY_KEYS.has(key)) {
+      if (typeof window !== 'undefined') window.localStorage.removeItem(key);
+      return;
+    }
     const generation = contextGeneration;
     const normalized = String(value);
     if (cache.get(key) === normalized && !dirtyKeys.has(key)) return;

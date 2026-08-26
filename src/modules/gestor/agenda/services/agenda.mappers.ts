@@ -10,6 +10,12 @@ import type {
   ResponsavelRow,
   UsuarioAgenda,
 } from './agenda.types';
+import {
+  businessDateTimeIso,
+  toBusinessDateKey,
+  toBusinessTimeKey,
+  toCalendarDateKey,
+} from '../../shared/businessDate';
 
 export function normalizarCor(cor?: string): string {
   if (!cor || typeof cor !== 'string') return '#64748b';
@@ -44,10 +50,10 @@ export const dateRange = (anoInicio: number, mesInicio: number, meses: number) =
   const inicio = new Date(anoInicio, mesInicio, 1);
   const fim = new Date(anoInicio, mesInicio + meses, 1);
   return {
-    inicio: inicio.toISOString(),
-    fim: fim.toISOString(),
-    inicioDia: inicio.toISOString().split('T')[0],
-    fimDia: fim.toISOString().split('T')[0],
+    inicio: businessDateTimeIso(toCalendarDateKey(inicio)),
+    fim: businessDateTimeIso(toCalendarDateKey(fim)),
+    inicioDia: toCalendarDateKey(inicio),
+    fimDia: toCalendarDateKey(fim),
   };
 };
 
@@ -116,8 +122,8 @@ export const toEvento = (row: AgendaEventoRow): Evento => {
     id: row.id,
     titulo: row.titulo,
     descricao: row.descricao || '',
-    data: row.data_inicio.slice(0, 10),
-    hora: data.toISOString().slice(11, 16),
+    data: toBusinessDateKey(data),
+    hora: toBusinessTimeKey(data),
     tipo: row.tipo,
     categoriaId: row.categoria,
     empresaId: row.cliente_id || undefined,

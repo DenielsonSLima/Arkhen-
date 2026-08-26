@@ -5,10 +5,12 @@ import {
   type RotinaAtividade,
   type TarefaGestor,
 } from '../services/rotinasAtividadesService';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
 export const atividadesKeys = {
   all: ['atividades'] as const,
   workspace: () => [...atividadesKeys.all, 'workspace'] as const,
+  modelos: () => [...atividadesKeys.all, 'modelos'] as const,
   permissoes: () => [...atividadesKeys.all, 'permissoes'] as const,
   materializacao: () => [...atividadesKeys.all, 'materializacao'] as const,
 };
@@ -30,7 +32,7 @@ export const useAtividadesWorkspace = () => {
     queryFn: async () => {
       const criadas = await rotinasAtividadesService.materializarRotinas();
       if (criadas > 0) {
-        await queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+        await invalidateAfterMutation(queryClient, 'atividades');
       }
       return criadas;
     },
@@ -40,7 +42,7 @@ export const useAtividadesWorkspace = () => {
   });
 
   const invalidateWorkspace = () => {
-    queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+    return invalidateAfterMutation(queryClient, 'atividades');
   };
 
   const saveRotinaMutation = useMutation({
@@ -63,7 +65,14 @@ export const useAtividadesWorkspace = () => {
     onSuccess: invalidateWorkspace,
   });
 
-  const workspace = workspaceQuery.data || { rotinas: [], tarefas: [], usuarios: [], clientes: [], usuarioAtual: null };
+  const workspace = workspaceQuery.data || {
+    rotinas: [],
+    tarefas: [],
+    usuarios: [],
+    clientes: [],
+    authUserId: null,
+    usuarioAtual: null,
+  };
 
   const actions = useMemo(() => ({
     saveRotina: (rotina: RotinaAtividade) => saveRotinaMutation.mutate(rotina),
@@ -96,10 +105,13 @@ export const useAtividadesWorkspace = () => {
     tarefas: workspace.tarefas,
     usuarios: workspace.usuarios,
     clientes: workspace.clientes,
+    authUserId: workspace.authUserId,
     usuarioAtual: workspace.usuarioAtual,
     podeGerenciar: Boolean(permissoesQuery.data),
     isLoadingPermissoes: permissoesQuery.isLoading,
     isLoading: workspaceQuery.isLoading,
+    isWorkspaceError: workspaceQuery.isError,
+    reloadWorkspace: workspaceQuery.refetch,
     ...actions,
     isSaving: saveTarefaMutation.isPending || saveRotinaMutation.isPending,
     saveError: saveTarefaMutation.error || saveRotinaMutation.error || null,

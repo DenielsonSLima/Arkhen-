@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getAvisoPrevioOpcoes, normalizeAvisoPrevioModo } from './SimuladorRescisao';
+import { getAvisoPrevioOpcoes, normalizeAvisoPrevioModo } from './rescisaoAvisoPrevio';
 
 describe('matriz de aviso-prévio por tipo de rescisão', () => {
   it.each([

@@ -1,0 +1,191 @@
+.signup-upload-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  pointer-events: none;
+  text-align: center;
+}
+
+.signup-upload-label svg {
+  color: #94a3b8;
+}
+
+.signup-upload-preview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.watermarks-upload-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 12px;
+}
+
+.signup-submit-btn {
+  background: var(--color-gold-gradient);
+  border: none;
+  color: #ffffff;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  margin-top: 12px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 15px rgba(197, 146, 53, 0.2);
+}
+
+.signup-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(197, 146, 53, 0.35);
+}
+
+.signup-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.signup-page-footer {
+  margin-top: 32px;
+  border-top: 1px solid #eef1f5;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.signup-secure-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  text-align: left;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .signup-columns-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  
+  .signup-page-card {
+    padding: 32px 20px;
+  }
+  
+  .signup-back-btn {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin-bottom: 16px;
+  }
+}
+
+.signup-developer-signature {
+  position: fixed;
+  bottom: 24px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2; /* Behind the card which is z-index 5 */
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.signup-signature-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.8;
+}
+
+.signup-signature-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.signup-signature-brand {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+.signup-signature-text {
+  font-size: 0.52rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.05em;
+  margin-top: 1px;
+}
+
+/* Password Strength Checklist */
+.password-strength-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fafbfc;
+  border: 1.5px solid #eef1f5;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 6px;
+}
+
+.strength-requirement {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.strength-requirement.fulfilled {
+  color: #34a853; /* System green */
+}
+
+.requirement-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #cbd5e1;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.strength-requirement.fulfilled .requirement-dot {
+  background-color: #34a853;
+  transform: scale(1.15);
+}
+
+@media (max-width: 576px) {
+  .password-strength-container {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}

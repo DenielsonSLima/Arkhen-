@@ -24,6 +24,8 @@ import {
   type CategoriaEventoConfig,
 } from '../services/agenda.service';
 import type { UsuarioAgenda } from '../services/agenda.defaults';
+import { toBusinessDateKey } from '../../shared/businessDate';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
 export type FiltroEvento = string[];
 
@@ -62,7 +64,6 @@ export const agendaKeys = {
 
 export function useAgenda() {
   const queryClient = useQueryClient();
-  const status = 'Em desenvolvimento';
   const hoje = new Date();
   const [anoAtual, setAnoAtual] = useState(hoje.getFullYear());
   const [mesAtual, setMesAtual] = useState(hoje.getMonth());
@@ -71,7 +72,7 @@ export function useAgenda() {
   const [funcionarioFiltro, setFuncionarioFiltro] = useState('todos');
   const [empresaFiltro, setEmpresaFiltro] = useState('todas');
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(
-    hoje.toISOString().split('T')[0],
+    toBusinessDateKey(hoje),
   );
   const [modalAberto, setModalAberto] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
@@ -135,7 +136,7 @@ export function useAgenda() {
   });
 
   const invalidateAgenda = () => {
-    queryClient.invalidateQueries({ queryKey: agendaKeys.all });
+    return invalidateAfterMutation(queryClient, 'agenda');
   };
 
   const salvarEventoMutation = useMutation({
@@ -230,7 +231,7 @@ export function useAgenda() {
   }, [eventosFiltrados, diaSelecionado]);
 
   const proximosEventos = useMemo(() => {
-    const hojeKey = new Date().toISOString().split('T')[0];
+    const hojeKey = toBusinessDateKey();
     return eventosFiltrados
       .filter((e) => e.data >= hojeKey)
       .sort((a, b) => a.data.localeCompare(b.data))
@@ -331,7 +332,6 @@ export function useAgenda() {
   }, [salvarPadroesMutation]);
 
   return {
-    status,
     anoAtual,
     mesAtual,
     filtro,

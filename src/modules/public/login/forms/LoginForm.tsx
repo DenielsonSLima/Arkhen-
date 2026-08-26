@@ -4,10 +4,11 @@ import { useLogin } from '../hooks/useLogin';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
 import { CURRENT_RELEASE } from '../../../../internal/version/release';
+import type { LoginResponse } from '../services/loginService';
 
 interface LoginFormProps {
   loginState: ReturnType<typeof useLogin>;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (profile?: LoginResponse['user']) => void;
   onBackToLanding?: () => void;
 }
 
@@ -37,7 +38,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     const res = await handleLogin(e);
     if (res && res.success) {
-      onLoginSuccess();
+      onLoginSuccess(res.user);
     }
   };
 

@@ -12,6 +12,7 @@ export type StatusAtividadeGestor = 'Pendente' | 'Em andamento' | 'Concluída';
 
 export interface RotinaAtividade {
   id: string;
+  modeloId?: string;
   nome: string;
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade;
@@ -69,6 +70,7 @@ export interface UsuarioAtividade {
 
 interface RotinaAtividadeRow {
   id: string;
+  modelo_id: string | null;
   nome: string;
   categoria: CategoriaAtividade | null;
   frequencia: FrequenciaAtividade | null;
@@ -132,6 +134,7 @@ const getCurrentEmpresaId = async () => {
 
 const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
   id: row.id,
+  modeloId: row.modelo_id || undefined,
   nome: row.nome,
   categoria: row.categoria || 'Cliente',
   frequencia: row.frequencia || 'Personalizada',
@@ -199,7 +202,7 @@ export const rotinasAtividadesService = {
     ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
-        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .select('id,modelo_id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
         .eq('empresa_id', empresaId)
         .eq('ativa', true)
         .order('proxima_execucao', { ascending: true }),
@@ -256,14 +259,37 @@ export const rotinasAtividadesService = {
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
       usuarios,
       clientes: (clientesData || []) as ClienteRotina[],
+      authUserId: authData.user?.id || null,
       usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
     };
   },
 
   async saveRotina(rotina: RotinaAtividade) {
+    if (!isUuid(rotina.modeloId)) {
+      throw new Error('Selecione um modelo ativo da empresa para criar a rotina.');
+    }
+    if (!isUuid(rotina.responsavelConfigUsuarioId) || !rotina.responsavel.trim()) {
+      throw new Error('Selecione um responsável ativo para a rotina.');
+    }
+    if (!rotina.cliente.trim()) {
+      throw new Error('Selecione um cliente ou confirme que a rotina pertence ao escritório.');
+    }
+    if (rotina.cliente !== 'Escritório' && !isUuid(rotina.clienteId)) {
+      throw new Error('Selecione um cliente válido da empresa.');
+    }
+    if (!rotina.proximaExecucao) {
+      throw new Error('Escolha a primeira execução da rotina.');
+    }
+    if (!isUuid(rotina.id) && rotina.proximaExecucao < todayKey()) {
+      throw new Error('A primeira execução não pode estar no passado.');
+    }
+    if (!rotina.checklist.some((item) => item.trim())) {
+      throw new Error('O modelo da rotina precisa fornecer ao menos uma etapa de checklist.');
+    }
     const empresaId = await getCurrentEmpresaId();
     const payload = {
       empresa_id: empresaId,
+      modelo_id: isUuid(rotina.modeloId) ? rotina.modeloId : null,
       nome: rotina.nome,
       categoria: rotina.categoria,
       frequencia: rotina.frequencia,
@@ -274,8 +300,8 @@ export const rotinasAtividadesService = {
         ? rotina.responsavelConfigUsuarioId
         : null,
       cliente_id: isUuid(rotina.clienteId) ? rotina.clienteId : null,
-      cliente_nome: rotina.cliente || 'Escritório',
-      proxima_execucao: rotina.proximaExecucao || todayKey(),
+      cliente_nome: rotina.cliente,
+      proxima_execucao: rotina.proximaExecucao,
       prioridade: rotina.prioridade,
       checklist: rotina.checklist || [],
       observacoes: rotina.observacoes || '',

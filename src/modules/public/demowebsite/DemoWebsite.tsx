@@ -14,6 +14,7 @@ interface QueryLink {
 
 export const DemoWebsite: React.FC = () => {
   const [activeView, setActiveView] = useState<'home' | 'consultas'>('home');
+  const [messageSent, setMessageSent] = useState(false);
 
   useEffect(() => {
     document.title = activeView === 'home' 
@@ -254,11 +255,23 @@ export const DemoWebsite: React.FC = () => {
 
               <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', color: '#0f172a' }}>Mensagem Rápida</h3>
-                <form onSubmit={(e) => { e.preventDefault(); alert('Mensagem demonstrativa enviada com sucesso!'); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    event.currentTarget.reset();
+                    setMessageSent(true);
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                >
                   <input type="text" placeholder="Seu Nome" required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                   <input type="email" placeholder="Seu E-mail" required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                   <textarea placeholder="Como podemos ajudar?" required rows={3} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'none' }}></textarea>
                   <button type="submit" className="demo-btn-primary" style={{ border: 'none', cursor: 'pointer', textAlign: 'center', justifyContent: 'center' }}>Enviar Mensagem</button>
+                  {messageSent && (
+                    <p role="status" style={{ margin: 0, color: '#166534', fontWeight: 600 }}>
+                      Mensagem demonstrativa enviada com sucesso.
+                    </p>
+                  )}
                 </form>
               </div>
             </div>

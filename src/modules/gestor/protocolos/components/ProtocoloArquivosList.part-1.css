@@ -1,0 +1,420 @@
+.protocolo-files-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.protocolo-operation-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff7f7;
+  color: #991b1b;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.protocolo-operation-error button {
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.protocolo-files-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.protocolo-files-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+.protocolo-files-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.protocolo-files-select-all input,
+.protocolo-file-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-gold-primary);
+}
+.protocolo-files-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.protocolo-files-actions button,
+.protocolo-file-actions button,
+.protocolo-upload-button,
+.protocolo-file-manage-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+.protocolo-upload-button {
+  min-height: 30px;
+  padding: 0 8px;
+}
+.protocolo-upload-button input {
+  display: none;
+}
+.protocolo-files-actions button {
+  min-height: 34px;
+  padding: 0 11px;
+}
+.protocolo-files-actions button:not(:disabled):hover,
+.protocolo-file-actions button:not(:disabled):hover,
+.protocolo-upload-button:hover,
+.protocolo-file-manage-actions button:not(:disabled):hover {
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-dark);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+.protocolo-files-actions button:disabled,
+.protocolo-file-actions button:disabled,
+.protocolo-file-manage-actions button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.protocolo-files-layout {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
+}
+.protocolo-files-layout.has-preview {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+.protocolo-files-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.protocolo-files-table-shell,
+.protocolo-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.protocolo-flow-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+.protocolo-flow-tab {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px;
+  border: 1px solid #e2e8f0; border-radius: 999px; background: #ffffff; color: #64748b;
+  font-size: 0.72rem; font-weight: 900; white-space: nowrap; cursor: pointer;
+  justify-content: center;
+  min-width: 0;
+}
+.protocolo-flow-tab.active {
+  border-color: var(--color-gold-primary); background: #fffbeb; color: var(--color-gold-dark); box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+.protocolo-flow-tab strong {
+  min-width: 20px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 6px;
+  margin-left: auto;
+}
+.protocolo-flow-tab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.protocolo-file-category {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.protocolo-file-category-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.protocolo-file-category-title strong { color: #0f172a; font-size: 0.82rem; }
+.protocolo-file-category-title span { color: #64748b; font-size: 0.68rem; font-weight: 900; }
+.protocolo-file-table-head {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 36px minmax(130px, 1.6fr) minmax(72px, 0.8fr) minmax(78px, 0.9fr) minmax(86px, 0.9fr) minmax(96px, 0.9fr) minmax(84px, 0.8fr) minmax(78px, 0.8fr) 74px;
+  gap: 10px;
+  padding: 0 10px 4px 10px;
+  color: #94a3b8;
+  font-size: 0.63rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.protocolo-file-row {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 36px minmax(130px, 1.6fr) minmax(72px, 0.8fr) minmax(78px, 0.9fr) minmax(86px, 0.9fr) minmax(96px, 0.9fr) minmax(84px, 0.8fr) minmax(78px, 0.8fr) 74px;
+  align-items: center;
+  gap: 10px;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background-color var(--transition-normal);
+  cursor: pointer;
+}
+
+.protocolo-file-row:hover {
+  border-color: #dbeafe;
+  background: #eff6ff;
+}
+
+.protocolo-file-row:focus-visible {
+  outline: 2px solid var(--color-gold-primary);
+  outline-offset: 2px;
+}
+.protocolo-file-row.active {
+  border-color: var(--color-gold-primary);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+.protocolo-file-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+.protocolo-file-icon.type-excel {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+.protocolo-file-icon.type-word {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+.protocolo-file-icon.type-txt {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+}
+.protocolo-file-meta {
+  min-width: 0;
+}
+.protocolo-file-meta strong {
+  display: block; color: #0f172a; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: normal; word-break: break-word;
+}
+.protocolo-file-meta span {
+  display: block; margin-top: 2px; color: #64748b; font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: normal; word-break: break-word;
+}
+.protocolo-file-type,
+.protocolo-file-status,
+.protocolo-review-status,
+.protocolo-file-size {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.protocolo-file-status,
+.protocolo-review-status {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+}
+.protocolo-date-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.protocolo-file-cell {
+  min-width: 0;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.protocolo-empty-state {
+  min-height: 120px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.75rem;
+}
+.protocolo-date-cell small {
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+.protocolo-date-cell em {
+  color: #94a3b8;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.protocolo-completed-by {
+  white-space: normal;
+}
+.protocolo-file-status.available {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+.protocolo-file-status.waiting {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+}
+.protocolo-review-status.pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+}
+.protocolo-review-status.approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+.protocolo-review-status.rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+.protocolo-file-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 30px);
+  gap: 6px;
+  justify-content: flex-end;
+  min-width: 66px;
+}
+.protocolo-file-actions button,
+.protocolo-file-actions .protocolo-upload-button {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+.protocolo-file-actions .danger,
+.protocolo-file-manage-actions .danger {
+  border-color: rgba(239, 68, 68, 0.22);
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.04);
+}
+.protocolo-upload-button.primary {
+  min-height: 34px;
+  background: var(--color-gold-gradient);
+  border-color: transparent;
+  color: #ffffff;
+}
+.protocolo-file-preview {
+  min-width: 0;
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 260px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.protocolo-preview-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.protocolo-preview-top > span {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(197, 146, 53, 0.1);
+  color: var(--color-gold-dark);
+}
+.protocolo-preview-top strong,
+.protocolo-preview-top small {
+  display: block;
+}
+.protocolo-preview-top strong {
+  color: #0f172a;
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+.protocolo-preview-top small {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.protocolo-preview-canvas {
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+  text-align: center;
+}
+.protocolo-preview-canvas span {
+  color: #0f172a;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+.protocolo-preview-canvas small {
+  max-width: 220px;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+.protocolo-file-preview dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}

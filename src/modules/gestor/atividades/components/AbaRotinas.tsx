@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Repeat, Trash2, Edit, X, ClipboardCheck } from 'lucide-react';
+import { RotinaProgramadaForm } from '../forms/RotinaProgramadaForm';
+import {
+  blankRotinaProgramadaForm,
+  buildRotinaFromForm,
+  rotinaToProgramadaForm,
+  validateRotinaProgramadaForm,
+} from '../forms/rotinaProgramadaFormModel';
+import { useAtividadesModelos } from '../hooks/useAtividadesModelos';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import {
   primaryBtnStyle,
@@ -22,39 +30,9 @@ import {
   drawerContentStyle,
   drawerHeaderStyle,
   closeBtnStyle,
-  formStyle,
-  fieldStyle,
-  rowStyle,
-  labelStyle,
-  inputStyle,
-  selectStyle,
-  textareaStyle,
-  drawerActionsStyle,
-  submitBtnStyle,
   cancelBtnStyle,
 } from './AbaRotinas.styles';
-import {
-  todayKey,
-  type CategoriaAtividade,
-  type FrequenciaAtividade,
-  type PrioridadeAtividade,
-  type RotinaAtividade,
-} from '../services/rotinasAtividadesService';
-
-const blankRotina = (): RotinaAtividade => ({
-  id: '',
-  nome: '',
-  categoria: 'Interna',
-  frequencia: 'Diária',
-  intervaloDias: 1,
-  responsavel: '',
-  cliente: 'Escritório',
-  proximaExecucao: todayKey(),
-  prioridade: 'Média',
-  ativa: true,
-  checklist: [''],
-  observacoes: '',
-});
+import type { RotinaAtividade } from '../services/rotinasAtividadesService';
 
 type FiltroRotinaTab = 'todas' | 'diarias' | 'semanais' | 'mensais' | 'empresa';
 
@@ -64,45 +42,48 @@ interface AbaRotinasProps {
 
 export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => {
   const { rotinas, usuarios, clientes, saveRotinaAsync, deleteRotina, isSaving } = useAtividadesWorkspace();
-  const [form, setForm] = useState<RotinaAtividade>(blankRotina());
+  const {
+    modelos,
+    isLoadingModelos,
+    isModelosError,
+    reloadModelos,
+  } = useAtividadesModelos();
+  const [form, setForm] = useState(blankRotinaProgramadaForm);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FiltroRotinaTab>('todas');
   const [formError, setFormError] = useState('');
 
   const handleEditClick = (rotina: RotinaAtividade) => {
     setFormError('');
-    setForm(rotina);
+    setForm(rotinaToProgramadaForm(rotina));
     setIsDrawerOpen(true);
   };
 
   const handleCreateClick = () => {
     setFormError('');
-    setForm(blankRotina());
+    setForm(blankRotinaProgramadaForm());
     setIsDrawerOpen(true);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.nome.trim()) return;
-    const checklist = form.checklist.map((item) => item.trim()).filter(Boolean);
+    const validationError = validateRotinaProgramadaForm(form);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+    if (!modelos.some((modelo) => modelo.id === form.modeloId)) {
+      setFormError('O modelo selecionado não está mais disponível. Recarregue e escolha outro modelo.');
+      return;
+    }
     setFormError('');
     try {
-      await saveRotinaAsync({
-        ...form,
-        responsavelUserId: usuarios.find((usuario) => usuario.configUsuarioId === form.responsavelConfigUsuarioId)?.userId,
-        id: form.id || `rotina-${Date.now()}`,
-        checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
-        intervaloDias: form.frequencia === 'Personalizada' ? Math.max(1, form.intervaloDias) : form.intervaloDias,
-      });
-      setForm(blankRotina());
+      await saveRotinaAsync(buildRotinaFromForm(form));
+      setForm(blankRotinaProgramadaForm());
       setIsDrawerOpen(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Não foi possível salvar a rotina.');
     }
-  };
-
-  const setChecklistText = (value: string) => {
-    setForm({ ...form, checklist: value.split('\n') });
   };
 
   // Filtragem com base nas abas
@@ -189,6 +170,9 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
                   <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
                     Frequência: <strong>{rotina.frequencia}</strong>
                   </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    Modelo: <strong>{modelos.find((modelo) => modelo.id === rotina.modeloId)?.nome || 'Não vinculado'}</strong>
+                  </span>
                 </div>
 
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
@@ -253,178 +237,43 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
       {/* Gaveta Lateral Flutuante (Quick Drawer) do Formulário */}
       {isDrawerOpen && (
         <div style={drawerOverlayStyle} onClick={() => setIsDrawerOpen(false)}>
-          <div style={drawerContentStyle} onClick={(e) => e.stopPropagation()}>
+          <div
+            style={drawerContentStyle}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rotina-drawer-title"
+          >
             <div style={drawerHeaderStyle}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 id="rotina-drawer-title" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Repeat size={18} color="var(--color-gold-primary)" />
                 {form.id ? 'Editar rotina programada' : 'Nova rotina programada'}
               </h3>
-              <button onClick={() => setIsDrawerOpen(false)} style={closeBtnStyle} type="button">
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                style={closeBtnStyle}
+                type="button"
+                aria-label="Fechar formulário de rotina"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={formStyle}>
-              {formError && (
-                <div className="error-banner" role="alert" style={{ padding: '10px 12px' }}>
-                  {formError}
-                </div>
-              )}
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Nome da rotina</label>
-                <input
-                  value={form.nome}
-                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  placeholder="Ex: Fechamento Fiscal Mensal"
-                  required
-                  style={inputStyle}
-                />
-              </div>
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Categoria</label>
-                  <select
-                    value={form.categoria}
-                    onChange={(e) => setForm({ ...form, categoria: e.target.value as CategoriaAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Interna">Interna</option>
-                    <option value="Cliente">Cliente</option>
-                    <option value="Fiscal">Fiscal</option>
-                    <option value="Folha">Folha</option>
-                    <option value="Contábil">Contábil</option>
-                    <option value="Controle">Controle</option>
-                  </select>
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Recorrência</label>
-                  <select
-                    value={form.frequencia}
-                    onChange={(e) => setForm({ ...form, frequencia: e.target.value as FrequenciaAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Diária">Diária</option>
-                    <option value="Semanal">Semanal</option>
-                    <option value="Quinzenal">Quinzenal</option>
-                    <option value="Mensal">Mensal</option>
-                    <option value="Personalizada">A cada X dias</option>
-                  </select>
-                </div>
-              </div>
-
-              {form.frequencia === 'Personalizada' && (
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Intervalo em dias</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.intervaloDias}
-                    onChange={(e) => setForm({ ...form, intervaloDias: Number(e.target.value) })}
-                    style={inputStyle}
-                  />
-                </div>
-              )}
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Responsável Padrão</label>
-                  <select
-                    value={form.responsavelConfigUsuarioId || ''}
-                    onChange={(e) => {
-                      const usuario = usuarios.find((item) => item.configUsuarioId === e.target.value);
-                      setForm({
-                        ...form,
-                        responsavel: usuario?.nome || '',
-                        responsavelUserId: usuario?.userId,
-                        responsavelConfigUsuarioId: usuario?.configUsuarioId,
-                      });
-                    }}
-                    style={selectStyle}
-                  >
-                    <option value="">Selecione</option>
-                    {usuarios.map((usuario) => (
-                      <option key={usuario.configUsuarioId} value={usuario.configUsuarioId}>{usuario.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Cliente / Vínculo</label>
-                  <select
-                    value={form.clienteId || ''}
-                    onChange={(e) => {
-                      const cliente = clientes.find((item) => item.id === e.target.value);
-                      setForm({
-                        ...form,
-                        clienteId: cliente?.id,
-                        cliente: cliente?.nome || 'Escritório',
-                      });
-                    }}
-                    style={selectStyle}
-                  >
-                    <option value="">Escritório</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Próxima Execução</label>
-                  <input
-                    type="date"
-                    value={form.proximaExecucao}
-                    onChange={(e) => setForm({ ...form, proximaExecucao: e.target.value })}
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Prioridade</label>
-                  <select
-                    value={form.prioridade}
-                    onChange={(e) => setForm({ ...form, prioridade: e.target.value as PrioridadeAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Baixa">Baixa</option>
-                    <option value="Média">Média</option>
-                    <option value="Alta">Alta</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Etapas do Checklist (Uma por linha)</label>
-                <textarea
-                  value={form.checklist.join('\n')}
-                  onChange={(e) => setChecklistText(e.target.value)}
-                  placeholder="Ex: Conciliar caixa&#10;Gerar guias&#10;Enviar e-mail para cliente"
-                  rows={4}
-                  style={textareaStyle}
-                />
-              </div>
-
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Observações / Instruções</label>
-                <textarea
-                  value={form.observacoes}
-                  onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                  placeholder="Instruções e links de apoio..."
-                  rows={2}
-                  style={textareaStyle}
-                />
-              </div>
-
-              <div style={drawerActionsStyle}>
-                <button onClick={() => setIsDrawerOpen(false)} style={cancelBtnStyle} type="button">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isSaving} style={submitBtnStyle}>
-                  {isSaving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar rotina'}
-                </button>
-              </div>
-            </form>
+            <RotinaProgramadaForm
+              values={form}
+              onChange={setForm}
+              onSubmit={handleSubmit}
+              onCancel={() => setIsDrawerOpen(false)}
+              modelos={modelos}
+              usuarios={usuarios}
+              clientes={clientes}
+              isLoadingModelos={isLoadingModelos}
+              isModelosError={isModelosError}
+              isSaving={isSaving}
+              formError={formError}
+              onRetryModelos={() => void reloadModelos()}
+              onConfigureModels={onConfigureModels}
+            />
           </div>
         </div>
       )}

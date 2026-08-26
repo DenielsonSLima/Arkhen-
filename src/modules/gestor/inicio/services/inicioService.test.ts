@@ -12,36 +12,46 @@ vi.mock('../../../../lib/supabase', () => ({
 
 import { supabase } from '../../../../lib/supabase';
 import { inicioService } from './inicioService';
+import { EMPTY_INICIO_DASHBOARD_SUMMARY } from './inicioDashboardSummary';
 import { buildInicioSetupStatus } from './inicioSetupService';
 
 describe('inicioService.getDashboardData', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(supabase.rpc).mockResolvedValue({ data: 'empresa-ativa', error: null } as never);
   });
 
-  it('usa a contagem real de clientes ativos visível pelas políticas RLS', async () => {
-    const statusEq = vi.fn().mockResolvedValue({ count: 3, error: null });
-    const empresaEq = vi.fn().mockReturnValue({ eq: statusEq });
-    const select = vi.fn().mockReturnValue({ eq: empresaEq });
-    vi.mocked(supabase.from).mockReturnValue({ select } as never);
-
-    await expect(inicioService.getDashboardData()).resolves.toEqual({
+  it('busca o resumo pronto somente pela RPC tenant-safe', async () => {
+    const dashboard = {
       stats: { clientesAtivos: 3 },
-    });
-    expect(supabase.from).toHaveBeenCalledWith('clientes');
-    expect(supabase.rpc).toHaveBeenCalledWith('current_empresa_id');
-    expect(select).toHaveBeenCalledWith('id', { count: 'exact', head: true });
-    expect(empresaEq).toHaveBeenCalledWith('empresa_id', 'empresa-ativa');
-    expect(statusEq).toHaveBeenCalledWith('status', 'Ativa');
+      summary: {
+        ...EMPTY_INICIO_DASHBOARD_SUMMARY,
+        alertas: {
+          ...EMPTY_INICIO_DASHBOARD_SUMMARY.alertas,
+          itens: [{
+            id: 'doc-1',
+            empresaNome: 'Cliente A',
+            tipo: 'documento' as const,
+            nome: 'Contrato',
+            dataValidade: '30/08/2026',
+            diasRestantes: 4,
+          }],
+        },
+      },
+    };
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: dashboard, error: null } as never);
+
+    await expect(inicioService.getDashboardData()).resolves.toEqual(dashboard);
+    expect(supabase.rpc).toHaveBeenCalledWith('obter_resumo_inicio');
+    expect(supabase.from).not.toHaveBeenCalled();
+    await expect(inicioService.getVencimentosProximos()).resolves.toEqual(
+      dashboard.summary.alertas.itens,
+    );
   });
 
-  it('não mascara falhas de leitura como zero clientes', async () => {
-    const statusEq = vi.fn().mockResolvedValue({ count: null, error: { message: 'acesso negado' } });
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({ eq: statusEq }),
-      }),
+  it('não mascara falhas da RPC como um resumo vazio', async () => {
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: null,
+      error: { message: 'acesso negado' },
     } as never);
 
     await expect(inicioService.getDashboardData()).rejects.toThrow('acesso negado');

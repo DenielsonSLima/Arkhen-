@@ -31,7 +31,7 @@ export const usePublicSharedDownloads = ({
       for (const id of documentIds) {
         const item = documents.find((doc) => doc.id === id);
         if (!item) continue;
-        const url = shareData.isLegacy ? shareData.legacyUrl : documentUrls[item.id];
+        const url = documentUrls[item.id];
         if (!url) continue;
 
         try {
@@ -72,7 +72,7 @@ export const usePublicSharedDownloads = ({
     try {
       const itemsToZip = documentIds.map((id) => {
         const item = documents.find((doc) => doc.id === id);
-        const url = shareData.isLegacy ? shareData.legacyUrl : documentUrls[id];
+        const url = documentUrls[id];
         return {
           name: item?.documento || 'documento',
           url: url || '',

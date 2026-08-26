@@ -19,8 +19,7 @@ export const useConformidadeRealtime = (enabled = true) => {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'conformidade_obrigacoes' }, invalidate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos_solicitacoes' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
     );
 

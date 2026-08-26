@@ -1,0 +1,118 @@
+.usuario-add-interval {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  padding: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition-normal);
+}
+
+.usuario-add-interval:hover {
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-primary);
+  background: #fffdf9;
+}
+
+/* Access Restrict Message */
+.usuario-access-message {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-dark);
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: var(--transition-normal);
+}
+
+.usuario-access-message:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+
+/* Modal Footer Actions */
+.usuario-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #edf1f6;
+  background: #fafbfc;
+  flex-shrink: 0;
+}
+
+/* Responsive Handling */
+@media (max-width: 768px) {
+  .usuario-modal-columns {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .usuario-access-presets {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Profile Permissions Info Block */
+.usuario-perfil-permissoes-info {
+  background: #fafbfc;
+  border: 1px solid #e9eff6;
+  border-radius: 12px;
+  margin-top: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.usuario-perfil-info-header {
+  margin-bottom: 6px;
+}
+
+.usuario-perfil-info-header h5 {
+  color: #172033;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin: 2px 0 0 0;
+}
+
+.usuario-perfil-info-desc {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.usuario-perfil-permissoes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.usuario-permissao-badge {
+  background: #ffffff;
+  border: 1px solid #dce3ec;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.usuario-permissao-empty {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-style: italic;
+}
