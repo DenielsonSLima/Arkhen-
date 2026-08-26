@@ -8,7 +8,7 @@ import {
 
 describe('validatePassword', () => {
   it.each([
-    ['a1', 'menos de seis caracteres'],
+    ['abcde1', 'menos de oito caracteres'],
     ['abcdef', 'nenhum número'],
     ['123456', 'nenhuma letra'],
   ])('rejeita uma senha com %s (%s)', (password) => {
@@ -16,7 +16,7 @@ describe('validatePassword', () => {
   });
 
   it.each([
-    'abcde1',
+    'abcde123',
     'Senha123',
   ])('aceita a senha válida %s', (password) => {
     expect(validatePassword(password)).toBeNull();

@@ -148,7 +148,7 @@ export const PasswordResetForm = ({
               </div>
             </div>
 
-            <p className="card-subtitle">Use pelo menos 6 caracteres, incluindo uma letra e um número.</p>
+            <p className="card-subtitle">Use pelo menos 8 caracteres, incluindo uma letra e um número.</p>
 
             <button type="submit" className="btn-primary" disabled={isSubmitting}>
               <ShieldCheck size={18} />

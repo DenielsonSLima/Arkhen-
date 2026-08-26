@@ -24,7 +24,12 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   companyGroups = [],
   handleToggleStep,
 }) => {
-  const { rotinas, tarefas, usuarios, saveRotinaAsync, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
+  const {
+    rotinas, tarefas, usuarios, saveRotinaAsync, saveTarefaAsync, deleteTarefa,
+    updateTarefa, toggleChecklist, isSaving, saveError, authUserId, podeGerenciar,
+    reviewTarefaAsync, reopenTarefaAsync, revisores, isLoading, isWorkspaceError,
+    workspaceError, materializationError, reloadWorkspace,
+  } = useAtividadesWorkspace();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('semana');
   const [dataBase, setDataBase] = useState(todayKey());
@@ -158,6 +163,28 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
       });
   };
 
+  if (isLoading) {
+    return <div className="submodule-content-card" role="status">Carregando tarefas e responsáveis...</div>;
+  }
+
+  if (isWorkspaceError) {
+    const message = workspaceError instanceof Error
+      ? workspaceError.message
+      : 'Não foi possível carregar ou gerar as tarefas da competência.';
+    return (
+      <div className="submodule-content-card" role="alert">
+        <h3>Não foi possível carregar a equipe</h3>
+        <p>{message}</p>
+        {materializationError && (
+          <p>A geração das rotinas falhou; nenhum resultado foi apresentado como zero.</p>
+        )}
+        <button type="button" className="btn-save-settings" onClick={() => void reloadWorkspace()}>
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
   if (!selectedUser) {
     return (
       <UserCardsGrid
@@ -203,6 +230,12 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
             taskSummary={taskSummary}
             toggleChecklist={toggleChecklist}
             updateTarefa={updateTarefa}
+            isSaving={isSaving}
+            saveError={saveError instanceof Error ? saveError : null}
+            authUserId={authUserId}
+            canManage={podeGerenciar}
+            reviewTarefaAsync={reviewTarefaAsync}
+            reopenTarefaAsync={reopenTarefaAsync}
           />
         </>
       ) : (
@@ -226,6 +259,8 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
         onClose={() => setModalNovaTarefaAberto(false)}
         onSalvar={handleCriarTarefaManual}
         usuarioNome={selectedUser.nome}
+        usuarioId={selectedUser.userId}
+        revisores={revisores}
       />
     </div>
   );

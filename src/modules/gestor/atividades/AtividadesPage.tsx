@@ -51,7 +51,14 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
   const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
   const { activateModule } = useInternalTabs();
-  const { podeGerenciar, isLoadingPermissoes, rotinas } = useAtividadesWorkspace();
+  const {
+    podeGerenciar,
+    isLoadingPermissoes,
+    rotinas,
+    isWorkspaceError,
+    workspaceError,
+    reloadWorkspace,
+  } = useAtividadesWorkspace();
   const responsaveisPorGrupo = React.useMemo(
     () => buildResponsaveisPorGrupo(rotinas),
     [rotinas],
@@ -68,6 +75,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     setGlobalFilter,
     companyGroups,
     isLoading,
+    loadError,
     selectedGroup,
     setSelectedGroup,
     fechamentoMeta,
@@ -84,6 +92,20 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   });
 
   useAtividadesRealtime(true, refresh);
+
+  if (isWorkspaceError) {
+    return (
+      <div className="submodule-content-card" role="alert">
+        <h3>Não foi possível preparar Atividades</h3>
+        <p>{workspaceError instanceof Error
+          ? workspaceError.message
+          : 'A carga ou a geração das rotinas falhou. Nenhum resultado foi apresentado como zero.'}</p>
+        <button type="button" className="btn-save-settings" onClick={() => void reloadWorkspace()}>
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
   if (activeView === 'fechamentos' && selectedGroup) {
     return (
@@ -111,6 +133,17 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
           />
         );
       case 'fechamentos':
+        if (loadError) {
+          return (
+            <div className="submodule-content-card" role="alert">
+              <h3>Não foi possível carregar os fechamentos</h3>
+              <p>Os dados não foram substituídos por zero. Verifique seu acesso ou a conexão e tente novamente.</p>
+              <button type="button" className="btn-save-settings" onClick={() => void refresh()}>
+                Tentar novamente
+              </button>
+            </div>
+          );
+        }
         return (
           <AtividadesPorEmpresa
             globalFilter={globalFilter}

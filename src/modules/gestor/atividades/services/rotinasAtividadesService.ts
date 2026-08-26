@@ -1,14 +1,16 @@
 import { supabase } from '../../../../lib/supabase';
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
-import { activityWriteError, isMissingRpcFunctionError } from './rpcCompatibility';
+import { activityWriteError } from './rpcCompatibility';
 import { toLocalDateKey } from '../utils/localDateKey';
+import type { CompletionEvidence } from '../utils/completionEvidence';
 
 export { toLocalDateKey } from '../utils/localDateKey';
 
 export type FrequenciaAtividade = 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Personalizada';
 export type CategoriaAtividade = 'Interna' | 'Cliente' | 'Fiscal' | 'Folha' | 'Contábil' | 'Controle';
 export type PrioridadeAtividade = 'Baixa' | 'Média' | 'Alta';
-export type StatusAtividadeGestor = 'Pendente' | 'Em andamento' | 'Concluída';
+export type StatusAtividadeGestor = 'Pendente' | 'Em andamento' | 'Aguardando revisão' | 'Concluída';
+export type RevisaoStatusAtividade = 'Não necessária' | 'Pendente' | 'Aprovada' | 'Rejeitada';
 
 export interface RotinaAtividade {
   id: string;
@@ -63,6 +65,14 @@ export interface TarefaGestor {
   observacaoFalta?: string;
   prazoLegal?: string;
   prazoInterno?: string;
+  revisorUserId?: string;
+  revisorNome?: string;
+  revisaoStatus?: RevisaoStatusAtividade;
+  evidencia?: string;
+  justificativaConclusao?: string;
+  conclusaoSolicitadaEm?: string;
+  revisadoEm?: string;
+  concluidoEm?: string;
   bloqueada?: boolean;
   motivoBloqueio?: MotivoBloqueioAtividade;
   bloqueadaDesde?: string;
@@ -114,6 +124,16 @@ interface TarefaGestorRow {
   notas: string | null;
   data_hora_conclusao: string | null;
   observacao_falta: string | null;
+  prazo_legal: string | null;
+  prazo_interno: string | null;
+  revisor_user_id: string | null;
+  revisor_nome: string | null;
+  revisao_status: RevisaoStatusAtividade | null;
+  evidencia: string | null;
+  justificativa_conclusao: string | null;
+  conclusao_solicitada_em: string | null;
+  revisado_em: string | null;
+  concluido_em: string | null;
 }
 
 export const RESPONSAVEIS_ATIVIDADES: string[] = [];
@@ -186,6 +206,16 @@ const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   notas: row.notas || '',
   dataHoraConclusao: row.data_hora_conclusao || undefined,
   observacaoFalta: row.observacao_falta || undefined,
+  prazoLegal: row.prazo_legal || row.vencimento || undefined,
+  prazoInterno: row.prazo_interno || row.vencimento || undefined,
+  revisorUserId: row.revisor_user_id || undefined,
+  revisorNome: row.revisor_nome || undefined,
+  revisaoStatus: row.revisao_status || 'Não necessária',
+  evidencia: row.evidencia || undefined,
+  justificativaConclusao: row.justificativa_conclusao || undefined,
+  conclusaoSolicitadaEm: row.conclusao_solicitada_em || undefined,
+  revisadoEm: row.revisado_em || undefined,
+  concluidoEm: row.concluido_em || undefined,
 });
 
 export const rotinasAtividadesService = {
@@ -214,6 +244,7 @@ export const rotinasAtividadesService = {
       { data: tarefasData, error: tarefasError },
       { data: usuariosData, error: usuariosError },
       { data: clientesData, error: clientesError },
+      { data: revisoresData, error: revisoresError },
     ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
@@ -223,7 +254,7 @@ export const rotinasAtividadesService = {
         .order('proxima_execucao', { ascending: true }),
       supabase
         .from('atividades_tarefas')
-        .select('id,rotina_id,cliente_id,titulo,categoria,frequencia,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta')
+        .select('id,rotina_id,cliente_id,titulo,categoria,frequencia,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,vencimento,prioridade,status,origem,checklist,notas,data_hora_conclusao,observacao_falta,prazo_legal,prazo_interno,revisor_user_id,revisor_nome,revisao_status,evidencia,justificativa_conclusao,conclusao_solicitada_em,revisado_em,concluido_em')
         .eq('empresa_id', empresaId)
         .eq('ativo', true)
         .order('vencimento', { ascending: true }),
@@ -239,12 +270,14 @@ export const rotinasAtividadesService = {
         .eq('empresa_id', empresaId)
         .eq('status', 'Ativa')
         .order('nome', { ascending: true }),
+      supabase.rpc('listar_revisores_atividade'),
     ]);
 
     if (rotinasError) throw rotinasError;
     if (tarefasError) throw tarefasError;
     if (usuariosError) throw usuariosError;
     if (clientesError) throw clientesError;
+    if (revisoresError) throw revisoresError;
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
@@ -273,6 +306,15 @@ export const rotinasAtividadesService = {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
       usuarios,
+      revisores: ((revisoresData || []) as Array<{
+        config_usuario_id: string;
+        user_id: string;
+        nome: string;
+      }>).map((usuario) => ({
+        configUsuarioId: usuario.config_usuario_id,
+        userId: usuario.user_id,
+        nome: usuario.nome,
+      })),
       clientes: ((clientesData || []) as ClienteRotinaRow[]).map(toClienteRotina),
       authUserId: authData.user?.id || null,
       usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
@@ -356,79 +398,75 @@ export const rotinasAtividadesService = {
   },
 
   async saveTarefa(tarefa: TarefaGestor) {
-    const empresaId = await getCurrentEmpresaId();
-    let responsavelUserId = tarefa.responsavelUserId;
-    if (!isUuid(responsavelUserId) && tarefa.origem === 'Usuario') {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      responsavelUserId = authData.user?.id;
-    }
-    const rpcPayload = {
+    const tarefaId = isUuid(tarefa.id) ? tarefa.id : null;
+    const rpcPayload: Record<string, unknown> = {
       rotina_id: isUuid(tarefa.rotinaId) ? tarefa.rotinaId : null,
       cliente_id: isUuid(tarefa.clienteId) ? tarefa.clienteId : null,
       titulo: tarefa.titulo,
       categoria: tarefa.categoria,
       frequencia: tarefa.frequencia || 'Única',
-      responsavel_nome: tarefa.responsavel || '',
-      responsavel_user_id: isUuid(responsavelUserId) ? responsavelUserId : null,
       responsavel_config_usuario_id: isUuid(tarefa.responsavelConfigUsuarioId)
         ? tarefa.responsavelConfigUsuarioId
         : null,
       cliente_nome: tarefa.cliente || 'Escritório',
       vencimento: tarefa.vencimento || todayKey(),
       prioridade: tarefa.prioridade,
-      status: tarefa.status,
       origem: tarefa.origem,
-      checklist: tarefa.checklist || [],
       notas: tarefa.notas || '',
       observacao_falta: tarefa.observacaoFalta || null,
+      prazo_legal: tarefa.prazoLegal || tarefa.vencimento || todayKey(),
+      prazo_interno: tarefa.prazoInterno || tarefa.vencimento || todayKey(),
+      revisor_user_id: isUuid(tarefa.revisorUserId) ? tarefa.revisorUserId : null,
       ativo: true,
     };
+    if (!tarefaId) rpcPayload.checklist = tarefa.checklist || [];
 
-    const tarefaId = isUuid(tarefa.id) ? tarefa.id : null;
-    const { error: rpcError } = await supabase.rpc('salvar_atividade_tarefa', {
+    const { error: rpcError } = await supabase.rpc('salvar_tarefa_operacional', {
       p_tarefa_id: tarefaId,
       p_payload: rpcPayload,
     });
     if (!rpcError) return this.getWorkspace();
-    if (!isMissingRpcFunctionError(rpcError)) {
-      throw activityWriteError('Não foi possível salvar a tarefa', rpcError);
-    }
-
-    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
-    const legacyPayload = {
-      empresa_id: empresaId,
-      ...rpcPayload,
-      data_hora_conclusao: tarefa.status === 'Concluída' ? new Date().toISOString() : null,
-    };
-
-    const request = tarefaId
-      ? supabase.from('atividades_tarefas').update(legacyPayload).eq('id', tarefaId).eq('empresa_id', empresaId)
-      : supabase.from('atividades_tarefas').insert(legacyPayload);
-
-    const { error } = await request;
-    if (error) throw activityWriteError('Não foi possível salvar a tarefa', error);
-    return this.getWorkspace();
+    throw activityWriteError('Não foi possível salvar a tarefa', rpcError);
   },
 
   async deleteTarefa(id: string) {
     if (!isUuid(id)) return this.getWorkspace();
-    const { error: rpcError } = await supabase.rpc('salvar_atividade_tarefa', {
+    const { error: rpcError } = await supabase.rpc('salvar_tarefa_operacional', {
       p_tarefa_id: id,
       p_payload: { ativo: false },
     });
-    if (!rpcError) return this.getWorkspace();
-    if (!isMissingRpcFunctionError(rpcError)) {
-      throw activityWriteError('Não foi possível arquivar a tarefa', rpcError);
-    }
-
-    const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase
-      .from('atividades_tarefas')
-      .update({ ativo: false })
-      .eq('id', id)
-      .eq('empresa_id', empresaId);
-    if (error) throw activityWriteError('Não foi possível arquivar a tarefa', error);
+    if (rpcError) throw activityWriteError('Não foi possível arquivar a tarefa', rpcError);
     return this.getWorkspace();
+  },
+
+  async updateTarefaProgress(id: string, patch: Partial<TarefaGestor>) {
+    const payload: Record<string, unknown> = {};
+    if ('notas' in patch) payload.notas = patch.notas || '';
+    if ('observacaoFalta' in patch) payload.observacao_falta = patch.observacaoFalta || null;
+    if ('evidencia' in patch) payload.evidencia = patch.evidencia || null;
+    if ('justificativaConclusao' in patch) {
+      payload.justificativa_conclusao = patch.justificativaConclusao || null;
+    }
+    const { error } = await supabase.rpc('atualizar_progresso_tarefa_operacional', {
+      p_tarefa_id: id,
+      p_payload: payload,
+    });
+    if (error) throw activityWriteError('Não foi possível atualizar o progresso', error);
+  },
+
+  async toggleTarefaChecklist(
+    tarefa: TarefaGestor,
+    index: number,
+    concluida: boolean,
+    proof?: CompletionEvidence,
+  ) {
+    const { error } = await supabase.rpc('atualizar_tarefa_operacional_checklist', {
+      p_tarefa_id: tarefa.id,
+      p_indice: index,
+      p_concluida: concluida,
+      p_evidencia: proof?.evidencia?.trim() || tarefa.evidencia || null,
+      p_justificativa: proof?.justificativa?.trim() || tarefa.justificativaConclusao || null,
+    });
+    if (error) throw activityWriteError('Não foi possível atualizar o checklist', error);
   },
 };

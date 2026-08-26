@@ -4,16 +4,20 @@ import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
 import { getResponsavelDoGrupo } from '../utils/responsaveisPorGrupo';
 import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
+import type { CompletionEvidence } from '../utils/completionEvidence';
 
 export interface CompanyActivity {
   instanciaId: string;
   modeloId: string;
   modeloNome: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída';
+  status: 'Pendente' | 'Em andamento' | 'Aguardando revisão' | 'Concluída';
   progresso: number;
   checklists: { [etapa: string]: boolean };
+  checklistLabels?: { [etapa: string]: string };
   checklistDates?: { [etapa: string]: string };
   checklistUsers?: { [etapa: string]: string };
+  evidencia?: string;
+  justificativaConclusao?: string;
   valores?: any;
 }
 
@@ -34,9 +38,9 @@ export interface CompanyActivityGroup {
 
 const formatCompetencia = (date: Date) => `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
 
-const getPreviousMonthCompetencia = () => {
+const getCurrentMonthCompetencia = () => {
   const today = new Date();
-  return formatCompetencia(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+  return formatCompetencia(new Date(today.getFullYear(), today.getMonth(), 1));
 };
 
 const parseCompetenciaDate = (competencia: string) => {
@@ -64,7 +68,7 @@ const normalizeCompetencia = (value?: string) => {
 export const useAtividades = (options: UseAtividadesOptions = {}) => {
   const queryClient = useQueryClient();
   const [competencia] = useState(() => (
-    normalizeCompetencia(options.initialCompetencia) || getPreviousMonthCompetencia()
+    normalizeCompetencia(options.initialCompetencia) || getCurrentMonthCompetencia()
   ));
   const [globalFilter, setGlobalFilter] = useState<'todas' | 'pendentes' | 'andamento' | 'concluidas'>('todas');
   
@@ -72,6 +76,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   const [modelos, setModelos] = useState<ModeloAtividade[]>([]);
   const [instancias, setInstancias] = useState<AtividadeInstancia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<Error | null>(null);
 
   const [selectedGroup, setSelectedGroup] = useState<CompanyActivityGroup | null>(null);
   const [fechamentoMeta, setFechamentoMeta] = useState<{ finalizado: boolean; dataHora: string; usuario: string }>({
@@ -102,7 +107,12 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     };
   }, [selectedGroup]);
 
-  const handleSaveFechamentoMeta = async (meta: { finalizado: boolean; dataHora: string; usuario: string }) => {
+  const handleSaveFechamentoMeta = async (meta: {
+    finalizado: boolean;
+    dataHora: string;
+    usuario: string;
+    justificativa?: string;
+  }) => {
     if (!selectedGroup) return;
     const savedMeta = await atividadesService.saveFechamentoMeta(
       selectedGroup.clienteId,
@@ -115,18 +125,15 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [mod, loadedClientes] = await Promise.all([
         atividadesService.getModelos(),
         atividadesService.getClientes(),
       ]);
       if (options.canMaterialize) {
-        try {
-          const createdInstances = await atividadesService.ensureInstancias(competencia);
-          if (createdInstances > 0) await invalidateActivityDependencies();
-        } catch (materializeError) {
-          console.warn('Não foi possível materializar novas atividades nesta carga:', materializeError);
-        }
+        const createdInstances = await atividadesService.ensureInstancias(competencia);
+        if (createdInstances > 0) await invalidateActivityDependencies();
       }
       const competenciaInstancias = await atividadesService.getInstancias(competencia);
       
@@ -135,6 +142,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       setInstancias(competenciaInstancias);
     } catch (err) {
       console.error('Erro ao carregar dados de atividades:', err);
+      setLoadError(err instanceof Error ? err : new Error('Não foi possível carregar as atividades.'));
     } finally {
       setIsLoading(false);
     }
@@ -173,12 +181,15 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         return {
           instanciaId: inst.id,
           modeloId: inst.modeloId,
-          modeloNome: model?.nome || inst.modeloId,
+          modeloNome: model?.nome || inst.titulo || 'Atividade operacional',
           status: inst.status,
           progresso: subProgress,
           checklists: inst.checklists,
+          checklistLabels: inst.checklistLabels,
           checklistDates: inst.checklistDates,
           checklistUsers: inst.checklistUsers,
+          evidencia: inst.evidencia,
+          justificativaConclusao: inst.justificativaConclusao,
           valores: inst.valores,
         };
       });
@@ -186,9 +197,9 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       const overallProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
       
       let overallStatus: CompanyActivityGroup['statusGeral'] = 'Pendente';
-      if (overallProgress === 100) {
+      if (overallProgress === 100 && mappedAtividades.every((item) => item.status === 'Concluída')) {
         overallStatus = 'Concluída';
-      } else if (overallProgress > 0) {
+      } else if (overallProgress > 0 || mappedAtividades.some((item) => item.status === 'Aguardando revisão')) {
         overallStatus = 'Em andamento';
       }
 
@@ -245,7 +256,12 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   }, [allGroups]);
 
   // Toggle checklist step
-  const handleToggleStep = async (instanciaId: string, etapa: string, value: boolean) => {
+  const handleToggleStep = async (
+    instanciaId: string,
+    etapa: string,
+    value: boolean,
+    proof?: CompletionEvidence,
+  ) => {
     const target = instancias.find((i) => i.id === instanciaId);
     if (!target) return;
 
@@ -262,6 +278,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         instanciaId,
         etapa,
         value,
+        proof,
       );
       setInstancias((current) => current.map((item) => (
         item.id === instanciaId ? updatedInstancia : item
@@ -323,6 +340,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     setGlobalFilter,
     companyGroups: filteredGroups,
     isLoading,
+    loadError,
     selectedGroup,
     setSelectedGroup,
     fechamentoMeta,

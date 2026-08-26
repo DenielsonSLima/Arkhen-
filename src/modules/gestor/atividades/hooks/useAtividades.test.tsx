@@ -118,10 +118,9 @@ describe('useAtividades internal-tab context', () => {
     expect(result.current.selectedGroup?.responsavel).toBe('Denielson');
   });
 
-  it('uses the previous month when no initial competencia is provided', async () => {
+  it('uses the current month when no initial competencia is provided', async () => {
     const now = new Date();
-    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const expectedCompetencia = `${String(previousMonth.getMonth() + 1).padStart(2, '0')}/${previousMonth.getFullYear()}`;
+    const expectedCompetencia = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
     const { Wrapper } = createHarness();
     renderHook(() => useAtividades({ canMaterialize: true }), { wrapper: Wrapper });
@@ -130,6 +129,35 @@ describe('useAtividades internal-tab context', () => {
       expect(serviceMock.ensureInstancias).toHaveBeenCalledWith(expectedCompetencia);
       expect(serviceMock.getInstancias).toHaveBeenCalledWith(expectedCompetencia);
     });
+  });
+
+  it('expõe falha de acesso sem apresentar a carga como um estado vazio válido', async () => {
+    const accessError = Object.assign(new Error('permission denied'), { code: '42501' });
+    serviceMock.getClientes.mockRejectedValueOnce(accessError);
+    const { Wrapper } = createHarness();
+    const { result } = renderHook(() => useAtividades({ canMaterialize: false }), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.loadError).toBe(accessError);
+    expect(result.current.companyGroups).toEqual([]);
+  });
+
+  it('expõe falha de materialização sem consultar uma lista possivelmente incompleta', async () => {
+    const materializationError = new Error('materialização indisponível');
+    serviceMock.ensureInstancias.mockRejectedValueOnce(materializationError);
+    const { Wrapper } = createHarness();
+    const { result } = renderHook(() => useAtividades({ canMaterialize: true }), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.loadError).toBe(materializationError);
+    expect(serviceMock.getInstancias).not.toHaveBeenCalled();
+    expect(result.current.companyGroups).toEqual([]);
   });
 
   it('invalida todos os módulos dependentes em cada caminho de escrita', async () => {

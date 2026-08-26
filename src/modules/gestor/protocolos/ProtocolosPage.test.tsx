@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   retry: vi.fn(),
+  activateModule: vi.fn(),
   hook: {
     companyGroups: [],
     counters: { pendentes: 0, concluidos: 0, todos: 0, ativos: 0, inativos: 0 },
@@ -33,12 +34,17 @@ vi.mock('./hooks/useProtocolosRealtime', () => ({
   useProtocolosRealtime: vi.fn(),
 }));
 
+vi.mock('../../../hooks/useInternalTabs', () => ({
+  useInternalTabs: () => ({ activateModule: mocks.activateModule, openTab: vi.fn() }),
+}));
+
 import { ProtocolosPage } from './ProtocolosPage';
 
 describe('ProtocolosPage', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mocks.hook.errorMessage = 'Falha ao consultar get_protocolos_operacionais';
   });
 
   it('não apresenta falha operacional como lista vazia e permite repetir a consulta', () => {
@@ -50,5 +56,13 @@ describe('ProtocolosPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(mocks.retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('oferece caminho direto para configurar clientes quando não há protocolos', () => {
+    mocks.hook.errorMessage = '';
+    render(<ProtocolosPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir cadastro de clientes' }));
+    expect(mocks.activateModule).toHaveBeenCalledWith('clientes');
   });
 });

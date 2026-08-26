@@ -35,7 +35,8 @@ vi.mock('../services/documentRequestService', () => ({
     listClients: vi.fn(),
     getCapabilities: vi.fn(),
     create: vi.fn(),
-    updateStatus: vi.fn(),
+    transition: vi.fn(),
+    listOptions: vi.fn(),
   },
 }));
 

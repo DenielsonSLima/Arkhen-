@@ -71,6 +71,8 @@ const makeProtocol = (overrides: Record<string, unknown> = {}) => ({
   anotacoesList: [],
   recebidoEm: '',
   concluidoPor: '',
+  podeAlterarStatus: true,
+  podeAnotar: true,
   ...overrides,
 });
 
@@ -125,8 +127,9 @@ describe('protocolosService integrity', () => {
 
     expect(items).toEqual(protocols);
     expect(items.every((item) => item.status === 'Pendente')).toBe(true);
+    expect(items.every((item) => item.podeAlterarStatus && item.podeAnotar)).toBe(true);
     expect(items.every((item) => !item.recebidoEm && !item.concluidoPor && item.anotacoesList.length === 0)).toBe(true);
-    expect(rpcMock).toHaveBeenCalledWith('get_protocolos_operacionais');
+    expect(rpcMock).toHaveBeenCalledWith('get_protocolos_operacionais_seguros');
   });
 
   it('não recalcula no navegador o prazo retornado pelo servidor', async () => {
@@ -162,6 +165,37 @@ describe('protocolosService integrity', () => {
     await expect(protocolosService.getProtocolos()).rejects.toMatchObject({ code: 'PGRST500' });
   });
 
+  it('não transforma resposta malformada da projeção em estado vazio', async () => {
+    rpcMock.mockResolvedValue({ data: { unexpected: true }, error: null });
+
+    await expect(protocolosService.getProtocolos()).rejects.toThrow('formato inválido');
+  });
+
+  it('interpreta capacidades somente quando o backend retorna booleano verdadeiro', async () => {
+    rpcMock.mockResolvedValue({
+      data: [makeProtocol({ podeAlterarStatus: 'true', podeAnotar: 1 })],
+      error: null,
+    });
+
+    await expect(protocolosService.getProtocolos()).resolves.toEqual([
+      expect.objectContaining({ podeAlterarStatus: false, podeAnotar: false }),
+    ]);
+  });
+
+  it('barra mutação no hook/service quando a capacidade retornada não permite', async () => {
+    const readonly = makeProtocol({ podeAlterarStatus: false, podeAnotar: false });
+    rpcMock.mockImplementation(async (name: string) => (
+      name === 'get_protocolos_operacionais_seguros'
+        ? { data: [readonly], error: null }
+        : { data: null, error: { message: 'escrita não deveria ser chamada' } }
+    ));
+
+    await expect(protocolosService.updateProtocolo(readonly.id, {
+      status: 'Concluído', anotacao: 'Arquivo conferido.',
+    })).rejects.toThrow('não pode concluir ou reabrir');
+    expect(rpcMock).not.toHaveBeenCalledWith('salvar_protocolo_operacional_seguro', expect.anything());
+  });
+
   it('envia apenas a intenção e recarrega a projeção auditada da RPC', async () => {
     const id = `${company.id}-2026-08-xml-nfe-mensal`;
     const pending = makeProtocol();
@@ -172,7 +206,7 @@ describe('protocolosService integrity', () => {
     });
     let readCount = 0;
     rpcMock.mockImplementation(async (name: string) => {
-      if (name === 'get_protocolos_operacionais') {
+      if (name === 'get_protocolos_operacionais_seguros') {
         readCount += 1;
         return { data: readCount === 1 ? [pending] : [concluded], error: null };
       }
@@ -184,7 +218,7 @@ describe('protocolosService integrity', () => {
       anotacao: 'Arquivo validado.',
     });
 
-    expect(rpcMock).toHaveBeenCalledWith('atualizar_protocolo_entrega', {
+    expect(rpcMock).toHaveBeenCalledWith('salvar_protocolo_operacional_seguro', {
       p_payload: {
         id,
         cliente_id: company.id,

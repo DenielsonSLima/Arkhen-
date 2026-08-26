@@ -84,7 +84,7 @@ export const HELP_DATA: HelpModule[] = [
     ],
   },
   {
-    titulo: 'Parametrização',
+    titulo: 'Rotinas e obrigações',
     icone: <Database size={18} />,
     descricao: 'Bases de classificação e modelos usados nos cadastros, cálculos, documentos e fechamentos.',
     objetivo: 'Padronizar a operação para evitar digitação repetida e classificações divergentes.',

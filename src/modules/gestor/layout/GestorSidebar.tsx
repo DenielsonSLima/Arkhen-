@@ -6,6 +6,7 @@ import {
   ShieldCheck, X,
 } from 'lucide-react';
 import { persistedStorage } from '../../../lib/persistedStorage';
+import { getProfileInitials } from '../../../lib/profileAvatar';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
 import type { SystemModuleId } from '../configuracoes/modulos-sistema/services/modulosSistemaService';
 import { TAB_INFOS } from './gestorTabMetadata';
@@ -49,7 +50,7 @@ const ATIVIDADES_ITEMS = [
 const MENU_ITEMS = {
   inicio: { id: 'inicio', label: 'Início', icon: LayoutDashboard },
   clientes: { id: 'clientes', label: 'Clientes', icon: Building2 },
-  parametrizacao: { id: 'parametrizacao', label: 'Parametrização', icon: Database },
+  parametrizacao: { id: 'parametrizacao', label: 'Rotinas e obrigações', icon: Database },
   atividades: { id: 'atividades', label: 'Atividades', icon: ClipboardList },
   conformidade: { id: 'conformidade', label: 'Conformidade', icon: ShieldCheck },
   'simulacoes-calculos': { id: 'simulacoes-calculos', label: 'Simulações', icon: Calculator },
@@ -335,7 +336,13 @@ export const GestorSidebar: React.FC<GestorSidebarProps> = ({
             title="Abrir meu perfil"
             aria-label={`Abrir meu perfil: ${userProfile.nome}`}
           >
-            <img src={userProfile.avatar} alt="" className="profile-avatar" referrerPolicy="no-referrer" />
+            {userProfile.avatar ? (
+              <img src={userProfile.avatar} alt="" className="profile-avatar" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="profile-avatar profile-avatar-initials" aria-hidden="true">
+                {getProfileInitials(userProfile.nome)}
+              </span>
+            )}
             <span className="profile-info"><span className="profile-name">{userProfile.nome}</span><span className="profile-role-status"><span className="profile-role">{userProfile.perfil}</span><span className="profile-status-dot" aria-hidden="true" /><span className="profile-status-text">Online</span></span></span>
           </button>
           <button type="button" onClick={onLogout} className="sidebar-logout-btn" title="Sair do sistema" aria-label="Sair do sistema"><LogOut size={18} aria-hidden="true" /></button>

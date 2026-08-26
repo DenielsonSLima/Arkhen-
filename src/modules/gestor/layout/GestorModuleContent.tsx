@@ -41,7 +41,6 @@ type GestorModuleContentProps = {
   initialContext?: InternalTabContext;
   updateTabContext: (tabId: string, context: InternalTabContext) => void;
   onModuleContextChange: (moduleId: string, context: InternalTabContext) => void;
-  onInitialReady?: () => void;
 };
 
 export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
@@ -50,7 +49,6 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
   initialContext,
   updateTabContext,
   onModuleContextChange,
-  onInitialReady,
 }) => {
   const onContextChange = useCallback((context: InternalTabContext) => {
     if (workspaceId.includes('__')) updateTabContext(workspaceId, context);
@@ -58,7 +56,7 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
   }, [id, onModuleContextChange, updateTabContext, workspaceId]);
 
   switch (id) {
-    case 'inicio': return <InicioPage onInitialReady={onInitialReady} />;
+    case 'inicio': return <InicioPage />;
     case 'clientes':
       return (
         <GestaoEmpresarialPage
@@ -156,6 +154,6 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
     case 'relatorios': return <RelatoriosPage />;
     case 'configuracoes': return <ConfiguracoesPage />;
     case 'guia-ajuda': return <GuiaAjudaPage />;
-    default: return <InicioPage onInitialReady={onInitialReady} />;
+    default: return <InicioPage />;
   }
 };

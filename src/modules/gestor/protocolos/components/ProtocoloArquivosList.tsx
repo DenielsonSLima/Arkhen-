@@ -74,8 +74,18 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const displayedItems = tabItems[activeTab] || [];
 
   const handleStatusToggle = async (item: ProtocoloEntrega) => {
+    if (!item.podeAlterarStatus) {
+      setOperationError('Seu perfil pode consultar este protocolo, mas não pode concluir ou reabrir.');
+      return;
+    }
+    if (previewFile?.id !== item.id || novaAnotacao.trim().length < 8) {
+      setPreviewFile(item);
+      setNovaAnotacao('');
+      setOperationError('Descreva no painel a evidência da conclusão ou o motivo da reabertura.');
+      return;
+    }
     const newStatus = item.status === 'Concluído' ? 'Pendente' : 'Concluído';
-    const updates: ProtocoloUpdate = { status: newStatus };
+    const updates: ProtocoloUpdate = { status: newStatus, anotacao: novaAnotacao.trim() };
     setUpdatingId(item.id);
     setOperationError('');
     try {
@@ -83,9 +93,10 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
       if (saved && previewFile?.id === item.id) {
         setPreviewFile(saved);
       }
+      setNovaAnotacao('');
     } catch (error) {
       console.error('Falha ao atualizar protocolo.', error);
-      setOperationError('Não foi possível atualizar o protocolo. Tente novamente.');
+      setOperationError(error instanceof Error ? error.message : 'Não foi possível atualizar o protocolo.');
     } finally {
       setUpdatingId('');
     }
@@ -93,6 +104,10 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
   const handleAddAnotacao = async () => {
     if (!previewFile || !novaAnotacao.trim()) return;
+    if (!previewFile.podeAnotar) {
+      setOperationError('Seu perfil não pode adicionar anotações neste protocolo.');
+      return;
+    }
 
     setUpdatingId(previewFile.id);
     setOperationError('');
@@ -210,7 +225,9 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                           {getShortTime(item.recebidoEm) ? <em>{getShortTime(item.recebidoEm)}</em> : null}
                         </span>
                         <span className="protocolo-file-cell protocolo-completed-by">
-                          {item.status === 'Concluído' ? item.concluidoPor || 'Não registrado' : '-'}
+                          {item.status === 'Concluído'
+                            ? item.concluidoPor || (item.auditoriaPendente ? 'Auditoria pendente' : 'Sem autoria')
+                            : '-'}
                         </span>
                         <span className="protocolo-date-cell">
                           <span className={`protocolo-file-status ${statusClasses}`}>
@@ -234,8 +251,10 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                           <button
                             type="button"
                             className={item.status === 'Concluído' ? 'danger' : 'approve'}
-                            disabled={updatingId === item.id}
-                            title={item.status === 'Concluído' ? 'Reabrir protocolo' : 'Concluir protocolo'}
+                            disabled={updatingId === item.id || !item.podeAlterarStatus}
+                            title={!item.podeAlterarStatus
+                              ? 'Seu perfil não pode alterar o status'
+                              : item.status === 'Concluído' ? 'Reabrir protocolo' : 'Concluir protocolo'}
                             onClick={(event) => {
                               event.stopPropagation();
                               handleStatusToggle(item);
@@ -278,6 +297,9 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
               <dl>
                 <div><dt>Status</dt><dd>{previewFile.status}</dd></div>
+                {previewFile.auditoriaPendente ? (
+                  <div><dt>Auditoria</dt><dd>Revisão pendente</dd></div>
+                ) : null}
                 <div>
                   <dt>Recebido em</dt>
                   <dd>
@@ -285,7 +307,9 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                     {getShortTime(previewFile.recebidoEm) ? <small>{getShortTime(previewFile.recebidoEm)}</small> : null}
                   </dd>
                 </div>
-                <div><dt>Concluído por</dt><dd>{previewFile.status === 'Concluído' ? previewFile.concluidoPor || 'Não registrado' : '-'}</dd></div>
+                <div><dt>Concluído por</dt><dd>{previewFile.status === 'Concluído' ? previewFile.concluidoPor || 'Sem autoria disponível' : '-'}</dd></div>
+                <div><dt>Concluído em</dt><dd>{getShortDate(previewFile.concluidoEm)}</dd></div>
+                <div><dt>Evidência atual</dt><dd>{previewFile.evidencia || 'Sem evidência registrada'}</dd></div>
                 <div><dt>Total Anotações</dt><dd>{previewFile.anotacoesList?.length || 0}</dd></div>
               </dl>
 
@@ -294,7 +318,8 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                   <button
                     type="button"
                     className={previewFile.status === 'Concluído' ? 'reject' : 'approve'}
-                    disabled={updatingId === previewFile.id}
+                    disabled={!previewFile.podeAlterarStatus
+                      || updatingId === previewFile.id || novaAnotacao.trim().length < 8}
                     onClick={() => handleStatusToggle(previewFile)}
                   >
                     {previewFile.status === 'Concluído' ? <X size={15} /> : <CheckCircle2 size={15} />}
@@ -318,17 +343,20 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                 </div>
 
                 <label>
-                  <span>Nova Anotação</span>
+                  <span>Evidência ou justificativa</span>
                   <textarea
                     value={novaAnotacao}
-                    placeholder="Digite a anotação para este protocolo"
+                    maxLength={2000}
+                    disabled={!previewFile.podeAnotar && !previewFile.podeAlterarStatus}
+                    placeholder="Descreva o que foi validado ou o motivo da reabertura (mínimo 8 caracteres)."
                     onChange={(event) => setNovaAnotacao(event.target.value)}
                   />
                 </label>
                 <button
                   className="add-anotacao-btn"
                   onClick={handleAddAnotacao}
-                  disabled={!novaAnotacao.trim() || updatingId === previewFile.id}
+                  disabled={!previewFile.podeAnotar
+                    || novaAnotacao.trim().length < 8 || updatingId === previewFile.id}
                 >
                   <Plus size={14} /> Adicionar
                 </button>

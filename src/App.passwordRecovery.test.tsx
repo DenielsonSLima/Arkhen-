@@ -84,7 +84,11 @@ vi.mock('./modules/public/login/LoginPage', () => ({
   LoginPage: () => <div data-testid="login-page" />,
 }));
 vi.mock('./modules/gestor/layout/GestorLayout', () => ({
-  GestorLayout: () => <div data-testid="gestor-layout" />,
+  GestorLayout: ({ onLogout }: any) => (
+    <div data-testid="gestor-layout">
+      <button type="button" onClick={onLogout}>sair do painel</button>
+    </div>
+  ),
 }));
 vi.mock('./modules/gestor/layout/GestorShellLoading', () => ({
   GestorShellLoading: ({ error, message, onRetry, onExit }: any) => (
@@ -273,6 +277,27 @@ describe('App password recovery isolation', () => {
     expect(mocks.getUser).toHaveBeenCalledOnce();
     expect(mocks.authorizeAuthenticatedUser).toHaveBeenCalledWith(globalSession.user);
     expect(mocks.getInitialRecoverySession).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe('/app');
+  });
+
+  it('redireciona /app sem sessão para o login', async () => {
+    window.history.replaceState({}, '', '/app');
+    mocks.getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
+    render(<App />);
+
+    expect(await screen.findByTestId('login-page')).toBeDefined();
+    expect(window.location.pathname).toBe('/login');
+  });
+
+  it('encerra a sessão no painel e fixa a URL em /login', async () => {
+    window.history.replaceState({}, '', '/app');
+    render(<App />);
+    expect(await screen.findByTestId('gestor-layout')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /sair do painel/i }));
+
+    await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    expect(mocks.globalSignOut).toHaveBeenCalled();
   });
 
   it('troca o carregamento infinito por erro recuperável e permite tentar novamente', async () => {

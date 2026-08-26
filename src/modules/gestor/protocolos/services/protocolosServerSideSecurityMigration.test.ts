@@ -47,7 +47,7 @@ describe('protocolos operacionais server-side', () => {
   });
 
   it('mantém o frontend apenas como consumidor da projeção', () => {
-    expect(serviceSource).toContain("supabase.rpc('get_protocolos_operacionais')");
+    expect(serviceSource).toContain("supabase.rpc('get_protocolos_operacionais_seguros')");
     expect(serviceSource).not.toContain('const makePrazo');
     expect(serviceSource).not.toContain('const getCompetenciasForCompany');
     expect(serviceSource).not.toContain('Math.min');

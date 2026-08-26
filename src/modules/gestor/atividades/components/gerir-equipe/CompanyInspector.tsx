@@ -4,6 +4,7 @@ import type { CompanyInspectorProps } from './types';
 import { styles } from './styles';
 import { EmptyState } from './EmptyState';
 import { ProgressBar } from './ProgressBar';
+import { CompanyActivityChecklist } from './CompanyActivityChecklist';
 
 export const CompanyInspector: React.FC<CompanyInspectorProps> = ({
   handleToggleStep,
@@ -46,7 +47,7 @@ export const CompanyInspector: React.FC<CompanyInspectorProps> = ({
       {selectedCompany ? (
         <>
           <div>
-            <span style={styles.detailEyebrow}>Fiscalização por empresa</span>
+            <span style={styles.detailEyebrow}>Acompanhamento por empresa</span>
             <h3 style={styles.detailTitle}>{selectedCompany.clienteNome}</h3>
             <p style={styles.detailMeta}>{selectedCompany.cnpj} • {selectedCompany.regime} • {selectedCompany.competencia}</p>
           </div>
@@ -58,20 +59,7 @@ export const CompanyInspector: React.FC<CompanyInspectorProps> = ({
                   <span>{atividade.progresso}%</span>
                 </div>
                 <ProgressBar value={atividade.progresso} />
-                <div style={styles.detailChecklist}>
-                  {Object.keys(atividade.checklists).map((etapa) => (
-                    <label key={etapa}>
-                      <input
-                        type="checkbox"
-                        checked={atividade.checklists[etapa]}
-                        disabled={!handleToggleStep}
-                        onChange={(event) => handleToggleStep?.(atividade.instanciaId, etapa, event.target.checked)}
-                        style={{ accentColor: 'var(--color-gold-primary)' }}
-                      />
-                      <span>{etapa}</span>
-                    </label>
-                  ))}
-                </div>
+                <CompanyActivityChecklist activity={atividade} onToggle={handleToggleStep} />
               </div>
             ))}
           </div>

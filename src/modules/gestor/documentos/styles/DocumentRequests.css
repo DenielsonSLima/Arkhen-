@@ -191,6 +191,23 @@
   justify-content: flex-end;
 }
 
+.document-request-options-state {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.document-request-options-state.is-error { color: #b91c1c; }
+.document-request-options-state button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  margin-left: 6px;
+  text-decoration: underline;
+}
+
 .document-request-feedback {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
@@ -210,7 +227,7 @@
 .document-request-summary {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .document-request-summary-card {
@@ -240,6 +257,7 @@
 .document-request-summary-card.status-recebido { border-left-color: #2563eb; }
 .document-request-summary-card.status-conferencia { border-left-color: #7c3aed; }
 .document-request-summary-card.status-concluido { border-left-color: #16a34a; }
+.document-request-summary-card.status-cancelado { border-left-color: #64748b; }
 
 .document-request-filters {
   align-items: flex-end;
@@ -289,7 +307,7 @@
   border-radius: 10px;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(220px, 1fr) minmax(180px, auto) minmax(150px, auto);
+  grid-template-columns: minmax(220px, 1fr) minmax(150px, auto) minmax(110px, auto) minmax(240px, 0.8fr);
   padding: 13px 14px;
 }
 
@@ -340,6 +358,20 @@
 .document-request-status-control select.status-recebido { background: #eff6ff; color: #1d4ed8; }
 .document-request-status-control select.status-conferencia { background: #f5f3ff; color: #6d28d9; }
 .document-request-status-control select.status-concluido { background: #f0fdf4; color: #15803d; }
+
+.document-request-status-badge {
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  padding: 7px 10px;
+  text-align: center;
+}
+
+.document-request-status-badge.status-pendente { background: #fffbeb; color: #a16207; }
+.document-request-status-badge.status-recebido { background: #eff6ff; color: #1d4ed8; }
+.document-request-status-badge.status-conferencia { background: #f5f3ff; color: #6d28d9; }
+.document-request-status-badge.status-concluido { background: #f0fdf4; color: #15803d; }
+.document-request-status-badge.status-cancelado { background: #f1f5f9; color: #475569; }
 
 .document-requests-page .sr-only {
   height: 1px;

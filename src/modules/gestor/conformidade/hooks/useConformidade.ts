@@ -8,6 +8,7 @@ import {
   type ConformidadeTipo,
 } from '../services/conformidadeOperationalService';
 import { conformidadeKeys, conformidadeQueries } from '../queries/conformidadeQueries';
+import type { CompletionEvidence } from '../../atividades/utils/completionEvidence';
 
 type TimeWindow = 'todos' | 'hoje' | 'semana' | 'atrasados' | 'sem-prazo';
 
@@ -30,7 +31,11 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
   const [tipoFiltro, setTipoFiltro] = useState<'todos' | ConformidadeTipo>('todos');
   const [responsavelFiltro, setResponsavelFiltro] = useState<'todos' | string>('todos');
   const [searchTerm, setSearchTerm] = useState('');
-  const obrigacoesQuery = useQuery(conformidadeQueries.obrigacoes(initialCompanyId));
+  const [competencia, setCompetencia] = useState(() => {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const obrigacoesQuery = useQuery(conformidadeQueries.obrigacoes(initialCompanyId, competencia));
   const obrigacoes = obrigacoesQuery.data?.obrigacoes || EMPTY_OBRIGACOES;
   const solicitacoesDocumentaisVisiveis =
     obrigacoesQuery.data?.solicitacoesDocumentaisVisiveis ?? false;
@@ -41,11 +46,15 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
       obrigacaoId,
       etapaId,
       checked,
+      proof,
     }: {
       obrigacaoId: string;
       etapaId: ConformidadeEtapa['id'];
       checked: boolean;
-    }) => conformidadeQueries.toggleEtapa(obrigacaoId, etapaId, checked),
+      proof?: CompletionEvidence;
+    }) => conformidadeQueries.toggleEtapa(
+      obrigacaoId, etapaId, checked, competencia, proof,
+    ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: conformidadeKeys.all });
     },
@@ -88,12 +97,18 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
     });
   }, [filteredByContext]);
 
-  const handleToggleStep = async (obrigacaoId: string, etapaId: string, checked: boolean) => {
+  const handleToggleStep = async (
+    obrigacaoId: string,
+    etapaId: string,
+    checked: boolean,
+    proof?: CompletionEvidence,
+  ) => {
     try {
       await toggleEtapaMutation.mutateAsync({
         obrigacaoId,
         etapaId: etapaId as ConformidadeEtapa['id'],
         checked,
+        proof,
       });
     } catch {
       // O erro permanece no estado da mutation e é apresentado pela página.
@@ -147,10 +162,12 @@ export const useConformidade = ({ initialCompanyId }: UseConformidadeOptions = {
     typeOptions,
     responsavelOptions,
     responsavelFiltro,
+    competencia,
     setTimeWindow,
     setTipoFiltro,
     setSearchTerm,
     setResponsavelFiltro,
+    setCompetencia,
     handleToggleStep,
   };
 };

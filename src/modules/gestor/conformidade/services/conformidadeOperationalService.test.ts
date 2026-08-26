@@ -38,7 +38,10 @@ describe('conformidadeService integrity', () => {
 
     await expect(conformidadeService.getObrigacoes()).resolves.toEqual(resumo());
     expect(rpcMock).toHaveBeenCalledOnce();
-    expect(rpcMock).toHaveBeenCalledWith('get_resumo_conformidade', { p_cliente_id: null });
+    expect(rpcMock).toHaveBeenCalledWith('get_conformidade_operacional_tarefas', {
+      p_cliente_id: null,
+      p_competencia: null,
+    });
   });
 
   it('propaga falha da consulta sem gerar obrigações demonstrativas', async () => {
@@ -52,15 +55,20 @@ describe('conformidadeService integrity', () => {
       .mockResolvedValueOnce({ data: { id: 'atividade-real' }, error: null })
       .mockResolvedValueOnce({ data: resumo(), error: null });
 
-    await expect(conformidadeService.toggleEtapa('atividade-real', 'Transmitir', true))
+    await expect(conformidadeService.toggleEtapa(
+      'atividade-real', '0', true, undefined, { justificativa: 'Documento conferido' },
+    ))
       .resolves.toEqual(resumo());
-    expect(rpcMock).toHaveBeenNthCalledWith(1, 'atualizar_atividade_checklist', {
-      p_instancia_id: 'atividade-real',
-      p_etapa: 'Transmitir',
+    expect(rpcMock).toHaveBeenNthCalledWith(1, 'atualizar_tarefa_operacional_checklist', {
+      p_tarefa_id: 'atividade-real',
+      p_indice: 0,
       p_concluida: true,
+      p_evidencia: null,
+      p_justificativa: 'Documento conferido',
     });
-    expect(rpcMock).toHaveBeenNthCalledWith(2, 'get_resumo_conformidade', {
+    expect(rpcMock).toHaveBeenNthCalledWith(2, 'get_conformidade_operacional_tarefas', {
       p_cliente_id: null,
+      p_competencia: null,
     });
   });
 
@@ -98,8 +106,9 @@ describe('conformidadeService integrity', () => {
       podeAtualizar: true,
       regraContrato: null,
     });
-    expect(rpcMock).toHaveBeenCalledWith('get_resumo_conformidade', {
+    expect(rpcMock).toHaveBeenCalledWith('get_conformidade_operacional_tarefas', {
       p_cliente_id: 'cliente-real',
+      p_competencia: null,
     });
   });
 

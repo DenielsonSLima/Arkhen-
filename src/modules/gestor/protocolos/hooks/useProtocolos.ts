@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProtocoloEntrega, ProtocoloStatus, ProtocoloUpdate } from '../services/protocolosService';
+import type { ProtocoloEntrega, ProtocoloUpdate } from '../services/protocolosService';
 import { protocolosKeys, protocolosQueries } from '../queries/protocolosQueries';
 
 export type ProtocoloTab = 'pendentes' | 'concluidos' | 'todos';
@@ -144,8 +144,6 @@ export const useProtocolos = () => {
     return savedList.find((item) => item.id === id);
   };
 
-  const updateStatus = (id: string, status: ProtocoloStatus) => updateProtocolo(id, { status });
-
   const updateEntregasEmpresa = async (empresaId: string, entregaIds: string[]) => {
     await updateEntregasEmpresaMutation.mutateAsync({ empresaId, entregaIds });
   };
@@ -173,7 +171,6 @@ export const useProtocolos = () => {
     dataFinal,
     setDataFinal,
     updateProtocolo,
-    updateStatus,
     updateEntregasEmpresa,
     reload: invalidateProtocolos,
   };

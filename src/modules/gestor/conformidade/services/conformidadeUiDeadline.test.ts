@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import pageSource from '../ConformidadePage.tsx?raw';
+import checklistSource from '../components/ConformidadeChecklist.tsx?raw';
 import hookSource from '../hooks/useConformidade.ts?raw';
 
 describe('conformidade UI deadline consistency', () => {
@@ -9,7 +10,9 @@ describe('conformidade UI deadline consistency', () => {
     expect(pageSource).toContain('const isVencido = item.atrasoDias > 0');
     expect(hookSource).not.toContain('item.diasParaVencimento < 0');
     expect(pageSource).not.toContain('diasParaVencimento < 0');
-    expect(pageSource).toContain('disabled={isUpdating || !item.podeAtualizar}');
+    expect(checklistSource).toContain('disabled={isUpdating || !item.podeAtualizar}');
+    expect(checklistSource).toContain('isFinalChecklistTransition');
+    expect(checklistSource).toContain('hasCompletionEvidence');
     expect(pageSource).toContain('updateErrorMessage');
   });
 });

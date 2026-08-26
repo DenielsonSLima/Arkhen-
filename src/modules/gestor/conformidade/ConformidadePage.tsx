@@ -3,7 +3,6 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
-  CheckCircle2,
   Clock,
   FileText,
   ListChecks,
@@ -16,6 +15,7 @@ import {
 import { useConformidade } from './hooks/useConformidade';
 import { useConformidadeRealtime } from './hooks/useConformidadeRealtime';
 import type { ConformidadeTipo } from './services/conformidadeOperationalService';
+import { ConformidadeChecklist } from './components/ConformidadeChecklist';
 import './ConformidadePage.css';
 import './ConformidadeDetails.css';
 
@@ -77,6 +77,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
     timeWindow,
     tipoFiltro,
     responsavelFiltro,
+    competencia,
     searchTerm,
     isLoading,
     errorMessage,
@@ -90,6 +91,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
     setTimeWindow,
     setTipoFiltro,
     setResponsavelFiltro,
+    setCompetencia,
     setSearchTerm,
     handleToggleStep,
     responsavelOptions,
@@ -137,7 +139,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
         </div>
         <div className="conformidade-page-kpi">
           <ShieldCheck size={18} />
-          <span>{metricas.total} riscos visíveis monitorados</span>
+          <span>{metricas.total} itens visíveis monitorados</span>
         </div>
       </header>
 
@@ -159,6 +161,17 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
       )}
 
       <section className="conformidade-toolbar">
+        <div className="conformidade-tab-block">
+          <label className="conformidade-tab-title" htmlFor="conformidade-competencia">
+            Competência
+          </label>
+          <input
+            id="conformidade-competencia"
+            type="month"
+            value={competencia}
+            onChange={(event) => setCompetencia(event.target.value)}
+          />
+        </div>
         <div className="conformidade-tab-block">
           <span className="conformidade-tab-title">Janela</span>
           <div className="conformidade-tabs">
@@ -327,6 +340,8 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
                   {item.descricao ? <span><FileText size={14} />{item.descricao}</span> : null}
                   <span><User size={14} />Responsável: {item.responsavel || 'Não atribuído'}</span>
                   <span><CalendarDays size={14} />Vencimento: {item.vencimento ? dataVenc : 'Não definido'}</span>
+                  <span><CalendarDays size={14} />Prazo interno: {item.prazoInterno ? formatDate(item.prazoInterno) : 'Não definido'}</span>
+                  <span><ShieldCheck size={14} />Revisão: {item.revisaoStatus}</span>
                   <span>
                     <AlertTriangle size={14} />
                     {diasParaVencimento === null
@@ -379,42 +394,12 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
                     ) : null}
 
                     {item.etapas.length > 0 && (
-                      <div className="conformidade-checklist">
-                        <h4>Checklist de competência</h4>
-                        <div className="conformidade-checklist-steps">
-                          {item.etapas.map((step) => {
-                            const isCompleted = step.concluida;
-
-                            return (
-                              <label
-                                key={`${item.id}-${step.id}`}
-                                className={`conformidade-step-row ${isCompleted ? 'completed' : ''}`}
-                                title={item.podeAtualizar
-                                  ? undefined
-                                  : 'Seu perfil possui acesso somente para consulta desta atividade.'}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isCompleted}
-                                  disabled={isUpdating || !item.podeAtualizar}
-                                  onChange={(event) => {
-                                    void handleToggleStep(item.id, step.id, event.target.checked);
-                                  }}
-                                />
-                                <div>
-                                  <strong>{step.label}</strong>
-                                  <span>
-                                    {isCompleted
-                                      ? `Concluído${step.responsavel ? ` por ${step.responsavel}` : ''}${step.concluidaEm ? ` • ${formatDate(step.concluidaEm)}` : ''}`
-                                      : 'Pendente'}
-                                  </span>
-                                </div>
-                                {isCompleted ? <CheckCircle2 size={15} /> : <Clock size={15} />}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      <ConformidadeChecklist
+                        item={item}
+                        isUpdating={isUpdating}
+                        formatDate={formatDate}
+                        onToggle={handleToggleStep}
+                      />
                     )}
 
                     {item.origem === 'solicitacoes-documentos' && (

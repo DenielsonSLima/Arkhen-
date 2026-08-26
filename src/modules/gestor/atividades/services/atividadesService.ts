@@ -1,6 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
-import { activityWriteError, isMissingRpcFunctionError } from './rpcCompatibility';
+import { activityWriteError } from './rpcCompatibility';
+import type { CompletionEvidence } from '../utils/completionEvidence';
 
 export interface ClienteEmpresa {
   id: string;
@@ -26,11 +27,15 @@ export interface AtividadeInstancia {
   clienteId: string;
   clienteNome: string;
   modeloId: string;
+  titulo?: string;
   competencia: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída';
+  status: 'Pendente' | 'Em andamento' | 'Aguardando revisão' | 'Concluída';
   checklists: { [etapa: string]: boolean };
+  checklistLabels?: { [etapa: string]: string };
   checklistDates?: { [etapa: string]: string };
   checklistUsers?: { [etapa: string]: string };
+  evidencia?: string;
+  justificativaConclusao?: string;
   valores?: {
     valorInss?: number;
     valorIrrf?: number;
@@ -74,13 +79,12 @@ interface InstanciaRow {
   cliente_id: string | null;
   cliente_nome: string;
   modelo_id: string | null;
-  modelo_codigo: string | null;
+  titulo: string;
   competencia: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída' | 'Cancelada';
-  checklists: Record<string, boolean> | null;
-  checklist_dates: Record<string, string> | null;
-  checklist_users: Record<string, string> | null;
-  valores: AtividadeInstancia['valores'] | null;
+  status: 'Pendente' | 'Em andamento' | 'Aguardando revisão' | 'Concluída' | 'Cancelada';
+  checklist: Array<{ titulo: string; concluida: boolean }> | null;
+  evidencia: string | null;
+  justificativa_conclusao: string | null;
 }
 
 interface FechamentoRow {
@@ -129,18 +133,25 @@ const slugify = (value: string) => (
     .replace(/^-+|-+$/g, '') || `modelo-${Date.now()}`
 );
 
-const toInstancia = (row: InstanciaRow): AtividadeInstancia => ({
-  id: row.id,
-  clienteId: row.cliente_id || row.cliente_nome,
-  clienteNome: row.cliente_nome,
-  modeloId: row.modelo_id || row.modelo_codigo || '',
-  competencia: row.competencia,
-  status: row.status === 'Cancelada' ? 'Pendente' : row.status,
-  checklists: row.checklists || {},
-  checklistDates: row.checklist_dates || {},
-  checklistUsers: row.checklist_users || {},
-  valores: row.valores || undefined,
-});
+const toInstancia = (row: InstanciaRow): AtividadeInstancia => {
+  const checklist = Array.isArray(row.checklist) ? row.checklist : [];
+  return {
+    id: row.id,
+    clienteId: row.cliente_id || row.cliente_nome,
+    clienteNome: row.cliente_nome,
+    modeloId: row.modelo_id || `tarefa:${row.id}`,
+    titulo: row.titulo,
+    competencia: row.competencia,
+    status: row.status === 'Cancelada' ? 'Pendente' : row.status,
+    checklists: Object.fromEntries(checklist.map((item, index) => [String(index), item.concluida])),
+    checklistLabels: Object.fromEntries(checklist.map((item, index) => [String(index), item.titulo])),
+    checklistDates: {},
+    checklistUsers: {},
+    evidencia: row.evidencia || undefined,
+    justificativaConclusao: row.justificativa_conclusao || undefined,
+    valores: undefined,
+  };
+};
 
 export const atividadesService = {
   async getClientes(): Promise<ClienteEmpresa[]> {
@@ -196,8 +207,12 @@ export const atividadesService = {
   },
 
   async ensureInstancias(competencia: string): Promise<number> {
-    const { data, error } = await supabase.rpc('ensure_atividades_instancias', {
-      p_competencia: competencia,
+    const match = competencia.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+    if (!match) throw new Error('Competência inválida.');
+    const endDate = new Date(Number(match[2]), Number(match[1]), 0);
+    const ate = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    const { data, error } = await supabase.rpc('materializar_atividades_rotinas', {
+      p_ate: ate,
     });
 
     if (error) throw error;
@@ -227,8 +242,8 @@ export const atividadesService = {
 
   async getInstancias(competencia: string): Promise<AtividadeInstancia[]> {
     const { data, error } = await supabase
-      .from('atividades_instancias')
-      .select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores')
+      .from('atividades_tarefas')
+      .select('id,cliente_id,cliente_nome,modelo_id,titulo,competencia,status,checklist,evidencia,justificativa_conclusao')
       .eq('competencia', competencia)
       .eq('ativo', true)
       .order('cliente_nome', { ascending: true });
@@ -241,46 +256,24 @@ export const atividadesService = {
     instanciaId: string,
     etapa: string,
     concluida: boolean,
+    proof?: CompletionEvidence,
   ): Promise<AtividadeInstancia> {
-    const { data, error } = await supabase.rpc('atualizar_atividade_checklist', {
-      p_instancia_id: instanciaId,
-      p_etapa: etapa,
+    const { data, error } = await supabase.rpc('atualizar_tarefa_operacional_checklist', {
+      p_tarefa_id: instanciaId,
+      p_indice: Number(etapa),
       p_concluida: concluida,
+      p_evidencia: proof?.evidencia?.trim() || null,
+      p_justificativa: proof?.justificativa?.trim() || null,
     });
     if (error) throw error;
     return toInstancia(data as InstanciaRow);
   },
 
   async atualizarValores(
-    instanciaId: string,
-    valores: ValoresCompetenciaAtividade,
+    _instanciaId: string,
+    _valores: ValoresCompetenciaAtividade,
   ): Promise<AtividadeInstancia> {
-    const { data, error } = await supabase.rpc('atualizar_atividade_valores', {
-      p_instancia_id: instanciaId,
-      p_valores: valores,
-    });
-    if (!error) {
-      if (!data) throw new Error('A atualização não retornou a atividade salva.');
-      return toInstancia(data as InstanciaRow);
-    }
-    if (error && !isMissingRpcFunctionError(error)) {
-      throw activityWriteError('Não foi possível salvar os valores da atividade', error);
-    }
-
-    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
-    const empresaId = await getCurrentEmpresaId();
-    const { data: legacyData, error: legacyError } = await supabase
-      .from('atividades_instancias')
-      .update({ valores })
-      .eq('id', instanciaId)
-      .eq('empresa_id', empresaId)
-      .eq('ativo', true)
-      .select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores')
-      .single();
-    if (legacyError) {
-      throw activityWriteError('Não foi possível salvar os valores da atividade', legacyError);
-    }
-    return toInstancia(legacyData as InstanciaRow);
+    throw new Error('Lançamentos de valores permanecem desativados até a homologação do fluxo operacional.');
   },
 
   async getFechamentoMeta(clienteId: string, competencia: string) {
@@ -303,14 +296,15 @@ export const atividadesService = {
   async saveFechamentoMeta(
     clienteId: string,
     competencia: string,
-    meta: { finalizado: boolean; dataHora: string; usuario: string },
+    meta: { finalizado: boolean; dataHora: string; usuario: string; justificativa?: string },
   ) {
     if (!isUuid(clienteId)) throw new Error('Cliente inválido para homologar o fechamento.');
 
-    const { data, error } = await supabase.rpc('salvar_atividade_fechamento', {
+    const { data, error } = await supabase.rpc('salvar_fechamento_operacional', {
       p_cliente_id: clienteId,
       p_competencia: competencia,
       p_finalizado: meta.finalizado,
+      p_justificativa: meta.justificativa || null,
     });
     if (!error) {
       if (!data) throw new Error('A homologação não retornou os dados salvos.');
@@ -321,36 +315,6 @@ export const atividadesService = {
         usuario: row.usuario || '',
       };
     }
-    if (!isMissingRpcFunctionError(error)) {
-      throw activityWriteError('Não foi possível salvar a auditoria do fechamento', error);
-    }
-
-    // Compatibilidade temporária: frontend novo contra banco anterior à RPC.
-    const empresaId = await getCurrentEmpresaId();
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-    const usuario = user?.user_metadata?.full_name
-      || user?.user_metadata?.name
-      || user?.email
-      || user?.id
-      || meta.usuario
-      || '';
-    const dataHora = new Date().toISOString();
-    const { error: legacyError } = await supabase
-      .from('atividades_fechamentos')
-      .upsert({
-        empresa_id: empresaId,
-        cliente_id: clienteId,
-        cliente_ref: clienteId,
-        competencia,
-        finalizado: meta.finalizado,
-        data_hora: dataHora,
-        usuario,
-      }, { onConflict: 'empresa_id,cliente_ref,competencia' });
-
-    if (legacyError) {
-      throw activityWriteError('Não foi possível salvar a auditoria do fechamento', legacyError);
-    }
-    return { finalizado: meta.finalizado, dataHora, usuario };
+    throw activityWriteError('Não foi possível salvar a auditoria do fechamento', error);
   },
 };
