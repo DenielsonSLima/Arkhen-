@@ -203,16 +203,16 @@
     flex-direction: column;
     overflow-y: auto; /* Allow scroll on small devices if necessary */
   }
-  
+
   .login-banner {
     display: none;
   }
-  
+
   .login-card-container {
     padding: 20px;
     height: 100vh;
   }
-  
+
   .login-card {
     padding: 30px 20px;
     border-radius: var(--radius-lg);
