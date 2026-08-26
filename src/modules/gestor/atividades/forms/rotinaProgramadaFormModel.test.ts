@@ -5,6 +5,8 @@ import {
   applyModeloToRotinaForm,
   blankRotinaProgramadaForm,
   buildRotinaFromForm,
+  getModelosDisponiveisParaVinculo,
+  isModeloPermitidoParaVinculo,
   validateRotinaProgramadaForm,
 } from './rotinaProgramadaFormModel';
 
@@ -35,7 +37,7 @@ describe('formulário de rotina programada', () => {
 
   it('exige escolhas operacionais conscientes antes de salvar', () => {
     expect(validateRotinaProgramadaForm(blankRotinaProgramadaForm(), '2026-08-25'))
-      .toBe('Selecione o modelo que fornecerá o checklist da rotina.');
+      .toBe('Selecione um cliente ou confirme que a rotina é interna do escritório.');
   });
 
   it('constrói a rotina interna apenas após a escolha explícita do escritório', () => {
@@ -62,5 +64,20 @@ describe('formulário de rotina programada', () => {
       intervaloDias: 30,
       checklist: modelo.etapas,
     });
+  });
+
+  it('filtra os modelos pelo vínculo do cliente e libera todos para o escritório', () => {
+    const outroModelo = { ...modelo, id: '10000000-0000-4000-8000-000000000002', nome: 'Folha' };
+    const clientes = [{
+      id: '40000000-0000-4000-8000-000000000001',
+      nome: 'Cliente A',
+      modelosAtivos: [modelo.id],
+    }];
+
+    expect(getModelosDisponiveisParaVinculo([modelo, outroModelo], clientes, clientes[0].id))
+      .toEqual([modelo]);
+    expect(getModelosDisponiveisParaVinculo([modelo, outroModelo], clientes, ESCRITORIO_SCOPE_ID))
+      .toEqual([modelo, outroModelo]);
+    expect(isModeloPermitidoParaVinculo(outroModelo.id, clientes[0].id, clientes)).toBe(false);
   });
 });

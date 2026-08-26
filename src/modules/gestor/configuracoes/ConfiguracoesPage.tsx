@@ -200,7 +200,7 @@ export const ConfiguracoesPage: React.FC = () => {
       id: 'meu-perfil',
       section: 'essencial' as ConfigSectionId,
       title: 'Meu Perfil',
-      desc: 'Altere sua foto de perfil, dados pessoais, e-mail, senha e conta Google.',
+      desc: 'Altere sua foto, dados pessoais, senha e métodos de acesso. O e-mail identifica sua conta.',
       icon: <User size={28} />,
     },
     {

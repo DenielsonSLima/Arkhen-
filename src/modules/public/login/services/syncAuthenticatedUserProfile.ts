@@ -1,9 +1,10 @@
 import type { User } from '@supabase/supabase-js';
 import { persistedStorage } from '../../../../lib/persistedStorage';
-
-const LEGACY_DEMO_AVATAR = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150';
-const LEGACY_DEMO_NAMES = new Set(['João Silva', 'João Silva Demonstração']);
-const LEGACY_DEMO_EMAILS = new Set(['joao.silva@arkhen.com.br', 'demo@arkhen.com.br']);
+import {
+  isKnownLegacyDemoAvatar,
+  isKnownLegacyDemoEmail,
+  isKnownLegacyDemoName,
+} from '../../../../lib/legacyDemoProfile';
 
 export interface AuthorizedUserProfile {
   nome?: string | null;
@@ -40,15 +41,15 @@ export const syncAuthenticatedUserProfile = (
         console.error('Erro ao ler perfil do usuário local:', error);
       }
     }
-    const storedName = LEGACY_DEMO_NAMES.has(localProfile.nome) ? '' : localProfile.nome;
-    const storedEmail = LEGACY_DEMO_EMAILS.has(localProfile.email) ? '' : localProfile.email;
-    const storedAvatar = localProfile.avatar === LEGACY_DEMO_AVATAR
+    const storedName = isKnownLegacyDemoName(localProfile) ? '' : localProfile.nome;
+    const storedEmail = isKnownLegacyDemoEmail(localProfile.email) ? '' : localProfile.email;
+    const storedAvatar = isKnownLegacyDemoAvatar(localProfile.avatar)
       || localProfile.avatar?.startsWith('data:image/svg+xml')
       ? ''
       : localProfile.avatar;
-    const nome = authorizedProfile?.nome?.trim()
-      || metadata.nome
-      || metadata.name
+    const nome = typeof metadata.nome === 'string' && metadata.nome.trim()
+      ? metadata.nome.trim()
+      : authorizedProfile?.nome?.trim()
       || storedName
       || 'Usuário';
     const avatarWasExplicitlySelected = localProfile.avatarSelectedByUser === true;

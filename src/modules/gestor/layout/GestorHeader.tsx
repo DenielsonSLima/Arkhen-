@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Bell, Calendar, Headphones, Search } from 'lucide-react';
+import { Calendar, Headphones, Search } from 'lucide-react';
 import type { GlobalSearchResult } from './hooks/useGestorGlobalSearch';
 
 type GestorHeaderProps = {
@@ -8,7 +8,6 @@ type GestorHeaderProps = {
   searchLoading: boolean;
   modulesReady: boolean;
   results: GlobalSearchResult[];
-  openSolicitacoesCount: number;
   onSearchTermChange: (value: string) => void;
   onSearchFocusChange: (focused: boolean) => void;
   onSearchSelect: (result: GlobalSearchResult) => void;
@@ -18,8 +17,8 @@ type GestorHeaderProps = {
 
 export const GestorHeader: React.FC<GestorHeaderProps> = ({
   searchTerm, searchFocused, searchLoading, modulesReady, results,
-  openSolicitacoesCount, onSearchTermChange, onSearchFocusChange,
-  onSearchSelect, onSearchKeyDown, onOpenHelp,
+  onSearchTermChange, onSearchFocusChange, onSearchSelect,
+  onSearchKeyDown, onOpenHelp,
 }) => {
   const headerDate = useMemo(() => {
     const now = new Date();
@@ -71,10 +70,6 @@ export const GestorHeader: React.FC<GestorHeaderProps> = ({
       <div className="header-actions">
         <button type="button" onClick={onOpenHelp} className="support-btn" title="Ajuda e funcionamento do sistema" aria-label="Abrir guia de ajuda">
           <Headphones size={20} />
-        </button>
-        <button className="notification-btn" aria-label="Notificações">
-          <Bell size={20} />
-          {openSolicitacoesCount > 0 && <span className="notification-badge">{openSolicitacoesCount}</span>}
         </button>
         <div className="header-date-widget">
           <Calendar size={18} className="date-icon" />

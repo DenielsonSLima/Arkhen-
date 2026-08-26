@@ -373,6 +373,12 @@
   background: #fffbeb;
 }
 
+.faturamento-charge-type:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  background: #f8fafc;
+}
+
 .faturamento-charge-type-icon {
   display: inline-flex;
   align-items: center;

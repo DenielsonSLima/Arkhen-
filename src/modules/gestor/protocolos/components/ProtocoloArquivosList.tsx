@@ -22,8 +22,8 @@ interface ProtocoloArquivosListProps {
 
 const ABA_CONFIG: { key: AbaProtocolo; label: string; icon: React.ElementType }[] = [
   { key: 'pendencias', label: 'Pendências', icon: Clock },
-  { key: 'recebidos', label: 'Documentos recebidos', icon: Inbox },
-  { key: 'enviados', label: 'Documentos enviados', icon: Send },
+  { key: 'recebidos', label: 'Itens a receber', icon: Inbox },
+  { key: 'enviados', label: 'Itens a enviar', icon: Send },
   { key: 'historico', label: 'Histórico', icon: History },
 ];
 

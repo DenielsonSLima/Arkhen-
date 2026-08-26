@@ -144,12 +144,12 @@ export const HELP_DATA: HelpModule[] = [
   {
     titulo: 'Protocolos',
     icone: <FileCheck size={18} />,
-    descricao: 'Controle de entregas e documentos em relação às obrigações.',
-    objetivo: 'Saber rapidamente o que foi entregue, o que está pendente e por competência.',
+    descricao: 'Controle operacional das entregas relacionadas às obrigações.',
+    objetivo: 'Saber rapidamente o que está pendente ou concluído por competência, sem substituir a biblioteca de arquivos.',
     comoUsa: 'Filtre por período, status e empresa, depois abra a competência para ver os detalhes de cada item.',
     submodulos: [
       { nome: 'Pendentes', descricao: 'Lista de entregas atrasadas ou em andamento.', comoUsar: 'Priorize esses itens no primeiro bloco da rotina.' },
-      { nome: 'Concluídos', descricao: 'Histórico de entregas finalizadas.', comoUsar: 'Use para comprovação e auditoria interna.' },
+      { nome: 'Concluídos', descricao: 'Histórico de controles marcados como finalizados.', comoUsar: 'Use como acompanhamento; comprovantes e arquivos devem permanecer em Documentos.' },
       { nome: 'Detalhe da empresa/competência', descricao: 'Acesso completo aos registros daquele período.', comoUsar: 'Revisite e reative notas/tarefas se necessário.' },
     ],
   },
@@ -160,7 +160,7 @@ export const HELP_DATA: HelpModule[] = [
     objetivo: 'Centralizar arquivos, preservar histórico e compartilhar documentos com controle.',
     comoUsa: 'Escolha a visão adequada antes de enviar arquivos; confirme sempre a empresa, pasta e categoria de destino.',
     submodulos: [
-      { nome: 'Meus Documentos', descricao: 'Arquivos pessoais e operacionais do usuário.', comoUsar: 'Armazene materiais de trabalho que não pertencem à pasta de uma empresa.' },
+      { nome: 'Biblioteca', descricao: 'Arquivos pessoais e operacionais do usuário.', comoUsar: 'Armazene materiais de trabalho que não pertencem à pasta de uma empresa.' },
       { nome: 'Por Empresa', descricao: 'Arquivos separados por cliente e pasta.', comoUsar: 'Suba e organize documentos de cada cliente no contexto correto.' },
       { nome: 'Solicitações', descricao: 'Controle do que cada cliente precisa enviar em cada competência.', comoUsar: 'Selecione o cliente, informe a competência e acompanhe o status de Pendente até Concluído.' },
       { nome: 'Empresas Inativas', descricao: 'Acesso ao acervo de clientes que não estão mais ativos.', comoUsar: 'Consulte o histórico sem misturá-lo à carteira operacional atual.' },
@@ -171,12 +171,12 @@ export const HELP_DATA: HelpModule[] = [
   {
     titulo: 'Faturamento',
     icone: <Receipt size={18} />,
-    descricao: 'Controle de cobranças, notas de serviço e recorrência contratual.',
+    descricao: 'Controle de cobranças, notas de serviço e contratos mensais.',
     objetivo: 'Administrar fluxo de receita e status de documentos de cobrança.',
     comoUsa: 'Use dashboard para visão gerencial e abas para detalhar histórico, inadimplência e recorrências.',
     submodulos: [
       { nome: 'Dashboard', descricao: 'Resumo de indicadores de faturamento.', comoUsar: 'Acompanhe a saúde do ciclo financeiro.' },
-      { nome: 'Recorrências', descricao: 'Configuração e execução de lançamentos recorrentes.', comoUsar: 'Gerencie mensalidades e repetições automáticas.' },
+      { nome: 'Contratos mensais', descricao: 'Configuração dos contratos e da primeira cobrança opcional.', comoUsar: 'Cadastre o padrão mensal; enquanto o agendador não estiver ativo, gere e confira cada competência manualmente.' },
       { nome: 'Histórico NFS-e', descricao: 'Consulta das emissões por competência/cliente.', comoUsar: 'Revisão e rastreabilidade de notas emitidas.' },
       { nome: 'Inadimplência', descricao: 'Clientes com atraso e posição de cobrança.', comoUsar: 'Acompanhe cobrança preventiva antes do atraso crítico.' },
       { nome: 'Financeiro', descricao: 'Visão complementar para fluxo e conciliação.', comoUsar: 'Integre com operações de faturamento para fechar caixa.' },

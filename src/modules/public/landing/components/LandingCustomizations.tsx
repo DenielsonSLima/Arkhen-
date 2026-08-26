@@ -17,24 +17,24 @@ export const LandingCustomizations: React.FC = () => {
         </div>
 
         <div className="customizations-grid">
-          {/* Card 1: Cliente Portal */}
+          {/* Card 1: acesso externo */}
           <div className="custom-feature-card">
             <div className="custom-card-header">
               <div className="custom-icon-wrapper">
                 <Users size={24} />
               </div>
               <div>
-                <h3>Área de Acesso do Cliente</h3>
-                <span className="custom-card-badge">Disponível sob consulta</span>
+                <h3>Compartilhamento com o Cliente</h3>
+                <span className="custom-card-badge">Links protegidos</span>
               </div>
             </div>
             <p className="custom-card-desc">
-              Facilite a comunicação e a entrega de arquivos. Seus clientes podem acessar um portal dedicado para enviar comprovantes e consultar documentos disponibilizados pelo escritório.
+              Disponibilize arquivos por links temporários protegidos por senha, sem prometer um portal autenticado que ainda não está ativo.
             </p>
             <ul className="custom-card-list">
-              <li>Upload rápido de comprovantes e documentos fiscais</li>
-              <li>Visualização e download dos arquivos publicados pelo escritório</li>
-              <li>Histórico completo de arquivos organizados por competência</li>
+              <li>Download do arquivo compartilhado pelo escritório</li>
+              <li>Senha e prazo de expiração configuráveis</li>
+              <li>Registro de tentativas e downloads do link</li>
             </ul>
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
@@ -79,6 +80,8 @@ export const ProtocolosPage: React.FC = () => {
     companyGroups,
     counters,
     isLoading,
+    errorMessage,
+    retry,
     activeTab,
     setActiveTab,
     activeEmpresaTab,
@@ -139,8 +142,8 @@ export const ProtocolosPage: React.FC = () => {
     <div className="protocolos-page animate-fade-in">
       <div className="protocolos-page-header">
         <div>
-          <h1>Protocolos e Documentos</h1>
-          <p>Controle por empresa e competência do que foi recebido, enviado, protocolado e comprovado.</p>
+          <h1>Controle de Entregas</h1>
+          <p>Acompanhamento por empresa e competência. A conclusão registra status e anotação; arquivos ficam em Documentos.</p>
         </div>
         <div className="protocolos-header-metric">
           <FileCheck size={18} />
@@ -216,6 +219,15 @@ export const ProtocolosPage: React.FC = () => {
         <div className="protocolos-loading">
           <Loader2 size={34} className="animate-spin" />
           <span>Carregando protocolos...</span>
+        </div>
+      ) : errorMessage ? (
+        <div className="protocolos-empty" role="alert">
+          <AlertCircle size={38} />
+          <h3>Não foi possível carregar os protocolos</h3>
+          <p>{errorMessage}</p>
+          <button type="button" className="protocolos-retry-button" onClick={() => { void retry(); }}>
+            Tentar novamente
+          </button>
         </div>
       ) : selectedGroupId && selectedCompany ? (
         <EmpresaProtocolosDetail
@@ -362,8 +374,8 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
         <div className="protocolo-section-title">
           <FolderOpen size={17} />
           <div>
-            <h3>Evidências da competência {formatCompetencia(company.competencia)}</h3>
-            <p>Arquivos, recibos, envios, recebimentos e provas vinculadas à operação.</p>
+            <h3>Entregas da competência {formatCompetencia(company.competencia)}</h3>
+            <p>Status operacional, direção do fluxo e anotações. Consulte os arquivos e comprovantes no módulo Documentos.</p>
           </div>
           <div className="protocolo-section-actions">
             <button type="button" className="protocolos-open-atividades" onClick={handleOpenAtividades}>

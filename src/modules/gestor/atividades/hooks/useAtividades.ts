@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
 import { getResponsavelDoGrupo } from '../utils/responsaveisPorGrupo';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
 export interface CompanyActivity {
   instanciaId: string;
@@ -60,6 +62,7 @@ const normalizeCompetencia = (value?: string) => {
 };
 
 export const useAtividades = (options: UseAtividadesOptions = {}) => {
+  const queryClient = useQueryClient();
   const [competencia] = useState(() => (
     normalizeCompetencia(options.initialCompetencia) || getPreviousMonthCompetencia()
   ));
@@ -76,6 +79,10 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     dataHora: '',
     usuario: '',
   });
+  const invalidateActivityDependencies = useCallback(
+    () => invalidateAfterMutation(queryClient, 'atividades'),
+    [queryClient],
+  );
 
   useEffect(() => {
     if (!selectedGroup) return;
@@ -103,6 +110,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       meta,
     );
     setFechamentoMeta(savedMeta);
+    await invalidateActivityDependencies();
   };
 
   const loadData = useCallback(async () => {
@@ -114,7 +122,8 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       ]);
       if (options.canMaterialize) {
         try {
-          await atividadesService.ensureInstancias(competencia);
+          const createdInstances = await atividadesService.ensureInstancias(competencia);
+          if (createdInstances > 0) await invalidateActivityDependencies();
         } catch (materializeError) {
           console.warn('Não foi possível materializar novas atividades nesta carga:', materializeError);
         }
@@ -129,7 +138,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [competencia, options.canMaterialize]);
+  }, [competencia, invalidateActivityDependencies, options.canMaterialize]);
 
   useEffect(() => {
     void loadData();
@@ -257,6 +266,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       setInstancias((current) => current.map((item) => (
         item.id === instanciaId ? updatedInstancia : item
       )));
+      await invalidateActivityDependencies();
     } catch (err) {
       console.error(err);
       setInstancias((current) => current.map((item) => (
@@ -291,6 +301,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       setInstancias((current) => current.map((item) => (
         item.id === instanciaId ? savedInstancia : item
       )));
+      await invalidateActivityDependencies();
     } catch (err) {
       console.error(err);
       setInstancias((current) => current.map((item) => (

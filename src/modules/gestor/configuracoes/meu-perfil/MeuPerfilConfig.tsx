@@ -17,9 +17,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { persistedStorage } from '../../../../lib/persistedStorage';
+import {
+  isKnownLegacyDemoAvatar,
+  isKnownLegacyDemoEmail,
+  isKnownLegacyDemoName,
+} from '../../../../lib/legacyDemoProfile';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
 import { passwordRecoveryService } from '../../../public/login/services/passwordRecoveryService';
-
 interface UserProfile {
   nome: string;
   email: string;
@@ -31,7 +35,6 @@ interface UserProfile {
   googleLinked: boolean;
   googleEmail?: string;
 }
-
 const DEFAULT_USER: UserProfile = {
   nome: 'Usuário',
   email: '',
@@ -42,18 +45,17 @@ const DEFAULT_USER: UserProfile = {
   googleLinked: false,
 };
 const sanitizeAvatar = (avatar: unknown) => typeof avatar === 'string'
-  && !avatar.includes('images.unsplash.com')
+  && !isKnownLegacyDemoAvatar(avatar)
   && !avatar.startsWith('data:image/svg+xml') ? avatar : '';
 const normalizeStoredProfile = (storedProfile: Partial<UserProfile>): UserProfile => ({
   ...DEFAULT_USER,
   ...storedProfile,
-  nome: !storedProfile.nome || storedProfile.nome === 'João Silva'
+  nome: !storedProfile.nome || isKnownLegacyDemoName(storedProfile)
     ? DEFAULT_USER.nome
     : storedProfile.nome,
-  email: storedProfile.email === 'joao.silva@arkhen.com.br' ? '' : storedProfile.email || '',
+  email: isKnownLegacyDemoEmail(storedProfile.email) ? '' : storedProfile.email || '',
   avatar: sanitizeAvatar(storedProfile.avatar),
 });
-
 const getStoredProfile = (): UserProfile => {
   try {
     const saved = persistedStorage.getItem('gestor_user_profile');
@@ -64,6 +66,7 @@ const getStoredProfile = (): UserProfile => {
   }
 };
 export const MeuPerfilConfig: React.FC = () => {
+  const googleAuthEnabled = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'dados' | 'seguranca'>('dados');
   const [profile, setProfile] = useState<UserProfile>(getStoredProfile);
@@ -81,13 +84,11 @@ export const MeuPerfilConfig: React.FC = () => {
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   const updateProfileData = (updated: UserProfile) => {
     setProfile(updated);
     persistedStorage.setItem('gestor_user_profile', JSON.stringify(updated));
     window.dispatchEvent(new Event('profile_updated'));
   };
-
   const showSuccess = (message: string) => {
     setSuccessMsg(message);
     setErrorMsg(null);
@@ -114,7 +115,9 @@ export const MeuPerfilConfig: React.FC = () => {
       const localProfile = getStoredProfile();
       const updated: UserProfile = {
         ...localProfile,
-        nome: metadata.nome || metadata.name || localProfile.nome,
+        nome: typeof metadata.nome === 'string' && metadata.nome.trim()
+          ? metadata.nome.trim()
+          : localProfile.nome,
         email: user.email || localProfile.email,
         avatar: localProfile.avatarSelectedByUser ? sanitizeAvatar(localProfile.avatar) : '',
         cpf: metadata.cpf || localProfile.cpf || '',
@@ -375,6 +378,7 @@ export const MeuPerfilConfig: React.FC = () => {
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={(event) => handlePhotoUpload(event.target.files?.[0])} />
             <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', margin: '14px 0 2px 0' }}>{profile.nome}</p>
             <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>{profile.perfil}</p>
+            <p style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.45, margin: '10px 0 0' }}>A foto só muda quando você envia uma imagem aqui. Vincular o Google não importa nem substitui sua foto.</p>
 
             <div style={{ marginTop: 18 }}>
               <button type="button" className="btn-save-settings" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto}>
@@ -404,6 +408,8 @@ export const MeuPerfilConfig: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            <p style={{ margin: '-4px 0 0', color: '#64748b', fontSize: '0.72rem', lineHeight: 1.45 }}>O e-mail é o identificador de acesso e não pode ser alterado neste formulário.</p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button type="submit" className="btn-save-settings" disabled={isSavingInfo}>
@@ -467,12 +473,13 @@ export const MeuPerfilConfig: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {googleAuthEnabled && (
           <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
               Conta Google
             </h4>
             <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.45 }}>
-              Vincule ou desvincule o login pelo Google. A desvinculação só é permitida se houver outro método de acesso ativo.
+              Vincule ou desvincule o login pelo Google. Isso não importa nome ou foto do Google. A desvinculação só é permitida se houver outro método de acesso ativo.
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 14, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #cbd5e1' }}>
               <div>
@@ -486,6 +493,7 @@ export const MeuPerfilConfig: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
       )}

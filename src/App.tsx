@@ -17,6 +17,10 @@ import { LandingPage } from './modules/public/landing/LandingPage';
 import { DemoWebsite } from './modules/public/demowebsite/DemoWebsite';
 import { navigate } from './lib/navigation';
 import { queryClient } from './lib/queryClient';
+import {
+  isOperationTimeoutError,
+  withOperationTimeout,
+} from './lib/operationTimeout';
 import { useCurrentPath } from './hooks/useCurrentPath';
 import {
   inspectPasswordRecoveryCallback,
@@ -29,6 +33,8 @@ import {
 import { syncAuthenticatedUserProfile } from './modules/public/login/services/syncAuthenticatedUserProfile';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+export const AUTH_BOOTSTRAP_TIMEOUT_MS = 15_000;
+const AUTH_BOOTSTRAP_TIMEOUT_MESSAGE = 'A validação do acesso demorou além do esperado.';
 type PasswordRecoveryStatus = 'validating' | 'ready' | 'error' | 'complete';
 
 function App() {
@@ -41,6 +47,8 @@ function App() {
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
   const [view, setView] = useState<'loading' | 'login' | 'password-reset' | 'gestor'>('loading');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [authBootstrapError, setAuthBootstrapError] = useState<string | null>(null);
+  const [authBootstrapAttempt, setAuthBootstrapAttempt] = useState(0);
   const [passwordRecoveryStatus, setPasswordRecoveryStatus] = useState<PasswordRecoveryStatus>('validating');
   const [passwordRecoveryError, setPasswordRecoveryError] = useState<string | null>(
     initialPasswordRecovery.current.errorMessage,
@@ -78,6 +86,7 @@ function App() {
       passwordRecoverySessionRef.current = null;
       setPasswordRecoveryStatus('error');
       setPasswordRecoveryError(null);
+      setAuthBootstrapError(null);
       viewRef.current = 'login';
       setView('login');
     };
@@ -91,6 +100,7 @@ function App() {
       passwordRecoveryContextRef.current = true;
       setPasswordRecoveryStatus(status);
       setPasswordRecoveryError(errorMessage);
+      setAuthBootstrapError(null);
       setAuthError(null);
       if (window.location.pathname !== PASSWORD_RECOVERY_PATH) navigate(PASSWORD_RECOVERY_PATH);
       viewRef.current = 'password-reset';
@@ -118,7 +128,11 @@ function App() {
         || isPasswordRecoveryPath(window.location.pathname)) return;
       authenticatedUserIdRef.current = user.id;
       queryClient.clear();
-      const authorization = await loginService.authorizeAuthenticatedUser(user);
+      const authorization = await withOperationTimeout(
+        loginService.authorizeAuthenticatedUser(user),
+        AUTH_BOOTSTRAP_TIMEOUT_MS,
+        AUTH_BOOTSTRAP_TIMEOUT_MESSAGE,
+      );
       if (!mounted
         || generation !== authFlowGenerationRef.current
         || passwordRecoveryContextRef.current
@@ -130,6 +144,7 @@ function App() {
       syncAuthenticatedUserProfile(user, authorization.profile);
       persistedStorage.setItem('contabil_auth', 'gestor');
       setAuthError(null);
+      setAuthBootstrapError(null);
       viewRef.current = 'gestor';
       setView('gestor');
     };
@@ -137,34 +152,43 @@ function App() {
     const bootstrapMainSession = async () => {
       const bootstrapGeneration = authFlowGenerationRef.current;
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!mounted
-          || bootstrapGeneration !== authFlowGenerationRef.current
-          || passwordRecoveryContextRef.current) return;
-        if (error || !data.session) {
-          try {
-            showLogin();
-          } catch (storageError) {
-            console.error('Erro ao remover auth persistido:', storageError);
-            viewRef.current = 'login';
-            setView('login');
+        await withOperationTimeout((async () => {
+          const { data, error } = await supabase.auth.getSession();
+          if (!mounted
+            || bootstrapGeneration !== authFlowGenerationRef.current
+            || passwordRecoveryContextRef.current) return;
+          if (error || !data.session) {
+            try {
+              showLogin();
+            } catch (storageError) {
+              console.error('Erro ao remover auth persistido:', storageError);
+              viewRef.current = 'login';
+              setView('login');
+            }
+            return;
           }
-          return;
-        }
 
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (!mounted
-          || bootstrapGeneration !== authFlowGenerationRef.current
-          || passwordRecoveryContextRef.current) return;
-        if (userError || !userData.user) {
-          await handleBootstrapFailure(userError || new Error('Sessão autenticada inválida.'));
-          return;
-        }
-        await activateAuthenticatedUser(userData.user, bootstrapGeneration);
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (!mounted
+            || bootstrapGeneration !== authFlowGenerationRef.current
+            || passwordRecoveryContextRef.current) return;
+          if (userError || !userData.user) {
+            throw userError || new Error('Sessão autenticada inválida.');
+          }
+          await activateAuthenticatedUser(userData.user, bootstrapGeneration);
+        })(), AUTH_BOOTSTRAP_TIMEOUT_MS, AUTH_BOOTSTRAP_TIMEOUT_MESSAGE);
       } catch (error) {
         if (!mounted
           || bootstrapGeneration !== authFlowGenerationRef.current
           || passwordRecoveryContextRef.current) return;
+        if (isOperationTimeoutError(error)) {
+          // A Promise subjacente nao e cancelavel. Invalida esta geracao para
+          // impedir que uma autorizacao tardia abra o painel depois do timeout.
+          authFlowGenerationRef.current += 1;
+          authenticatedUserIdRef.current = null;
+          setAuthBootstrapError(`${error.message} Verifique a conexão e tente novamente.`);
+          return;
+        }
         await handleBootstrapFailure(error);
       }
     };
@@ -182,7 +206,11 @@ function App() {
 
       showPasswordRecovery('validating');
       try {
-        const recoverySession = await passwordRecoveryService.getInitialSession();
+        const recoverySession = await withOperationTimeout(
+          passwordRecoveryService.getInitialSession(),
+          AUTH_BOOTSTRAP_TIMEOUT_MS,
+          'A validação do link demorou além do esperado. Solicite um novo link ou tente novamente.',
+        );
         if (!mounted) return;
         passwordRecoverySessionRef.current = recoverySession;
         showPasswordRecovery('ready');
@@ -233,6 +261,7 @@ function App() {
         passwordRecoverySessionRef.current = null;
         setPasswordRecoveryStatus('error');
         setAuthError(null);
+        setAuthBootstrapError(null);
         sessionStorage.removeItem('contabil_config_active_subtab');
         if (isPasswordRecoveryPath(window.location.pathname)) navigate('/login');
         viewRef.current = 'login';
@@ -245,7 +274,7 @@ function App() {
       window.clearTimeout(authStateTimer);
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [authBootstrapAttempt]);
 
   useEffect(() => {
     if (view === 'gestor') internalTabsStore.resetToInicio();
@@ -256,6 +285,7 @@ function App() {
     passwordRecoverySessionRef.current = null;
     setPasswordRecoveryStatus('error');
     setPasswordRecoveryError(null);
+    setAuthBootstrapError(null);
     authFlowGenerationRef.current += 1;
     queryClient.clear();
     internalTabsStore.resetToInicio();
@@ -341,6 +371,35 @@ function App() {
     })();
   };
 
+  const retryAuthBootstrap = () => {
+    authFlowGenerationRef.current += 1;
+    authenticatedUserIdRef.current = null;
+    setAuthBootstrapError(null);
+    viewRef.current = 'loading';
+    setView('loading');
+    setAuthBootstrapAttempt((current) => current + 1);
+  };
+
+  const exitAuthBootstrap = () => {
+    authFlowGenerationRef.current += 1;
+    authenticatedUserIdRef.current = null;
+    queryClient.clear();
+    try {
+      persistedStorage.removeItem('contabil_auth');
+      persistedStorage.removeItem('gestor_user_profile');
+    } catch (error) {
+      console.error('Erro ao limpar o acesso local após falha de carregamento:', error);
+    }
+    setAuthBootstrapError(null);
+    setAuthError(null);
+    if (window.location.pathname !== '/login') navigate('/login');
+    viewRef.current = 'login';
+    setView('login');
+    void supabase.auth.signOut({ scope: 'local' }).catch((error) => {
+      console.error('Erro ao encerrar sessão local após falha de carregamento:', error);
+    });
+  };
+
   useEffect(() => {
     if (view !== 'gestor') return undefined;
 
@@ -374,7 +433,16 @@ function App() {
     return <div className="animate-page-fade"><DemoWebsite /></div>;
   }
 
-  if (view === 'loading') return <GestorShellLoading message="Validando seu acesso..." />;
+  if (view === 'loading') {
+    return (
+      <GestorShellLoading
+        error={Boolean(authBootstrapError)}
+        message={authBootstrapError || 'Validando seu acesso...'}
+        onRetry={authBootstrapError ? retryAuthBootstrap : undefined}
+        onExit={authBootstrapError ? exitAuthBootstrap : undefined}
+      />
+    );
+  }
 
   if (view === 'password-reset' || isPasswordResetRoute) {
     return (

@@ -25,11 +25,16 @@ export const RecorrenciasTab = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>Mensalidades e Recorrências</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a' }}>Contratos e modelos mensais</h2>
         <button className="faturamento-btn-primary" onClick={() => setIsModalOpen(true)}>
           <Plus size={16} />
-          Nova Recorrência
+          Novo contrato mensal
         </button>
+      </div>
+
+      <div role="note" style={{ padding: '12px 14px', border: '1px solid #fde68a', borderRadius: '10px', background: '#fffbeb', color: '#78350f', fontSize: '0.85rem' }}>
+        Estes registros são modelos de contrato. Eles não geram cobranças nem NFS-e automaticamente;
+        cada nova competência deve ser criada manualmente.
       </div>
 
       <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid #e2e8f0' }}>
@@ -61,11 +66,11 @@ export const RecorrenciasTab = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '20px' }}>
         {recorrenciasQuery.isLoading && (
-          <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>Carregando recorrências...</div>
+          <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>Carregando contratos mensais...</div>
         )}
         {recorrenciasQuery.isError && (
           <div className="faturamento-card" role="alert" style={{ padding: 20, gridColumn: '1 / -1', color: '#991b1b', background: '#fef2f2' }}>
-            Não foi possível carregar as recorrências.{' '}
+            Não foi possível carregar os contratos mensais.{' '}
             <button type="button" className="faturamento-btn-secondary" onClick={() => void recorrenciasQuery.refetch()}>
               Tentar novamente
             </button>
@@ -134,18 +139,18 @@ export const RecorrenciasTab = () => {
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '16px', borderTop: '1px solid #f1f5f9', marginTop: 'auto' }}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#64748b' }}>
-                <Calendar size={14} /> Todo dia {item.dia}
+                <Calendar size={14} /> Referência: dia {item.dia}
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
-                {item.emissaoNfse && <span style={{ padding: '2px 6px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600 }} title="Emite NFS-e Automática">NFS-e</span>}
-                {item.cobranca && <span style={{ padding: '2px 6px', backgroundColor: '#f8fafc', color: '#0f172a', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, border: '1px solid #e2e8f0' }} title="Gera Cobrança Automática">Cob</span>}
+                {item.emissaoNfse && <span style={{ padding: '2px 6px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600 }} title="NFS-e configurada apenas como referência">NFS-e ref.</span>}
+                {item.cobranca && <span style={{ padding: '2px 6px', backgroundColor: '#f8fafc', color: '#0f172a', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, border: '1px solid #e2e8f0' }} title="As próximas cobranças são criadas manualmente">Cob. manual</span>}
               </div>
             </div>
           </div>
         ))}
         {!recorrenciasQuery.isLoading && !recorrenciasQuery.isError && filteredRecorrencias.length === 0 && (
           <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>
-            Nenhuma recorrência encontrada.
+            Nenhum contrato mensal encontrado.
           </div>
         )}
       </div>

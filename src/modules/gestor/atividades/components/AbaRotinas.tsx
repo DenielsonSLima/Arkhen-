@@ -4,6 +4,8 @@ import { RotinaProgramadaForm } from '../forms/RotinaProgramadaForm';
 import {
   blankRotinaProgramadaForm,
   buildRotinaFromForm,
+  ESCRITORIO_SCOPE_ID,
+  isModeloPermitidoParaVinculo,
   rotinaToProgramadaForm,
   validateRotinaProgramadaForm,
 } from '../forms/rotinaProgramadaFormModel';
@@ -74,6 +76,11 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
     }
     if (!modelos.some((modelo) => modelo.id === form.modeloId)) {
       setFormError('O modelo selecionado não está mais disponível. Recarregue e escolha outro modelo.');
+      return;
+    }
+    if (form.clienteScopeId !== ESCRITORIO_SCOPE_ID
+      && !isModeloPermitidoParaVinculo(form.modeloId, form.clienteScopeId, clientes)) {
+      setFormError('O modelo selecionado não está vinculado a este cliente. Escolha um modelo permitido ou revise os vínculos.');
       return;
     }
     setFormError('');

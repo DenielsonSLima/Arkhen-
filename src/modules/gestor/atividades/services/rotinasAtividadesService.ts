@@ -33,6 +33,13 @@ export interface RotinaAtividade {
 export interface ClienteRotina {
   id: string;
   nome: string;
+  modelosAtivos: string[];
+}
+
+interface ClienteRotinaRow {
+  id: string;
+  nome: string | null;
+  modelos_ativos: string[] | null;
 }
 
 export interface TarefaGestor {
@@ -152,6 +159,14 @@ const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
   incluirFinaisDeSemana: row.incluir_finais_de_semana || false,
 });
 
+const toClienteRotina = (row: ClienteRotinaRow): ClienteRotina => ({
+  id: row.id,
+  nome: row.nome || 'Cliente sem nome',
+  modelosAtivos: Array.isArray(row.modelos_ativos)
+    ? row.modelos_ativos.filter((modeloId): modeloId is string => typeof modeloId === 'string')
+    : [],
+});
+
 const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   id: row.id,
   rotinaId: row.rotina_id || undefined,
@@ -220,7 +235,7 @@ export const rotinasAtividadesService = {
         .order('nome', { ascending: true }),
       supabase
         .from('clientes')
-        .select('id,nome')
+        .select('id,nome,modelos_ativos')
         .eq('empresa_id', empresaId)
         .eq('status', 'Ativa')
         .order('nome', { ascending: true }),
@@ -258,7 +273,7 @@ export const rotinasAtividadesService = {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
       usuarios,
-      clientes: (clientesData || []) as ClienteRotina[],
+      clientes: ((clientesData || []) as ClienteRotinaRow[]).map(toClienteRotina),
       authUserId: authData.user?.id || null,
       usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
     };
@@ -287,6 +302,20 @@ export const rotinasAtividadesService = {
       throw new Error('O modelo da rotina precisa fornecer ao menos uma etapa de checklist.');
     }
     const empresaId = await getCurrentEmpresaId();
+    if (isUuid(rotina.clienteId)) {
+      const { data: cliente, error: clienteError } = await supabase
+        .from('clientes')
+        .select('id,modelos_ativos')
+        .eq('empresa_id', empresaId)
+        .eq('id', rotina.clienteId)
+        .eq('status', 'Ativa')
+        .maybeSingle();
+      if (clienteError) throw clienteError;
+      const modelosAtivos = Array.isArray(cliente?.modelos_ativos) ? cliente.modelos_ativos : [];
+      if (!cliente || !modelosAtivos.includes(rotina.modeloId as string)) {
+        throw new Error('O modelo selecionado não está vinculado ao cliente escolhido. Revise os vínculos antes de salvar.');
+      }
+    }
     const payload = {
       empresa_id: empresaId,
       modelo_id: isUuid(rotina.modeloId) ? rotina.modeloId : null,

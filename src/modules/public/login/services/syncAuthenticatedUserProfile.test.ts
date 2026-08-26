@@ -25,6 +25,7 @@ describe('syncAuthenticatedUserProfile', () => {
     syncAuthenticatedUserProfile(authUser({ name: 'Pessoa Real', picture: 'https://provedor/foto.jpg' }) as never);
 
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
+    expect(saved.nome).toBe('Usuário');
     expect(saved.avatar).not.toBe('https://provedor/foto.jpg');
     expect(saved.avatar).toContain('data:image/svg+xml');
     expect(saved.avatarSelectedByUser).toBe(false);
@@ -42,6 +43,31 @@ describe('syncAuthenticatedUserProfile', () => {
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
     expect(saved.avatar).toBe('https://storage/foto-escolhida.webp');
     expect(saved.avatarSelectedByUser).toBe(true);
+  });
+
+  it('preserva uma pessoa real chamada João Silva sem sinais de demonstração', () => {
+    storage.getItem.mockReturnValue(JSON.stringify({
+      nome: 'João Silva',
+      email: 'pessoa@empresa.com.br',
+    }));
+
+    syncAuthenticatedUserProfile(authUser({}) as never);
+
+    const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
+    expect(saved.nome).toBe('João Silva');
+  });
+
+  it('descarta a identidade legada quando o nome vem acompanhado do e-mail demo exato', () => {
+    storage.getItem.mockReturnValue(JSON.stringify({
+      nome: 'João Silva',
+      email: 'joao.silva@arkhen.com.br',
+    }));
+
+    syncAuthenticatedUserProfile(authUser({}) as never);
+
+    const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
+    expect(saved.nome).toBe('Usuário');
+    expect(saved.email).toBe('pessoa@empresa.com.br');
   });
 
   it('descarta qualquer foto antiga sem consentimento explícito', () => {
@@ -67,6 +93,16 @@ describe('syncAuthenticatedUserProfile', () => {
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
     expect(saved.nome).toBe('Pessoa Convidada');
     expect(saved.perfil).toBe('Auxiliar');
+  });
+
+  it('preserva o nome editado no app acima do nome operacional anterior', () => {
+    syncAuthenticatedUserProfile(
+      authUser({ nome: 'Nome Atualizado', name: 'Nome do Google' }) as never,
+      { nome: 'Nome Operacional Anterior', perfil: 'Auxiliar' },
+    );
+
+    const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
+    expect(saved.nome).toBe('Nome Atualizado');
   });
 
   it('adota perfil neutro quando a autorização não informa um cargo', () => {

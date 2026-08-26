@@ -161,6 +161,15 @@
 .protocolos-empty p {
   font-size: 0.85rem;
 }
+.protocolos-retry-button {
+  border: 1px solid var(--color-gold-primary);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--color-gold-dark);
+  padding: 9px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
 .protocolos-regime-groups {
   display: flex;
   flex-direction: column;

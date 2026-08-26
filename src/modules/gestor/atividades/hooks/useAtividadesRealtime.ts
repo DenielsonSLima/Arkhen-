@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
-import { atividadesKeys } from './useAtividadesWorkspace';
+import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
 
 export const useAtividadesRealtime = (enabled = true, onChange?: () => void) => {
   const queryClient = useQueryClient();
@@ -17,7 +17,7 @@ export const useAtividadesRealtime = (enabled = true, onChange?: () => void) => 
     if (!enabled) return;
 
     const invalidate = () => {
-      void queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
+      void invalidateAfterMutation(queryClient, 'atividades');
       if (!onChangeRef.current) return;
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = window.setTimeout(() => {

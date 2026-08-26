@@ -28,7 +28,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
   });
   const saveContratoMutation = useSaveContratoFinanceiroMutation();
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
-  const [emitCobranca, setEmitCobranca] = useState(true);
+  const [emitCobranca, setEmitCobranca] = useState(false);
   const [clienteEmpresaId, setClienteEmpresaId] = useState('');
   const [valorMensal, setValorMensal] = useState('');
   const [diaVencimento, setDiaVencimento] = useState(1);
@@ -50,7 +50,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
   };
 
   const resetForm = () => {
-    setEmitCobranca(true);
+    setEmitCobranca(false);
     setClienteEmpresaId('');
     setValorMensal('');
     setDiaVencimento(1);
@@ -103,7 +103,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
         });
       }
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'Falha ao salvar recorrência.');
+      setErrorMsg(error instanceof Error ? error.message : 'Falha ao salvar contrato mensal.');
       return;
     }
 
@@ -119,8 +119,8 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
               <Repeat size={20} />
             </span>
             <div>
-              <h2>Nova recorrência</h2>
-              <p>Contrato mensal com padrão de cobrança pelo Banco Inter.</p>
+              <h2>Novo contrato mensal</h2>
+              <p>Modelo de referência; as próximas competências devem ser lançadas manualmente.</p>
             </div>
           </div>
           <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
@@ -129,7 +129,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
         </div>
 
         <div className="faturamento-charge-form">
-          <BillingSectionTitle title="Cliente e mensalidade" description="Dados fixos que orientam a emissão recorrente." />
+          <BillingSectionTitle title="Cliente e mensalidade" description="Dados de referência para os lançamentos mensais manuais." />
 
           <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
             <label>Parceiro / Cliente</label>
@@ -157,7 +157,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
           </div>
 
           <div className="faturamento-form-group">
-            <label>Dia de Vencimento/Emissão</label>
+            <label>Dia de vencimento de referência</label>
             <BillingInputFrame icon={
               <CalendarDays size={16} />
             }>
@@ -183,20 +183,23 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             </BillingInputFrame>
           </div>
 
-          <BillingSectionTitle title="Automação Banco Inter" description="Primeira cobrança e padrão financeiro da recorrência." />
+          <BillingSectionTitle
+            title="Primeira cobrança opcional"
+            description="Somente a primeira cobrança pode ser criada agora; as próximas competências são manuais."
+          />
 
           <label className="faturamento-switch-row" style={{ gridColumn: '1 / -1' }}>
             <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
             <span>
-              <strong>Gerar primeira cobrança automaticamente</strong>
-              <small>Cria uma cobrança BolePix no Banco Inter para o próximo vencimento.</small>
+              <strong>Gerar a primeira cobrança agora</strong>
+              <small>Cria somente esta cobrança BolePix; não agenda cobranças futuras.</small>
             </span>
           </label>
 
           {emitCobranca && (
             <>
               <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Forma de Pagamento Padrão</label>
+                <label>Forma de pagamento da primeira cobrança</label>
                 <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
                   <option value="Ambos">Boleto + Pix</option>
                   <option value="Pix">Apenas Pix</option>
@@ -242,7 +245,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             disabled={saveContratoMutation.isPending || createCobrancaMutation.isPending}
             className="faturamento-btn-primary"
           >
-            <Check size={16} /> {saveContratoMutation.isPending || createCobrancaMutation.isPending ? 'Salvando...' : 'Salvar Recorrência'}
+            <Check size={16} /> {saveContratoMutation.isPending || createCobrancaMutation.isPending ? 'Salvando...' : 'Salvar contrato mensal'}
           </button>
         </div>
       </div>

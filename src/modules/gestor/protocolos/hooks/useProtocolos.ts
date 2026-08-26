@@ -158,6 +158,12 @@ export const useProtocolos = () => {
     activeEmpresaTab,
     setActiveEmpresaTab,
     isLoading: protocolosQuery.isLoading,
+    errorMessage: protocolosQuery.error instanceof Error
+      ? protocolosQuery.error.message
+      : protocolosQuery.isError
+        ? 'Não foi possível carregar os protocolos.'
+        : '',
+    retry: protocolosQuery.refetch,
     activeTab,
     setActiveTab,
     searchTerm,

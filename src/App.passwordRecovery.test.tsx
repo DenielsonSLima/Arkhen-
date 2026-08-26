@@ -87,7 +87,13 @@ vi.mock('./modules/gestor/layout/GestorLayout', () => ({
   GestorLayout: () => <div data-testid="gestor-layout" />,
 }));
 vi.mock('./modules/gestor/layout/GestorShellLoading', () => ({
-  GestorShellLoading: () => <div data-testid="auth-loading" />,
+  GestorShellLoading: ({ error, message, onRetry, onExit }: any) => (
+    <div data-testid="auth-loading" role={error ? 'alert' : 'status'}>
+      <span>{message}</span>
+      {onRetry && <button type="button" onClick={onRetry}>Tentar novamente</button>}
+      {onExit && <button type="button" onClick={onExit}>Voltar ao login</button>}
+    </div>
+  ),
 }));
 vi.mock('./modules/gestor/configuracoes/hooks/useConfiguracoesRealtime', () => ({
   useConfiguracoesRealtime: vi.fn(),
@@ -118,7 +124,7 @@ vi.mock('./lib/persistedStorage', () => ({
   },
 }));
 
-import App from './App';
+import App, { AUTH_BOOTSTRAP_TIMEOUT_MS } from './App';
 
 const globalSession = {
   user: { id: 'global-user', email: 'global@example.com', user_metadata: {} },
@@ -134,7 +140,10 @@ const SUPABASE_STORAGE_KEY = 'sb-dgklhykjwzmeqxejlicz-auth-token';
 const GLOBAL_STORAGE_SENTINEL = JSON.stringify(globalSession);
 
 describe('App password recovery isolation', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -264,5 +273,74 @@ describe('App password recovery isolation', () => {
     expect(mocks.getUser).toHaveBeenCalledOnce();
     expect(mocks.authorizeAuthenticatedUser).toHaveBeenCalledWith(globalSession.user);
     expect(mocks.getInitialRecoverySession).not.toHaveBeenCalled();
+  });
+
+  it('troca o carregamento infinito por erro recuperável e permite tentar novamente', async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, '', '/');
+    mocks.getSession.mockReturnValueOnce(new Promise(() => undefined));
+    render(<App />);
+
+    expect(screen.getByTestId('auth-loading').getAttribute('role')).toBe('status');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTH_BOOTSTRAP_TIMEOUT_MS);
+    });
+
+    expect(screen.getByTestId('auth-loading').getAttribute('role')).toBe('alert');
+    expect(screen.getByText(/validação do acesso demorou/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /tentar novamente/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /voltar ao login/i })).toBeDefined();
+
+    mocks.getSession.mockResolvedValueOnce({ data: { session: globalSession }, error: null });
+    fireEvent.click(screen.getByRole('button', { name: /tentar novamente/i }));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('gestor-layout')).toBeDefined();
+    expect(mocks.getSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignora a autorização antiga quando ela termina depois do timeout', async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, '', '/');
+    let resolveAuthorization: ((value: unknown) => void) | undefined;
+    mocks.authorizeAuthenticatedUser.mockReturnValueOnce(new Promise((resolve) => {
+      resolveAuthorization = resolve;
+    }));
+    render(<App />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(AUTH_BOOTSTRAP_TIMEOUT_MS);
+    });
+    expect(screen.getByTestId('auth-loading').getAttribute('role')).toBe('alert');
+
+    await act(async () => {
+      resolveAuthorization?.({ allowed: true, message: '', onboarding: null });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByTestId('gestor-layout')).toBeNull();
+    expect(screen.getByTestId('auth-loading').getAttribute('role')).toBe('alert');
+  });
+
+  it('permite abandonar imediatamente um bootstrap travado e voltar ao login', async () => {
+    vi.useFakeTimers();
+    window.history.replaceState({}, '', '/');
+    mocks.getSession.mockReturnValueOnce(new Promise(() => undefined));
+    render(<App />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTH_BOOTSTRAP_TIMEOUT_MS);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /voltar ao login/i }));
+
+    expect(screen.getByTestId('login-page')).toBeDefined();
+    expect(window.location.pathname).toBe('/login');
+    expect(mocks.globalSignOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 });

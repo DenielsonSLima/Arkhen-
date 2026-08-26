@@ -56,7 +56,7 @@ const slides: Slide[] = [
   },
   {
     src: screenLinkPublico,
-    title: 'Portal Público do Cliente',
+    title: 'Link Público Protegido',
     desc: 'Página profissional de acesso ao arquivo com contador regressivo e identificação do escritório.',
     featurePhrase: 'Ofereça um canal ágil e moderno para seus parceiros comerciais resgatarem arquivos.',
   },

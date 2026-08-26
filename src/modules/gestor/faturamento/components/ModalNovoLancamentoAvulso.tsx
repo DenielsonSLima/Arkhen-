@@ -28,6 +28,8 @@ import {
   LancamentoTypeChoice,
 } from './NovoLancamentoAvulsoFormSteps';
 import {
+  DIRECT_NFSE_UNAVAILABLE_MESSAGE,
+  executeNovoLancamento,
   getTodayString,
   type MeioPagamento,
   type NovoLancamentoTipo,
@@ -74,15 +76,12 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
     const parts = value.split('-');
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
   };
-  const isSomenteNfse = tipo === 'nfse';
   const isSubmitPending = createCobrancaMutation.isPending || emitNfseMutation.isPending;
   const getSuccessMessage = () => {
-    if (isSomenteNfse) return 'Cobrança criada e NFS-e emitida.';
-    if (tipo === 'nfseComCobranca') return 'Cobrança gerada e NFS-e emitida em seguida.';
+    if (tipo === 'nfseComCobranca') return 'Cobrança criada no financeiro e NFS-e emitida com vínculo à cobrança.';
     return 'Cobrança criada no Banco Inter e registrada no financeiro.';
   };
   const getStep3Title = () => {
-    if (isSomenteNfse) return 'NFS-e emitida';
     if (tipo === 'nfseComCobranca') return 'Cobrança e NFS-e emitidas';
     return 'Cobrança gerada';
   };
@@ -145,6 +144,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   };
 
   const handleSubmit = async () => {
+    if (tipo === 'nfse') {
+      setErrorMsg(DIRECT_NFSE_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
     const parsedValor = parseCurrencyInput(valor);
     if (!clienteEmpresaId) {
       setErrorMsg('Por favor, selecione um parceiro/cliente.');
@@ -161,22 +165,21 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
 
     try {
       setErrorMsg(null);
-      const cobranca = await createCobrancaMutation.mutateAsync({
-        clienteEmpresaId,
-        valor: parsedValor,
-        dataVencimento,
-        descricao: descricao.trim() || 'Cobrança avulsa',
-        meioPagamento,
-        descontoPercentual: parsePercentInput(descontoPercentual),
-        jurosPercentual: parsePercentInput(jurosPercentual),
-        multaPercentual: parsePercentInput(multaPercentual),
-        mensagemBoleto: mensagemBoleto.trim(),
+      const updatedCobranca = await executeNovoLancamento({
+        tipo,
+        createCobranca: () => createCobrancaMutation.mutateAsync({
+          clienteEmpresaId,
+          valor: parsedValor,
+          dataVencimento,
+          descricao: descricao.trim() || 'Cobrança avulsa',
+          meioPagamento,
+          descontoPercentual: parsePercentInput(descontoPercentual),
+          jurosPercentual: parsePercentInput(jurosPercentual),
+          multaPercentual: parsePercentInput(multaPercentual),
+          mensagemBoleto: mensagemBoleto.trim(),
+        }),
+        emitNfse: (cobrancaId) => emitNfseMutation.mutateAsync(cobrancaId),
       });
-      let updatedCobranca = cobranca;
-      if (tipo === 'nfse' || tipo === 'nfseComCobranca') {
-        const nfseId = await emitNfseMutation.mutateAsync(cobranca.id);
-        updatedCobranca = { ...cobranca, nfseId };
-      }
 
       setGeneratedCobranca(updatedCobranca);
       setStep(3);
@@ -196,10 +199,10 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
             <div>
               <h2>
                 {step === 1 && 'Nova cobrança'}
-                {step === 2 && (isSomenteNfse ? 'Dados da NFS-e' : 'Dados da cobrança')}
+                {step === 2 && 'Dados da cobrança'}
                 {step === 3 && getStep3Title()}
               </h2>
-              <p>{step === 3 ? 'Lançamento finalizado.' : 'Emissão avulsa com BolePix, cobrança Pix pelo Banco Inter e/ou emissão de NFS-e.'}</p>
+              <p>{step === 3 ? 'Lançamento finalizado.' : 'Toda NFS-e emitida por este fluxo precisa estar vinculada a uma cobrança no financeiro.'}</p>
             </div>
           </div>
           <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
@@ -350,7 +353,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               disabled={isSubmitPending}
               className="faturamento-btn-primary"
             >
-              <Check size={16} /> {isSubmitPending ? 'Gerando...' : 'Confirmar Geração'}
+              <Check size={16} /> {isSubmitPending
+                ? 'Gerando...'
+                : tipo === 'nfseComCobranca'
+                  ? 'Gerar cobrança e NFS-e'
+                  : 'Gerar cobrança'}
             </button>
           )}
         </div>

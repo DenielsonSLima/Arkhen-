@@ -136,4 +136,27 @@ describe('useAtividadesRealtime', () => {
     hook.unmount();
     vi.useRealTimers();
   });
+
+  it('invalida atividades e todos os módulos dependentes', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
+    const Wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const hook = renderHook(() => useAtividadesRealtime(true), { wrapper: Wrapper });
+    const activeChannel = Array.from(realtimeMock.channels.values()).at(-1);
+
+    await act(async () => {
+      activeChannel?.callbacks[0]?.();
+      await Promise.resolve();
+    });
+
+    expect(invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
+      ['atividades'],
+      ['inicio'],
+      ['agenda'],
+      ['conformidade'],
+    ]);
+    hook.unmount();
+  });
 });

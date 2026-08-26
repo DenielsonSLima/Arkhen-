@@ -14,6 +14,11 @@ import { GestorModuleContent } from './GestorModuleContent';
 import { GestorSidebar } from './GestorSidebar';
 import { GestorShellLoading } from './GestorShellLoading';
 import { useGestorGlobalSearch, type GlobalSearchResult } from './hooks/useGestorGlobalSearch';
+import {
+  isKnownLegacyDemoAvatar,
+  isKnownLegacyDemoEmail,
+  isKnownLegacyDemoName,
+} from '../../../lib/legacyDemoProfile';
 import './GestorLayout.css';
 import './GestorLayoutFixes.css';
 import './GestorModuleTabs.css';
@@ -36,11 +41,11 @@ const DEFAULT_PROFILE = {
 const normalizeUserProfile = (storedProfile: Partial<typeof DEFAULT_PROFILE>) => ({
   ...DEFAULT_PROFILE,
   ...storedProfile,
-  nome: !storedProfile.nome || storedProfile.nome === 'João Silva'
+  nome: !storedProfile.nome || isKnownLegacyDemoName(storedProfile)
     ? DEFAULT_PROFILE.nome
     : storedProfile.nome,
-  email: storedProfile.email === 'joao.silva@arkhen.com.br' ? '' : storedProfile.email || '',
-  avatar: storedProfile.avatar?.includes('images.unsplash.com') ? '' : storedProfile.avatar || '',
+  email: isKnownLegacyDemoEmail(storedProfile.email) ? '' : storedProfile.email || '',
+  avatar: isKnownLegacyDemoAvatar(storedProfile.avatar) ? '' : storedProfile.avatar || '',
 });
 
 const readUserProfile = () => {
@@ -275,7 +280,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
           searchLoading={globalSearch.query.isLoading}
           modulesReady={modulesReady}
           results={globalSearch.results}
-          openSolicitacoesCount={0}
           onSearchTermChange={globalSearch.setTerm}
           onSearchFocusChange={globalSearch.setFocused}
           onSearchSelect={selectGlobalSearch}

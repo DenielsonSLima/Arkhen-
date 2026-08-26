@@ -1,4 +1,8 @@
 import { supabase } from '../../../../../lib/supabase';
+import { withOperationTimeout } from '../../../../../lib/operationTimeout';
+
+export const MODULES_REQUEST_TIMEOUT_MS = 15_000;
+const MODULES_TIMEOUT_MESSAGE = 'A consulta de módulos demorou além do esperado. Tente novamente.';
 
 export type SystemModuleId =
   | 'inicio'
@@ -77,7 +81,11 @@ const isMissingSchemaError = (error: { code?: string; message?: string }) => (
 
 export const modulosSistemaService = {
   async list(): Promise<SystemModulesResponse> {
-    const { data, error } = await supabase.rpc('listar_configuracoes_modulos_sistema');
+    const { data, error } = await withOperationTimeout(
+      supabase.rpc('listar_configuracoes_modulos_sistema'),
+      MODULES_REQUEST_TIMEOUT_MS,
+      MODULES_TIMEOUT_MESSAGE,
+    );
     if (error && isMissingSchemaError(error)) {
       return { canManage: false, available: false, modulos: fallbackModules };
     }

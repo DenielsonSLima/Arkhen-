@@ -28,7 +28,7 @@ export const LandingPage: React.FC = () => {
   const faqs: FaqItem[] = [
     {
       question: 'O que é o Arkhen Gestão Contábil?',
-      answer: 'O Arkhen é um ecossistema completo para escritórios de contabilidade. Ele integra o controle interno de prazos e tarefas, envio de protocolos digitais com comprovante de visualização, gestão financeira de honorários e um portal de compartilhamento de documentos com o cliente.'
+      answer: 'O Arkhen integra o controle interno de prazos e tarefas, o acompanhamento de entregas, a biblioteca de documentos e o compartilhamento externo por links protegidos. Recursos financeiros e fiscais dependem de configuração e homologação próprias.'
     },
     {
       question: 'Como funciona a emissão de NFS-e e a homologação com a prefeitura?',
@@ -44,7 +44,7 @@ export const LandingPage: React.FC = () => {
     },
     {
       question: 'Como funciona o rastro do protocolo eletrônico?',
-      answer: 'O sistema mantém um histórico operacional de publicação, visualização e download dos documentos. Esse registro ajuda o escritório a acompanhar a entrega; eventual uso jurídico deve ser avaliado conforme o caso e a orientação profissional adequada.'
+      answer: 'O compartilhamento externo mantém tentativas de acesso e downloads do link protegido. O Controle de Entregas registra status e anotações operacionais; eventual uso jurídico deve ser avaliado conforme o caso e a orientação profissional adequada.'
     },
     {
       question: 'Meu escritório pode testar gratuitamente?',

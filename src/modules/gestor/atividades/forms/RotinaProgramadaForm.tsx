@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { ModeloAtividade } from '../services/atividadesService';
 import {
   todayKey,
@@ -23,6 +23,8 @@ import {
 import {
   ESCRITORIO_SCOPE_ID,
   applyModeloToRotinaForm,
+  getModelosDisponiveisParaVinculo,
+  isModeloPermitidoParaVinculo,
   type RotinaProgramadaFormValues,
 } from './rotinaProgramadaFormModel';
 
@@ -57,10 +59,23 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
   onRetryModelos,
   onConfigureModels,
 }) => {
-  const selectedModelo = modelos.find((modelo) => modelo.id === values.modeloId);
+  const modelosDisponiveis = getModelosDisponiveisParaVinculo(
+    modelos,
+    clientes,
+    values.clienteScopeId,
+  );
+  const selectedModelo = modelosDisponiveis.find((modelo) => modelo.id === values.modeloId);
+
+  useEffect(() => {
+    if (!values.modeloId || !values.clienteScopeId) return;
+    if (isModeloPermitidoParaVinculo(values.modeloId, values.clienteScopeId, clientes)) return;
+    onChange((current) => current.modeloId === values.modeloId
+      ? { ...current, modeloId: '', checklistText: '' }
+      : current);
+  }, [clientes, onChange, values.clienteScopeId, values.modeloId]);
 
   const handleModeloChange = (modeloId: string) => {
-    const modelo = modelos.find((item) => item.id === modeloId);
+    const modelo = modelosDisponiveis.find((item) => item.id === modeloId);
     if (!modelo) {
       onChange((current) => ({ ...current, modeloId: '', checklistText: '' }));
       return;
@@ -80,13 +95,19 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
 
   const handleClienteChange = (clienteScopeId: string) => {
     const cliente = clientes.find((item) => item.id === clienteScopeId);
-    onChange((current) => ({
-      ...current,
-      clienteScopeId,
-      clienteNome: clienteScopeId === ESCRITORIO_SCOPE_ID
-        ? 'Escritório'
-        : cliente?.nome || '',
-    }));
+    onChange((current) => {
+      const modeloContinuaPermitido = !current.modeloId
+        || isModeloPermitidoParaVinculo(current.modeloId, clienteScopeId, clientes);
+      return {
+        ...current,
+        clienteScopeId,
+        clienteNome: clienteScopeId === ESCRITORIO_SCOPE_ID
+          ? 'Escritório'
+          : cliente?.nome || '',
+        modeloId: modeloContinuaPermitido ? current.modeloId : '',
+        checklistText: modeloContinuaPermitido ? current.checklistText : '',
+      };
+    });
   };
 
   return (
@@ -98,22 +119,40 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
       )}
 
       <div style={fieldStyle}>
-        <label htmlFor="rotina-modelo" style={labelStyle}>1. Modelo base do checklist</label>
+        <label htmlFor="rotina-vinculo" style={labelStyle}>1. Cliente ou escritório</label>
+        <select
+          id="rotina-vinculo"
+          value={values.clienteScopeId}
+          onChange={(event) => handleClienteChange(event.target.value)}
+          style={selectStyle}
+          required
+        >
+          <option value="">Selecione o vínculo</option>
+          <option value={ESCRITORIO_SCOPE_ID}>Escritório — rotina interna</option>
+          {clientes.map((cliente) => (
+            <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
+          ))}
+        </select>
+        <small style={helpTextStyle}>A escolha do vínculo define quais modelos podem ser usados nesta rotina.</small>
+      </div>
+
+      <div style={fieldStyle}>
+        <label htmlFor="rotina-modelo" style={labelStyle}>2. Modelo base do checklist</label>
         <select
           id="rotina-modelo"
           value={values.modeloId}
           onChange={(event) => handleModeloChange(event.target.value)}
           style={selectStyle}
           required
-          disabled={isLoadingModelos || isModelosError || modelos.length === 0}
+          disabled={!values.clienteScopeId || isLoadingModelos || isModelosError || modelosDisponiveis.length === 0}
         >
-          <option value="">Selecione um modelo</option>
-          {modelos.map((modelo) => (
+          <option value="">{values.clienteScopeId ? 'Selecione um modelo vinculado' : 'Escolha primeiro o vínculo'}</option>
+          {modelosDisponiveis.map((modelo) => (
             <option key={modelo.id} value={modelo.id}>{modelo.nome}</option>
           ))}
         </select>
         <small style={helpTextStyle}>
-          O modelo define o checklist técnico. A rotina define quando, para quem e por quem ele será executado.
+          Para clientes, aparecem somente os modelos definidos em Modelos de fechamento › Vínculos por cliente.
         </small>
         {isLoadingModelos && <small style={statusTextStyle}>Carregando modelos disponíveis...</small>}
         {isModelosError && (
@@ -131,6 +170,16 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
             )}
           </div>
         )}
+        {!isLoadingModelos && !isModelosError && valoresTemVinculoSemModelo(values.clienteScopeId, modelos, modelosDisponiveis) && (
+          <div style={modelWarningStyle} role="status">
+            <span>Nenhum modelo está vinculado a este cliente.</span>
+            {onConfigureModels && (
+              <button type="button" onClick={onConfigureModels} style={inlineActionStyle}>
+                Revisar vínculos por cliente
+              </button>
+            )}
+          </div>
+        )}
         {selectedModelo && (
           <div style={modelSummaryStyle} role="status">
             <strong>{selectedModelo.etapas.length} etapas herdadas</strong>
@@ -140,7 +189,7 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
       </div>
 
       <div style={fieldStyle}>
-        <label htmlFor="rotina-nome" style={labelStyle}>2. Nome da rotina</label>
+        <label htmlFor="rotina-nome" style={labelStyle}>3. Nome da rotina</label>
         <input
           id="rotina-nome"
           value={values.nome}
@@ -153,7 +202,7 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
 
       <div style={rowStyle}>
         <div style={{ ...fieldStyle, flex: 1 }}>
-          <label htmlFor="rotina-categoria" style={labelStyle}>3. Categoria</label>
+          <label htmlFor="rotina-categoria" style={labelStyle}>4. Categoria</label>
           <select
             id="rotina-categoria"
             value={values.categoria}
@@ -174,7 +223,7 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
           </select>
         </div>
         <div style={{ ...fieldStyle, flex: 1 }}>
-          <label htmlFor="rotina-frequencia" style={labelStyle}>4. Recorrência</label>
+          <label htmlFor="rotina-frequencia" style={labelStyle}>5. Recorrência</label>
           <select
             id="rotina-frequencia"
             value={values.frequencia}
@@ -213,7 +262,7 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
 
       <div style={rowStyle}>
         <div style={{ ...fieldStyle, flex: 1 }}>
-          <label htmlFor="rotina-responsavel" style={labelStyle}>5. Responsável</label>
+          <label htmlFor="rotina-responsavel" style={labelStyle}>6. Responsável</label>
           <select
             id="rotina-responsavel"
             value={values.responsavelConfigUsuarioId}
@@ -224,22 +273,6 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
             <option value="">Selecione</option>
             {usuarios.map((usuario) => (
               <option key={usuario.configUsuarioId} value={usuario.configUsuarioId}>{usuario.nome}</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ ...fieldStyle, flex: 1 }}>
-          <label htmlFor="rotina-vinculo" style={labelStyle}>6. Cliente ou escritório</label>
-          <select
-            id="rotina-vinculo"
-            value={values.clienteScopeId}
-            onChange={(event) => handleClienteChange(event.target.value)}
-            style={selectStyle}
-            required
-          >
-            <option value="">Selecione o vínculo</option>
-            <option value={ESCRITORIO_SCOPE_ID}>Escritório — rotina interna</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>{cliente.nome}</option>
             ))}
           </select>
         </div>
@@ -322,7 +355,7 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
         <button onClick={onCancel} style={cancelBtnStyle} type="button">Cancelar</button>
         <button
           type="submit"
-          disabled={isSaving || isLoadingModelos || isModelosError || modelos.length === 0}
+          disabled={isSaving || isLoadingModelos || isModelosError || modelosDisponiveis.length === 0}
           style={{ ...submitBtnStyle, opacity: isSaving ? 0.65 : 1 }}
         >
           {isSaving ? 'Salvando...' : values.id ? 'Salvar alterações' : 'Criar rotina'}
@@ -331,6 +364,17 @@ export const RotinaProgramadaForm: React.FC<RotinaProgramadaFormProps> = ({
     </form>
   );
 };
+
+const valoresTemVinculoSemModelo = (
+  clienteScopeId: string,
+  modelos: ModeloAtividade[],
+  modelosDisponiveis: ModeloAtividade[],
+) => Boolean(
+  clienteScopeId
+  && clienteScopeId !== ESCRITORIO_SCOPE_ID
+  && modelos.length > 0
+  && modelosDisponiveis.length === 0,
+);
 
 const helpTextStyle = { color: '#64748b', fontSize: '0.74rem', lineHeight: 1.45 };
 const statusTextStyle = { ...helpTextStyle, color: '#78571d', fontWeight: 700 };

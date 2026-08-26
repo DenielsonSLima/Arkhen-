@@ -32,6 +32,7 @@ interface LancamentoTypeChoiceProps {
 export const LancamentoTypeChoice = ({ tipo, onChange }: LancamentoTypeChoiceProps) => (
   <div className="faturamento-charge-choice">
     <button
+      type="button"
       onClick={() => onChange('cobranca')}
       className={`faturamento-charge-type ${tipo === 'cobranca' ? 'active' : ''}`}
     >
@@ -44,18 +45,22 @@ export const LancamentoTypeChoice = ({ tipo, onChange }: LancamentoTypeChoicePro
       </span>
     </button>
     <button
+      type="button"
       onClick={() => onChange('nfse')}
       className={`faturamento-charge-type ${tipo === 'nfse' ? 'active' : ''}`}
+      disabled
+      title="Indisponível: ainda não existe integração fiscal direta para emitir NFS-e sem uma cobrança vinculada."
     >
       <span className="faturamento-charge-type-icon">
         <FileText size={24} />
       </span>
       <span>
         <strong>Somente NFS-e</strong>
-        <small>Gerar a cobrança base e emitir nota fiscal automaticamente.</small>
+        <small>Indisponível enquanto não houver integração fiscal direta sem cobrança.</small>
       </span>
     </button>
     <button
+      type="button"
       onClick={() => onChange('nfseComCobranca')}
       className={`faturamento-charge-type ${tipo === 'nfseComCobranca' ? 'active' : ''}`}
     >
@@ -64,7 +69,7 @@ export const LancamentoTypeChoice = ({ tipo, onChange }: LancamentoTypeChoicePro
       </span>
       <span>
         <strong>NFS-e + cobrança</strong>
-        <small>Emitir NFS-e e manter cobrança ativa no financeiro.</small>
+        <small>Criar a cobrança no financeiro e emitir a NFS-e vinculada a ela.</small>
       </span>
     </button>
   </div>

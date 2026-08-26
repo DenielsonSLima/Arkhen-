@@ -55,7 +55,7 @@ const modules: ModuleCard[] = [
   },
   {
     icon: <Link2 size={26} />,
-    title: 'Portal Público do Cliente',
+    title: 'Link Público Protegido',
     desc: 'Página de download exclusiva sem login. Contador regressivo de expiração e identificação da empresa.',
   },
   {

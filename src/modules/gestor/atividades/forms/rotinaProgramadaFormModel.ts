@@ -5,6 +5,7 @@ import {
   type FrequenciaAtividade,
   type PrioridadeAtividade,
   type RotinaAtividade,
+  type ClienteRotina,
 } from '../services/rotinasAtividadesService';
 
 export const ESCRITORIO_SCOPE_ID = '__escritorio__';
@@ -78,10 +79,34 @@ export const applyModeloToRotinaForm = (
   checklistText: modelo.etapas.join('\n'),
 });
 
+export const getModelosDisponiveisParaVinculo = (
+  modelos: ModeloAtividade[],
+  clientes: ClienteRotina[],
+  clienteScopeId: string,
+): ModeloAtividade[] => {
+  if (!clienteScopeId) return [];
+  if (clienteScopeId === ESCRITORIO_SCOPE_ID) return modelos;
+  const cliente = clientes.find((item) => item.id === clienteScopeId);
+  const modelosAtivos = new Set(Array.isArray(cliente?.modelosAtivos) ? cliente.modelosAtivos : []);
+  return modelos.filter((modelo) => modelosAtivos.has(modelo.id));
+};
+
+export const isModeloPermitidoParaVinculo = (
+  modeloId: string,
+  clienteScopeId: string,
+  clientes: ClienteRotina[],
+): boolean => {
+  if (!modeloId || !clienteScopeId) return false;
+  if (clienteScopeId === ESCRITORIO_SCOPE_ID) return true;
+  const cliente = clientes.find((item) => item.id === clienteScopeId);
+  return Array.isArray(cliente?.modelosAtivos) && cliente.modelosAtivos.includes(modeloId);
+};
+
 export const validateRotinaProgramadaForm = (
   values: RotinaProgramadaFormValues,
   currentDate = todayKey(),
 ): string | null => {
+  if (!values.clienteScopeId) return 'Selecione um cliente ou confirme que a rotina é interna do escritório.';
   if (!values.modeloId) return 'Selecione o modelo que fornecerá o checklist da rotina.';
   if (!values.nome.trim()) return 'Informe o nome da rotina.';
   if (!values.categoria) return 'Selecione a categoria da rotina.';
@@ -90,7 +115,6 @@ export const validateRotinaProgramadaForm = (
     return 'Informe um intervalo personalizado de pelo menos 1 dia.';
   }
   if (!values.responsavelConfigUsuarioId) return 'Selecione o responsável pela rotina.';
-  if (!values.clienteScopeId) return 'Selecione um cliente ou confirme que a rotina é interna do escritório.';
   if (!values.proximaExecucao) return 'Escolha a data da primeira execução.';
   if (!values.id && values.proximaExecucao < currentDate) {
     return 'A primeira execução não pode estar no passado.';
