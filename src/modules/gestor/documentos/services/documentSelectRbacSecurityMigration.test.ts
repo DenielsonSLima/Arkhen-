@@ -11,7 +11,7 @@ describe('document metadata read policy', () => {
     expect(migrationSql).toContain('owner_user_id = (SELECT auth.uid())');
     expect(migrationSql).toContain('public.current_user_can_access_client_row(empresa_id, cliente_id)');
     expect(migrationSql).toContain('public.current_user_is_client_scoped(empresa_id)');
-    expect(migrationSql).toContain('public.current_user_has_client_access(empresa_id, cliente_id)');
+    expect(migrationSql).not.toContain('public.current_user_has_client_access(empresa_id, cliente_id)');
   });
 
   it('only enables Conformidade when its activity source is readable', () => {

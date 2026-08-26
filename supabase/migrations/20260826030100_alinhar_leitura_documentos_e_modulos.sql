@@ -31,7 +31,7 @@ CREATE POLICY documentos_select_permission ON public.documentos
             scope = 'empresa'
             AND cliente_id IS NOT NULL
             AND public.current_user_is_client_scoped(empresa_id)
-            AND public.current_user_has_client_access(empresa_id, cliente_id)
+            AND public.current_user_can_access_client_row(empresa_id, cliente_id)
           )
         )
       )
