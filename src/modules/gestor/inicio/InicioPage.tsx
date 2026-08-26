@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   MessageSquareQuote,
   AlertTriangle,
@@ -10,7 +10,6 @@ import {
   ListChecks,
   ShieldAlert,
   Users,
-  Settings,
 } from 'lucide-react';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import officeBackground from '../../../assets/office-scene-meeting.png';
@@ -24,6 +23,9 @@ import {
 import { useInicio } from './hooks/useInicio';
 import { useInicioBootstrap } from './hooks/useInicioBootstrap';
 import { useInicioRealtime } from './hooks/useInicioRealtime';
+import { useInicioSetup } from './hooks/useInicioSetup';
+import { PrimeirosPassosCard } from './components/PrimeirosPassosCard';
+import { navigateToInicioTarget, type InicioSetupTarget } from './services/inicioNavigation';
 import type { VencimentoAlerta } from './services/inicioService';
 import { frasesMotivacionais, type FraseMotivacional } from './services/motivationalPhrases';
 import './InicioPage.css';
@@ -67,7 +69,8 @@ type InicioPageProps = {
 export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   useInicioRealtime(true);
   const { stats, vencimentosProximos, isLoading } = useInicio();
-  const { openTab } = useInternalTabs();
+  const setupQuery = useInicioSetup();
+  const { activateModule } = useInternalTabs();
 
   const hoje = todayKey();
   const fimSemana = addDays(hoje, 6);
@@ -80,8 +83,6 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   const {
     tarefasWorkspace,
     eventosAgenda,
-    showConfigNotice,
-    noticeType,
     fraseMotivacional,
   } = useInicioBootstrap({
     hoje,
@@ -89,6 +90,10 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
     dashboardReady: !isLoading,
     onReady: onInitialReady,
   });
+
+  const handleSetupNavigate = useCallback((target: InicioSetupTarget) => {
+    navigateToInicioTarget(target, activateModule);
+  }, [activateModule]);
 
   const agendaResumo = useMemo(() => {
     const eventos = eventosAgenda
@@ -159,35 +164,13 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
 
   return (
     <div className="inicio-page">
-      {showConfigNotice && noticeType && (
-        <div className="company-config-warning-banner animate-fade-in">
-          <div className="warning-banner-content">
-            <AlertTriangle className="warning-icon" size={20} />
-            {noticeType === 'address' ? (
-              <span>
-                <strong>Cadastro da Empresa Incompleto:</strong> Os dados de endereço e contato de sua empresa ainda estão usando valores de demonstração ou incompletos. Complete o cadastro para que saiam corretos nos cabeçalhos de seus documentos.
-              </span>
-            ) : (
-              <span>
-                <strong>Identidade Visual Incompleta:</strong> Você ainda não configurou as marcas d'água da sua empresa. Carregue as imagens de paisagem e retrato para personalizar os cabeçalhos de relatórios.
-              </span>
-            )}
-          </div>
-          <button 
-            className="btn-complete-config"
-            onClick={() => {
-              openTab('configuracoes', 'Configurações', 'Settings');
-              const subTabTarget = noticeType === 'address' ? 'empresa' : 'marca-dagua';
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: subTabTarget } }));
-              }, 100);
-            }}
-          >
-            <Settings size={14} style={{ display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
-            {noticeType === 'address' ? 'Completar Cadastro' : 'Configurar Marca d\'Água'}
-          </button>
-        </div>
-      )}
+      <PrimeirosPassosCard
+        status={setupQuery.data}
+        isLoading={setupQuery.isLoading}
+        isError={setupQuery.isError}
+        onNavigate={handleSetupNavigate}
+        onRetry={() => { void setupQuery.refetch(); }}
+      />
 
       <section className="inicio-motivation-card">
         <div
@@ -227,7 +210,7 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
           <div className="inicio-metric-icon green"><Users size={22} /></div>
           <span>Equipe monitorada</span>
           <strong>{tarefasResumo.usuarios.length}</strong>
-          <small>{stats.empresasAtivas} empresas no radar</small>
+          <small>{stats.clientesAtivos} clientes ativos</small>
         </article>
       </section>
 

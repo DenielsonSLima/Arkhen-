@@ -1,31 +1,9 @@
 import { persistedStorage } from '../../../../lib/persistedStorage';
+import { supabase } from '../../../../lib/supabase';
+import { getInicioEmpresaId } from './inicioTenant';
 
 export interface DashboardStats {
   clientesAtivos: number;
-  clientesNovos: number;
-  empresasAtivas: number;
-  empresasNovas: number;
-  obrigacoesMes: number;
-  obrigacoesHoje: number;
-  faturamentoMes: number;
-  faturamentoCrescimento: number;
-}
-
-export interface AtividadeRecente {
-  id: string;
-  tipo: 'documento' | 'obrigacao' | 'cliente';
-  titulo: string;
-  detalhe: string;
-  horario: string;
-}
-
-export interface ObrigacaoAgendada {
-  id: string;
-  dataDia: string;
-  dataMes: string;
-  titulo: string;
-  detalhe: string;
-  status: 'vence-hoje' | '5-dias' | '8-dias' | '13-dias';
 }
 
 export interface VencimentoAlerta {
@@ -53,79 +31,22 @@ function formatDateBR(dateStr: string): string {
 }
 
 export const inicioService = {
-  async getDashboardData(): Promise<{
-    stats: DashboardStats;
-    atividades: AtividadeRecente[];
-    agenda: ObrigacaoAgendada[];
-  }> {
+  async getDashboardData(): Promise<{ stats: DashboardStats }> {
+    const empresaId = await getInicioEmpresaId();
+    const { count, error } = await supabase
+      .from('clientes')
+      .select('id', { count: 'exact', head: true })
+      .eq('empresa_id', empresaId)
+      .eq('status', 'Ativa');
+
+    if (error) {
+      throw new Error(`Erro ao carregar indicadores do painel: ${error.message}`);
+    }
+
     return {
       stats: {
-        clientesAtivos: 128,
-        clientesNovos: 8,
-        empresasAtivas: 156,
-        empresasNovas: 12,
-        obrigacoesMes: 24,
-        obrigacoesHoje: 6,
-        faturamentoMes: 48750.0,
-        faturamentoCrescimento: 15,
+        clientesAtivos: count ?? 0,
       },
-      atividades: [
-        {
-          id: '1',
-          tipo: 'documento',
-          titulo: 'Novo documento enviado',
-          detalhe: 'Contrato Social - Empresa Exemplo Ltda',
-          horario: 'Hoje, 10:30',
-        },
-        {
-          id: '2',
-          tipo: 'obrigacao',
-          titulo: 'Obrigação concluída',
-          detalhe: 'DCTFWeb - Empresa ABC Ltda',
-          horario: 'Hoje, 09:15',
-        },
-        {
-          id: '3',
-          tipo: 'cliente',
-          titulo: 'Novo cliente cadastrado',
-          detalhe: 'Empresa Nova Ltda',
-          horario: 'Ontem, 16:45',
-        },
-      ],
-      agenda: [
-        {
-          id: '1',
-          dataDia: '02',
-          dataMes: 'JUL',
-          titulo: 'DCTFWeb',
-          detalhe: '3 empresas',
-          status: 'vence-hoje',
-        },
-        {
-          id: '2',
-          dataDia: '07',
-          dataMes: 'JUL',
-          titulo: 'EFD-Reinf',
-          detalhe: '5 empresas',
-          status: '5-dias',
-        },
-        {
-          id: '3',
-          dataDia: '10',
-          dataMes: 'JUL',
-          titulo: 'DARF Simples Nacional',
-          detalhe: '8-empresas',
-          status: '8-dias',
-        },
-        {
-          id: '4',
-          dataDia: '15',
-          dataMes: 'JUL',
-          titulo: 'EFD-Contribuições',
-          detalhe: '4 empresas',
-          status: '13-dias',
-        },
-      ],
     };
   },
 

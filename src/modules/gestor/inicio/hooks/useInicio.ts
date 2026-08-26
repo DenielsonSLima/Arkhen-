@@ -19,9 +19,7 @@ export const useInicio = () => {
 
   return {
     stats: dashboardQuery.data?.stats ?? null,
-    atividades: dashboardQuery.data?.atividades ?? [],
-    agenda: dashboardQuery.data?.agenda ?? [],
     vencimentosProximos: vencimentosQuery.data ?? [],
-    isLoading: dashboardQuery.isLoading || vencimentosQuery.isLoading,
+    isLoading: dashboardQuery.isLoading,
   };
 };

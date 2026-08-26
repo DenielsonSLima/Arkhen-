@@ -52,10 +52,12 @@ describe('useAtividades internal-tab context', () => {
   });
 
   it('selects the requested company once without a render feedback loop', async () => {
+    const responsaveisPorGrupo = { 'cliente-1:06/2026': 'Denielson' };
     const { result } = renderHook(() => useAtividades({
       initialCompanyId: 'cliente-1',
       initialCompetencia: '2026-06',
       canMaterialize: true,
+      responsaveisPorGrupo,
     }));
 
     await waitFor(() => {
@@ -69,6 +71,7 @@ describe('useAtividades internal-tab context', () => {
     expect(serviceMock.getInstancias).toHaveBeenCalledOnce();
     expect(serviceMock.getInstancias).toHaveBeenCalledWith('06/2026');
     expect(serviceMock.getFechamentoMeta).toHaveBeenCalledTimes(1);
+    expect(result.current.selectedGroup?.responsavel).toBe('Denielson');
   });
 
   it('uses the previous month when no initial competencia is provided', async () => {

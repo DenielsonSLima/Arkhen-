@@ -29,9 +29,12 @@ export const useInicioRealtime = (enabled = true) => {
       ch
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_modelos' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_empresa' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_marca_dagua' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_usuarios' }, invalidate)
     );
 
     return () => {

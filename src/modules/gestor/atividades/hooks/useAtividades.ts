@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
+import { getResponsavelDoGrupo } from '../utils/responsaveisPorGrupo';
 
 export interface CompanyActivity {
   instanciaId: string;
@@ -45,6 +46,7 @@ export interface UseAtividadesOptions {
   initialCompanyId?: string;
   initialCompetencia?: string;
   canMaterialize?: boolean;
+  responsaveisPorGrupo?: Record<string, string>;
 }
 
 const normalizeCompetencia = (value?: string) => {
@@ -189,7 +191,11 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         regime: cliente.regime,
         tipoEstabelecimento: cliente.tipoEstabelecimento,
         competencia: groupCompetencia,
-        responsavel: '',
+        responsavel: getResponsavelDoGrupo(
+          options.responsaveisPorGrupo,
+          cliente.id,
+          groupCompetencia,
+        ),
         atividades: mappedAtividades,
         progressoGeral: overallProgress,
         statusGeral: overallStatus,
@@ -200,7 +206,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       a.clienteNome.localeCompare(b.clienteNome) ||
       parseCompetenciaDate(a.competencia) - parseCompetenciaDate(b.competencia)
     ))
-  ), [clientes, instancias, modelos]);
+  ), [clientes, instancias, modelos, options.responsaveisPorGrupo]);
 
   // Filter groups
   const filteredGroups = allGroups.filter((group) => {

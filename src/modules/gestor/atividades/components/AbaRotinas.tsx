@@ -58,7 +58,11 @@ const blankRotina = (): RotinaAtividade => ({
 
 type FiltroRotinaTab = 'todas' | 'diarias' | 'semanais' | 'mensais' | 'empresa';
 
-export const AbaRotinas: React.FC = () => {
+interface AbaRotinasProps {
+  onConfigureModels?: () => void;
+}
+
+export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => {
   const { rotinas, usuarios, clientes, saveRotinaAsync, deleteRotina, isSaving } = useAtividadesWorkspace();
   const [form, setForm] = useState<RotinaAtividade>(blankRotina());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -118,7 +122,7 @@ export const AbaRotinas: React.FC = () => {
       {/* Topo com ação principal */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
         <button onClick={handleCreateClick} style={primaryBtnStyle} type="button">
-          <Plus size={16} /> Cadastrar Checklist
+          <Plus size={16} /> Nova rotina
         </button>
       </div>
 
@@ -136,7 +140,7 @@ export const AbaRotinas: React.FC = () => {
                 fontWeight: activeTab === tab ? 700 : 500,
               }}
             >
-              {tab === 'todas' && 'Todos os Modelos'}
+              {tab === 'todas' && 'Todas as rotinas'}
               {tab === 'diarias' && 'Diárias'}
               {tab === 'semanais' && 'Semanais'}
               {tab === 'mensais' && 'Mensais'}
@@ -145,7 +149,7 @@ export const AbaRotinas: React.FC = () => {
           ))}
         </div>
         <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
-          {filteredRotinas.length} modelos encontrados
+          {filteredRotinas.length} rotinas encontradas
         </div>
       </div>
 
@@ -154,8 +158,23 @@ export const AbaRotinas: React.FC = () => {
         <div className="empty-state-card" style={emptyCardStyle}>
           <Repeat size={40} color="var(--color-gold-primary)" />
           <p style={{ marginTop: '12px', fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>
-            Nenhum modelo de checklist cadastrado nesta categoria.
+            {rotinas.length === 0
+              ? 'Nenhuma rotina programada. Defina a recorrência, o responsável e a primeira execução.'
+              : 'Nenhuma rotina encontrada nesta categoria.'}
           </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button type="button" onClick={handleCreateClick} style={primaryBtnStyle}>
+              <Plus size={15} /> {rotinas.length === 0 ? 'Criar primeira rotina' : 'Nova rotina'}
+            </button>
+            {rotinas.length === 0 && onConfigureModels && (
+              <button type="button" onClick={onConfigureModels} style={cancelBtnStyle}>
+                Revisar modelos de fechamento
+              </button>
+            )}
+            {rotinas.length > 0 && activeTab !== 'todas' && (
+              <button type="button" onClick={() => setActiveTab('todas')} style={cancelBtnStyle}>Ver todas</button>
+            )}
+          </div>
         </div>
       ) : (
         <div style={gridContainerStyle}>
@@ -173,10 +192,10 @@ export const AbaRotinas: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button onClick={() => handleEditClick(rotina)} style={iconBtnStyle} title="Editar checklist" type="button">
+                  <button onClick={() => handleEditClick(rotina)} style={iconBtnStyle} title="Editar rotina" type="button">
                     <Edit size={13} />
                   </button>
-                  <button onClick={() => deleteRotina(rotina.id)} style={{ ...iconBtnStyle, color: '#ef4444' }} title="Excluir checklist" type="button">
+                  <button onClick={() => deleteRotina(rotina.id)} style={{ ...iconBtnStyle, color: '#ef4444' }} title="Arquivar rotina" type="button">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -198,7 +217,7 @@ export const AbaRotinas: React.FC = () => {
               {rotina.checklist && rotina.checklist.length > 0 && (
                 <div style={checklistBlockStyle}>
                   <strong style={{ fontSize: '0.72rem', color: 'var(--color-gold-dark)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                    <ClipboardCheck size={12} /> Etapas do Checklist:
+                    <ClipboardCheck size={12} /> Etapas da rotina:
                   </strong>
                   <ul style={checklistListStyle}>
                     {rotina.checklist.slice(0, 3).map((item, i) => (
@@ -238,7 +257,7 @@ export const AbaRotinas: React.FC = () => {
             <div style={drawerHeaderStyle}>
               <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Repeat size={18} color="var(--color-gold-primary)" />
-                {form.id ? 'Editar Checklist Recorrente' : 'Cadastrar Checklist Recorrente'}
+                {form.id ? 'Editar rotina programada' : 'Nova rotina programada'}
               </h3>
               <button onClick={() => setIsDrawerOpen(false)} style={closeBtnStyle} type="button">
                 <X size={18} />
@@ -252,7 +271,7 @@ export const AbaRotinas: React.FC = () => {
                 </div>
               )}
               <div style={fieldStyle}>
-                <label style={labelStyle}>Nome do Checklist</label>
+                <label style={labelStyle}>Nome da rotina</label>
                 <input
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
@@ -402,7 +421,7 @@ export const AbaRotinas: React.FC = () => {
                   Cancelar
                 </button>
                 <button type="submit" disabled={isSaving} style={submitBtnStyle}>
-                  {isSaving ? 'Salvando...' : form.id ? 'Salvar Alterações' : 'Salvar Modelo'}
+                  {isSaving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar rotina'}
                 </button>
               </div>
             </form>

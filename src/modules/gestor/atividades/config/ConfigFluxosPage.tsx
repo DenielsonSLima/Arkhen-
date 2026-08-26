@@ -3,6 +3,7 @@ import { Settings, Users, Plus, Trash2, CheckCircle2, FilePlus2 } from 'lucide-r
 import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade } from '../services/atividadesService';
 import { MODELOS_PADRAO, REGIMES_APLICAVEIS, emptyNewModel } from './defaultChecklistModels';
+import { NovoModeloFormModal } from './forms/NovoModeloFormModal';
 
 export const ConfigFluxosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'modelos' | 'empresas'>('modelos');
@@ -46,7 +47,7 @@ export const ConfigFluxosPage: React.FC = () => {
     const modelo: ModeloAtividade = {
       id: `modelo-${Date.now()}`,
       nome: newModel.nome.trim(),
-      descricao: newModel.descricao.trim() || 'Modelo personalizado de checklist.',
+      descricao: newModel.descricao.trim() || 'Modelo personalizado de fechamento.',
       etapas,
       tipos: newModel.tipos,
     };
@@ -57,7 +58,7 @@ export const ConfigFluxosPage: React.FC = () => {
       setSelectedModelo(savedModelo);
       setNewModel(emptyNewModel());
       setShowNewModelForm(false);
-      setSuccessMsg('Novo modelo de checklist criado com sucesso!');
+      setSuccessMsg('Novo modelo de fechamento criado com sucesso!');
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (err) {
       console.error(err);
@@ -99,7 +100,7 @@ export const ConfigFluxosPage: React.FC = () => {
 
     try {
       await atividadesService.saveCliente(updatedCliente);
-      setSuccessMsg('Vínculo de atividade atualizado com sucesso!');
+      setSuccessMsg('Vínculo do modelo com o cliente atualizado com sucesso!');
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (err) {
       console.error(err);
@@ -170,8 +171,8 @@ export const ConfigFluxosPage: React.FC = () => {
     <div className="submodule-content-card animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Parametrização de Fluxos de Atividades</h2>
-          <p>Gerencie os modelos de checklists contábeis e controle quais atividades são exigidas por cada cliente.</p>
+          <h2>Modelos de Fechamento</h2>
+          <p>Defina os checklists contábeis e vincule a cada cliente somente os modelos que fazem parte da operação.</p>
         </div>
         <div className="tab-buttons-header">
           <button
@@ -181,13 +182,13 @@ export const ConfigFluxosPage: React.FC = () => {
               setSelectedModelo(null);
             }}
           >
-            <Settings size={16} /> Modelos de Checklist
+            <Settings size={16} /> Modelos de fechamento
           </button>
           <button
             className={`btn-tab ${activeTab === 'empresas' ? 'active' : ''}`}
             onClick={() => setActiveTab('empresas')}
           >
-            <Users size={16} /> Vinculação de Clientes
+            <Users size={16} /> Vínculos por cliente
           </button>
         </div>
       </div>
@@ -205,9 +206,9 @@ export const ConfigFluxosPage: React.FC = () => {
         <div className="tab-pane" style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
             <div>
-              <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{modelos.length} modelos cadastrados</strong>
+              <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{modelos.length} modelos de fechamento</strong>
               <p style={{ color: '#64748b', fontSize: '0.78rem', margin: '4px 0 0 0' }}>
-                Use os modelos padrão ou crie checklists personalizados para sua operação.
+                Use os modelos padrão ou crie um fluxo específico para sua operação.
               </p>
             </div>
             <button
@@ -216,14 +217,14 @@ export const ConfigFluxosPage: React.FC = () => {
               onClick={() => setShowNewModelForm(true)}
               style={{ borderRadius: '8px', padding: '10px 16px' }}
             >
-              <FilePlus2 size={16} /> Novo Modelo
+              <FilePlus2 size={16} /> Novo modelo
             </button>
           </div>
 
           {modelos.length === 0 && (
             <div className="fluxo-setup-box" style={{ textAlign: 'center' }}>
-              <h3 style={{ margin: 0, color: '#0f172a' }}>Nenhum modelo cadastrado</h3>
-              <p style={{ color: '#64748b', margin: '8px 0 0 0' }}>Crie um novo modelo ou recarregue para aplicar os padrões iniciais.</p>
+              <h3 style={{ margin: 0, color: '#0f172a' }}>Nenhum modelo de fechamento cadastrado</h3>
+              <p style={{ color: '#64748b', margin: '8px 0 0 0' }}>Crie o primeiro modelo para depois vinculá-lo aos clientes.</p>
             </div>
           )}
 
@@ -254,7 +255,7 @@ export const ConfigFluxosPage: React.FC = () => {
           {selectedModelo && (
             <div className="fluxo-setup-box animate-slide-up">
               <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text-dark)' }}>
-                Configurando etapas do modelo: <span className="gold-text">{selectedModelo.nome}</span>
+                Etapas do modelo de fechamento: <span className="gold-text">{selectedModelo.nome}</span>
               </h3>
 
               
@@ -334,7 +335,7 @@ export const ConfigFluxosPage: React.FC = () => {
             
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
               <button className="btn-save-settings" onClick={handleApplyPattern} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle2 size={16} /> Aplicar Padrões por Tipo (Regime)
+                <CheckCircle2 size={16} /> Vincular padrões por regime
               </button>
             </div>
             <table className="config-table">
@@ -386,107 +387,13 @@ export const ConfigFluxosPage: React.FC = () => {
       )}
     </div>
     {showNewModelForm && (
-      <div
-        className="confirm-modal-backdrop"
-        onClick={() => setShowNewModelForm(false)}
-        style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
-      >
-        <div
-          className="animate-slide-up"
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            width: 'min(860px, 100%)',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 24px 70px rgba(15, 23, 42, 0.28)',
-            padding: '24px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
-            <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--color-text-dark)' }}>
-                Criar novo modelo de checklist
-              </h3>
-              <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '6px 0 0 0' }}>
-                Cadastre um modelo personalizado e defina quais regimes podem utilizá-lo.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn-save-settings"
-              onClick={() => setShowNewModelForm(false)}
-              style={{ background: '#64748b', minWidth: 42, padding: '8px 10px' }}
-              aria-label="Fechar modal"
-            >
-              ×
-            </button>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 0.85fr) minmax(280px, 1fr)', gap: '14px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Nome do modelo</label>
-              <input
-                type="text"
-                value={newModel.nome}
-                onChange={(event) => setNewModel((current) => ({ ...current, nome: event.target.value }))}
-                placeholder="Ex.: Admissão de Funcionário"
-                style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', color: '#111827', background: '#fff' }}
-                autoFocus
-              />
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Descrição</label>
-              <textarea
-                value={newModel.descricao}
-                onChange={(event) => setNewModel((current) => ({ ...current, descricao: event.target.value }))}
-                placeholder="Resumo do objetivo do checklist"
-                rows={4}
-                style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', color: '#111827', background: '#fff', resize: 'vertical' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>Etapas do checklist</label>
-              <p style={{ margin: '-4px 0 0 0', color: '#64748b', fontSize: '0.75rem', lineHeight: 1.35 }}>
-                Digite uma etapa por linha. Cada linha será criada como um item separado do checklist.
-              </p>
-              <textarea
-                value={newModel.etapas}
-                onChange={(event) => setNewModel((current) => ({ ...current, etapas: event.target.value }))}
-                placeholder={'Exemplo:\nConferir documentos\nGerar guia\nEnviar protocolo ao cliente'}
-                rows={9}
-                style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', color: '#111827', background: '#fff', resize: 'vertical' }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: '14px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
-            <strong style={{ fontSize: '0.8rem', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Tipos / Regimes Aplicáveis</strong>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {REGIMES_APLICAVEIS.map((tipo) => (
-                <label key={tipo} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer', color: '#475569' }}>
-                  <input
-                    type="checkbox"
-                    checked={newModel.tipos.includes(tipo)}
-                    onChange={(event) => toggleNewModelTipo(tipo, event.target.checked)}
-                    style={{ width: '14px', height: '14px', accentColor: 'var(--color-gold-primary)' }}
-                  />
-                  {tipo}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
-            <button type="button" className="btn-save-settings" onClick={() => setShowNewModelForm(false)} style={{ background: '#64748b' }}>
-              Cancelar
-            </button>
-            <button type="button" className="btn-add-user" onClick={handleCreateModelo} style={{ borderRadius: '6px', padding: '0 16px' }}>
-              <Plus size={16} /> Criar Modelo
-            </button>
-          </div>
-        </div>
-      </div>
+      <NovoModeloFormModal
+        model={newModel}
+        onChange={(changes) => setNewModel((current) => ({ ...current, ...changes }))}
+        onToggleTipo={toggleNewModelTipo}
+        onCancel={() => setShowNewModelForm(false)}
+        onSubmit={handleCreateModelo}
+      />
     )}
     </>
   );

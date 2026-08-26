@@ -43,7 +43,8 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
             <button
               className="btn-add-user"
               onClick={onShowConfig}
-              title="Gerir atividades e configurar fluxos"
+              title="Configurar modelos de fechamento e vínculos por cliente"
+              aria-label="Configurar modelos de fechamento e vínculos por cliente"
               style={{ padding: '10px 14px', borderRadius: '8px' }}
             >
               <Settings size={18} />
@@ -110,7 +111,18 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
       ) : companyGroups.length === 0 ? (
         <div className="empty-state-card">
           <ClipboardList size={48} className="empty-state-icon" />
-          <p>Nenhuma empresa encontrada com este filtro.</p>
+          <p>{metrics.total === 0
+            ? 'Nenhum fechamento está configurado. Vincule modelos aos clientes para iniciar o acompanhamento mensal.'
+            : 'Nenhuma empresa corresponde a este filtro.'}</p>
+          {metrics.total === 0 && onShowConfig ? (
+            <button type="button" className="btn-save-settings" onClick={onShowConfig}>
+              <Settings size={16} /> Configurar modelos e vínculos
+            </button>
+          ) : globalFilter !== 'todas' ? (
+            <button type="button" className="btn-save-settings" onClick={() => setGlobalFilter('todas')}>
+              Ver todas as empresas
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="models-preset-grid">

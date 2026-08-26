@@ -132,15 +132,22 @@ export const ConfiguracoesPage: React.FC = () => {
   }, [activeSubTab]);
 
   useEffect(() => {
+    if (permissaoConfigQuery.isLoading || permissaoConfigQuery.isFetching) return;
     if (activeSubTab && !podeAcessarCard(activeSubTab)) {
       setActiveSubTab('meu-perfil');
     }
-  }, [activeSubTab, podeAcessarCard]);
+  }, [
+    activeSubTab,
+    permissaoConfigQuery.isFetching,
+    permissaoConfigQuery.isLoading,
+    podeAcessarCard,
+  ]);
 
   useEffect(() => {
     const handleOpenSubTab = (event: Event) => {
       const subTab = (event as CustomEvent<{ subTab?: string }>).detail?.subTab;
       if (subTab) {
+        sessionStorage.removeItem('contabil_config_initial_subtab');
         setActiveSubTab(subTab);
       }
     };
@@ -258,6 +265,13 @@ export const ConfiguracoesPage: React.FC = () => {
   const cardsVisiveis = cards.filter((card) => podeAcessarCard(card.id));
 
   const renderActiveSubModule = () => {
+    if (activeSubTab && (permissaoConfigQuery.isLoading || permissaoConfigQuery.isFetching)) {
+      return (
+        <div className="submodule-content-card" role="status" aria-live="polite">
+          <p style={{ margin: 0, color: '#64748b' }}>Validando seu acesso...</p>
+        </div>
+      );
+    }
     if (activeSubTab && !podeAcessarCard(activeSubTab)) {
       return <MeuPerfilConfig />;
     }

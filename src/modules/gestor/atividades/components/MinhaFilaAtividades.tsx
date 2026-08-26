@@ -1,19 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CheckCircle2, Circle, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import { addDaysKey, formatDateBR, todayKey, toLocalDateKey, type TarefaGestor } from '../services/rotinasAtividadesService';
+import { MinhaFilaEmptyState } from './MinhaFilaEmptyState';
+import { MinhaFilaToolbar } from './MinhaFilaToolbar';
+import { MINHA_FILA_FILTROS, type MinhaFilaFiltro } from './minhaFilaFilters';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
-
-export type MinhaFilaFiltro = 'hoje' | 'semana' | 'mes' | 'atrasadas' | 'internas';
-
-const FILTROS: Array<{ id: MinhaFilaFiltro; label: string }> = [
-  { id: 'hoje', label: 'Hoje' },
-  { id: 'semana', label: 'Semana' },
-  { id: 'mes', label: 'Mês' },
-  { id: 'atrasadas', label: 'Atrasadas' },
-  { id: 'internas', label: 'Internas' },
-];
 
 const getMonday = (dateKey: string) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -63,7 +56,15 @@ const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
   return '';
 };
 
-export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> = ({ initialFilter = 'hoje' }) => {
+interface MinhaFilaAtividadesProps {
+  initialFilter?: MinhaFilaFiltro;
+  onConfigureRotinas?: () => void;
+}
+
+export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
+  initialFilter = 'hoje',
+  onConfigureRotinas,
+}) => {
   const { tarefas, usuarioAtual, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -94,7 +95,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
   };
 
   // Se o filtro mudar, sincroniza ou reseta datas adequadas se necessário
-  const counts = useMemo(() => FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
+  const counts = useMemo(() => MINHA_FILA_FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
     acc[filtro.id] = tarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
     return acc;
   }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [tarefas, referenceDate]);
@@ -162,24 +163,12 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
 
   return (
     <div style={pageStyle}>
-      <section style={toolbarStyle}>
-        <div style={filterGroupStyle}>
-          {FILTROS.map((filtro) => (
-            <button
-              key={filtro.id}
-              type="button"
-              onClick={() => setActiveFilter(filtro.id)}
-              style={activeFilter === filtro.id ? activeFilterBtnStyle : filterBtnStyle}
-            >
-              {filtro.label}
-              <strong>{counts[filtro.id]}</strong>
-            </button>
-          ))}
-        </div>
-        <button type="button" onClick={() => setModalNovaAberto(true)} style={primaryBtnStyle}>
-          <Plus size={15} /> Nova tarefa
-        </button>
-      </section>
+      <MinhaFilaToolbar
+        activeFilter={activeFilter}
+        counts={counts}
+        onFilterChange={setActiveFilter}
+        onCreateTask={() => setModalNovaAberto(true)}
+      />
 
       {/* Barra de Filtros de Busca e Navegação de Data */}
       <section style={subToolbarStyle}>
@@ -254,10 +243,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
       )}
 
       {filteredTasks.length === 0 ? (
-        <div className="empty-state-card" style={emptyStateStyle}>
-          <CheckCircle2 size={38} color="var(--color-gold-primary)" />
-          <p>Nenhuma tarefa encontrada para este filtro.</p>
-        </div>
+        <MinhaFilaEmptyState taskCount={tarefas.length} onConfigureRotinas={onConfigureRotinas} />
       ) : (
         <div style={listStyle}>
           {filteredTasks.map((tarefa) => (
@@ -306,33 +292,6 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
 };
 
 const pageStyle = { display: 'flex', flexDirection: 'column' as const, gap: '18px' };
-const toolbarStyle = { display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' as const };
-const filterGroupStyle = { display: 'flex', gap: '8px', flexWrap: 'wrap' as const };
-const filterBtnBaseStyle = {
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '9px 12px',
-  display: 'flex',
-  gap: '8px',
-  alignItems: 'center',
-  fontWeight: 700,
-  cursor: 'pointer',
-};
-const filterBtnStyle = { ...filterBtnBaseStyle, background: '#ffffff', color: '#64748b' };
-const activeFilterBtnStyle = { ...filterBtnBaseStyle, background: '#1f2937', color: '#ffffff', borderColor: '#c59235' };
-const primaryBtnStyle = {
-  background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)',
-  border: 'none',
-  borderRadius: '8px',
-  padding: '9px 14px',
-  color: '#ffffff',
-  fontWeight: 700,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-};
-const emptyStateStyle = { padding: '40px', textAlign: 'center' as const, color: '#64748b' };
 const listStyle = { display: 'flex', flexDirection: 'column' as const, gap: '10px' };
 const taskCardStyle = {
   display: 'grid',

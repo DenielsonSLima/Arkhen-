@@ -1,5 +1,7 @@
 import React from 'react';
-import { MinhaFilaAtividades, type MinhaFilaFiltro } from './components/MinhaFilaAtividades';
+import { useInternalTabs } from '../../../hooks/useInternalTabs';
+import { MinhaFilaAtividades } from './components/MinhaFilaAtividades';
+import type { MinhaFilaFiltro } from './components/minhaFilaFilters';
 import { AbaGerirEquipe } from './components/AbaGerirEquipe';
 import { AbaRotinas } from './components/AbaRotinas';
 import { AtividadesPorEmpresa } from './por-empresa/AtividadesPorEmpresa';
@@ -8,6 +10,7 @@ import { AtividadesControle } from './components/AtividadesControle';
 import { useAtividades } from './hooks/useAtividades';
 import { useAtividadesRealtime } from './hooks/useAtividadesRealtime';
 import { useAtividadesWorkspace } from './hooks/useAtividadesWorkspace';
+import { buildResponsaveisPorGrupo } from './utils/responsaveisPorGrupo';
 import './Atividades.css';
 import './AtividadesRedesign.css';
 
@@ -35,7 +38,7 @@ const VIEW_INFO: Record<AtividadesView, { title: string; subtitle: string }> = {
   'minha-fila': { title: 'Minha Fila', subtitle: 'Tarefas operacionais por prazo, prioridade, status e bloqueios.' },
   equipe: { title: 'Equipe', subtitle: 'Acompanhe carga, atrasos, tarefas concluídas e pendências por colaborador.' },
   fechamentos: { title: 'Fechamentos de Clientes', subtitle: 'Visualize rotinas, competências e pendências de cada empresa.' },
-  modelos: { title: 'Rotinas e Modelos', subtitle: 'Cadastre modelos de fechamento, rotinas internas e tarefas recorrentes.' },
+  modelos: { title: 'Rotinas programadas', subtitle: 'Defina recorrência, responsável, cliente e próxima execução de cada tarefa.' },
   painel: { title: 'Painel Operacional', subtitle: 'Métricas de produtividade, gargalos, atrasos e clientes travados.' },
 };
 
@@ -47,7 +50,12 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
 }) => {
   const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
   const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
-  const { podeGerenciar, isLoadingPermissoes } = useAtividadesWorkspace();
+  const { activateModule } = useInternalTabs();
+  const { podeGerenciar, isLoadingPermissoes, rotinas } = useAtividadesWorkspace();
+  const responsaveisPorGrupo = React.useMemo(
+    () => buildResponsaveisPorGrupo(rotinas),
+    [rotinas],
+  );
   const activeView: AtividadesView = !isLoadingPermissoes && !podeGerenciar && requestedView !== 'minha-fila'
     ? 'minha-fila'
     : requestedView;
@@ -72,6 +80,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     initialCompanyId,
     initialCompetencia,
     canMaterialize: podeGerenciar && !isLoadingPermissoes,
+    responsaveisPorGrupo,
   });
 
   useAtividadesRealtime(true, refresh);
@@ -95,7 +104,12 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   const renderViewContent = () => {
     switch (activeView) {
       case 'minha-fila':
-        return <MinhaFilaAtividades initialFilter={queueFilter} />;
+        return (
+          <MinhaFilaAtividades
+            initialFilter={queueFilter}
+            onConfigureRotinas={() => activateModule('atividades-modelos')}
+          />
+        );
       case 'fechamentos':
         return (
           <AtividadesPorEmpresa
@@ -105,12 +119,13 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
             isLoading={isLoading}
             setSelectedGroup={setSelectedGroup}
             metrics={metrics}
+            onShowConfig={() => activateModule('parametrizacao-checklists')}
           />
         );
       case 'equipe':
         return <AbaGerirEquipe companyGroups={companyGroups} handleToggleStep={handleToggleStep} />;
       case 'modelos':
-        return <AbaRotinas />;
+        return <AbaRotinas onConfigureModels={() => activateModule('parametrizacao-checklists')} />;
       case 'painel':
         return <AtividadesControle />;
       default:

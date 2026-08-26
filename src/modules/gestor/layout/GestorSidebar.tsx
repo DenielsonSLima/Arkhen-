@@ -34,7 +34,7 @@ const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-prazos-entrega', label: 'Obrigações' },
   { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },
   { id: 'parametrizacao-pastas-padrao', label: 'Pastas Padrão' },
-  { id: 'parametrizacao-checklists', label: 'Modelos de Checklists' },
+  { id: 'parametrizacao-checklists', label: 'Modelos de fechamento' },
   { id: 'parametrizacao-categoria-financeira', label: 'Categorias Financeiras' },
 ];
 
@@ -42,7 +42,7 @@ const ATIVIDADES_ITEMS = [
   { id: 'atividades', label: 'Minha Fila' },
   { id: 'atividades-equipe', label: 'Equipe' },
   { id: 'atividades-fechamentos', label: 'Fechamentos de Clientes' },
-  { id: 'atividades-modelos', label: 'Rotinas e Modelos' },
+  { id: 'atividades-modelos', label: 'Rotinas programadas' },
   { id: 'atividades-painel-operacional', label: 'Painel Operacional' },
 ];
 
