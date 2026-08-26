@@ -36,7 +36,7 @@ export const LandingPage: React.FC = () => {
     },
     {
       question: 'Como funciona o faturamento integrado ao Banco Inter?',
-      answer: 'O Arkhen conecta a conta PJ do Banco Inter para gerar BolePix e cobranças Pix, além de conciliar pagamentos pelos webhooks oficiais. A disponibilidade depende das permissões habilitadas na integração Inter Empresas.'
+      answer: 'O módulo financeiro já organiza contas a pagar e receber. A automação com Banco Inter será ativada somente depois da configuração das credenciais, dos testes e da homologação do escritório; até lá, nenhuma cobrança bancária é criada automaticamente.'
     },
     {
       question: 'O que é o compartilhamento de documentos com senha?',
@@ -73,7 +73,7 @@ export const LandingPage: React.FC = () => {
       {/* LIGHT — Showcase interativo de funcionalidades */}
       <LandingFeatures />
 
-      {/* DARK — Customizações & Área do Cliente */}
+      {/* DARK — Customizações & Compartilhamento */}
       <LandingCustomizations />
 
       {/* LIGHT — Diferenciais do Arkhen */}

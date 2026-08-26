@@ -9,7 +9,7 @@ export const LandingCustomizations: React.FC = () => {
         <div className="section-header">
           <span className="hero-tag" style={{ marginBottom: '16px' }}>Flexibilidade & Integração</span>
           <h2 className="section-title">
-            Ecossistema Sob Medida & <span className="highlight-gold">Área do Cliente</span>
+            Ecossistema Sob Medida & <span className="highlight-gold">Compartilhamento Seguro</span>
           </h2>
           <p className="section-subtitle">
             O Arkhen cresce com o seu escritório. Uma plataforma flexível feita para atender as particularidades da sua equipe e dos seus parceiros.
@@ -50,7 +50,7 @@ export const LandingCustomizations: React.FC = () => {
               </div>
             </div>
             <p className="custom-card-desc">
-              Além da plataforma interna de gestão, podemos projetar e publicar um site institucional completo e moderno para o seu escritório contábil atrair novos clientes, integrado com a Área do Cliente.
+              Além da plataforma interna de gestão, podemos projetar e publicar um site institucional completo e moderno para o seu escritório contábil atrair novos clientes, integrado aos canais de contato do escritório.
             </p>
             <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
               <button 

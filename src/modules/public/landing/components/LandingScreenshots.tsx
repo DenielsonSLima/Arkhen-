@@ -39,7 +39,7 @@ const slides: Slide[] = [
   {
     src: screenFaturamento,
     title: 'Faturamento e Cobranças',
-    desc: 'Dashboard de NFS-e, BolePix, cobranças Pix e controle de inadimplência integrado ao Banco Inter.',
+    desc: 'Dashboard para organizar honorários, vencimentos e inadimplência. Integrações bancária e fiscal dependem de homologação.',
     featurePhrase: 'Organize cobranças, recebimentos e honorários em uma visão única.',
   },
   {

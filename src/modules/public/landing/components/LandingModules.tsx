@@ -36,9 +36,9 @@ const modules: ModuleCard[] = [
   },
   {
     icon: <CreditCard size={26} />,
-    title: 'Faturamento Banco Inter',
-    desc: 'Geração de cobranças por Pix e boleto, acompanhamento de vencimentos e registro de recebimentos.',
-    badge: 'Integração Banco Inter',
+    title: 'Gestão Financeira',
+    desc: 'Controle de contas, honorários e vencimentos. A automação bancária depende de configuração, testes e homologação.',
+    badge: 'Integração após homologação',
     badgeColor: '#c59235',
   },
   {

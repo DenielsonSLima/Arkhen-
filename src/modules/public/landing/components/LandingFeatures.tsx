@@ -38,12 +38,12 @@ export const LandingFeatures: React.FC = () => {
   const features: Record<FeatureKey, FeatureDetail> = {
     financeiro: {
       icon: <CreditCard size={18} />,
-      tabLabel: 'Faturamento Banco Inter',
-      title: 'Faturamento de Honorários com Banco Inter',
-      subtitle: 'Geração e acompanhamento de cobranças por Pix e boleto.',
+      tabLabel: 'Gestão Financeira',
+      title: 'Honorários e cobranças em um só lugar',
+      subtitle: 'Controle interno agora; automação bancária somente após homologação.',
       description: (
         <span>
-          O Arkhen integra-se à API oficial do Banco Inter para gerar BolePix, cobranças Pix e acompanhar a conciliação no painel financeiro.
+          O Arkhen organiza honorários, vencimentos e recebimentos no painel financeiro. A criação real de BolePix ou cobranças Pix fica bloqueada até a integração bancária ser configurada, testada e homologada pelo escritório.
           <br /><br />
           <strong style={{ color: '#c59235' }}>Requisito:</strong> a integração exige conta Inter Empresas PJ, certificado mTLS e permissões de cobrança habilitadas. Consulte o portal oficial:{' '}
           <a href="https://developers.inter.co" target="_blank" rel="noopener noreferrer" style={{ color: '#c59235', textDecoration: 'underline', fontWeight: 600 }}>
@@ -52,9 +52,9 @@ export const LandingFeatures: React.FC = () => {
         </span>
       ) as any,
       benefits: [
-        'Geração de links de cobrança, Pix e boletos pelo painel.',
+        'Cadastro e acompanhamento interno de honorários e vencimentos.',
         'Acompanhamento de vencimentos e situações de pagamento.',
-        'Atualização de recebimentos informados pela integração.',
+        'Integração bancária disponível somente depois da homologação.',
         'Controle total da inadimplência do escritório em um só painel.'
       ],
       visualContent: (
@@ -62,15 +62,15 @@ export const LandingFeatures: React.FC = () => {
           <div style={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 6px 20px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>FATURA DE HONORÁRIOS</span>
-              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px' }}>LIQUIDADA</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>DEMONSTRAÇÃO VISUAL</span>
+              <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px' }}>SEM COBRANÇA REAL</span>
             </div>
 
             {/* Body */}
             <div style={{ padding: '14px 16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
                 <div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.65rem', marginBottom: '2px' }}>Valor</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.65rem', marginBottom: '2px' }}>Valor ilustrativo</div>
                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#c59235' }}>R$ 1.200,00</div>
                 </div>
                 <div>
@@ -141,7 +141,7 @@ export const LandingFeatures: React.FC = () => {
             <div style={{ marginTop: '12px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.78rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span>Status da API Municipal</span>
-                <strong style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block', flexShrink: 0 }}></span>Integrada e Homologada</strong>
+                <strong style={{ color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#d97706', display: 'inline-block', flexShrink: 0 }}></span>Exemplo sujeito à homologação</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Município Sede</span>

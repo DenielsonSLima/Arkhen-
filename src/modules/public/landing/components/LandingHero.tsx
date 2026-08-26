@@ -96,8 +96,8 @@ export const LandingHero: React.FC = () => {
           <div className="hero-float-card hero-float-bottom">
             <div className="hero-float-dot" style={{ background: '#c59235' }}></div>
             <div>
-              <div className="hero-float-title">Boleto Liquidado</div>
-              <div className="hero-float-sub">R$ 750,00 via Banco Inter</div>
+              <div className="hero-float-title">Financeiro Organizado</div>
+              <div className="hero-float-sub">Automação bancária após homologação</div>
             </div>
           </div>
         </div>
