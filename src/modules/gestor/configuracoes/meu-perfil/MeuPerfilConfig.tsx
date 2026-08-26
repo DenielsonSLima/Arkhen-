@@ -1,73 +1,29 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Calendar,
-  Camera,
   CheckCircle,
-  Eye,
-  EyeOff,
   IdCard,
   Link as LinkIcon,
-  Lock,
   Mail,
   Save,
   ShieldCheck,
-  Upload,
   User,
 } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { persistedStorage } from '../../../../lib/persistedStorage';
-import {
-  isKnownLegacyDemoAvatar,
-  isKnownLegacyDemoEmail,
-  isKnownLegacyDemoName,
-} from '../../../../lib/legacyDemoProfile';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
 import { passwordRecoveryService } from '../../../public/login/services/passwordRecoveryService';
-interface UserProfile {
-  nome: string;
-  email: string;
-  perfil: string;
-  avatar: string;
-  avatarSelectedByUser?: boolean;
-  cpf: string;
-  dataNascimento: string;
-  googleLinked: boolean;
-  googleEmail?: string;
-}
-const DEFAULT_USER: UserProfile = {
-  nome: 'Usuário',
-  email: '',
-  perfil: 'Usuário',
-  avatar: '',
-  cpf: '',
-  dataNascimento: '',
-  googleLinked: false,
-};
-const sanitizeAvatar = (avatar: unknown) => typeof avatar === 'string'
-  && !isKnownLegacyDemoAvatar(avatar)
-  && !avatar.startsWith('data:image/svg+xml') ? avatar : '';
-const normalizeStoredProfile = (storedProfile: Partial<UserProfile>): UserProfile => ({
-  ...DEFAULT_USER,
-  ...storedProfile,
-  nome: !storedProfile.nome || isKnownLegacyDemoName(storedProfile)
-    ? DEFAULT_USER.nome
-    : storedProfile.nome,
-  email: isKnownLegacyDemoEmail(storedProfile.email) ? '' : storedProfile.email || '',
-  avatar: sanitizeAvatar(storedProfile.avatar),
-});
-const getStoredProfile = (): UserProfile => {
-  try {
-    const saved = persistedStorage.getItem('gestor_user_profile');
-    return saved ? normalizeStoredProfile(JSON.parse(saved)) : DEFAULT_USER;
-  } catch (error) {
-    console.error('Erro ao carregar perfil local:', error);
-    return DEFAULT_USER;
-  }
-};
+import { validatePassword } from '../../../public/login/services/passwordPolicy';
+import {
+  buildProfileMetadata,
+  resolveProfileAvatar,
+} from '../../../../lib/profileAvatar';
+import { ProfileAvatarCard } from './ProfileAvatarCard';
+import { ProfilePasswordForm } from './ProfilePasswordForm';
+import { getStoredProfile, type UserProfile } from './profileStorage';
 export const MeuPerfilConfig: React.FC = () => {
   const googleAuthEnabled = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'dados' | 'seguranca'>('dados');
   const [profile, setProfile] = useState<UserProfile>(getStoredProfile);
   const [nome, setNome] = useState(profile.nome);
@@ -76,9 +32,8 @@ export const MeuPerfilConfig: React.FC = () => {
   const [dataNascimento, setDataNascimento] = useState(profile.dataNascimento);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isRemovingPhoto, setIsRemovingPhoto] = useState(false);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
@@ -112,14 +67,25 @@ export const MeuPerfilConfig: React.FC = () => {
 
       const metadata = user.user_metadata || {};
       const googleIdentity = identitiesResult.data?.identities.find((identity) => identity.provider === 'google');
+      const authProviders = Array.isArray(user.app_metadata?.providers)
+        ? user.app_metadata.providers
+        : [user.app_metadata?.provider];
       const localProfile = getStoredProfile();
+      const resolvedAvatar = resolveProfileAvatar({
+        metadata,
+        googleIdentityData: googleIdentity?.identity_data,
+        hasGoogleIdentity: Boolean(googleIdentity || authProviders.includes('google')),
+        storedAvatar: localProfile.avatar,
+        storedAvatarSource: localProfile.avatarSource,
+      });
       const updated: UserProfile = {
         ...localProfile,
         nome: typeof metadata.nome === 'string' && metadata.nome.trim()
           ? metadata.nome.trim()
           : localProfile.nome,
         email: user.email || localProfile.email,
-        avatar: localProfile.avatarSelectedByUser ? sanitizeAvatar(localProfile.avatar) : '',
+        avatar: resolvedAvatar.avatar,
+        avatarSource: resolvedAvatar.avatarSource,
         cpf: metadata.cpf || localProfile.cpf || '',
         dataNascimento: metadata.data_nascimento || localProfile.dataNascimento || '',
         googleLinked: Boolean(googleIdentity),
@@ -147,12 +113,13 @@ export const MeuPerfilConfig: React.FC = () => {
 
     setIsSavingInfo(true);
     try {
-      const nextMetadata = {
+      const nextMetadata = buildProfileMetadata({
         nome: nome.trim(),
         cpf: cpf.trim(),
-        data_nascimento: dataNascimento,
-        ...(profile.avatar ? { avatar_url: profile.avatar } : {}),
-      };
+        dataNascimento,
+        avatar: profile.avatar,
+        avatarSource: profile.avatarSource,
+      });
       const payload = { data: nextMetadata };
       const { data, error } = await supabase.auth.updateUser(payload);
 
@@ -176,8 +143,9 @@ export const MeuPerfilConfig: React.FC = () => {
 
   const handleChangePassword = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (newPassword.length < 6) {
-      showError('A nova senha deve possuir no mínimo 6 caracteres.');
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      showError(passwordError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -267,21 +235,43 @@ export const MeuPerfilConfig: React.FC = () => {
       if (error || !data.user) throw error || new Error('Usuário autenticado não encontrado.');
       const publicUrl = await uploadImageAsset(file, 'avatars', data.user.id);
       const { error: updateError } = await supabase.auth.updateUser({
-        data: {
+        data: buildProfileMetadata({
           nome: profile.nome,
           cpf: profile.cpf,
-          data_nascimento: profile.dataNascimento,
-          avatar_url: publicUrl,
-        },
+          dataNascimento: profile.dataNascimento,
+          avatar: publicUrl,
+          avatarSource: 'manual',
+        }),
       });
       if (updateError) throw updateError;
-      updateProfileData({ ...profile, avatar: publicUrl, avatarSelectedByUser: true });
+      updateProfileData({ ...profile, avatar: publicUrl, avatarSource: 'manual' });
       showSuccess('Foto de perfil atualizada.');
     } catch (error: any) {
       showError(error.message || 'Erro ao enviar foto de perfil.');
     } finally {
       setIsUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePhotoRemove = async () => {
+    setIsRemovingPhoto(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: buildProfileMetadata({
+          nome: profile.nome,
+          cpf: profile.cpf,
+          dataNascimento: profile.dataNascimento,
+          avatar: '',
+          avatarSource: 'conta',
+        }),
+      });
+      if (error) throw error;
+      updateProfileData({ ...profile, avatar: '', avatarSource: 'conta' });
+      showSuccess('Foto removida. Suas iniciais serão exibidas no perfil.');
+    } catch (error: any) {
+      showError(error.message || 'Erro ao remover a foto de perfil.');
+    } finally {
+      setIsRemovingPhoto(false);
     }
   };
 
@@ -295,14 +285,6 @@ export const MeuPerfilConfig: React.FC = () => {
     width: '100%',
     boxSizing: 'border-box',
   };
-
-  const profileInitials = profile.nome
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toLocaleUpperCase('pt-BR'))
-    .join('') || 'U';
 
   const tabButtonStyle = (tab: 'dados' | 'seguranca'): React.CSSProperties => ({
     alignItems: 'center',
@@ -353,39 +335,15 @@ export const MeuPerfilConfig: React.FC = () => {
       {activeTab === 'dados' && (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 0.8fr) minmax(320px, 1.2fr)', gap: '28px', marginTop: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
-            <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: '0 0 16px 0', letterSpacing: '0.04em', textAlign: 'left' }}>
-              Foto de Perfil
-            </h4>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              style={{ position: 'relative', width: 110, height: 110, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--color-gold-primary)', padding: 0, cursor: 'pointer', background: '#f8fafc' }}
-              title="Enviar nova foto"
-              disabled={isUploadingPhoto}
-            >
-              {profile.avatar ? (
-                <img src={profile.avatar} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
-              ) : (
-                <span style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center', color: '#475569', fontSize: '1.75rem', fontWeight: 800 }}>
-                  {profileInitials}
-                </span>
-              )}
-              <span style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.48)', color: '#fff', display: 'grid', placeItems: 'center', opacity: isUploadingPhoto ? 1 : 0 }}>
-                {isUploadingPhoto ? <Upload size={20} /> : <Camera size={20} />}
-              </span>
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={(event) => handlePhotoUpload(event.target.files?.[0])} />
-            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', margin: '14px 0 2px 0' }}>{profile.nome}</p>
-            <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>{profile.perfil}</p>
-            <p style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.45, margin: '10px 0 0' }}>A foto só muda quando você envia uma imagem aqui. Vincular o Google não importa nem substitui sua foto.</p>
-
-            <div style={{ marginTop: 18 }}>
-              <button type="button" className="btn-save-settings" onClick={() => fileInputRef.current?.click()} disabled={isUploadingPhoto}>
-                <Upload size={14} /> {isUploadingPhoto ? 'Enviando...' : 'Enviar nova foto'}
-              </button>
-            </div>
-          </div>
+          <ProfileAvatarCard
+            nome={profile.nome}
+            perfil={profile.perfil}
+            avatar={profile.avatar}
+            avatarSource={profile.avatarSource}
+            isBusy={isUploadingPhoto || isRemovingPhoto}
+            onFileSelected={handlePhotoUpload}
+            onRemove={handlePhotoRemove}
+          />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -425,36 +383,14 @@ export const MeuPerfilConfig: React.FC = () => {
       {activeTab === 'seguranca' && (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 1fr)', gap: '24px', marginTop: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <form onSubmit={handleChangePassword} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
-              Alterar Senha de Acesso
-            </h4>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.45 }}>
-              Altera a senha da sessão autenticada atual. Para receber um link por e-mail, use a opção de redefinição abaixo.
-            </p>
-
-            {[
-              { label: 'Nova Senha', value: newPassword, setter: setNewPassword, show: showNew, setShow: setShowNew, placeholder: 'Min. 6 caracteres' },
-              { label: 'Confirmar Nova Senha', value: confirmPassword, setter: setConfirmPassword, show: showConfirm, setShow: setShowConfirm, placeholder: 'Repita a nova senha' },
-            ].map((field) => (
-              <div key={field.label} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{field.label}</label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                  <input type={field.show ? 'text' : 'password'} value={field.value} onChange={(event) => field.setter(event.target.value)} placeholder={field.placeholder} style={{ ...inputStyle, paddingRight: 38 }} disabled={isChangingPassword} />
-                  <button type="button" onClick={() => field.setShow(!field.show)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
-                    {field.show ? <EyeOff size={15} style={{ color: '#64748b' }} /> : <Eye size={15} style={{ color: '#64748b' }} />}
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn-save-settings" disabled={isChangingPassword}>
-                {isChangingPassword ? 'Alterando...' : 'Alterar Senha'}
-              </button>
-            </div>
-          </form>
+          <ProfilePasswordForm
+            newPassword={newPassword}
+            confirmPassword={confirmPassword}
+            isChanging={isChangingPassword}
+            onNewPasswordChange={setNewPassword}
+            onConfirmPasswordChange={setConfirmPassword}
+            onSubmit={handleChangePassword}
+          />
 
           <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
@@ -479,7 +415,7 @@ export const MeuPerfilConfig: React.FC = () => {
               Conta Google
             </h4>
             <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.45 }}>
-              Vincule ou desvincule o login pelo Google. Isso não importa nome ou foto do Google. A desvinculação só é permitida se houver outro método de acesso ativo.
+              Vincule ou desvincule o login pelo Google. Quando uma foto vier dessa conta, sua origem será identificada e você poderá substituí-la ou usar iniciais.
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: 14, backgroundColor: '#f8fafc', borderRadius: 8, border: '1px solid #cbd5e1' }}>
               <div>

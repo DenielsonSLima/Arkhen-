@@ -16,6 +16,7 @@ export const isTarefaDoUsuario = (
   usuarioAtual: UsuarioAtividade | null,
 ) => {
   if (!authUserId || !usuarioAtual) return false;
+  if (tarefa.status === 'Aguardando revisão' && tarefa.revisorUserId === authUserId) return true;
   if (tarefa.responsavelUserId) return tarefa.responsavelUserId === authUserId;
 
   return tarefa.responsavelConfigUsuarioId === usuarioAtual.configUsuarioId;

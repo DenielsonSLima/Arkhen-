@@ -6,7 +6,12 @@ interface ResumoAuditoriaTabProps {
   selectedGroup: CompanyActivityGroup;
   competencia: string;
   fechamentoMeta: { finalizado: boolean; dataHora: string; usuario: string } | null;
-  handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string }) => Promise<void>;
+  handleSaveFechamentoMeta: (meta: {
+    finalizado: boolean;
+    dataHora: string;
+    usuario: string;
+    justificativa?: string;
+  }) => Promise<void>;
   getActivityIcon: (modeloId: string, status: string, size?: number) => React.ReactNode;
   onSelectTab: (modeloId: string) => void;
 }
@@ -23,6 +28,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
   const [auditSuccessMsg, setAuditSuccessMsg] = useState(false);
   const [auditError, setAuditError] = useState('');
   const [isSavingAudit, setIsSavingAudit] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
   const auditDataHora = fechamentoMeta?.dataHora || '';
   const auditUsuario = fechamentoMeta?.usuario || '';
 
@@ -30,6 +36,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
     setAuditFinalizado(Boolean(fechamentoMeta?.finalizado));
     setAuditSuccessMsg(false);
     setAuditError('');
+    setReopenReason('');
   }, [fechamentoMeta, selectedGroup]);
 
   const handleSaveAudit = async (e: React.FormEvent) => {
@@ -42,6 +49,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
         finalizado: auditFinalizado,
         dataHora: auditDataHora,
         usuario: auditUsuario,
+        justificativa: reopenReason || undefined,
       });
       setAuditSuccessMsg(true);
       setTimeout(() => setAuditSuccessMsg(false), 3000);
@@ -152,6 +160,22 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
               Finalizar e Homologar Fechamento da Competência ({competencia})
             </label>
           </div>
+
+          {fechamentoMeta?.finalizado && !auditFinalizado && (
+            <div className="form-item-group" style={{ marginBottom: '16px' }}>
+              <label htmlFor="justificativa-reabertura">Justificativa da reabertura</label>
+              <textarea
+                id="justificativa-reabertura"
+                required
+                minLength={8}
+                maxLength={4000}
+                value={reopenReason}
+                onChange={(event) => setReopenReason(event.target.value)}
+                placeholder="Explique por que esta competência precisa ser reaberta."
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="form-row-grid">
             <div className="form-item-group">

@@ -61,7 +61,7 @@ const fallbackModules: SystemModuleConfig[] = [
   ['financeiro', 'Financeiro', 'Contas, fluxo de caixa e conciliação.', 'Financeiro', false],
   ['documentos', 'Documentos', 'Arquivos e compartilhamentos.', 'Operação', false],
   ['agenda', 'Agenda', 'Compromissos e eventos da equipe.', 'Produtividade', false],
-  ['parametrizacao', 'Parametrização', 'Cadastros e regras utilizadas pelo sistema.', 'Administração', false],
+  ['parametrizacao', 'Rotinas e obrigações', 'Cadastros e regras utilizadas pelo sistema.', 'Administração', false],
   ['configuracoes', 'Configurações', 'Empresa, equipe, permissões e integrações.', 'Essenciais', true],
 ].map(([id, nome, descricao, categoria, obrigatorio], ordem) => ({
   id: id as SystemModuleId,

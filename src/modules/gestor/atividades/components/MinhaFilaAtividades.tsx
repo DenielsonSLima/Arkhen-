@@ -100,7 +100,13 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
     toggleChecklist,
     isLoading,
     isWorkspaceError,
+    isSaving,
+    saveError,
     reloadWorkspace,
+    podeGerenciar,
+    reviewTarefaAsync,
+    reopenTarefaAsync,
+    revisores,
   } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -172,13 +178,6 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
     window.setTimeout(() => setFeedback(null), 3000);
   };
 
-  const handleToggleConcluir = (tarefa: TarefaGestor) => {
-    updateTarefa(tarefa.id, {
-      status: isDone(tarefa) ? 'Pendente' : 'Concluída',
-      dataHoraConclusao: isDone(tarefa) ? undefined : new Date().toISOString(),
-    });
-  };
-
   const handleSalvarTarefaUsuario = (dados: any) => {
     const nova: TarefaGestor = {
       ...dados,
@@ -220,7 +219,7 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
   return (
     <div style={pageStyle}>
       <div style={personalContextStyle} role="status">
-        Exibindo somente tarefas atribuídas a <strong>{usuarioAtual.nome}</strong>.
+        Exibindo tarefas atribuídas a <strong>{usuarioAtual.nome}</strong> e revisões encaminhadas a você.
       </div>
       <MinhaFilaToolbar
         activeFilter={activeFilter}
@@ -317,7 +316,12 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
         <div style={listStyle}>
           {filteredTasks.map((tarefa) => (
             <article key={tarefa.id} style={taskCardStyle}>
-              <button type="button" onClick={() => handleToggleConcluir(tarefa)} style={checkBtnStyle}>
+              <button
+                type="button"
+                onClick={() => setSelectedTaskId(tarefa.id)}
+                style={checkBtnStyle}
+                title="Abrir checklist e evidências"
+              >
                 {isDone(tarefa) ? <CheckCircle2 size={19} color="#10b981" /> : <Circle size={19} color="#c59235" />}
               </button>
 
@@ -347,6 +351,12 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
           onClose={() => setSelectedTaskId(null)}
           updateTarefa={updateTarefa}
           toggleChecklist={toggleChecklist}
+          isSaving={isSaving}
+          saveError={saveError instanceof Error ? saveError : null}
+          authUserId={authUserId}
+          canManage={podeGerenciar}
+          reviewTarefaAsync={reviewTarefaAsync}
+          reopenTarefaAsync={reopenTarefaAsync}
         />
       )}
 
@@ -355,6 +365,8 @@ export const MinhaFilaAtividades: React.FC<MinhaFilaAtividadesProps> = ({
         onClose={() => setModalNovaAberto(false)}
         onSalvar={handleSalvarTarefaUsuario}
         usuarioNome={usuarioLogado}
+        usuarioId={usuarioAtual.userId}
+        revisores={revisores}
       />
     </div>
   );

@@ -1,11 +1,13 @@
 import React from 'react';
 import { CheckCircle2, Eye, Trash2 } from 'lucide-react';
-import { formatDateBR, type StatusAtividadeGestor } from '../../services/rotinasAtividadesService';
+import { formatDateBR } from '../../services/rotinasAtividadesService';
 import { getPct } from './utils';
 import type { TaskInspectorProps } from './types';
 import { deleteOutlineBtnStyle, styles } from './styles';
 import { EmptyState } from './EmptyState';
 import { ProgressBar } from './ProgressBar';
+import { TaskReviewActions } from '../TaskReviewActions';
+import { hasCompletionEvidence } from '../../utils/completionEvidence';
 
 export const TaskInspector: React.FC<TaskInspectorProps> = ({
   deleteTarefa,
@@ -14,7 +16,36 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   setSelectedTaskId,
   toggleChecklist,
   updateTarefa,
-}) => (
+  isSaving,
+  saveError,
+  authUserId,
+  canManage,
+  reviewTarefaAsync,
+  reopenTarefaAsync,
+}) => {
+  const [completionEvidence, setCompletionEvidence] = React.useState('');
+  const [validationError, setValidationError] = React.useState('');
+
+  React.useEffect(() => {
+    setCompletionEvidence(selectedTask?.justificativaConclusao || selectedTask?.evidencia || '');
+    setValidationError('');
+  }, [selectedTask?.id, selectedTask?.evidencia, selectedTask?.justificativaConclusao]);
+
+  const toggleStep = (index: number, checked: boolean) => {
+    if (!selectedTask) return;
+    const finishesChecklist = checked && selectedTask.checklist.every((item, itemIndex) => (
+      itemIndex === index ? true : item.concluida
+    ));
+    const proof = { justificativa: completionEvidence };
+    if (finishesChecklist && !hasCompletionEvidence(proof)) {
+      setValidationError('Informe evidência ou justificativa antes de concluir a última etapa.');
+      return;
+    }
+    setValidationError('');
+    toggleChecklist(selectedTask.id, index, checked, proof);
+  };
+
+  return (
   <div style={styles.inspectorGrid}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {filteredTasks.length === 0 ? (
@@ -48,15 +79,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <ProgressBar value={pct} />
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>{done}/{total || 1} itens feitos</span>
-                <select
-                  value={tarefa.status}
-                  onChange={(event) => updateTarefa(tarefa.id, { status: event.target.value as StatusAtividadeGestor })}
-                  style={styles.statusSelect}
-                >
-                  <option value="Pendente">Pendente</option>
-                  <option value="Em andamento">Em andamento</option>
-                  <option value="Concluída">Concluída</option>
-                </select>
+                <span style={styles.statusSelect}>{tarefa.status}</span>
               </div>
             </article>
           );
@@ -68,7 +91,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
       {selectedTask ? (
         <>
           <div>
-            <span style={styles.detailEyebrow}>Fiscalização da tarefa</span>
+            <span style={styles.detailEyebrow}>Acompanhamento da tarefa</span>
             <h3 style={styles.detailTitle}>{selectedTask.titulo}</h3>
             <p style={styles.detailMeta}>{selectedTask.cliente} • {selectedTask.responsavel} • {formatDateBR(selectedTask.vencimento)}</p>
           </div>
@@ -90,9 +113,10 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                     <input
                       type="checkbox"
                       checked={item.concluida}
+                      disabled={isSaving || selectedTask.status === 'Aguardando revisão' || selectedTask.status === 'Concluída'}
                       onChange={(event) => {
                         const realIndex = selectedTask.checklist.findIndex((check) => check.titulo === item.titulo);
-                        toggleChecklist(selectedTask.id, realIndex >= 0 ? realIndex : index, event.target.checked);
+                        toggleStep(realIndex >= 0 ? realIndex : index, event.target.checked);
                       }}
                       style={{ accentColor: 'var(--color-gold-primary)' }}
                     />
@@ -104,6 +128,18 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
           <div style={styles.notesGrid}>
+            <label>
+              Evidência ou justificativa da conclusão
+              <textarea
+                value={completionEvidence}
+                disabled={isSaving || selectedTask.status === 'Aguardando revisão' || selectedTask.status === 'Concluída'}
+                onChange={(event) => setCompletionEvidence(event.target.value)}
+                onBlur={(event) => updateTarefa(selectedTask.id, {
+                  justificativaConclusao: event.target.value,
+                })}
+                placeholder="Protocolo, documento conferido ou motivo auditável."
+              />
+            </label>
             <label>
               Anotações do andamento
               <textarea
@@ -121,18 +157,26 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               />
             </label>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-            <button onClick={() => updateTarefa(selectedTask.id, { status: 'Concluída', dataHoraConclusao: new Date().toISOString() })} style={styles.primaryBtn} type="button">
-              <CheckCircle2 size={15} /> Marcar concluída
-            </button>
+          {validationError && <div role="alert" style={{ color: '#b91c1c' }}>{validationError}</div>}
+          {saveError && <div role="alert" style={{ color: '#b91c1c' }}>{saveError.message}</div>}
+          <TaskReviewActions
+            task={selectedTask}
+            authUserId={authUserId}
+            canManage={canManage}
+            isSaving={isSaving}
+            onReview={reviewTarefaAsync}
+            onReopen={reopenTarefaAsync}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
             <button onClick={() => deleteTarefa(selectedTask.id)} style={deleteOutlineBtnStyle} type="button">
               <Trash2 size={14} /> Excluir
             </button>
           </div>
         </>
       ) : (
-        <EmptyState icon={<Eye size={34} color="var(--color-gold-primary)" />} text="Clique em uma atividade para fiscalizar o andamento." />
+        <EmptyState icon={<Eye size={34} color="var(--color-gold-primary)" />} text="Clique em uma atividade para acompanhar o andamento." />
       )}
     </aside>
   </div>
-);
+  );
+};

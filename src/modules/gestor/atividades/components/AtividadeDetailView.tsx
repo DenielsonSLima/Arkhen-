@@ -6,14 +6,25 @@ import { renderCompanyLogo } from '../por-empresa/companyActivityPresentation';
 import { ResumoAuditoriaTab } from './ResumoAuditoriaTab';
 import { ChecklistTab } from './ChecklistTab';
 import { getActivityIcon } from './activityIcons';
+import type { CompletionEvidence } from '../utils/completionEvidence';
 
 interface AtividadeDetailViewProps {
   selectedGroup: CompanyActivityGroup;
   onBack: () => void;
   competencia: string;
   fechamentoMeta: { finalizado: boolean; dataHora: string; usuario: string } | null;
-  handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string }) => Promise<void>;
-  handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
+  handleSaveFechamentoMeta: (meta: {
+    finalizado: boolean;
+    dataHora: string;
+    usuario: string;
+    justificativa?: string;
+  }) => Promise<void>;
+  handleToggleStep: (
+    instanciaId: string,
+    etapa: string,
+    value: boolean,
+    proof?: CompletionEvidence,
+  ) => Promise<void>;
   handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
 

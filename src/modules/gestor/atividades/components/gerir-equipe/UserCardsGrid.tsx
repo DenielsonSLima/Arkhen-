@@ -43,7 +43,7 @@ export const UserCardsGrid: React.FC<UserCardsGridProps> = ({ onSelectUser, user
           </div>
 
           <button onClick={() => onSelectUser(user.id)} style={styles.manageBtn} type="button">
-            Fiscalizar Atividades
+            Acompanhar atividades
           </button>
         </div>
       ))}

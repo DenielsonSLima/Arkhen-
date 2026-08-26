@@ -74,6 +74,7 @@ const formatCompetenciaAtividade = (competencia: string) => {
 
 export const ProtocolosPage: React.FC = () => {
   useProtocolosRealtime(true);
+  const { activateModule } = useInternalTabs();
   
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const {
@@ -246,6 +247,15 @@ export const ProtocolosPage: React.FC = () => {
               ? 'Ative as entregas em Rotinas e Obrigações no cadastro de cada cliente.'
               : 'Ajuste os filtros ou selecione a aba Ativas.'}
           </p>
+          {protocolos.length === 0 ? (
+            <button
+              type="button"
+              className="protocolos-retry-button"
+              onClick={() => activateModule('clientes')}
+            >
+              Abrir cadastro de clientes
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="protocolos-regime-groups animate-fade-in">

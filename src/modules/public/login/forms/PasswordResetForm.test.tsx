@@ -71,13 +71,13 @@ describe('PasswordResetForm', () => {
     fillPasswords('abc');
     submit();
 
-    expect(screen.getByRole('alert').textContent).toContain('pelo menos 6 caracteres');
+    expect(screen.getByRole('alert').textContent).toContain('pelo menos 8 caracteres');
     expect(updatePasswordMock).not.toHaveBeenCalled();
   });
 
   it('rejeita confirmação divergente sem chamar o serviço', () => {
     renderForm();
-    fillPasswords('abc123', 'abc124');
+    fillPasswords('abc12345', 'abc12346');
     submit();
 
     expect(screen.getByRole('alert').textContent).toContain('confirmação não corresponde');
@@ -86,24 +86,24 @@ describe('PasswordResetForm', () => {
 
   it('atualiza uma vez e conclui o fluxo quando o formulário é válido', async () => {
     renderForm();
-    fillPasswords('abc123');
+    fillPasswords('abc12345');
     submit();
 
     await waitFor(() => expect(updatePasswordMock).toHaveBeenCalledTimes(1));
-    expect(updatePasswordMock).toHaveBeenCalledWith('abc123');
+    expect(updatePasswordMock).toHaveBeenCalledWith('abc12345');
   });
 
   it('mantém o formulário preenchido quando a atualização falha', async () => {
     updatePasswordMock.mockRejectedValueOnce(new Error('Falha remota ao atualizar.'));
     renderForm();
-    fillPasswords('abc123');
+    fillPasswords('abc12345');
     submit();
 
     await waitFor(() => {
       expect(screen.getByRole('alert').textContent).toContain('Falha remota ao atualizar.');
     });
-    expect((screen.getByLabelText('Nova senha') as HTMLInputElement).value).toBe('abc123');
-    expect((screen.getByLabelText('Confirmar nova senha') as HTMLInputElement).value).toBe('abc123');
+    expect((screen.getByLabelText('Nova senha') as HTMLInputElement).value).toBe('abc12345');
+    expect((screen.getByLabelText('Confirmar nova senha') as HTMLInputElement).value).toBe('abc12345');
     expect(screen.getByRole('button', { name: 'SALVAR NOVA SENHA' })).toBeDefined();
   });
 
@@ -113,7 +113,7 @@ describe('PasswordResetForm', () => {
       resolveUpdate = resolve;
     }));
     renderForm();
-    fillPasswords('abc123');
+    fillPasswords('abc12345');
 
     const submitButton = screen.getByRole('button', { name: 'SALVAR NOVA SENHA' }) as HTMLButtonElement;
     fireEvent.click(submitButton);

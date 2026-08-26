@@ -16,7 +16,6 @@ export const useConformidadeRealtime = (enabled = true) => {
 
     const channel = subscribeRealtimeChannel('conformidade-realtime', (ch) =>
       ch
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_instancias' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_fechamentos' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos_solicitacoes' }, invalidate)

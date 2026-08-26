@@ -33,6 +33,18 @@ describe('filtro da Minha Fila', () => {
     )).toBe(true);
   });
 
+  it('inclui tarefas encaminhadas ao usuário como revisor', () => {
+    expect(isTarefaDoUsuario(
+      task({
+        status: 'Aguardando revisão',
+        responsavelUserId: 'auth-user-2',
+        revisorUserId: 'auth-user-1',
+      }),
+      'auth-user-1',
+      currentUser,
+    )).toBe(true);
+  });
+
   it('aceita o vínculo operacional estável quando o auth id ainda não foi replicado', () => {
     expect(isTarefaDoUsuario(
       task({ responsavelConfigUsuarioId: 'config-user-1' }),

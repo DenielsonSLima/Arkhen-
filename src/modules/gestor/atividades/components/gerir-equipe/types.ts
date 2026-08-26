@@ -1,11 +1,12 @@
 import type { CompanyActivityGroup } from '../../hooks/useAtividades';
 import type { TarefaGestor } from '../../services/rotinasAtividadesService';
+import type { CompletionEvidence } from '../../utils/completionEvidence';
 
 export type PeriodoFiltro = 'dia' | 'semana' | 'mes' | 'empresas';
 
 export interface AbaGerirEquipeProps {
   companyGroups?: CompanyActivityGroup[];
-  handleToggleStep?: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
+  handleToggleStep?: (instanciaId: string, etapa: string, value: boolean, proof?: CompletionEvidence) => Promise<void>;
 }
 
 export interface UserStats {
@@ -39,12 +40,18 @@ export interface TaskInspectorProps {
   selectedTask: TarefaGestor | null;
   setSelectedTaskId: (id: string | null) => void;
   taskSummary: TaskSummary;
-  toggleChecklist: (taskId: string, index: number, concluida: boolean) => void;
+  toggleChecklist: (taskId: string, index: number, concluida: boolean, proof?: CompletionEvidence) => void;
   updateTarefa: (id: string, patch: Partial<TarefaGestor>) => void;
+  authUserId: string | null;
+  canManage: boolean;
+  reviewTarefaAsync: (id: string, approve: boolean, justification?: string) => Promise<unknown>;
+  reopenTarefaAsync: (id: string, justification: string) => Promise<unknown>;
+  isSaving: boolean;
+  saveError: Error | null;
 }
 
 export interface CompanyInspectorProps {
-  handleToggleStep?: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
+  handleToggleStep?: (instanciaId: string, etapa: string, value: boolean, proof?: CompletionEvidence) => Promise<void>;
   selectedCompany: CompanyActivityGroup | null;
   setSelectedCompanyId: (id: string | null) => void;
   userCompanyGroups: CompanyActivityGroup[];

@@ -2,10 +2,20 @@ import React, { useState } from 'react';
 import { Calculator, Clock, User } from 'lucide-react';
 import type { CompanyActivity } from '../hooks/useAtividades';
 import type { ValoresCompetenciaAtividade } from '../services/atividadesService';
+import {
+  hasCompletionEvidence,
+  isFinalChecklistTransition,
+  type CompletionEvidence,
+} from '../utils/completionEvidence';
 
 interface ChecklistTabProps {
   atv: CompanyActivity;
-  handleToggleStep: (instanciaId: string, etapa: string, value: boolean) => Promise<void>;
+  handleToggleStep: (
+    instanciaId: string,
+    etapa: string,
+    value: boolean,
+    proof?: CompletionEvidence,
+  ) => Promise<void>;
   handleSaveTaxValores: (instanciaId: string, valores: ValoresCompetenciaAtividade) => Promise<void>;
 }
 
@@ -91,8 +101,32 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
   const [valoresDraft, setValoresDraft] = useState<Record<string, string>>({});
   const [isEditingTax, setIsEditingTax] = useState(false);
   const [isSavingTax, setIsSavingTax] = useState(false);
+  const [isUpdatingStep, setIsUpdatingStep] = useState(false);
+  const [completionEvidence, setCompletionEvidence] = useState(
+    atv.justificativaConclusao || atv.evidencia || '',
+  );
   const [operationError, setOperationError] = useState('');
   const camposValores = [...CAMPOS_VALORES_COMPETENCIA, ...CAMPOS_ENCARGOS_DCTFWEB];
+
+  const updateStep = async (etapa: string, checked: boolean) => {
+    const proof = { justificativa: completionEvidence };
+    if (isFinalChecklistTransition(atv.checklists, etapa, checked)
+        && !hasCompletionEvidence(proof)) {
+      setOperationError('Informe uma evidência ou justificativa antes de concluir a última etapa.');
+      return;
+    }
+    setIsUpdatingStep(true);
+    setOperationError('');
+    try {
+      await handleToggleStep(atv.instanciaId, etapa, checked, proof);
+    } catch (error) {
+      setOperationError(error instanceof Error
+        ? error.message
+        : 'Não foi possível atualizar o checklist.');
+    } finally {
+      setIsUpdatingStep(false);
+    }
+  };
 
   const openTaxEditor = () => {
     setOperationError('');
@@ -151,7 +185,22 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
         </div>
       )}
 
-      {isDctfWebModel(atv) && (
+      <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px', fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+        Evidência ou justificativa da conclusão
+        <textarea
+          value={completionEvidence}
+          onChange={(event) => setCompletionEvidence(event.target.value)}
+          disabled={isUpdatingStep || atv.status === 'Aguardando revisão' || atv.status === 'Concluída'}
+          placeholder="Informe protocolo, arquivo conferido ou motivo auditável antes da última etapa."
+          rows={3}
+          style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px', font: 'inherit', resize: 'vertical' }}
+        />
+        <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 500 }}>
+          Este registro será enviado ao histórico auditável quando a atividade for concluída.
+        </span>
+      </label>
+
+      {isDctfWebModel(atv) && atv.valores && (
         <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -245,16 +294,8 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
                   type="checkbox"
                   id={`step-${atv.instanciaId}-${etapa}`}
                   checked={checked}
-                  onChange={async (event) => {
-                    setOperationError('');
-                    try {
-                      await handleToggleStep(atv.instanciaId, etapa, event.target.checked);
-                    } catch (error) {
-                      setOperationError(error instanceof Error
-                        ? error.message
-                        : 'Não foi possível atualizar o checklist.');
-                    }
-                  }}
+                  disabled={isUpdatingStep || atv.status === 'Aguardando revisão' || atv.status === 'Concluída'}
+                  onChange={(event) => void updateStep(etapa, event.target.checked)}
                   style={{
                     width: '16px',
                     height: '16px',
@@ -266,7 +307,7 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
                   htmlFor={`step-${atv.instanciaId}-${etapa}`}
                   style={{ fontSize: '0.82rem', fontWeight: 500, color: '#0f172a', cursor: 'pointer', flex: 1 }}
                 >
-                  {etapa}
+                  {atv.checklistLabels?.[etapa] || etapa}
                 </label>
               </div>
 

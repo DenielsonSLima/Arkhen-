@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import type { CategoriaAtividade, PrioridadeAtividade } from '../services/rotinasAtividadesService';
+import type {
+  CategoriaAtividade,
+  PrioridadeAtividade,
+  UsuarioAtividade,
+} from '../services/rotinasAtividadesService';
 
 interface NovaTarefaFormProps {
   onCancelar: () => void;
@@ -11,10 +15,18 @@ interface NovaTarefaFormProps {
     prioridade: PrioridadeAtividade;
     checklist: string[];
     notas: string;
+    revisorUserId?: string;
   }) => void;
+  revisores?: UsuarioAtividade[];
+  responsavelUserId?: string;
 }
 
-export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({ onCancelar, onSalvar }) => {
+export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({
+  onCancelar,
+  onSalvar,
+  revisores = [],
+  responsavelUserId,
+}) => {
   const [titulo, setTitulo] = useState('');
   const [cliente, setCliente] = useState('Escritório');
   const [categoria, setCategoria] = useState<CategoriaAtividade>('Interna');
@@ -22,6 +34,7 @@ export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({ onCancelar, onSa
   const [prioridade, setPrioridade] = useState<PrioridadeAtividade>('Média');
   const [checklistRaw, setChecklistRaw] = useState('');
   const [notas, setNotas] = useState('');
+  const [revisorUserId, setRevisorUserId] = useState('');
 
   const clientes = ['Escritório'];
 
@@ -42,6 +55,7 @@ export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({ onCancelar, onSa
       prioridade,
       checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
       notas,
+      revisorUserId: revisorUserId || undefined,
     });
 
     setTitulo('');
@@ -51,6 +65,7 @@ export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({ onCancelar, onSa
     setPrioridade('Média');
     setChecklistRaw('');
     setNotas('');
+    setRevisorUserId('');
   };
 
   return (
@@ -138,6 +153,25 @@ export const NovaTarefaForm: React.FC<NovaTarefaFormProps> = ({ onCancelar, onSa
           style={styles.textarea}
           rows={2}
         />
+      </div>
+
+      <div className="calc-field" style={styles.field}>
+        <label style={styles.label}>Revisor da conclusão (opcional)</label>
+        <select
+          value={revisorUserId}
+          onChange={(event) => setRevisorUserId(event.target.value)}
+          style={styles.select}
+        >
+          <option value="">Sem revisão adicional</option>
+          {revisores
+            .filter((usuario) => usuario.userId && usuario.userId !== responsavelUserId)
+            .map((usuario) => (
+              <option key={usuario.userId} value={usuario.userId}>{usuario.nome}</option>
+            ))}
+        </select>
+        <span style={{ color: '#64748b', fontSize: '0.72rem' }}>
+          Somente usuários ativos com permissão de atividades aparecem nesta lista.
+        </span>
       </div>
 
       <div style={styles.actions}>

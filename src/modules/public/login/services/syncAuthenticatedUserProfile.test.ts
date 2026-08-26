@@ -9,10 +9,15 @@ vi.mock('../../../../lib/persistedStorage', () => ({ persistedStorage: storage }
 
 import { syncAuthenticatedUserProfile } from './syncAuthenticatedUserProfile';
 
-const authUser = (metadata: Record<string, unknown>) => ({
+const authUser = (metadata: Record<string, unknown>, google = false) => ({
   id: 'usuario-real',
   email: 'pessoa@empresa.com.br',
   user_metadata: metadata,
+  app_metadata: google ? { provider: 'google', providers: ['google'] } : {},
+  identities: google ? [{
+    provider: 'google',
+    identity_data: { picture: 'https://provedor/foto.jpg' },
+  }] : [],
 });
 
 describe('syncAuthenticatedUserProfile', () => {
@@ -21,14 +26,15 @@ describe('syncAuthenticatedUserProfile', () => {
     storage.getItem.mockReturnValue(null);
   });
 
-  it('não importa silenciosamente a foto do provedor', () => {
-    syncAuthenticatedUserProfile(authUser({ name: 'Pessoa Real', picture: 'https://provedor/foto.jpg' }) as never);
+  it('identifica claramente a foto importada do Google', () => {
+    syncAuthenticatedUserProfile(
+      authUser({ name: 'Pessoa Real', picture: 'https://provedor/foto.jpg' }, true) as never,
+    );
 
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
     expect(saved.nome).toBe('Usuário');
-    expect(saved.avatar).not.toBe('https://provedor/foto.jpg');
-    expect(saved.avatar).toContain('data:image/svg+xml');
-    expect(saved.avatarSelectedByUser).toBe(false);
+    expect(saved.avatar).toBe('https://provedor/foto.jpg');
+    expect(saved.avatarSource).toBe('google');
   });
 
   it('preserva a foto escolhida explicitamente pelo usuário', () => {
@@ -42,7 +48,7 @@ describe('syncAuthenticatedUserProfile', () => {
 
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
     expect(saved.avatar).toBe('https://storage/foto-escolhida.webp');
-    expect(saved.avatarSelectedByUser).toBe(true);
+    expect(saved.avatarSource).toBe('manual');
   });
 
   it('preserva uma pessoa real chamada João Silva sem sinais de demonstração', () => {
@@ -80,8 +86,20 @@ describe('syncAuthenticatedUserProfile', () => {
 
     const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
     expect(saved.avatar).not.toBe('https://origem-desconhecida/foto.jpg');
-    expect(saved.avatar).toContain('data:image/svg+xml');
-    expect(saved.avatarSelectedByUser).toBe(false);
+    expect(saved.avatar).toBe('');
+    expect(saved.avatarSource).toBe('conta');
+  });
+
+  it('não reimporta foto do Google depois da escolha explícita por iniciais', () => {
+    syncAuthenticatedUserProfile(authUser({
+      avatar_source: 'conta',
+      avatar_url: null,
+      picture: null,
+    }, true) as never);
+
+    const saved = JSON.parse(storage.setItem.mock.calls[0][1]);
+    expect(saved.avatar).toBe('');
+    expect(saved.avatarSource).toBe('conta');
   });
 
   it('usa o perfil autorizado do banco e nunca presume administrador', () => {

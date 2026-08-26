@@ -3,7 +3,6 @@ import { CheckCircle2, Trash2 } from 'lucide-react';
 import {
   formatDateBR,
   todayKey,
-  type StatusAtividadeGestor,
   type TarefaGestor,
 } from '../services/rotinasAtividadesService';
 
@@ -70,14 +69,7 @@ export const TarefaGestorList: React.FC<TarefaGestorListProps> = ({
           )}
 
           <div className="gestor-task-footer">
-            <select
-              value={tarefa.status}
-              onChange={(event) => onUpdate(tarefa.id, { status: event.target.value as StatusAtividadeGestor })}
-            >
-              <option value="Pendente">Pendente</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Concluída">Concluída</option>
-            </select>
+            <span>{tarefa.status}</span>
             <input
               value={tarefa.notas}
               onChange={(event) => onUpdate(tarefa.id, { notas: event.target.value })}

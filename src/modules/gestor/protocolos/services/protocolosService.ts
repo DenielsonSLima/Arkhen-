@@ -50,6 +50,11 @@ export interface ProtocoloEntrega {
   anotacoesList: Anotacao[];
   recebidoEm?: string;
   concluidoPor?: string;
+  concluidoEm?: string;
+  evidencia?: string;
+  auditoriaPendente?: boolean;
+  podeAlterarStatus: boolean;
+  podeAnotar: boolean;
 }
 
 export type ProtocoloUpdate = {
@@ -64,6 +69,18 @@ type ProtocoloConfigRow = {
 
 const PROTOCOLOS_CONFIG_TABLE = 'configuracoes_protocolos_empresas';
 const ALLOWED_PERIODICIDADES = new Set<TipoFechamentoEntrega>(['mensal', 'quinzenal', 'trimestral', 'semestral']);
+
+const mapProtocoloOperacional = (value: unknown): ProtocoloEntrega => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('A consulta de protocolos retornou um item inválido.');
+  }
+  const row = value as Record<string, unknown>;
+  return {
+    ...(row as unknown as ProtocoloEntrega),
+    podeAlterarStatus: row.podeAlterarStatus === true,
+    podeAnotar: row.podeAnotar === true,
+  };
+};
 
 const isConfigMismatch = (value: ProtocoloEmpresaConfig[] | undefined, catalogo: ProtocoloTipoConfig[]) => {
   if (!Array.isArray(value)) return true;
@@ -141,7 +158,7 @@ const persistirProtocolo = async (protocolo: ProtocoloEntrega, updates: Protocol
     ...(updates.status ? { status: updates.status } : {}),
     ...(anotacao ? { anotacao } : {}),
   };
-  const { data, error } = await supabase.rpc('atualizar_protocolo_entrega', {
+  const { data, error } = await supabase.rpc('salvar_protocolo_operacional_seguro', {
     p_payload: payload,
   });
   if (error) throw error;
@@ -231,19 +248,28 @@ export const protocolosService = {
   },
 
   async getProtocolos(): Promise<ProtocoloEntrega[]> {
-    const { data, error } = await supabase.rpc('get_protocolos_operacionais');
+    const { data, error } = await supabase.rpc('get_protocolos_operacionais_seguros');
     if (error) throw error;
-    if (!Array.isArray(data)) return [];
-    return data as ProtocoloEntrega[];
+    if (!Array.isArray(data)) throw new Error('A consulta de protocolos retornou um formato inválido.');
+    return data.map(mapProtocoloOperacional);
   },
 
   async updateProtocolo(id: string, updates: ProtocoloUpdate) {
     if (!updates.status && !updates.anotacao?.trim()) {
       throw new Error('Nenhuma alteração de protocolo foi informada.');
     }
+    if (updates.status && (updates.anotacao?.trim().length || 0) < 8) {
+      throw new Error('Informe uma evidência ou justificativa com pelo menos 8 caracteres.');
+    }
     const protocolos = await this.getProtocolos();
     const target = protocolos.find((item) => item.id === id);
     if (!target) throw new Error('Protocolo não encontrado ou não configurado.');
+    if (updates.status && !target.podeAlterarStatus) {
+      throw new Error('Seu perfil não pode concluir ou reabrir este protocolo.');
+    }
+    if (!updates.status && updates.anotacao?.trim() && !target.podeAnotar) {
+      throw new Error('Seu perfil não pode adicionar anotações neste protocolo.');
+    }
     await persistirProtocolo(target, updates);
     return this.getProtocolos();
   },

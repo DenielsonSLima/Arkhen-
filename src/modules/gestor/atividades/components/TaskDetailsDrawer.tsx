@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { formatDateBR, type TarefaGestor } from '../services/rotinasAtividadesService';
+import { hasCompletionEvidence } from '../utils/completionEvidence';
+import { TaskReviewActions } from './TaskReviewActions';
 
 interface TaskDetailsDrawerProps {
   selectedTask: TarefaGestor;
   onClose: () => void;
   updateTarefa: (id: string, updates: Partial<TarefaGestor>) => void;
-  toggleChecklist: (id: string, idx: number, checked: boolean) => void;
+  toggleChecklist: (id: string, idx: number, checked: boolean, proof?: { justificativa?: string }) => void;
+  authUserId: string | null;
+  canManage: boolean;
+  reviewTarefaAsync: (id: string, approve: boolean, justification?: string) => Promise<unknown>;
+  reopenTarefaAsync: (id: string, justification: string) => Promise<unknown>;
+  isSaving?: boolean;
+  saveError?: Error | null;
 }
 
 export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
@@ -14,10 +22,38 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
   onClose,
   updateTarefa,
   toggleChecklist,
+  authUserId,
+  canManage,
+  reviewTarefaAsync,
+  reopenTarefaAsync,
+  isSaving = false,
+  saveError = null,
 }) => {
+  const [completionEvidence, setCompletionEvidence] = useState(
+    selectedTask.justificativaConclusao || selectedTask.evidencia || '',
+  );
+  const [validationError, setValidationError] = useState('');
   const totalItems = selectedTask.checklist.length;
   const completedItems = selectedTask.checklist.filter((item) => item.concluida).length;
   const checklistPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+  useEffect(() => {
+    setCompletionEvidence(selectedTask.justificativaConclusao || selectedTask.evidencia || '');
+    setValidationError('');
+  }, [selectedTask.id, selectedTask.evidencia, selectedTask.justificativaConclusao]);
+
+  const toggleStep = (idx: number, checked: boolean) => {
+    const finishesChecklist = checked && selectedTask.checklist.every((item, itemIndex) => (
+      itemIndex === idx ? true : item.concluida
+    ));
+    const proof = { justificativa: completionEvidence };
+    if (finishesChecklist && !hasCompletionEvidence(proof)) {
+      setValidationError('Informe evidência ou justificativa antes de concluir a última etapa.');
+      return;
+    }
+    setValidationError('');
+    toggleChecklist(selectedTask.id, idx, checked, proof);
+  };
 
   return (
     <div style={drawerBackdropStyle} onClick={onClose}>
@@ -152,6 +188,40 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
         </div>
 
         {/* Observações / Bloqueio Textarea */}
+        {saveError && (
+          <div role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>
+            {saveError.message || 'Não foi possível salvar. Revise os dados e tente novamente.'}
+          </div>
+        )}
+        {validationError && (
+          <div role="alert" style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px', borderRadius: '8px' }}>
+            {validationError}
+          </div>
+        )}
+
+        <TaskReviewActions
+          task={selectedTask}
+          authUserId={authUserId}
+          canManage={canManage}
+          isSaving={isSaving}
+          onReview={reviewTarefaAsync}
+          onReopen={reopenTarefaAsync}
+        />
+
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+          Evidência ou justificativa da conclusão
+          <textarea
+            value={completionEvidence}
+            disabled={isSaving || selectedTask.status === 'Aguardando revisão' || selectedTask.status === 'Concluída'}
+            onChange={(event) => setCompletionEvidence(event.target.value)}
+            onBlur={(event) => updateTarefa(selectedTask.id, {
+              justificativaConclusao: event.target.value,
+            })}
+            placeholder="Informe protocolo, documento conferido ou motivo auditável antes de concluir."
+            rows={3}
+          />
+        </label>
+
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
           Observações / bloqueio
           <textarea
@@ -203,7 +273,8 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                         type="checkbox"
                         id={`step-${selectedTask.id}-${idx}`}
                         checked={isItemDone}
-                        onChange={(e) => toggleChecklist(selectedTask.id, idx, e.target.checked)}
+                        disabled={isSaving || selectedTask.status === 'Aguardando revisão' || selectedTask.status === 'Concluída'}
+                        onChange={(e) => toggleStep(idx, e.target.checked)}
                         style={{
                           width: '16px',
                           height: '16px',

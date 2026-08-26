@@ -1,4 +1,4 @@
-import React, { Activity, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
 import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import { persistedStorage } from '../../../lib/persistedStorage';
@@ -65,7 +65,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   const [moduleContexts, setModuleContexts] = useState<Record<string, InternalTabContext>>({});
   const [moduleContextVersions, setModuleContextVersions] = useState<Record<string, number>>({});
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [initialContentReady, setInitialContentReady] = useState(false);
   const [userProfile, setUserProfile] = useState(readUserProfile);
   const contentViewportRef = useRef<HTMLDivElement>(null);
 
@@ -94,10 +93,25 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     () => visibleTabs.find((tab) => tab.id === activeTabId),
     [activeTabId, visibleTabs],
   );
-  // A navegação comum não precisa preservar cópias ocultas de todos os módulos.
-  // Somente abas internas permanecem montadas; isso evita duplicar Financeiro ou
-  // Faturamento no exato momento em que o usuário os promove pelo botão "+".
-  const mountedBaseModuleIds = activeVisibleTab ? [] : [activeModuleId];
+  const activePanel = useMemo(() => {
+    if (activeVisibleTab) {
+      return {
+        key: activeVisibleTab.id,
+        moduleId: activeVisibleTab.moduleId,
+        workspaceId: activeVisibleTab.id,
+        context: activeVisibleTab.context,
+        contextVersion: 0,
+      };
+    }
+
+    return {
+      key: `${activeModuleId}:${moduleContextVersions[activeModuleId] || 0}`,
+      moduleId: activeModuleId,
+      workspaceId: activeModuleId,
+      context: moduleContexts[activeModuleId],
+      contextVersion: moduleContextVersions[activeModuleId] || 0,
+    };
+  }, [activeModuleId, activeVisibleTab, moduleContexts, moduleContextVersions]);
 
   const resetContentScroll = useCallback(() => {
     const viewport = contentViewportRef.current;
@@ -150,12 +164,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     window.addEventListener('gestor:reset-scroll', resetContentScroll);
     return () => window.removeEventListener('gestor:reset-scroll', resetContentScroll);
   }, [resetContentScroll]);
-
-  useEffect(() => {
-    if (!modulesReady || initialContentReady) return undefined;
-    const timer = window.setTimeout(() => setInitialContentReady(true), 15_000);
-    return () => window.clearTimeout(timer);
-  }, [initialContentReady, modulesReady]);
 
   const navigate = (id: string) => {
     if (!modulesReady || !isRouteEnabled(id, enabledModuleIds)) return;
@@ -222,10 +230,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     avatar: userProfile.avatar,
   }), [userProfile]);
 
-  const handleInitialContentReady = useCallback(() => {
-    setInitialContentReady(true);
-  }, []);
-
   const renderContent = (
     id: string,
     workspaceId = id,
@@ -242,7 +246,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         initialContext={context}
         updateTabContext={updateTabContext}
         onModuleContextChange={handleModuleContextChange}
-        onInitialReady={id === 'inicio' && workspaceId === 'inicio' ? handleInitialContentReady : undefined}
       />
     </React.Suspense>
   );
@@ -290,35 +293,23 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         />
         {modulesReady && <InternalTabBar />}
         <main ref={contentViewportRef} className="gestor-content-viewport" style={{ position: 'relative' }}>
-          {mountedBaseModuleIds.map((moduleId) => {
-            const isActive = !activeVisibleTab && activeModuleId === moduleId;
-            return (
-              <Activity key={moduleId} mode={isActive ? 'visible' : 'hidden'}>
-                <div data-active-module-panel={isActive ? 'true' : undefined} style={{ height: '100%' }}>
-                  <ModuleRenderErrorBoundary moduleName={moduleId} onReset={() => activateModule('inicio')}>
-                    {renderContent(
-                      moduleId,
-                      moduleId,
-                      moduleContexts[moduleId],
-                      moduleContextVersions[moduleId],
-                    )}
-                  </ModuleRenderErrorBoundary>
-                </div>
-              </Activity>
-            );
-          })}
-          {visibleTabs.map((tab) => {
-            const isActive = activeTabId === tab.id;
-            return (
-              <Activity key={tab.id} mode={isActive ? 'visible' : 'hidden'}>
-                <div data-active-module-panel={isActive ? 'true' : undefined} style={{ height: '100%' }}>
-                  <ModuleRenderErrorBoundary moduleName={tab.moduleId} onReset={() => activateModule('inicio')}>
-                    {renderContent(tab.moduleId, tab.id, tab.context)}
-                  </ModuleRenderErrorBoundary>
-                </div>
-              </Activity>
-            );
-          })}
+          <div
+            key={activePanel.key}
+            data-active-module-panel="true"
+            style={{ height: '100%' }}
+          >
+            <ModuleRenderErrorBoundary
+              moduleName={activePanel.moduleId}
+              onReset={() => activateModule('inicio')}
+            >
+              {renderContent(
+                activePanel.moduleId,
+                activePanel.workspaceId,
+                activePanel.context,
+                activePanel.contextVersion,
+              )}
+            </ModuleRenderErrorBoundary>
+          </div>
         </main>
       </div>
       {showLogoutConfirm && (
@@ -334,9 +325,6 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         </div>
       )}
       <FloatingCalculator userId={currentUser.id} openInternalChatsCount={0} />
-      {!initialContentReady ? (
-        <GestorShellLoading overlay message="Preparando o painel inicial..." />
-      ) : null}
     </div>
   );
 };

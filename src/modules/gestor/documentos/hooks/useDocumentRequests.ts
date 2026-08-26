@@ -3,7 +3,7 @@ import {
   documentRequestService,
   type CreateDocumentRequestInput,
   type DocumentRequest,
-  type DocumentRequestStatus,
+  type TransitionDocumentRequestInput,
 } from '../services/documentRequestService';
 import { conformidadeKeys } from '../../conformidade/queries/conformidadeQueries';
 import { invalidateAfterMutation } from '../../shared/mutationInvalidation';
@@ -13,7 +13,22 @@ export const documentRequestKeys = {
   list: () => [...documentRequestKeys.all, 'lista'] as const,
   clients: () => [...documentRequestKeys.all, 'clientes'] as const,
   capabilities: () => [...documentRequestKeys.all, 'capacidades'] as const,
+  options: (clienteId: string, competencia: string) => (
+    [...documentRequestKeys.all, 'opcoes', clienteId, competencia] as const
+  ),
 };
+
+export const useDocumentRequestOptions = (
+  clienteId: string,
+  competencia: string,
+  enabled = true,
+) => useQuery({
+  queryKey: documentRequestKeys.options(clienteId, competencia),
+  queryFn: () => documentRequestService.listOptions(clienteId || undefined, competencia || undefined),
+  enabled,
+  staleTime: 60_000,
+  gcTime: 10 * 60_000,
+});
 
 export const useDocumentRequests = () => {
   const queryClient = useQueryClient();
@@ -51,9 +66,7 @@ export const useDocumentRequests = () => {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: DocumentRequestStatus }) => (
-      documentRequestService.updateStatus(id, status)
-    ),
+    mutationFn: (input: TransitionDocumentRequestInput) => documentRequestService.transition(input),
     onSuccess: (updated) => {
       queryClient.setQueryData<DocumentRequest[]>(documentRequestKeys.list(), (current = []) => (
         current.map((request) => request.id === updated.id ? updated : request)
@@ -79,7 +92,7 @@ export const useDocumentRequests = () => {
     createRequest: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
     createError: createMutation.error instanceof Error ? createMutation.error.message : '',
-    updateStatus: statusMutation.mutateAsync,
+    transitionRequest: statusMutation.mutateAsync,
     updatingRequestId: statusMutation.isPending ? statusMutation.variables?.id || null : null,
     updateError: statusMutation.error instanceof Error ? statusMutation.error.message : '',
     retry: async () => {

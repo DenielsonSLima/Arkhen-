@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import type { CompletionEvidence } from '../../atividades/utils/completionEvidence';
 
 export type ConformidadeTipo = 'fiscal' | 'folha' | 'contabil' | 'atendimento' | 'atividade';
 export type ConformidadePrioridade = 'verde' | 'amarelo' | 'vermelho' | 'sem-prazo';
@@ -13,6 +14,14 @@ export interface ConformidadeSolicitacaoDocumento {
   solicitadoEm: string;
   atualizadoEm: string;
   dataLimite: string;
+  responsavel?: string;
+  revisor?: string;
+  tarefaId?: string;
+  tarefaTitulo?: string;
+  documentoId?: string;
+  documentoNome?: string;
+  semArquivo: boolean;
+  auditoriaPendente: boolean;
 }
 
 export interface ConformidadeEtapa {
@@ -41,6 +50,11 @@ export interface ConformidadeObrigacao {
   descricao: string;
   responsavel: string;
   vencimento: string;
+  prazoLegal: string;
+  prazoInterno: string;
+  revisaoStatus: string;
+  evidencia?: string;
+  justificativaConclusao?: string;
   diasParaVencimento: number | null;
   prioridade: ConformidadePrioridade;
   status: ConformidadeStatus;
@@ -148,6 +162,14 @@ const normalizeSolicitacao = (raw: unknown, index: number): ConformidadeSolicita
     solicitadoEm: optionalString(item.solicitadoEm),
     atualizadoEm: optionalString(item.atualizadoEm),
     dataLimite: optionalString(item.dataLimite),
+    responsavel: optionalString(item.responsavel) || undefined,
+    revisor: optionalString(item.revisor) || undefined,
+    tarefaId: optionalString(item.tarefaId) || undefined,
+    tarefaTitulo: optionalString(item.tarefaTitulo) || undefined,
+    documentoId: optionalString(item.documentoId) || undefined,
+    documentoNome: optionalString(item.documentoNome) || undefined,
+    semArquivo: item.semArquivo === true,
+    auditoriaPendente: item.auditoriaPendente === true,
   };
 };
 
@@ -185,6 +207,11 @@ const normalizeObrigacao = (raw: unknown): ConformidadeObrigacao => {
     descricao: optionalString(item.descricao),
     responsavel: optionalString(item.responsavel),
     vencimento: optionalString(item.vencimento),
+    prazoLegal: optionalString(item.prazoLegal) || optionalString(item.vencimento),
+    prazoInterno: optionalString(item.prazoInterno) || optionalString(item.vencimento),
+    revisaoStatus: optionalString(item.revisaoStatus) || 'Não necessária',
+    evidencia: optionalString(item.evidencia) || undefined,
+    justificativaConclusao: optionalString(item.justificativaConclusao) || undefined,
     diasParaVencimento,
     prioridade,
     status,
@@ -252,22 +279,34 @@ const normalizeResultado = (raw: unknown): ConformidadeResultado => {
 };
 
 export const conformidadeService = {
-  async getObrigacoes(companyId?: string): Promise<ConformidadeResultado> {
-    const { data, error } = await supabase.rpc('get_resumo_conformidade', {
+  async getObrigacoes(companyId?: string, competencia?: string): Promise<ConformidadeResultado> {
+    const rpcCompetencia = competencia && /^\d{4}-\d{2}$/.test(competencia)
+      ? `${competencia.slice(5, 7)}/${competencia.slice(0, 4)}`
+      : competencia || null;
+    const { data, error } = await supabase.rpc('get_conformidade_operacional_tarefas', {
       p_cliente_id: companyId || null,
+      p_competencia: rpcCompetencia,
     });
     if (error) throw error;
     return normalizeResultado(data);
   },
 
-  async toggleEtapa(obrigacaoId: string, etapaId: string, checked: boolean) {
-    const { error } = await supabase.rpc('atualizar_atividade_checklist', {
-      p_instancia_id: obrigacaoId,
-      p_etapa: etapaId,
+  async toggleEtapa(
+    obrigacaoId: string,
+    etapaId: string,
+    checked: boolean,
+    competencia?: string,
+    proof?: CompletionEvidence,
+  ) {
+    const { error } = await supabase.rpc('atualizar_tarefa_operacional_checklist', {
+      p_tarefa_id: obrigacaoId,
+      p_indice: Number(etapaId),
       p_concluida: checked,
+      p_evidencia: proof?.evidencia?.trim() || null,
+      p_justificativa: proof?.justificativa?.trim() || null,
     });
     if (error) throw error;
-    return conformidadeService.getObrigacoes();
+    return conformidadeService.getObrigacoes(undefined, competencia);
   },
 
   getTipoLabel(tipo: ConformidadeTipo) {

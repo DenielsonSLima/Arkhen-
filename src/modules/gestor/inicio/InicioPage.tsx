@@ -42,11 +42,7 @@ const quantidade = (total: number, singular: string, plural: string) => (
   `${total} ${total === 1 ? singular : plural}`
 );
 
-type InicioPageProps = {
-  onInitialReady?: () => void;
-};
-
-export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
+export const InicioPage: React.FC = () => {
   useInicioRealtime(true);
   const {
     stats,
@@ -70,8 +66,6 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   const { fraseMotivacional } = useInicioBootstrap({
     hoje: dataMotivacional,
     fraseFallback: fraseMotivacionalFallback,
-    dashboardReady: !dashboardLoading,
-    onReady: onInitialReady,
   });
 
   const handleSetupNavigate = useCallback((target: InicioSetupTarget) => {

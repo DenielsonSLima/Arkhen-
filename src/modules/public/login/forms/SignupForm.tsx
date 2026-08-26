@@ -251,9 +251,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
 
               {/* Password Strength Checklist */}
               <div className="password-strength-container">
-                <div className={`strength-requirement ${signupSenha.length >= 6 ? 'fulfilled' : ''}`}>
+                <div className={`strength-requirement ${signupSenha.length >= 8 ? 'fulfilled' : ''}`}>
                   <span className="requirement-dot"></span>
-                  <span className="requirement-text">Mínimo 6 caracteres</span>
+                  <span className="requirement-text">Mínimo 8 caracteres</span>
                 </div>
                 <div className={`strength-requirement ${(signupSenha && /[a-zA-Z]/.test(signupSenha) && /[0-9]/.test(signupSenha)) ? 'fulfilled' : ''}`}>
                   <span className="requirement-dot"></span>

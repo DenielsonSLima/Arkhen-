@@ -1,6 +1,10 @@
 import React from 'react';
 import { PlusCircle, X } from 'lucide-react';
-import type { CategoriaAtividade, PrioridadeAtividade } from '../services/rotinasAtividadesService';
+import type {
+  CategoriaAtividade,
+  PrioridadeAtividade,
+  UsuarioAtividade,
+} from '../services/rotinasAtividadesService';
 import { NovaTarefaForm } from '../forms/NovaTarefaForm';
 
 interface ModalNovaTarefaProps {
@@ -14,8 +18,11 @@ interface ModalNovaTarefaProps {
     prioridade: PrioridadeAtividade;
     checklist: string[];
     notas: string;
+    revisorUserId?: string;
   }) => void;
   usuarioNome: string;
+  usuarioId?: string;
+  revisores?: UsuarioAtividade[];
 }
 
 export const ModalNovaTarefa: React.FC<ModalNovaTarefaProps> = ({
@@ -23,6 +30,8 @@ export const ModalNovaTarefa: React.FC<ModalNovaTarefaProps> = ({
   onClose,
   onSalvar,
   usuarioNome,
+  usuarioId,
+  revisores,
 }) => {
   if (!aberto) return null;
 
@@ -39,7 +48,12 @@ export const ModalNovaTarefa: React.FC<ModalNovaTarefaProps> = ({
           </button>
         </div>
 
-        <NovaTarefaForm onCancelar={onClose} onSalvar={onSalvar} />
+        <NovaTarefaForm
+          onCancelar={onClose}
+          onSalvar={onSalvar}
+          revisores={revisores}
+          responsavelUserId={usuarioId}
+        />
       </div>
     </div>
   );

@@ -35,7 +35,7 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
             <CalendarDays size={16} />
             <div>
               <span>Ciclo por empresa</span>
-              <strong>Mês anterior</strong>
+              <strong>Competência atual</strong>
             </div>
           </div>
 

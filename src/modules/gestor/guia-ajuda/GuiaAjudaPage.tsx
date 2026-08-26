@@ -23,7 +23,7 @@ export const GuiaAjudaPage: React.FC = () => {
           <ol>
             <li>Conclua os <strong>Primeiros passos</strong> no Início e revise atrasos e vencimentos de hoje.</li>
             <li>Cadastre e confira a carteira em <strong>Clientes</strong>.</li>
-            <li>Crie o checklist em <strong>Parametrização › Modelos de fechamento</strong> e vincule-o em <strong>Atividades › Rotinas programadas</strong>.</li>
+            <li>Crie o checklist em <strong>Rotinas e obrigações › Modelos de fechamento</strong> e vincule-o em <strong>Atividades › Rotinas programadas</strong>.</li>
             <li>Execute o dia pela <strong>Minha Fila</strong> e acompanhe a equipe no <strong>Painel Operacional</strong>.</li>
             <li>Use <strong>Documentos</strong>, <strong>Protocolos</strong> e <strong>Faturamento</strong> conforme a etapa do atendimento.</li>
           </ol>

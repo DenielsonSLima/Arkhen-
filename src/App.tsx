@@ -22,6 +22,7 @@ import {
   withOperationTimeout,
 } from './lib/operationTimeout';
 import { useCurrentPath } from './hooks/useCurrentPath';
+import { useInactivityLogout } from './hooks/useInactivityLogout';
 import {
   inspectPasswordRecoveryCallback,
   isPasswordRecoveryPath,
@@ -31,8 +32,12 @@ import {
   type PasswordRecoverySession,
 } from './modules/public/login/services/passwordRecoveryService';
 import { syncAuthenticatedUserProfile } from './modules/public/login/services/syncAuthenticatedUserProfile';
+import {
+  AUTHENTICATED_APP_PATH,
+  isStandalonePublicRoute,
+  LOGIN_PATH,
+} from './modules/public/login/services/authRoutePolicy';
 
-const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 export const AUTH_BOOTSTRAP_TIMEOUT_MS = 15_000;
 const AUTH_BOOTSTRAP_TIMEOUT_MESSAGE = 'A validação do acesso demorou além do esperado.';
 type PasswordRecoveryStatus = 'validating' | 'ready' | 'error' | 'complete';
@@ -89,6 +94,9 @@ function App() {
       setAuthBootstrapError(null);
       viewRef.current = 'login';
       setView('login');
+      if (window.location.pathname !== LOGIN_PATH && window.location.pathname !== '/signup') {
+        navigate(LOGIN_PATH);
+      }
     };
     const showPasswordRecovery = (
       status: PasswordRecoveryStatus,
@@ -116,9 +124,6 @@ function App() {
         console.error('Erro ao encerrar sessão incompleta:', signOutError);
       }
       if (mounted) {
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-          navigate('/login');
-        }
         showLogin();
       }
     };
@@ -147,6 +152,10 @@ function App() {
       setAuthBootstrapError(null);
       viewRef.current = 'gestor';
       setView('gestor');
+      if (!isStandalonePublicRoute(window.location.pathname)
+        && window.location.pathname !== AUTHENTICATED_APP_PATH) {
+        navigate(AUTHENTICATED_APP_PATH);
+      }
     };
 
     const bootstrapMainSession = async () => {
@@ -263,7 +272,7 @@ function App() {
         setAuthError(null);
         setAuthBootstrapError(null);
         sessionStorage.removeItem('contabil_config_active_subtab');
-        if (isPasswordRecoveryPath(window.location.pathname)) navigate('/login');
+        if (window.location.pathname !== LOGIN_PATH) navigate(LOGIN_PATH);
         viewRef.current = 'login';
         setView('login');
       }
@@ -301,6 +310,7 @@ function App() {
       viewRef.current = 'gestor';
       setView('gestor');
     }
+    if (window.location.pathname !== AUTHENTICATED_APP_PATH) navigate(AUTHENTICATED_APP_PATH);
     void supabase.auth.getUser().then(({ data }) => {
       if (data.user) syncAuthenticatedUserProfile(data.user, authorizedProfile);
     }).catch((error) => {
@@ -320,7 +330,7 @@ function App() {
     queryClient.clear();
     authenticatedUserIdRef.current = null;
     persistedStorage.resetLocalContext();
-    if (window.location.pathname !== '/login') navigate('/login');
+    if (window.location.pathname !== LOGIN_PATH) navigate(LOGIN_PATH);
     viewRef.current = 'login';
     setView('login');
   };
@@ -367,6 +377,7 @@ function App() {
         }
         viewRef.current = 'login';
         setView('login');
+        if (window.location.pathname !== LOGIN_PATH) navigate(LOGIN_PATH);
       }
     })();
   };
@@ -392,7 +403,7 @@ function App() {
     }
     setAuthBootstrapError(null);
     setAuthError(null);
-    if (window.location.pathname !== '/login') navigate('/login');
+    if (window.location.pathname !== LOGIN_PATH) navigate(LOGIN_PATH);
     viewRef.current = 'login';
     setView('login');
     void supabase.auth.signOut({ scope: 'local' }).catch((error) => {
@@ -400,26 +411,7 @@ function App() {
     });
   };
 
-  useEffect(() => {
-    if (view !== 'gestor') return undefined;
-
-    let timeoutId: any;
-    const resetTimer = () => {
-      window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
-        handleLogout();
-      }, INACTIVITY_LIMIT_MS);
-    };
-
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
-    resetTimer();
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
-    };
-  }, [view]);
+  useInactivityLogout(view === 'gestor', handleLogout, 30 * 60 * 1000);
 
   if (isSharedDocumentRoute) {
     return <div className="animate-page-fade"><PublicSharedDocumentPage /></div>;
