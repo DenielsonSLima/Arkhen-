@@ -385,7 +385,7 @@ export const MarcaDaguaConfig: React.FC = () => {
 
         <div className="form-actions-row" style={{ marginTop: '24px' }}>
           <button type="submit" className="btn-save-settings" disabled={isSaving}>
-            {isSaving ? 'Salvando...' : 'Salvar Ocorrência'}
+            {isSaving ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </div>
       </form>
