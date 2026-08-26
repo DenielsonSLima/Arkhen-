@@ -11,15 +11,38 @@ ALTER TABLE public.parametrizacao_protocolos_tipos
   ADD COLUMN IF NOT EXISTS sistema boolean;
 
 UPDATE public.parametrizacao_protocolos_tipos
-SET codigo = COALESCE(NULLIF(btrim(codigo), ''), btrim(id)),
+SET codigo = COALESCE(NULLIF(btrim(codigo), ''), btrim(id::text)),
     sistema = COALESCE(sistema, true)
 WHERE codigo IS NULL OR btrim(codigo) = '' OR sistema IS NULL;
 
 ALTER TABLE public.parametrizacao_protocolos_tipos
-  ALTER COLUMN id SET DEFAULT gen_random_uuid()::text,
   ALTER COLUMN codigo SET NOT NULL,
   ALTER COLUMN sistema SET DEFAULT true,
   ALTER COLUMN sistema SET NOT NULL;
+
+-- O histórico possui instalações com `id` uuid e outras com `id` text.
+-- Preserva o tipo real da coluna ao definir o default de novos catálogos.
+DO $$
+DECLARE
+  v_id_type regtype;
+BEGIN
+  SELECT atributo.atttypid::regtype
+  INTO v_id_type
+  FROM pg_catalog.pg_attribute atributo
+  WHERE atributo.attrelid = 'public.parametrizacao_protocolos_tipos'::regclass
+    AND atributo.attname = 'id'
+    AND atributo.attnum > 0
+    AND NOT atributo.attisdropped;
+
+  IF v_id_type = 'uuid'::regtype THEN
+    EXECUTE 'ALTER TABLE public.parametrizacao_protocolos_tipos '
+      || 'ALTER COLUMN id SET DEFAULT gen_random_uuid()';
+  ELSE
+    EXECUTE 'ALTER TABLE public.parametrizacao_protocolos_tipos '
+      || 'ALTER COLUMN id SET DEFAULT gen_random_uuid()::text';
+  END IF;
+END;
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS parametrizacao_protocolos_tipos_empresa_codigo_uidx
   ON public.parametrizacao_protocolos_tipos (empresa_id, codigo);

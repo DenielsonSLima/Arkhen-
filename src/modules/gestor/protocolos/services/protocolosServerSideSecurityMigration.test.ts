@@ -11,6 +11,9 @@ describe('protocolos operacionais server-side', () => {
 
     expect(schemaPosition).toBeGreaterThan(-1);
     expect(schemaPosition).toBeLessThan(functionPosition);
+    expect(migrationSql).toContain('btrim(id::text)');
+    expect(migrationSql).toContain("IF v_id_type = 'uuid'::regtype");
+    expect(migrationSql).toContain('ALTER COLUMN id SET DEFAULT gen_random_uuid()');
     expect(migrationSql).toContain('ALTER COLUMN id SET DEFAULT gen_random_uuid()::text');
     expect(migrationSql).toContain('(empresa_id, codigo)');
     expect(migrationSql).toContain('ADD COLUMN IF NOT EXISTS orgao text');
