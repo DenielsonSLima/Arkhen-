@@ -6,6 +6,7 @@ import {
   categoriaClienteService,
   type CategoriaCliente,
 } from '../services/categoriaClienteService';
+import { CatalogDialog } from './components/CatalogDialog';
 import './ParametrizacaoPlaceholder.css'; // Usando os mesmos estilos comuns de parametrização
 
 const EMPTY_CATEGORIES: CategoriaCliente[] = [];
@@ -189,12 +190,12 @@ export const CategoriaClientePage: React.FC = () => {
 
       {/* Modal Overlay para Adicionar/Editar Categoria */}
       {showModal && (
-        <div className="modal-overlay-custom" style={{ display: 'flex', alignItems: 'center', padding: '20px' }}>
-          <form className="cliente-form-container" onSubmit={handleSave} style={{ maxWidth: '480px' }}>
-            <div className="cliente-form-header">
-              <h2>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</h2>
-              <p>Preencha os dados da categoria de cliente.</p>
-            </div>
+        <CatalogDialog
+          title={editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+          description="Preencha os dados da categoria de cliente."
+          onClose={() => setShowModal(false)}
+          onSubmit={handleSave}
+        >
 
             {error && (
               <div className="form-alert-banner error">
@@ -211,6 +212,7 @@ export const CategoriaClientePage: React.FC = () => {
                   placeholder="Ex: Holding Familiar"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
+                  data-autofocus
                 />
               </div>
 
@@ -235,8 +237,7 @@ export const CategoriaClientePage: React.FC = () => {
                 Salvar Categoria
               </button>
             </div>
-          </form>
-        </div>
+        </CatalogDialog>
       )}
     </div>
   );

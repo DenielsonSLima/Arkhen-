@@ -1,4 +1,5 @@
 import React from 'react';
+import { isClienteContabilTipo, type TipoParceiroOption } from '../../hooks/useTiposParceiros';
 import { Loader2, Search } from 'lucide-react';
 import {
   CLIENTE_REGIMES,
@@ -16,6 +17,9 @@ interface ClienteIdentificationFieldsProps {
   nomeFantasia: string;
   cnae: string;
   tipo: RegimeCliente;
+  tipoParceiroId: string;
+  partnerTypes: TipoParceiroOption[];
+  isLoadingPartnerTypes: boolean;
   categoria: string;
   ieIm: string;
   availableCategories: string[];
@@ -28,6 +32,7 @@ interface ClienteIdentificationFieldsProps {
   onNomeFantasiaChange: (value: string) => void;
   onCnaeChange: (value: string) => void;
   onTipoChange: (value: RegimeCliente) => void;
+  onTipoParceiroChange: (value: string) => void;
   onCategoriaChange: (value: string) => void;
   onIeImChange: (value: string) => void;
   onLookup: () => void;
@@ -42,6 +47,9 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
   nomeFantasia,
   cnae,
   tipo,
+  tipoParceiroId,
+  partnerTypes,
+  isLoadingPartnerTypes,
   categoria,
   ieIm,
   availableCategories,
@@ -54,6 +62,7 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
   onNomeFantasiaChange,
   onCnaeChange,
   onTipoChange,
+  onTipoParceiroChange,
   onCategoriaChange,
   onIeImChange,
   onLookup,
@@ -148,6 +157,23 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
       )}
 
       <div className="input-container field-col-6">
+        <label>Tipo de relacionamento *</label>
+        <select
+          className="input-style"
+          required
+          value={tipoParceiroId}
+          onChange={(event) => onTipoParceiroChange(event.target.value)}
+          disabled={isLoadingPartnerTypes || isDisabled}
+        >
+          <option value="">{isLoadingPartnerTypes ? 'Carregando tipos...' : 'Selecione o tipo'}</option>
+          {partnerTypes.map((item) => (
+            <option key={item.id} value={item.id}>{item.nome}</option>
+          ))}
+        </select>
+      </div>
+
+      {isClienteContabilTipo(partnerTypes.find((item) => item.id === tipoParceiroId)) && (
+      <div className="input-container field-col-6">
         <label>Categoria do Cliente</label>
         <div style={{ display: 'flex', gap: '6px' }}>
           <select
@@ -186,6 +212,7 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
           </button>
         </div>
       </div>
+      )}
 
       <div className="input-container field-col-6">
         <label>IE / IM</label>

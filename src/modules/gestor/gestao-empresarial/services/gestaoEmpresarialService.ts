@@ -79,6 +79,7 @@ export interface ClientBranch {
   ativo: boolean;
   endereco?: string;
   cep?: string;
+  documentFolderPath?: string;
 }
 
 export interface CorporateEvent {
@@ -97,6 +98,8 @@ export interface Company {
   cnae?: string;
   cnaeDescricao?: string;
   tipo: 'Não informado' | 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
+  tipoParceiroId?: string;
+  tipoParceiroNome?: string;
   categoriaCliente?: string;
   tipoEstabelecimento: 'Matriz' | 'Filial';
   logo?: string;
@@ -145,6 +148,8 @@ interface ClienteRow {
   cnpj: string | null;
   tipo: CompanyType | null;
   categoria_cliente: string | null;
+  tipo_parceiro_id: string | null;
+  tipo_parceiro?: { id: string; nome: string | null } | null;
   tipo_estabelecimento: CompanyEstablishmentType | null;
   logo: string | null;
   funcionarios_count: number | null;
@@ -172,6 +177,8 @@ interface ClienteRow {
   polos: ClientBranch[] | null;
   created_at: string | null;
 }
+
+const COMPANY_SELECT = '*,tipo_parceiro:parametrizacao_catalogos!clientes_tipo_parceiro_tenant_fk(id,nome)';
 
 const extractLocationFromAddress = (endereco = '') => {
   const match = endereco.match(/,\s*([^,]+?)\s*-\s*([A-Z]{2})\s*$/);
@@ -207,6 +214,8 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   cnae: row.cnae || undefined,
   cnaeDescricao: row.cnae_descricao || undefined,
   tipo: row.tipo || 'Não informado',
+  tipoParceiroId: row.tipo_parceiro_id || undefined,
+  tipoParceiroNome: row.tipo_parceiro?.nome || undefined,
   categoriaCliente: row.categoria_cliente || undefined,
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
   logo: row.logo || undefined,
@@ -241,6 +250,7 @@ const mapCompanyToPayload = (company: Company) => ({
   cnae_descricao: company.cnaeDescricao || null,
   cnpj: company.cnpj || '',
   tipo: company.tipo || 'Não informado',
+  tipo_parceiro_id: company.tipoParceiroId || null,
   categoria_cliente: company.categoriaCliente || null,
   tipo_estabelecimento: company.tipoEstabelecimento || 'Matriz',
   logo: company.logo || null,
@@ -297,7 +307,7 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
         .from('clientes')
         .update(payload)
         .eq('id', updatedCompany.id)
-        .select('*')
+        .select(COMPANY_SELECT)
         .single();
 
       if (error) throw error;
@@ -307,7 +317,7 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
     const { data, error } = await supabase
       .from('clientes')
       .insert(payload)
-      .select('*')
+      .select(COMPANY_SELECT)
       .single();
 
     if (error) throw error;
@@ -319,7 +329,7 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
           .from('clientes')
           .update(payloadWithoutCnae)
           .eq('id', updatedCompany.id)
-          .select('*')
+          .select(COMPANY_SELECT)
           .single();
 
         if (fallbackError) throw new Error(`Erro ao atualizar cliente: ${fallbackError.message}`);
@@ -329,7 +339,7 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
       const { data, error: fallbackError } = await supabase
         .from('clientes')
         .insert(payloadWithoutCnae)
-        .select('*')
+        .select(COMPANY_SELECT)
         .single();
 
       if (fallbackError) throw new Error(`Erro ao cadastrar cliente: ${fallbackError.message}`);
@@ -344,7 +354,7 @@ export const gestaoEmpresarialService = {
   async getCompanies(): Promise<Company[]> {
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select(COMPANY_SELECT)
       .order('nome', { ascending: true });
 
     if (error) throw new Error(`Erro ao buscar clientes: ${error.message}`);
@@ -354,7 +364,7 @@ export const gestaoEmpresarialService = {
   async getCompanyById(id: string): Promise<Company | null> {
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select(COMPANY_SELECT)
       .eq('id', id)
       .maybeSingle();
 

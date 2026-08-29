@@ -3,6 +3,7 @@ import { AlertCircle, ArrowLeft, Check, FolderTree, Loader2 } from 'lucide-react
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
+import { isClienteContabilTipo, useTiposParceiros } from '../hooks/useTiposParceiros';
 import {
   DEFAULT_PASTAS_DOCUMENTOS,
   expandFolderPaths,
@@ -50,6 +51,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnae, setCnae] = useState('');
   const [tipo, setTipo] = useState<RegimeCliente>('Não informado');
+  const [tipoParceiroId, setTipoParceiroId] = useState('');
   const [categoria, setCategoria] = useState<CategoriaCliente>('Cliente Contábil');
   const [logo, setLogo] = useState('');
   
@@ -76,6 +78,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [pastasTouched, setPastasTouched] = useState(false);
   
   const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const { tiposParceiros, isLoadingTiposParceiros } = useTiposParceiros();
   const pastasPadraoQuery = useActivePastasPadraoQuery();
 
   const availablePastas = useMemo(() => {
@@ -132,6 +135,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
 
   const buildCompanyDraft = (): Company => {
     const activeDoc = docType === 'CNPJ' ? cnpj : cpf;
+    const isClientPartner = isClienteContabilTipo(tiposParceiros.find((item) => item.id === tipoParceiroId));
 
     return {
       id: '',
@@ -140,7 +144,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       cnpj: activeDoc,
       cnae,
       tipo,
-      categoriaCliente: categoria,
+      tipoParceiroId,
+      categoriaCliente: isClientPartner ? categoria : undefined,
       tipoEstabelecimento: 'Matriz',
       logo,
       funcionariosCount: 0,
@@ -164,7 +169,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
 
   const validateIdentificacao = () => {
     const activeDoc = docType === 'CNPJ' ? cnpj : cpf;
-    return validateClienteIdentification(docType, activeDoc, razaoSocial, nomeFantasia);
+    return validateClienteIdentification(docType, activeDoc, razaoSocial, nomeFantasia)
+      || (!tipoParceiroId ? 'Selecione o tipo de relacionamento.' : null);
   };
 
   const currentStepIndex = formSteps.findIndex((item) => item.id === step);
@@ -289,6 +295,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               nomeFantasia={nomeFantasia}
               cnae={cnae}
               tipo={tipo}
+              tipoParceiroId={tipoParceiroId}
+              partnerTypes={tiposParceiros}
+              isLoadingPartnerTypes={isLoadingTiposParceiros}
               categoria={categoria}
               ieIm={ieIm}
               availableCategories={availableCategories}
@@ -300,6 +309,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               onNomeFantasiaChange={setNomeFantasia}
               onCnaeChange={setCnae}
               onTipoChange={setTipo}
+              onTipoParceiroChange={setTipoParceiroId}
               onCategoriaChange={setCategoria}
               onIeImChange={setIeIm}
               onLookup={handleLookup}

@@ -62,7 +62,7 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
         <span><strong>IE/IM:</strong> {company.inscricaoEstadual || '-'}</span>
         <span><strong>Email:</strong> {company.email || '-'}</span>
         <span><strong>Telefone:</strong> {company.telefone || '-'}</span>
-        <span><strong>Tipo:</strong> {company.categoriaCliente || 'Cliente Contábil'}</span>
+        <span><strong>Relacionamento:</strong> {company.tipoParceiroNome || 'Não informado'}</span>
       </div>
       
       <div className="company-card-footer" onClick={(event) => event.stopPropagation()}>
