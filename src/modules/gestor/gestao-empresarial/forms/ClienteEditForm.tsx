@@ -3,6 +3,7 @@ import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
+import { isClienteContabilTipo, useTiposParceiros } from '../hooks/useTiposParceiros';
 import { ClienteLogoUpload } from './components/ClienteLogoUpload';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
@@ -35,6 +36,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
   const [nomeFantasia, setNomeFantasia] = useState(company.nome || '');
   const [cnae, setCnae] = useState(company.cnae || '');
   const [tipo, setTipo] = useState<RegimeCliente>(company.tipo || 'Não informado');
+  const [tipoParceiroId, setTipoParceiroId] = useState(company.tipoParceiroId || '');
   const [categoria, setCategoria] = useState<CategoriaCliente>(company.categoriaCliente || 'Cliente Contábil');
   const [logo, setLogo] = useState(company.logo || '');
 
@@ -60,6 +62,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
   const [savingState, setSavingState] = useState(false);
   
   const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const { tiposParceiros, isLoadingTiposParceiros } = useTiposParceiros();
 
   useEffect(() => {
     setDocType(company.tipo === 'PF' ? 'CPF' : 'CNPJ');
@@ -69,6 +72,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     setNomeFantasia(company.nome || '');
     setCnae(company.cnae || '');
     setTipo(company.tipo || 'Não informado');
+    setTipoParceiroId(company.tipoParceiroId || '');
     setCategoria(company.categoriaCliente || 'Cliente Contábil');
     setLogo(company.logo || '');
     setEmail(company.email || '');
@@ -130,14 +134,15 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
       razaoSocial,
       nomeFantasia,
     );
-    if (validationError) {
-      setErrorMsg(validationError);
+    if (validationError || !tipoParceiroId) {
+      setErrorMsg(validationError || 'Selecione o tipo de relacionamento.');
       return;
     }
 
     setSavingState(true);
     setErrorMsg(null);
     try {
+      const isClientPartner = isClienteContabilTipo(tiposParceiros.find((item) => item.id === tipoParceiroId));
       await onSave({
         ...company,
         nome: nomeFantasia,
@@ -145,7 +150,8 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
         cnpj: activeDoc,
         cnae,
         tipo,
-        categoriaCliente: categoria,
+        tipoParceiroId,
+        categoriaCliente: isClientPartner ? categoria : undefined,
         logo,
         email,
         telefone,
@@ -225,6 +231,9 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             nomeFantasia={nomeFantasia}
             cnae={cnae}
             tipo={tipo}
+            tipoParceiroId={tipoParceiroId}
+            partnerTypes={tiposParceiros}
+            isLoadingPartnerTypes={isLoadingTiposParceiros}
             categoria={categoria}
             ieIm={ieIm}
             availableCategories={availableCategories}
@@ -236,6 +245,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             onNomeFantasiaChange={setNomeFantasia}
             onCnaeChange={setCnae}
             onTipoChange={setTipo}
+            onTipoParceiroChange={setTipoParceiroId}
             onCategoriaChange={setCategoria}
             onIeImChange={setIeIm}
             onLookup={handleLookup}

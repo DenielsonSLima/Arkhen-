@@ -1,0 +1,118 @@
+.catalog-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.catalog-dialog {
+  display: flex;
+  width: min(480px, 100%);
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid rgba(197, 146, 53, 0.22);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 24px;
+  color: #0f172a;
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.26);
+}
+
+.catalog-dialog-header {
+  border-bottom: 1px solid #edf1f5;
+  padding-bottom: 12px;
+}
+
+.catalog-dialog-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+}
+
+.catalog-dialog-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.catalog-dialog .parametrizacao-modal-error {
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #fef2f2;
+  padding: 9px 11px;
+  color: #b91c1c;
+  font-size: 0.82rem;
+}
+
+.catalog-dialog .parametrizacao-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.catalog-dialog .input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catalog-dialog .input-container > label {
+  color: #475569;
+  font-size: 0.825rem;
+  font-weight: 700;
+}
+
+.catalog-dialog .parametrizacao-form-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.catalog-dialog .parametrizacao-form-control:focus {
+  border-color: #c59235;
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.12);
+}
+
+.catalog-dialog textarea.parametrizacao-form-control {
+  resize: vertical;
+}
+
+.catalog-dialog .parametrizacao-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.catalog-dialog .parametrizacao-btn-cancel,
+.catalog-dialog .parametrizacao-btn-submit {
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.catalog-dialog .parametrizacao-btn-cancel {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.catalog-dialog .parametrizacao-btn-submit {
+  border: 0;
+  background: var(--color-gold-gradient, linear-gradient(135deg, #d5a53b, #b7791f));
+  color: #ffffff;
+}

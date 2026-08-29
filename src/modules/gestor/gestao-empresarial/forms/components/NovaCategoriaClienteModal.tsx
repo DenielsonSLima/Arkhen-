@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import './NovaCategoriaClienteModal.css';
 
 interface NovaCategoriaClienteModalProps {
   nome: string;
@@ -20,20 +22,75 @@ export const NovaCategoriaClienteModal: React.FC<NovaCategoriaClienteModalProps>
   onDescricaoChange,
   onCancel,
   onSubmit,
-}) => (
-  <div 
-    className="modal-overlay-custom" 
-    style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      backgroundColor: 'rgba(0, 0, 0, 0.4)',
-      zIndex: 10000,
-    }}
-  >
-    <div className="cliente-form-container" style={{ maxWidth: '400px', width: '95%' }}>
+}) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusedElementRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousFocusedElementRef.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusInitialField = window.setTimeout(() => {
+      dialogRef.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }, 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isSaving) {
+        event.preventDefault();
+        event.stopPropagation();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+      const focusableElements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusableElements.length === 0) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusInitialField);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocusedElementRef.current?.focus();
+    };
+  }, [isSaving, onCancel]);
+
+  return createPortal(
+    <div
+      className="nested-category-modal-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isSaving) onCancel();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (event.target === event.currentTarget && !isSaving) onCancel();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className="nested-category-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nova-categoria-cliente-title"
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+      >
       <div className="cliente-form-header">
-        <h2>Nova Categoria</h2>
+        <h2 id="nova-categoria-cliente-title">Nova Categoria</h2>
         <p>Cadastre uma nova categoria de cliente.</p>
       </div>
 
@@ -52,6 +109,7 @@ export const NovaCategoriaClienteModal: React.FC<NovaCategoriaClienteModalProps>
             placeholder="Ex: Holding Familiar"
             value={nome}
             onChange={(event) => onNomeChange(event.target.value)}
+            data-autofocus
           />
         </div>
 
@@ -76,5 +134,7 @@ export const NovaCategoriaClienteModal: React.FC<NovaCategoriaClienteModalProps>
         </button>
       </div>
     </div>
-  </div>
-);
+    </div>,
+    document.body,
+  );
+};

@@ -140,6 +140,7 @@ export const FilialForm: React.FC<FilialFormProps> = ({
         contato,
         endereco,
         bairro,
+        cep,
         cidade,
         uf,
         ativo: branch ? branch.ativo : true,

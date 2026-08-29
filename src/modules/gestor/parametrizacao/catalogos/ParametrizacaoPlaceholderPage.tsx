@@ -19,6 +19,7 @@ import {
   type CatalogoItem,
   type CatalogoTipo,
 } from '../services/catalogosService';
+import { CatalogDialog } from './components/CatalogDialog';
 import './ParametrizacaoPlaceholder.css';
 
 type ParametrizacaoKind = 'tipos-empresa' | 'natureza-juridica' | 'tipos-parceiros' | 'tipos-documentos';
@@ -356,12 +357,12 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
 
       {/* Modal Form */}
       {showModal && (
-        <div className="modal-overlay-custom" style={{ display: 'flex', alignItems: 'center', padding: '20px' }}>
-          <form className="cliente-form-container" onSubmit={handleSave} style={{ maxWidth: '480px' }}>
-            <div className="cliente-form-header">
-              <h2>{editingItem ? 'Editar Registro' : 'Novo Registro'}</h2>
-              <p>Gerencie as configurações de {config.title.toLowerCase()}.</p>
-            </div>
+        <CatalogDialog
+          title={editingItem ? 'Editar Registro' : 'Novo Registro'}
+          description={`Gerencie as configurações de ${config.title.toLowerCase()}.`}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleSave}
+        >
 
             {error && (
               <div className="form-alert-banner error">
@@ -388,6 +389,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
                   }}
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
+                  data-autofocus
                 />
               </div>
 
@@ -467,8 +469,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
                 Salvar Parâmetro
               </button>
             </div>
-          </form>
-        </div>
+        </CatalogDialog>
       )}
     </div>
   );

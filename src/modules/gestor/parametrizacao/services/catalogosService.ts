@@ -73,10 +73,8 @@ const sortByName = (items: CatalogoItem[]) => (
   [...items].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
 );
 
-const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[]) => {
+const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[], empresaId: string) => {
   if (!defaults.length) return;
-
-  const empresaId = await getCurrentEmpresaId();
   const { data, error } = await supabase
     .from(TABLE)
     .select('codigo')
@@ -105,11 +103,13 @@ const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[
 
 export const catalogosService = {
   async list(tipo: CatalogoTipo, defaults: CatalogoDefaultItem[] = []): Promise<CatalogoItem[]> {
-    await ensureDefaults(tipo, defaults);
+    const empresaId = await getCurrentEmpresaId();
+    await ensureDefaults(tipo, defaults, empresaId);
 
     const { data, error } = await supabase
       .from(TABLE)
       .select('id,codigo,nome,descricao,sistema,ativo,ordem')
+      .eq('empresa_id', empresaId)
       .eq('tipo', tipo)
       .order('nome', { ascending: true });
 
@@ -130,7 +130,8 @@ export const catalogosService = {
           ativo: input.ativo,
           sistema: input.sistema ?? false,
         })
-        .eq('id', input.id);
+        .eq('id', input.id)
+        .eq('empresa_id', empresaId);
 
       if (error) throw error;
       return;
@@ -153,7 +154,12 @@ export const catalogosService = {
   },
 
   async setAtivo(id: string, ativo: boolean): Promise<void> {
-    const { error } = await supabase.from(TABLE).update({ ativo }).eq('id', id);
+    const empresaId = await getCurrentEmpresaId();
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ ativo })
+      .eq('id', id)
+      .eq('empresa_id', empresaId);
     if (error) throw error;
   },
 };
