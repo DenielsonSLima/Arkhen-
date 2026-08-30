@@ -4,7 +4,7 @@ import {
   Trash2, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import type { MeusDocumentosData } from '../services/documentosService';
-import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentQuickPreview } from '../../gestao-empresarial/components/DocumentQuickPreview';
 import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { OrganizedDocumentList } from './OrganizedDocumentList';
