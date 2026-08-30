@@ -14,7 +14,6 @@ export const atividadesKeys = {
   workspace: () => [...atividadesKeys.all, 'workspace'] as const,
   modelos: () => [...atividadesKeys.all, 'modelos'] as const,
   permissoes: () => [...atividadesKeys.all, 'permissoes'] as const,
-  materializacao: () => [...atividadesKeys.all, 'materializacao'] as const,
 };
 
 export const useAtividadesWorkspace = () => {
@@ -29,20 +28,6 @@ export const useAtividadesWorkspace = () => {
     queryFn: () => rotinasAtividadesService.getPodeGerenciar(),
     staleTime: 60_000,
   });
-  const materializationQuery = useQuery({
-    queryKey: atividadesKeys.materializacao(),
-    queryFn: async () => {
-      const criadas = await rotinasAtividadesService.materializarRotinas();
-      if (criadas > 0) {
-        await invalidateAfterMutation(queryClient, 'atividades');
-      }
-      return criadas;
-    },
-    enabled: permissoesQuery.data === true,
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-  });
-
   const invalidateWorkspace = () => {
     return invalidateAfterMutation(queryClient, 'atividades');
   };
@@ -159,16 +144,11 @@ export const useAtividadesWorkspace = () => {
     usuarioAtual: workspace.usuarioAtual,
     podeGerenciar: Boolean(permissoesQuery.data),
     isLoadingPermissoes: permissoesQuery.isLoading,
-    isLoading: workspaceQuery.isLoading || permissoesQuery.isLoading
-      || (permissoesQuery.data === true && materializationQuery.isLoading),
-    isWorkspaceError: workspaceQuery.isError || permissoesQuery.isError
-      || materializationQuery.isError,
-    workspaceError: workspaceQuery.error || permissoesQuery.error
-      || materializationQuery.error || null,
-    materializationError: materializationQuery.error || null,
+    isLoading: workspaceQuery.isLoading || permissoesQuery.isLoading,
+    isWorkspaceError: workspaceQuery.isError || permissoesQuery.isError,
+    workspaceError: workspaceQuery.error || permissoesQuery.error || null,
     reloadWorkspace: async () => {
       await workspaceQuery.refetch();
-      if (permissoesQuery.data === true) await materializationQuery.refetch();
     },
     ...actions,
     isSaving: saveTarefaMutation.isPending || saveRotinaMutation.isPending

@@ -6,10 +6,8 @@ import {
   FileCheck2,
   FileCode2,
   Landmark,
-  PlayCircle,
   ReceiptText,
   Save,
-  Send,
   WalletCards,
 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
@@ -47,7 +45,9 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -104,8 +104,17 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   };
 
   const handleSave = async () => {
-    await protocolosService.saveEntregasEmpresaConfig(company, configs);
-    setSaved(true);
+    setIsSaving(true);
+    setSaveError('');
+    try {
+      await protocolosService.saveEntregasEmpresaConfig(company, configs);
+      setSaved(true);
+    } catch (error) {
+      setSaved(false);
+      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleOpenAtividades = () => {
@@ -125,10 +134,10 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     const periodicidade = config?.periodicidade || entrega.periodicidadePadrao;
     const periodicidadeLabel = periodicidadeOptions.find((item) => item.value === periodicidade)?.label || periodicidade;
     const origem = entrega.origemPadrao === 'Ambos'
-      ? 'Cliente e Escritório'
+      ? 'Informações: cliente e escritório'
       : entrega.origemPadrao === 'Escritório envia'
-        ? 'Envio do escritório'
-        : 'Envio do cliente';
+        ? 'Informações: escritório'
+        : 'Informações: cliente';
     const tipo = ['xml-nfe', 'xml-nfce'].includes(entrega.id)
       ? 'XML em lote'
       : ['folha-pagamento', 'notas-fiscais', 'extrato-bancario', 'guias-pagas'].includes(entrega.id)
@@ -156,26 +165,43 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
       ) : null}
 
       {loadError ? <div className="error-banner" role="alert">{loadError}</div> : null}
+      {saveError ? <div className="error-banner" role="alert">{saveError}</div> : null}
 
       <div className="protocolos-config-header">
         <div>
-          <h3>Rotinas e obrigações da empresa</h3>
-          <p>Defina o que entra por competência, com rotina e origem (cliente, escritório ou ambos).</p>
+          <h3>Configuração de obrigações da empresa</h3>
+          <p>Selecione somente o que esta empresa possui ou precisa acompanhar. Salvar não cria atividades, solicitações, documentos nem envios.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button className="btn-save-protocolos" onClick={handleOpenAtividades}>
-            <PlayCircle size={16} /> Abrir atividades
+            <ClipboardCheck size={16} /> Ver atividades existentes
           </button>
           <button
             className="btn-save-protocolos"
             onClick={handleSave}
             style={{ minWidth: 170 }}
-            disabled={isLoading}
+            disabled={isLoading || isSaving}
           >
             {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Salvo' : 'Salvar entregas'}
+            {isSaving ? 'Salvando...' : saved ? 'Configuração salva' : 'Salvar configuração'}
           </button>
         </div>
+      </div>
+
+      <div
+        role="note"
+        style={{
+          margin: '0 0 16px',
+          padding: '12px 14px',
+          borderRadius: 10,
+          border: '1px solid #dbeafe',
+          background: '#eff6ff',
+          color: '#1e3a5f',
+          fontSize: '0.84rem',
+          lineHeight: 1.45,
+        }}
+      >
+        Esta tela apenas registra quais obrigações se aplicam à empresa e a periodicidade de cada uma. Atividades são acompanhadas em outro módulo e nenhum envio é disparado aqui.
       </div>
 
       <div className="protocolos-config-summary">
@@ -184,12 +210,12 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
           <strong>{company.nome}</strong>
         </div>
         <div>
-          <span>Itens cobrados</span>
+          <span>Obrigações selecionadas</span>
           <strong>{configs.filter((item) => item.ativo).length}</strong>
         </div>
         <div>
-          <span>Base</span>
-          <strong>Competência + rotina</strong>
+          <span>Efeito do salvamento</span>
+          <strong>Somente configuração</strong>
         </div>
       </div>
 
@@ -213,7 +239,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                       onChange={() => toggleEntrega(entrega.id)}
                     />
                     <span className="protocolo-option-marker">
-                      {checked ? <CheckCircle2 size={16} /> : <Send size={16} />}
+                      {checked ? <CheckCircle2 size={16} /> : <ClipboardCheck size={16} />}
                     </span>
                     <span className="protocolo-option-text">
                       <strong>{entrega.nome}</strong>

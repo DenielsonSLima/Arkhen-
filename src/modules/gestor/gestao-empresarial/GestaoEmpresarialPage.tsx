@@ -154,6 +154,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
         onUpdateCompany={updateCompany}
         onToggleStatus={toggleCompanyStatus}
         onSyncCnae={syncCompanyCnae}
+        initialTab={activeDetailTab}
       />
     );
   }

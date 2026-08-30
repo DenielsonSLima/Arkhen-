@@ -51,7 +51,6 @@ const parseCompetenciaDate = (competencia: string) => {
 export interface UseAtividadesOptions {
   initialCompanyId?: string;
   initialCompetencia?: string;
-  canMaterialize?: boolean;
   responsaveisPorGrupo?: Record<string, string>;
 }
 
@@ -131,10 +130,6 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         atividadesService.getModelos(),
         atividadesService.getClientes(),
       ]);
-      if (options.canMaterialize) {
-        const createdInstances = await atividadesService.ensureInstancias(competencia);
-        if (createdInstances > 0) await invalidateActivityDependencies();
-      }
       const competenciaInstancias = await atividadesService.getInstancias(competencia);
       
       setClientes(loadedClientes);
@@ -146,7 +141,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [competencia, invalidateActivityDependencies, options.canMaterialize]);
+  }, [competencia]);
 
   useEffect(() => {
     void loadData();

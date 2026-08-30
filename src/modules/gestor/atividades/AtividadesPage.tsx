@@ -87,7 +87,6 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   } = useAtividades({
     initialCompanyId,
     initialCompetencia,
-    canMaterialize: podeGerenciar && !isLoadingPermissoes,
     responsaveisPorGrupo,
   });
 
@@ -99,7 +98,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
         <h3>Não foi possível preparar Atividades</h3>
         <p>{workspaceError instanceof Error
           ? workspaceError.message
-          : 'A carga ou a geração das rotinas falhou. Nenhum resultado foi apresentado como zero.'}</p>
+          : 'Não foi possível carregar as atividades. Nenhum resultado foi apresentado como zero.'}</p>
         <button type="button" className="btn-save-settings" onClick={() => void reloadWorkspace()}>
           Tentar novamente
         </button>

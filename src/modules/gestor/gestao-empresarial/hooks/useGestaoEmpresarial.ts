@@ -30,7 +30,9 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(options.initialCompanyId || null);
-  const initialDetailTab = options.initialDetailTab === 'filiais' ? 'filiais' : 'dados';
+  const initialDetailTab: EmpresaDetailTab = ['dados', 'filiais', 'protocolos'].includes(options.initialDetailTab || '')
+    ? options.initialDetailTab as EmpresaDetailTab
+    : 'dados';
   const [activeDetailTab, setActiveDetailTab] = useState<EmpresaDetailTab>(initialDetailTab);
 
   const companiesQuery = useQuery({
@@ -136,9 +138,14 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
       const savedCompany = await saveMutation.mutateAsync(payload);
       setShowFormModal(false);
       setEditingCompany(null);
-      setSuccessMsg(company.id ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
+      setSuccessMsg(company.id
+        ? 'Cliente atualizado com sucesso!'
+        : 'Cliente cadastrado. Agora configure as obrigações aplicáveis.');
       setTimeout(() => setSuccessMsg(null), 3000);
-      if (!company.id) setSelectedCompanyId(savedCompany.id);
+      if (!company.id) {
+        setActiveDetailTab('protocolos');
+        setSelectedCompanyId(savedCompany.id);
+      }
     } finally {
       setIsSaving(false);
     }

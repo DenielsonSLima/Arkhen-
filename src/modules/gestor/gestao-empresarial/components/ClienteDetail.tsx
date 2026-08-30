@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -31,6 +31,7 @@ interface ClienteDetailProps {
   onUpdateCompany: (company: Company) => Promise<void>;
   onToggleStatus: (company: Company) => void;
   onSyncCnae: (company: Company) => Promise<void>;
+  initialTab?: 'dados' | 'filiais' | 'protocolos';
 }
 
 type DetailTab = 'dados' | 'filiais' | 'protocolos';
@@ -48,8 +49,9 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   onUpdateCompany,
   onToggleStatus,
   onSyncCnae,
+  initialTab = 'dados',
 }) => {
-  const [activeTab, setActiveTab] = useState<DetailTab>('dados');
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [editingBranch, setEditingBranch] = useState<ClientBranch | null>(null);
@@ -58,6 +60,10 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   const [logoError, setLogoError] = useState<string | null>(null);
   const [cnaeSyncMsg, setCnaeSyncMsg] = useState<string | null>(null);
   const [isSyncingCnae, setIsSyncingCnae] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [company.id, initialTab]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAtiva = company.status === 'Ativa';
