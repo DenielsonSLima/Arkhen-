@@ -95,6 +95,9 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     return selectedCompany?.documentos || [];
   }, [selectedCompany?.documentos]);
 
+  const isProtectedBranchFolder = (path: string) => path === 'Filiais'
+    || (selectedCompany?.polos || []).some((branch) => branch.documentFolderPath === path || branch.documentFolderPath?.startsWith(`${path}/`));
+
   // Subpastas diretas da pasta atual do cliente selecionado
   const currentSubFolders = useMemo(
     () => getDirectChildren(foldersList, selectedFolder),
@@ -227,6 +230,11 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     if (!selectedCompany) return;
     const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
 
+    if (isProtectedBranchFolder(fullPath)) {
+      setQuickModal({ title: 'Pasta vinculada à filial', message: 'Esta pasta é criada automaticamente para a filial e não pode ser removida pela Biblioteca.' });
+      return;
+    }
+
     const prefix = fullPath + '/';
     const folderFiles = documents.filter(
       d => d.pasta === fullPath || (d.pasta && d.pasta.startsWith(prefix))
@@ -256,6 +264,10 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
 
   const handleMoveFolder = (sourcePath: string, targetPath: string | null) => {
     if (!selectedCompany) return;
+    if (isProtectedBranchFolder(sourcePath)) {
+      setQuickModal({ title: 'Pasta vinculada à filial', message: 'Esta pasta é criada automaticamente para a filial e não pode ser movida pela Biblioteca.' });
+      return;
+    }
     const moved = moveFolderTree(sourcePath, targetPath, foldersList, documents);
     if (!moved) return;
     const updatedCompany: Company = {

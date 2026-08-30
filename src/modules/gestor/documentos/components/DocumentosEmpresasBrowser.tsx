@@ -134,6 +134,7 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
           <div className="docs-folders-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
             {companies.map((company) => {
               const filesCount = company.documentos.length;
+              const branchesCount = company.polos?.length || 0;
               return (
                 <div
                   key={company.id}
@@ -170,6 +171,11 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
                       }}>
                         {company.tipo}
                       </span>
+                      {branchesCount > 0 && (
+                        <span title="As pastas das filiais estão dentro desta empresa" style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
+                          {branchesCount} {branchesCount === 1 ? 'filial' : 'filiais'}
+                        </span>
+                      )}
                       <span style={{
                         fontSize: '0.65rem',
                         fontWeight: 600,

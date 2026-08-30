@@ -79,6 +79,7 @@ export interface ClientBranch {
   ativo: boolean;
   endereco?: string;
   cep?: string;
+  documentFolderPath?: string;
 }
 
 export interface CorporateEvent {
