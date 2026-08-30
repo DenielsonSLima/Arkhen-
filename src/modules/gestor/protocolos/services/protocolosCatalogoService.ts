@@ -82,7 +82,8 @@ const normalizeStatus = (status: unknown): StatusProtocoloTipo => (
 );
 
 const normalizePeriodicidade = (value: unknown, fallback: TipoFechamentoEntrega): TipoFechamentoEntrega => (
-  value === 'quinzenal' || value === 'trimestral' || value === 'semestral' || value === 'mensal'
+  value === 'diaria' || value === 'semanal' || value === 'quinzenal'
+    || value === 'trimestral' || value === 'semestral' || value === 'mensal'
     ? value
     : fallback
 );
@@ -99,21 +100,17 @@ const normalizeRegimes = (regimes: unknown): RegimeEmpresa[] => {
 };
 
 const normalizeConfig = (items: ProtocoloTipoConfig[]) => {
-  const defaults = makeDefaultCatalog();
-  const byId = new Map(items.map((item) => [item.id, item]));
-
-  return defaults.map((item) => {
-    const saved = byId.get(item.id);
-    if (!saved) return item;
+  return items.map((saved) => {
+    const fallback = makeDefaultCatalog().find((item) => item.id === saved.id);
     const regimes = normalizeRegimes(saved.regimes);
     return {
-      ...item,
+      ...fallback,
       ...saved,
-      descricao: saved.descricao.trim() || item.descricao,
+      descricao: saved.descricao.trim() || fallback?.descricao || '',
       status: normalizeStatus(saved.status),
-      regimes: regimes.length ? regimes : item.regimes,
-      periodicidadePadrao: normalizePeriodicidade(saved.periodicidadePadrao, item.periodicidadePadrao),
-      origemPadrao: normalizeOrigemPadrao(saved.origemPadrao, item.origemPadrao),
+      regimes: regimes.length ? regimes : fallback?.regimes || [],
+      periodicidadePadrao: normalizePeriodicidade(saved.periodicidadePadrao, fallback?.periodicidadePadrao || 'mensal'),
+      origemPadrao: normalizeOrigemPadrao(saved.origemPadrao, fallback?.origemPadrao || 'Ambos'),
     };
   });
 };
@@ -208,7 +205,7 @@ export const protocolosCatalogoService = {
       .order('nome', { ascending: true });
 
     if (error) throw error;
-    return normalizeConfig(((data || []) as ProtocoloTipoRow[]).map(fromRow));
+    return ((data || []) as ProtocoloTipoRow[]).map(fromRow);
   },
 
   async persistCatalogo(items: ProtocoloTipoConfig[]): Promise<ProtocoloTipoConfig[]> {

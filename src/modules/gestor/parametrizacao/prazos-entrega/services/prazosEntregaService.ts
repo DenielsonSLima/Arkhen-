@@ -4,7 +4,13 @@ import { ENTREGA_CATALOGO } from '../../../protocolos/protocolosCatalogo';
 import { getCurrentEmpresaId } from '../../services/parametrizacaoSupabase';
 
 export type RegimeEmpresa = Company['tipo'];
-export type TipoFechamentoEntrega = 'mensal' | 'quinzenal' | 'trimestral' | 'semestral';
+export type TipoFechamentoEntrega =
+  | 'diaria'
+  | 'semanal'
+  | 'quinzenal'
+  | 'mensal'
+  | 'trimestral'
+  | 'semestral';
 
 export interface PrazoEntregaConfig {
   id: string;

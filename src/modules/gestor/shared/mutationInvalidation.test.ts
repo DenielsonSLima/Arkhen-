@@ -11,6 +11,7 @@ const expectedKeys = {
   agenda: [['agenda'], ['inicio']],
   documentos: [['documentos'], ['inicio']],
   usuarios: [['configuracoes', 'usuarios'], ['inicio']],
+  protocolos: [['protocolos'], ['atividades'], ['inicio'], ['agenda'], ['conformidade']],
 } as const;
 
 describe('invalidateAfterMutation', () => {

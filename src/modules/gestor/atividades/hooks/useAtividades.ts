@@ -54,6 +54,7 @@ export interface UseAtividadesOptions {
   /** Mantido para compatibilidade; atividades não são mais geradas ao abrir a tela. */
   canMaterialize?: boolean;
   responsaveisPorGrupo?: Record<string, string>;
+  enabled?: boolean;
 }
 
 const normalizeCompetencia = (value?: string) => {
@@ -125,6 +126,10 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   };
 
   const loadData = useCallback(async () => {
+    if (options.enabled === false) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setLoadError(null);
     try {
@@ -143,7 +148,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [competencia]);
+  }, [competencia, options.enabled]);
 
   useEffect(() => {
     void loadData();

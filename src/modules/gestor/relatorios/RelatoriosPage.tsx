@@ -13,10 +13,14 @@ import { FaturamentoRelatorio } from './faturamento/FaturamentoRelatorio';
 import { AtividadesRelatorio } from './atividades/AtividadesRelatorio';
 import { PessoalRelatorio } from './pessoal/PessoalRelatorio';
 import { TributarioRelatorio } from './tributario/TributarioRelatorio';
+import { ReportPrintWatermark } from './components/ReportPrintWatermark';
+import { useMarcaDaguaQuery } from '../configuracoes/marca-dagua/queries/useMarcaDaguaQueries';
 
 import './Relatorios.css';
+import './components/ReportPrintWatermark.css';
 
 export const RelatoriosPage: React.FC = () => {
+  const marcaDaguaQuery = useMarcaDaguaQuery();
   const {
     activeReport,
     setActiveReport,
@@ -56,6 +60,7 @@ export const RelatoriosPage: React.FC = () => {
 
   return (
     <div className="relatorios-container animate-fade-in">
+      <ReportPrintWatermark config={marcaDaguaQuery.data} />
       {/* Title Header */}
       <div className="relatorios-header-row">
         <div className="relatorios-title">
@@ -93,7 +98,16 @@ export const RelatoriosPage: React.FC = () => {
               <p>{currentReportOption.desc}</p>
             </div>
             {isGenerated && !isLoading && (
-              <button className="btn-print-report" onClick={handlePrint}>
+              <button
+                className="btn-print-report"
+                onClick={handlePrint}
+                disabled={marcaDaguaQuery.isLoading || marcaDaguaQuery.isError}
+                title={marcaDaguaQuery.isError
+                  ? 'Não foi possível carregar a marca d’água configurada'
+                  : marcaDaguaQuery.isLoading
+                    ? 'Carregando a identidade visual do relatório'
+                    : 'Imprimir relatório'}
+              >
                 <Printer size={16} /> Imprimir Relatório
               </button>
             )}

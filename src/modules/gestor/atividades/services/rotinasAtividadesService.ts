@@ -1,6 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
 import { activityWriteError } from './rpcCompatibility';
+import { atribuirResponsavelRotinaProtocolo, getCurrentEmpresaId } from './rotinasProtocolosService';
 import { toLocalDateKey } from '../utils/localDateKey';
 import type { CompletionEvidence } from '../utils/completionEvidence';
 import { buildTaskAuditSummaries, type TaskAuditSummary, type TarefaChecklistEventRow } from './taskChecklistAudit';
@@ -16,6 +17,7 @@ export type RevisaoStatusAtividade = 'Não necessária' | 'Pendente' | 'Aprovada
 export interface RotinaAtividade {
   id: string;
   modeloId?: string;
+  protocoloCodigo?: string;
   nome: string;
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade;
@@ -91,6 +93,7 @@ export interface UsuarioAtividade {
 interface RotinaAtividadeRow {
   id: string;
   modelo_id: string | null;
+  protocolo_codigo: string | null;
   nome: string;
   categoria: CategoriaAtividade | null;
   frequencia: FrequenciaAtividade | null;
@@ -155,16 +158,10 @@ const isUuid = (value?: string) => (
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 );
 
-const getCurrentEmpresaId = async () => {
-  const { data, error } = await supabase.rpc('current_empresa_id');
-  if (error) throw error;
-  if (!data) throw new Error('Empresa atual nao encontrada para salvar atividades.');
-  return data as string;
-};
-
 const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
   id: row.id,
   modeloId: row.modelo_id || undefined,
+  protocoloCodigo: row.protocolo_codigo || undefined,
   nome: row.nome,
   categoria: row.categoria || 'Cliente',
   frequencia: row.frequencia || 'Personalizada',
@@ -258,7 +255,7 @@ export const rotinasAtividadesService = {
     ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
-        .select('id,modelo_id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .select('id,modelo_id,protocolo_codigo,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
         .eq('empresa_id', empresaId)
         .eq('ativa', true)
         .order('proxima_execucao', { ascending: true }),
@@ -419,6 +416,11 @@ export const rotinasAtividadesService = {
     const { error } = await supabase.from('atividades_rotinas').update({ ativa: false }).eq('id', id).eq('empresa_id', empresaId);
     if (error) throw error;
     return this.getWorkspace();
+  },
+
+  async atribuirResponsavelRotinaProtocolo(rotinaId: string, responsavelConfigUsuarioId: string) {
+    if (!isUuid(rotinaId) || !isUuid(responsavelConfigUsuarioId)) throw new Error('Selecione uma rotina e um responsável válidos.');
+    await atribuirResponsavelRotinaProtocolo(rotinaId, responsavelConfigUsuarioId); return this.getWorkspace();
   },
 
   async saveTarefa(tarefa: TarefaGestor) {

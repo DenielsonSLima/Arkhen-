@@ -1,13 +1,14 @@
 import React from 'react';
 import { CalendarDays, Settings, Layers, AlertCircle, Clock, CheckCircle2, ClipboardList } from 'lucide-react';
 import { CompanyActivityCard } from './CompanyActivityCard';
+import type { FechamentoOperacionalGrupo } from '../services/fechamentosOperacionaisService';
 
 interface AtividadesPorEmpresaProps {
   globalFilter: 'todas' | 'pendentes' | 'andamento' | 'concluidas';
   setGlobalFilter: (filter: 'todas' | 'pendentes' | 'andamento' | 'concluidas') => void;
-  companyGroups: any[];
+  companyGroups: FechamentoOperacionalGrupo[];
   isLoading: boolean;
-  setSelectedGroup: (group: any) => void;
+  setSelectedGroup: (group: FechamentoOperacionalGrupo) => void;
   metrics: { total: number; completed: number; inProgress: number; pending: number };
   onShowConfig?: () => void;
 }
@@ -27,7 +28,7 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
       <div className="atividades-filter-header" style={{ marginTop: 0 }}>
         <div className="atividades-title">
           <h2 style={{ color: '#0f172a', margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Fechamentos de Clientes</h2>
-          <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '2px 0 0 0' }}>Rotinas, competências e pendências de cada empresa.</p>
+          <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '2px 0 0 0' }}>Obrigações ativas, competências e pendências de cada empresa.</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -43,8 +44,8 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
             <button
               className="btn-add-user"
               onClick={onShowConfig}
-              title="Configurar modelos de fechamento e vínculos por cliente"
-              aria-label="Configurar modelos de fechamento e vínculos por cliente"
+              title="Abrir cadastro de clientes"
+              aria-label="Abrir cadastro de clientes"
               style={{ padding: '10px 14px', borderRadius: '8px' }}
             >
               <Settings size={18} />
@@ -112,11 +113,11 @@ export const AtividadesPorEmpresa: React.FC<AtividadesPorEmpresaProps> = ({
         <div className="empty-state-card">
           <ClipboardList size={48} className="empty-state-icon" />
           <p>{metrics.total === 0
-            ? 'Nenhum fechamento está configurado. Vincule modelos aos clientes para iniciar o acompanhamento mensal.'
+              ? 'Nenhum fechamento está configurado. Ative as obrigações no cadastro do cliente para criar as rotinas automaticamente.'
             : 'Nenhuma empresa corresponde a este filtro.'}</p>
           {metrics.total === 0 && onShowConfig ? (
             <button type="button" className="btn-save-settings" onClick={onShowConfig}>
-              <Settings size={16} /> Configurar modelos e vínculos
+              <Settings size={16} /> Configurar obrigações
             </button>
           ) : globalFilter !== 'todas' ? (
             <button type="button" className="btn-save-settings" onClick={() => setGlobalFilter('todas')}>

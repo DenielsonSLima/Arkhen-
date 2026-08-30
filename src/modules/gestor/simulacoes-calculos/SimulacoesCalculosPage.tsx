@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Download, X, Check, FileDown, Calculator } from 'lucide-react';
 import { useSimulacoesCalculos } from './hooks/useSimulacoesCalculos';
 import { SimuladorRescisao } from './rescisao/SimuladorRescisao';
-import { empresaService } from '../configuracoes/empresa/services/empresaService';
-import { marcaDaguaService } from '../configuracoes/marca-dagua/services/marcaDaguaService';
+import { useEmpresaQuery } from '../configuracoes/empresa/queries/useEmpresaQueries';
+import { useMarcaDaguaQuery } from '../configuracoes/marca-dagua/queries/useMarcaDaguaQueries';
+import { resolveMarcaDaguaParaRelatorio } from '../configuracoes/marca-dagua/services/marcaDaguaService';
 import {
   generateSimulationPdf,
   getImageDetails,
@@ -26,40 +27,16 @@ export const SimulacoesCalculosPage: React.FC = () => {
     relatorioDisponivel,
     tiposRescisao,
   } = useSimulacoesCalculos();
+  const empresaQuery = useEmpresaQuery();
+  const marcaDaguaQuery = useMarcaDaguaQuery();
 
   // Estados do Modal de PDF e exportação
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  const [empresa, setEmpresa] = useState<any>(null);
-  const [marcaDagua, setMarcaDagua] = useState<any>(null);
-  const [identidadeStatus, setIdentidadeStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-
   const [downloadState, setDownloadState] = useState<'idle' | 'generating' | 'done'>('idle');
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      empresaService.getDadosEmpresa(),
-      marcaDaguaService.getMarcaDaguaConfig(),
-    ])
-      .then(([empresaData, marcaDaguaData]) => {
-        if (!active) return;
-        setEmpresa(empresaData);
-        setMarcaDagua(marcaDaguaData);
-        setIdentidadeStatus('ready');
-      })
-      .catch((error) => {
-        console.error('Erro ao carregar a identidade visual do relatório:', error);
-        if (active) setIdentidadeStatus('error');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!isPdfModalOpen) return undefined;
@@ -70,7 +47,11 @@ export const SimulacoesCalculosPage: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isPdfModalOpen]);
 
-  const podeGerarRelatorio = relatorioDisponivel && identidadeStatus === 'ready';
+  const empresa = empresaQuery.data;
+  const marcaDagua = marcaDaguaQuery.data;
+  const identidadeComErro = empresaQuery.isError || marcaDaguaQuery.isError;
+  const identidadeCarregando = empresaQuery.isLoading || marcaDaguaQuery.isLoading;
+  const podeGerarRelatorio = relatorioDisponivel && !identidadeCarregando && !identidadeComErro;
 
   const handleOpenPdfModal = async () => {
     if (!podeGerarRelatorio) return;
@@ -91,19 +72,12 @@ export const SimulacoesCalculosPage: React.FC = () => {
         }
       }
 
-      let watermarkDataUrl;
+      const watermark = resolveMarcaDaguaParaRelatorio(marcaDagua, 'retrato');
+      let watermarkDataUrl: string | null = null;
       let watermarkAspectRatio = 1;
-      if (marcaDagua?.habilitado && marcaDagua.fileUrlRetrato) {
+      if (watermark.habilitado && watermark.fileUrl) {
         try {
-          const details = await getImageDetails(marcaDagua.fileUrlRetrato);
-          watermarkDataUrl = details.dataUrl;
-          watermarkAspectRatio = details.aspectRatio;
-        } catch (e) {
-          console.warn('Erro ao carregar marca dágua:', e);
-        }
-      } else if (marcaDagua?.habilitado && marcaDagua.fileUrl) {
-         try {
-          const details = await getImageDetails(marcaDagua.fileUrl);
+          const details = await getImageDetails(watermark.fileUrl);
           watermarkDataUrl = details.dataUrl;
           watermarkAspectRatio = details.aspectRatio;
         } catch (e) {
@@ -133,11 +107,11 @@ export const SimulacoesCalculosPage: React.FC = () => {
           resultado: resultadoRescisao,
         }),
         watermark: {
-          enabled: !!marcaDagua?.habilitado,
+          enabled: watermark.habilitado,
           dataUrl: watermarkDataUrl,
-          opacity: marcaDagua?.opacidadeRetrato || marcaDagua?.opacidade,
-          size: marcaDagua?.tamanhoRetrato || marcaDagua?.tamanho,
-          position: marcaDagua?.posicaoRetrato || marcaDagua?.posicao,
+          opacity: watermark.opacidade,
+          size: watermark.tamanho,
+          position: watermark.posicao,
           aspectRatio: watermarkAspectRatio,
         },
       });
@@ -194,7 +168,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
             disabled={!podeGerarRelatorio}
             title={podeGerarRelatorio
               ? 'Gerar relatório em PDF'
-              : identidadeStatus === 'error'
+              : identidadeComErro
                 ? 'Não foi possível carregar os dados da empresa e da marca d’água'
                 : 'Aguarde o cálculo e a identidade visual serem carregados'}
           >
@@ -209,7 +183,7 @@ export const SimulacoesCalculosPage: React.FC = () => {
         </div>
       )}
 
-      {identidadeStatus === 'error' && (
+      {identidadeComErro && (
         <div className="simulacoes-banner-error" role="alert" style={{ margin: '16px 24px 0 24px', padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#ef4444', fontSize: '0.85rem' }}>
           Não foi possível carregar os dados da empresa ou a marca d’água. Atualize a página antes de gerar o relatório.
         </div>

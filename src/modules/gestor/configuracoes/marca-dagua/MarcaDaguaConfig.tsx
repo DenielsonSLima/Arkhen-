@@ -47,22 +47,22 @@ export const MarcaDaguaConfig: React.FC = () => {
       positionStyle = {
         top: '12px',
         left: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
+        maxWidth: `${sizeVal}%`,
+        maxHeight: `${sizeVal}%`,
       };
     } else if (activePos === 'topo-direita') {
       positionStyle = {
         top: '12px',
         right: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
+        maxWidth: `${sizeVal}%`,
+        maxHeight: `${sizeVal}%`,
       };
     } else if (activePos === 'rodape-direita') {
       positionStyle = {
         bottom: '12px',
         right: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
+        maxWidth: `${sizeVal}%`,
+        maxHeight: `${sizeVal}%`,
       };
     }
 

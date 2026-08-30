@@ -22,7 +22,7 @@ describe('AtividadesPorEmpresa empty states', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /configurar modelos e vínculos/i }));
+    fireEvent.click(screen.getByRole('button', { name: /configurar obrigações/i }));
 
     expect(onShowConfig).toHaveBeenCalledOnce();
   });

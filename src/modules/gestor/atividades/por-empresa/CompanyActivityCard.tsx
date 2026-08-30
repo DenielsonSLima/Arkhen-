@@ -1,11 +1,11 @@
 import React from 'react';
 import { Calendar, User, ChevronRight } from 'lucide-react';
-import type { CompanyActivityGroup } from '../hooks/useAtividades';
+import type { FechamentoOperacionalGrupo } from '../services/fechamentosOperacionaisService';
 import { CompanyCardIdentity } from './CompanyCardIdentity';
 import { getActivityMiniIcon } from './companyActivityPresentation';
 
 interface CompanyActivityCardProps {
-  group: CompanyActivityGroup;
+  group: FechamentoOperacionalGrupo;
   competencia: string;
   onSelect: () => void;
 }
@@ -72,17 +72,17 @@ export const CompanyActivityCard: React.FC<CompanyActivityCardProps> = ({
 
       {/* Semaphore of sub-activities */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-        {group.atividades.map((atv) => (
-          <div key={atv.instanciaId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+        {group.tarefas.map((tarefa) => (
+          <div key={tarefa.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {getActivityMiniIcon(atv.modeloId, atv.status)}
-              <span style={{ fontWeight: 500, color: '#334155' }}>{atv.modeloNome}</span>
+              {getActivityMiniIcon(tarefa.categoria, tarefa.status)}
+              <span style={{ fontWeight: 500, color: '#334155' }}>{tarefa.titulo}</span>
             </div>
             <span style={{
               fontWeight: 600,
-              color: atv.status === 'Concluída' ? '#2e7d32' : atv.status === 'Em andamento' ? '#ed6c02' : '#64748b'
+              color: tarefa.status === 'Concluída' ? '#2e7d32' : tarefa.status === 'Em andamento' ? '#ed6c02' : '#64748b'
             }}>
-              {atv.status === 'Concluída' ? 'Concluído' : atv.status === 'Em andamento' ? `${atv.progresso}%` : 'Pendente'}
+              {tarefa.status === 'Concluída' ? 'Concluído' : tarefa.status === 'Em andamento' ? `${tarefa.progresso}%` : 'Pendente'}
             </span>
           </div>
         ))}

@@ -58,7 +58,9 @@ const drawWatermark = (doc: JsPdfDocument, input: SimulationPdfInput) => {
   const watermark = input.watermark;
   if (!watermark?.enabled || !watermark.dataUrl) return;
 
-  const sizePercent = Math.max(12, Math.min(70, watermark.size ?? 35));
+  const sizePercent = Math.max(0, Math.min(100, watermark.size ?? 35));
+  const opacityPercent = Math.max(0, Math.min(100, watermark.opacity ?? 10));
+  if (sizePercent === 0 || opacityPercent === 0) return;
   const maxW = CONTENT_WIDTH * (sizePercent / 100);
   const maxH = (PAGE_HEIGHT - 40) * (sizePercent / 100);
   const aspect = watermark.aspectRatio && watermark.aspectRatio > 0 ? watermark.aspectRatio : 1;
@@ -87,7 +89,7 @@ const drawWatermark = (doc: JsPdfDocument, input: SimulationPdfInput) => {
   }
 
   try {
-    const opacity = Math.max(0.03, Math.min(0.25, (watermark.opacity ?? 10) / 100));
+    const opacity = opacityPercent / 100;
     const pdfWithState = doc as JsPdfDocument & {
       GState: new (options: { opacity: number }) => unknown;
       setGState: (state: unknown) => void;

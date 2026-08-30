@@ -110,8 +110,7 @@ describe('useAtividades internal-tab context', () => {
 
     expect(serviceMock.getModelos).toHaveBeenCalledTimes(1);
     expect(serviceMock.getClientes).toHaveBeenCalledTimes(1);
-    expect(serviceMock.ensureInstancias).toHaveBeenCalledOnce();
-    expect(serviceMock.ensureInstancias).toHaveBeenCalledWith('06/2026');
+    expect(serviceMock.ensureInstancias).not.toHaveBeenCalled();
     expect(serviceMock.getInstancias).toHaveBeenCalledOnce();
     expect(serviceMock.getInstancias).toHaveBeenCalledWith('06/2026');
     expect(serviceMock.getFechamentoMeta).toHaveBeenCalledTimes(1);
@@ -126,9 +125,9 @@ describe('useAtividades internal-tab context', () => {
     renderHook(() => useAtividades({ canMaterialize: true }), { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(serviceMock.ensureInstancias).toHaveBeenCalledWith(expectedCompetencia);
       expect(serviceMock.getInstancias).toHaveBeenCalledWith(expectedCompetencia);
     });
+    expect(serviceMock.ensureInstancias).not.toHaveBeenCalled();
   });
 
   it('expõe falha de acesso sem apresentar a carga como um estado vazio válido', async () => {
@@ -145,9 +144,7 @@ describe('useAtividades internal-tab context', () => {
     expect(result.current.companyGroups).toEqual([]);
   });
 
-  it('expõe falha de materialização sem consultar uma lista possivelmente incompleta', async () => {
-    const materializationError = new Error('materialização indisponível');
-    serviceMock.ensureInstancias.mockRejectedValueOnce(materializationError);
+  it('não materializa instâncias no navegador, mesmo no contrato legado', async () => {
     const { Wrapper } = createHarness();
     const { result } = renderHook(() => useAtividades({ canMaterialize: true }), {
       wrapper: Wrapper,
@@ -155,15 +152,15 @@ describe('useAtividades internal-tab context', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.loadError).toBe(materializationError);
-    expect(serviceMock.getInstancias).not.toHaveBeenCalled();
-    expect(result.current.companyGroups).toEqual([]);
+    expect(result.current.loadError).toBeNull();
+    expect(serviceMock.ensureInstancias).not.toHaveBeenCalled();
+    expect(serviceMock.getInstancias).toHaveBeenCalledOnce();
+    expect(result.current.companyGroups).toHaveLength(1);
   });
 
-  it('invalida todos os módulos dependentes em cada caminho de escrita', async () => {
+  it('invalida todos os módulos dependentes apenas nos caminhos de escrita', async () => {
     const { queryClient, Wrapper } = createHarness();
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
-    serviceMock.ensureInstancias.mockResolvedValueOnce(1);
     const { result } = renderHook(() => useAtividades({
       initialCompanyId: 'cliente-1',
       initialCompetencia: '2026-06',
@@ -173,7 +170,7 @@ describe('useAtividades internal-tab context', () => {
     await waitFor(() => {
       expect(result.current.selectedGroup?.id).toBe('cliente-1-06-2026');
     });
-    expect(getInvalidatedKeys(invalidateQueries)).toEqual(expectedActivityInvalidations);
+    expect(getInvalidatedKeys(invalidateQueries)).toEqual([]);
 
     invalidateQueries.mockClear();
     await act(async () => {

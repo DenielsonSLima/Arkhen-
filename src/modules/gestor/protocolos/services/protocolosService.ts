@@ -68,7 +68,14 @@ type ProtocoloConfigRow = {
 };
 
 const PROTOCOLOS_CONFIG_TABLE = 'configuracoes_protocolos_empresas';
-const ALLOWED_PERIODICIDADES = new Set<TipoFechamentoEntrega>(['mensal', 'quinzenal', 'trimestral', 'semestral']);
+const ALLOWED_PERIODICIDADES = new Set<TipoFechamentoEntrega>([
+  'diaria',
+  'semanal',
+  'quinzenal',
+  'mensal',
+  'trimestral',
+  'semestral',
+]);
 
 const mapProtocoloOperacional = (value: unknown): ProtocoloEntrega => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

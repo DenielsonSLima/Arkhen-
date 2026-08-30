@@ -6,14 +6,16 @@ import {
   FileCheck2,
   FileCode2,
   Landmark,
+  PlayCircle,
   ReceiptText,
   Save,
+  Send,
   WalletCards,
 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
-import { protocolosService } from '../../protocolos/services/protocolosService';
 import type { ProtocoloEmpresaConfig } from '../../protocolos/services/protocolosService';
 import type { ProtocoloTipoConfig } from '../../protocolos/services/protocolosCatalogoService';
+import { useEmpresaProtocolosConfiguracao } from '../../protocolos/hooks/useEmpresaProtocolosConfiguracao';
 import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
 import './TabProtocolosEntregas.css';
@@ -33,48 +35,35 @@ const categoryIcon = {
 };
 
 const periodicidadeOptions: Array<{ value: TipoFechamentoEntrega; label: string }> = [
+  { value: 'diaria', label: 'Diária' },
+  { value: 'semanal', label: 'Semanal' },
   { value: 'mensal', label: 'Mensal' },
   { value: 'quinzenal', label: 'Quinzenal' },
   { value: 'trimestral', label: 'Trimestral' },
   { value: 'semestral', label: 'Semestral' },
 ];
 
+const EMPTY_CATALOGO: ProtocoloTipoConfig[] = [];
+
 export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ company }) => {
   const { openTab } = useInternalTabs();
-  const [catalogo, setCatalogo] = useState<ProtocoloTipoConfig[]>([]);
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [saved, setSaved] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [loadError, setLoadError] = useState('');
-  const [saveError, setSaveError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const {
+    data: configuracao,
+    error: configuracaoError,
+    isLoading,
+    isSaving,
+    saveConfiguracao,
+    saveError,
+  } = useEmpresaProtocolosConfiguracao(company);
+  const catalogo = configuracao?.catalogo ?? EMPTY_CATALOGO;
+  const loadError = configuracaoError || saveError;
 
   useEffect(() => {
-    let mounted = true;
-    setIsLoading(true);
-    setLoadError('');
-
-    protocolosService.getConfiguracaoEmpresa(company)
-      .then((setup) => {
-        if (!mounted) return;
-        setCatalogo(setup.catalogo);
-        setConfigs(setup.configs);
-      })
-      .catch((error) => {
-        if (!mounted) return;
-        setCatalogo([]);
-        setConfigs([]);
-        setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar as obrigações.');
-      })
-      .finally(() => {
-        if (!mounted) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [company]);
+    if (configuracao) setConfigs(configuracao.configs);
+  }, [configuracao]);
 
   const configById = useMemo(() => {
     const map = new Map<string, ProtocoloEmpresaConfig>();
@@ -82,12 +71,12 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     return map;
   }, [configs]);
 
-  const groupedCatalogo = useMemo(() => {
-    return catalogo.reduce<Record<string, typeof catalogo>>((acc, item) => {
+  const groupedCatalogo = useMemo(() => (
+    catalogo.reduce<Record<string, typeof catalogo>>((acc, item) => {
       acc[item.categoria] = [...(acc[item.categoria] || []), item];
       return acc;
-    }, {});
-  }, [catalogo]);
+    }, {})
+  ), [catalogo]);
 
   const toggleEntrega = (id: string) => {
     setSaved(false);
@@ -104,119 +93,85 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError('');
+    setSaved(false);
+    setSubmitError('');
     try {
-      await protocolosService.saveEntregasEmpresaConfig(company, configs);
+      await saveConfiguracao(configs);
       setSaved(true);
     } catch (error) {
-      setSaved(false);
-      setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar a configuração.');
-    } finally {
-      setIsSaving(false);
+      setSubmitError(error instanceof Error ? error.message : 'Não foi possível sincronizar as obrigações.');
     }
   };
 
   const handleOpenAtividades = () => {
-    openTab(
-      'atividades-empresa',
-      'Atividades por empresa',
-      'Building2',
-      {
-        data: {
-          selectedCompanyId: company.id,
-        },
-      },
-    );
+    openTab('atividades-empresa', 'Atividades por empresa', 'Building2', {
+      data: { selectedCompanyId: company.id },
+    });
   };
 
-  const getEntregaDescricao = (entrega: typeof catalogo[number], config: ProtocoloEmpresaConfig | undefined) => {
+  const getEntregaDescricao = (
+    entrega: typeof catalogo[number],
+    config: ProtocoloEmpresaConfig | undefined,
+  ) => {
     const periodicidade = config?.periodicidade || entrega.periodicidadePadrao;
     const periodicidadeLabel = periodicidadeOptions.find((item) => item.value === periodicidade)?.label || periodicidade;
     const origem = entrega.origemPadrao === 'Ambos'
-      ? 'Informações: cliente e escritório'
+      ? 'Cliente e escritório'
       : entrega.origemPadrao === 'Escritório envia'
-        ? 'Informações: escritório'
-        : 'Informações: cliente';
+        ? 'Envio do escritório'
+        : 'Envio do cliente';
     const tipo = ['xml-nfe', 'xml-nfce'].includes(entrega.id)
       ? 'XML em lote'
       : ['folha-pagamento', 'notas-fiscais', 'extrato-bancario', 'guias-pagas'].includes(entrega.id)
-      ? 'arquivo mensal'
-    : 'obrigação/documento';
+        ? 'arquivo mensal'
+        : 'obrigação/documento';
     return `${origem} • ${tipo} • rotina ${periodicidadeLabel} • prazo dia ${entrega.diaLimite}`;
   };
+
+  const errorMessage = submitError || (loadError instanceof Error
+    ? loadError.message
+    : loadError ? 'Não foi possível sincronizar as obrigações.' : '');
 
   return (
     <div className="tab-panel-content protocolos-config-panel" style={{ position: 'relative', opacity: isLoading ? 0.7 : 1 }}>
       {isLoading ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            padding: '40px 0',
-            color: '#475569',
-          }}
-        >
+        <div className="protocolos-loading">
           <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: '2px' }} />
-          <span style={{ fontSize: '0.82rem' }}>Carregando obrigações da empresa...</span>
+          <span>Carregando obrigações da empresa...</span>
         </div>
       ) : null}
 
-      {loadError ? <div className="error-banner" role="alert">{loadError}</div> : null}
-      {saveError ? <div className="error-banner" role="alert">{saveError}</div> : null}
+      {errorMessage ? <div className="error-banner" role="alert">{errorMessage}</div> : null}
 
       <div className="protocolos-config-header">
         <div>
-          <h3>Configuração de obrigações da empresa</h3>
-          <p>Selecione somente o que esta empresa possui ou precisa acompanhar. Salvar não cria atividades, solicitações, documentos nem envios.</p>
+          <h3>Rotinas e obrigações da empresa</h3>
+          <p>O catálogo foi filtrado pelo regime {company.tipo}. Ative somente o que esta empresa realmente utiliza.</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button className="btn-save-protocolos" onClick={handleOpenAtividades}>
-            <ClipboardCheck size={16} /> Ver atividades existentes
+            <PlayCircle size={16} /> Ver fechamentos
           </button>
           <button
             className="btn-save-protocolos"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             style={{ minWidth: 170 }}
             disabled={isLoading || isSaving}
           >
             {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {isSaving ? 'Salvando...' : saved ? 'Configuração salva' : 'Salvar configuração'}
+            {saved ? 'Rotinas sincronizadas' : isSaving ? 'Sincronizando...' : 'Salvar e sincronizar'}
           </button>
         </div>
       </div>
 
-      <div
-        role="note"
-        style={{
-          margin: '0 0 16px',
-          padding: '12px 14px',
-          borderRadius: 10,
-          border: '1px solid #dbeafe',
-          background: '#eff6ff',
-          color: '#1e3a5f',
-          fontSize: '0.84rem',
-          lineHeight: 1.45,
-        }}
-      >
-        Esta tela apenas registra quais obrigações se aplicam à empresa e a periodicidade de cada uma. Atividades são acompanhadas em outro módulo e nenhum envio é disparado aqui.
+      <div className="protocolos-guidance" role="note">
+        Ao salvar, cada obrigação ativa é sincronizada com uma rotina da empresa e com as tarefas do período atual. A execução e a atribuição de responsável são acompanhadas em Atividades; nenhum envio é disparado aqui.
       </div>
 
       <div className="protocolos-config-summary">
-        <div>
-          <span>Empresa</span>
-          <strong>{company.nome}</strong>
-        </div>
-        <div>
-          <span>Obrigações selecionadas</span>
-          <strong>{configs.filter((item) => item.ativo).length}</strong>
-        </div>
-        <div>
-          <span>Efeito do salvamento</span>
-          <strong>Somente configuração</strong>
-        </div>
+        <div><span>Empresa</span><strong>{company.nome}</strong></div>
+        <div><span>Obrigações ativas</span><strong>{configs.filter((item) => item.ativo).length}</strong></div>
+        <div><span>Automação</span><strong>Rotina + tarefa por período</strong></div>
       </div>
 
       <div className="protocolos-category-grid">
@@ -234,12 +189,12 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                   <label key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
                     <input
                       type="checkbox"
-                      disabled={isLoading}
+                      disabled={isLoading || isSaving}
                       checked={checked}
                       onChange={() => toggleEntrega(entrega.id)}
                     />
                     <span className="protocolo-option-marker">
-                      {checked ? <CheckCircle2 size={16} /> : <ClipboardCheck size={16} />}
+                      {checked ? <CheckCircle2 size={16} /> : <Send size={16} />}
                     </span>
                     <span className="protocolo-option-text">
                       <strong>{entrega.nome}</strong>
@@ -247,18 +202,15 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                     </span>
                     <div className="protocolo-option-periodicidade">
                       <span className="protocolo-option-periodicidade-label">
-                        <CalendarClock size={13} />
-                        <strong>Rotina</strong>
+                        <CalendarClock size={13} /><strong>Rotina</strong>
                       </span>
                       <select
                         value={config?.periodicidade ?? entrega.periodicidadePadrao}
-                        disabled={isLoading || !checked}
+                        disabled={isLoading || isSaving || !checked}
                         onChange={(event) => handleChangePeriodicidade(entrega.id, event.target.value as TipoFechamentoEntrega)}
                       >
                         {periodicidadeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
+                          <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                       </select>
                     </div>

@@ -42,6 +42,14 @@ export const useAtividadesWorkspace = () => {
     onSuccess: invalidateWorkspace,
   });
 
+  const atribuirResponsavelRotinaProtocoloMutation = useMutation({
+    mutationFn: ({ rotinaId, responsavelConfigUsuarioId }: {
+      rotinaId: string;
+      responsavelConfigUsuarioId: string;
+    }) => rotinasAtividadesService.atribuirResponsavelRotinaProtocolo(rotinaId, responsavelConfigUsuarioId),
+    onSuccess: invalidateWorkspace,
+  });
+
   const saveTarefaMutation = useMutation({
     mutationFn: (tarefa: TarefaGestor) => rotinasAtividadesService.saveTarefa(tarefa),
     onSuccess: invalidateWorkspace,
@@ -99,6 +107,9 @@ export const useAtividadesWorkspace = () => {
     saveRotina: (rotina: RotinaAtividade) => saveRotinaMutation.mutate(rotina),
     saveRotinaAsync: (rotina: RotinaAtividade) => saveRotinaMutation.mutateAsync(rotina),
     deleteRotina: (id: string) => deleteRotinaMutation.mutate(id),
+    atribuirResponsavelRotinaProtocolo: (rotinaId: string, responsavelConfigUsuarioId: string) => (
+      atribuirResponsavelRotinaProtocoloMutation.mutateAsync({ rotinaId, responsavelConfigUsuarioId })
+    ),
     saveTarefa: (tarefa: TarefaGestor) => saveTarefaMutation.mutate(tarefa),
     saveTarefaAsync: (tarefa: TarefaGestor) => saveTarefaMutation.mutateAsync(tarefa),
     deleteTarefa: (id: string) => deleteTarefaMutation.mutate(id),
@@ -132,7 +143,18 @@ export const useAtividadesWorkspace = () => {
     reopenTarefaAsync: (id: string, justification: string) => (
       reopenMutation.mutateAsync({ id, justification })
     ),
-  }), [checklistMutation, deleteRotinaMutation, deleteTarefaMutation, progressMutation, reopenMutation, reviewMutation, saveRotinaMutation, saveTarefaMutation, workspace.tarefas]);
+  }), [
+    atribuirResponsavelRotinaProtocoloMutation,
+    checklistMutation,
+    deleteRotinaMutation,
+    deleteTarefaMutation,
+    progressMutation,
+    reopenMutation,
+    reviewMutation,
+    saveRotinaMutation,
+    saveTarefaMutation,
+    workspace.tarefas,
+  ]);
 
   return {
     rotinas: workspace.rotinas,
@@ -153,9 +175,11 @@ export const useAtividadesWorkspace = () => {
     },
     ...actions,
     isSaving: saveTarefaMutation.isPending || saveRotinaMutation.isPending
+      || atribuirResponsavelRotinaProtocoloMutation.isPending
       || progressMutation.isPending || checklistMutation.isPending
       || reviewMutation.isPending || reopenMutation.isPending,
     saveError: saveTarefaMutation.error || saveRotinaMutation.error
+      || atribuirResponsavelRotinaProtocoloMutation.error
       || progressMutation.error || checklistMutation.error
       || reviewMutation.error || reopenMutation.error || null,
   };

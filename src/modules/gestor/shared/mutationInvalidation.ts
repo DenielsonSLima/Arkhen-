@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 
-export type GestorMutationScope = 'atividades' | 'agenda' | 'documentos' | 'usuarios';
+export type GestorMutationScope = 'atividades' | 'agenda' | 'documentos' | 'usuarios' | 'protocolos';
 
 export const mutationInvalidationKeys = {
   atividades: [
@@ -20,6 +20,13 @@ export const mutationInvalidationKeys = {
   usuarios: [
     ['configuracoes', 'usuarios'],
     ['inicio'],
+  ],
+  protocolos: [
+    ['protocolos'],
+    ['atividades'],
+    ['inicio'],
+    ['agenda'],
+    ['conformidade'],
   ],
 } as const satisfies Record<GestorMutationScope, readonly (readonly unknown[])[]>;
 

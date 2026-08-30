@@ -16,6 +16,16 @@ export interface MarcaDaguaDados {
   tamanhoRetrato: number;
 }
 
+export type OrientacaoMarcaDagua = 'paisagem' | 'retrato';
+
+export interface MarcaDaguaParaRelatorio {
+  habilitado: boolean;
+  fileUrl: string | null;
+  posicao: MarcaDaguaDados['posicao'];
+  opacidade: number;
+  tamanho: number;
+}
+
 interface MarcaDaguaRow {
   habilitado: boolean;
   file_url: string | null;
@@ -46,6 +56,49 @@ const emptyMarcaDagua: MarcaDaguaDados = {
   opacidadeRetrato: 15,
   tamanhoPaisagem: 35,
   tamanhoRetrato: 35,
+};
+
+const getOrientationValue = <T>(
+  orientationValue: T | null | undefined,
+  legacyValue: T | null | undefined,
+  fallback: T,
+) => orientationValue ?? legacyValue ?? fallback;
+
+/**
+ * Selects the persisted visual identity for a report orientation. This keeps
+ * previews, print reports and generated PDFs from choosing different fallback
+ * fields for the same configuration.
+ */
+export const resolveMarcaDaguaParaRelatorio = (
+  dados: MarcaDaguaDados | null | undefined,
+  orientacao: OrientacaoMarcaDagua,
+): MarcaDaguaParaRelatorio => {
+  if (!dados) {
+    return {
+      habilitado: false,
+      fileUrl: null,
+      posicao: 'centro',
+      opacidade: 15,
+      tamanho: 35,
+    };
+  }
+
+  const portrait = orientacao === 'retrato';
+  return {
+    habilitado: dados.habilitado,
+    fileUrl: portrait
+      ? getOrientationValue(dados.fileUrlRetrato, dados.fileUrl, null)
+      : getOrientationValue(dados.fileUrlPaisagem, dados.fileUrl, null),
+    posicao: portrait
+      ? getOrientationValue(dados.posicaoRetrato, dados.posicao, 'centro')
+      : getOrientationValue(dados.posicaoPaisagem, dados.posicao, 'centro'),
+    opacidade: portrait
+      ? getOrientationValue(dados.opacidadeRetrato, dados.opacidade, 15)
+      : getOrientationValue(dados.opacidadePaisagem, dados.opacidade, 15),
+    tamanho: portrait
+      ? getOrientationValue(dados.tamanhoRetrato, dados.tamanho, 35)
+      : getOrientationValue(dados.tamanhoPaisagem, dados.tamanho, 35),
+  };
 };
 
 const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {

@@ -43,7 +43,15 @@ interface AbaRotinasProps {
 }
 
 export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => {
-  const { rotinas, usuarios, clientes, saveRotinaAsync, deleteRotina, isSaving } = useAtividadesWorkspace();
+  const {
+    rotinas,
+    usuarios,
+    clientes,
+    saveRotinaAsync,
+    deleteRotina,
+    atribuirResponsavelRotinaProtocolo,
+    isSaving,
+  } = useAtividadesWorkspace();
   const {
     modelos,
     isLoadingModelos,
@@ -54,6 +62,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<FiltroRotinaTab>('todas');
   const [formError, setFormError] = useState('');
+  const [responsavelError, setResponsavelError] = useState('');
 
   const handleEditClick = (rotina: RotinaAtividade) => {
     setFormError('');
@@ -65,6 +74,16 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
     setFormError('');
     setForm(blankRotinaProgramadaForm());
     setIsDrawerOpen(true);
+  };
+
+  const handleAssignSystemRoutine = async (rotinaId: string, responsavelConfigUsuarioId: string) => {
+    if (!responsavelConfigUsuarioId) return;
+    setResponsavelError('');
+    try {
+      await atribuirResponsavelRotinaProtocolo(rotinaId, responsavelConfigUsuarioId);
+    } catch (error) {
+      setResponsavelError(error instanceof Error ? error.message : 'Não foi possível atribuir o responsável.');
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -113,6 +132,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
           <Plus size={16} /> Nova rotina
         </button>
       </div>
+      {responsavelError ? <div className="error-banner" role="alert">{responsavelError}</div> : null}
 
       {/* Abas de Categorias */}
       <div style={tabsWrapperStyle}>
@@ -178,25 +198,43 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ onConfigureModels }) => 
                     Frequência: <strong>{rotina.frequencia}</strong>
                   </span>
                   <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                    Modelo: <strong>{modelos.find((modelo) => modelo.id === rotina.modeloId)?.nome || 'Não vinculado'}</strong>
+                    {rotina.protocoloCodigo
+                      ? 'Gerada pela obrigação configurada'
+                      : <>Modelo: <strong>{modelos.find((modelo) => modelo.id === rotina.modeloId)?.nome || 'Não vinculado'}</strong></>}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button onClick={() => handleEditClick(rotina)} style={iconBtnStyle} title="Editar rotina" type="button">
-                    <Edit size={13} />
-                  </button>
-                  <button onClick={() => deleteRotina(rotina.id)} style={{ ...iconBtnStyle, color: '#ef4444' }} title="Arquivar rotina" type="button">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+                {!rotina.protocoloCodigo ? (
+                  <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                    <button onClick={() => handleEditClick(rotina)} style={iconBtnStyle} title="Editar rotina" type="button">
+                      <Edit size={13} />
+                    </button>
+                    <button onClick={() => deleteRotina(rotina.id)} style={{ ...iconBtnStyle, color: '#ef4444' }} title="Arquivar rotina" type="button">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               {/* Informações Centrais do Modelo */}
               <div style={cardMetaStyle}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={metaLabelStyle}>Responsável Padrão</span>
-                  <span style={metaValStyle}>{rotina.responsavel || 'Sem responsável'}</span>
+                  <span style={metaLabelStyle}>Responsável</span>
+                  {rotina.protocoloCodigo ? (
+                    <select
+                      aria-label={`Responsável da rotina ${rotina.nome}`}
+                      value={rotina.responsavelConfigUsuarioId || ''}
+                      disabled={isSaving}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => void handleAssignSystemRoutine(rotina.id, event.target.value)}
+                      style={{ ...metaValStyle, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '5px 7px' }}
+                    >
+                      <option value="">Selecionar responsável</option>
+                      {usuarios.map((usuario) => (
+                        <option key={usuario.configUsuarioId} value={usuario.configUsuarioId}>{usuario.nome}</option>
+                      ))}
+                    </select>
+                  ) : <span style={metaValStyle}>{rotina.responsavel || 'Sem responsável'}</span>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={metaLabelStyle}>Cliente / Vínculo</span>

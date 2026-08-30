@@ -1,0 +1,20 @@
+.report-print-watermark {
+  display: none;
+}
+
+@media print {
+  .report-print-watermark {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  .report-print-watermark__image {
+    position: absolute;
+    display: block;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+  }
+}

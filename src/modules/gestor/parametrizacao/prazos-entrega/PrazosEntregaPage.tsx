@@ -215,6 +215,8 @@ export const PrazosEntregaPage: React.FC = () => {
                     value={item.fechamento}
                     onChange={(event) => updateItem(item.id, { fechamento: event.target.value as TipoFechamentoEntrega })}
                   >
+                    <option value="diaria">Diária</option>
+                    <option value="semanal">Semanal</option>
                     <option value="mensal">Mensal</option>
                     <option value="quinzenal">Quinzenal</option>
                     <option value="trimestral">Trimestral</option>
