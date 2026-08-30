@@ -147,6 +147,7 @@ export const useAtividadesWorkspace = () => {
     isLoading: workspaceQuery.isLoading || permissoesQuery.isLoading,
     isWorkspaceError: workspaceQuery.isError || permissoesQuery.isError,
     workspaceError: workspaceQuery.error || permissoesQuery.error || null,
+    materializationError: null,
     reloadWorkspace: async () => {
       await workspaceQuery.refetch();
     },

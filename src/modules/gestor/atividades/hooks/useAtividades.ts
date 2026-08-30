@@ -51,6 +51,8 @@ const parseCompetenciaDate = (competencia: string) => {
 export interface UseAtividadesOptions {
   initialCompanyId?: string;
   initialCompetencia?: string;
+  /** Mantido para compatibilidade; atividades não são mais geradas ao abrir a tela. */
+  canMaterialize?: boolean;
   responsaveisPorGrupo?: Record<string, string>;
 }
 

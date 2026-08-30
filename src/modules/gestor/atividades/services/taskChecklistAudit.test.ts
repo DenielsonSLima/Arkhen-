@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildTaskAuditSummaries, type TarefaChecklistEventRow } from './taskChecklistAudit';
 
-const event = (patch: Partial<TarefaChecklistEventRow>): TarefaChecklistEventRow => ({
+const event = (patch: Partial<TarefaChecklistEventRow> = {}): TarefaChecklistEventRow => ({
   tarefa_id: 'task-1',
   tipo: 'checklist',
   ator_nome: 'Denielson',
