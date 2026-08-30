@@ -4,6 +4,10 @@ import { formatDateBR, type TarefaGestor } from '../services/rotinasAtividadesSe
 import { hasCompletionEvidence } from '../utils/completionEvidence';
 import { TaskReviewActions } from './TaskReviewActions';
 
+const formatDateTimeBR = (value?: string) => (
+  value ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : ''
+);
+
 interface TaskDetailsDrawerProps {
   selectedTask: TarefaGestor;
   onClose: () => void;
@@ -222,6 +226,20 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
           />
         </label>
 
+        {selectedTask.concluidoEm && (
+          <div style={{ border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: '8px', padding: '10px 12px' }}>
+            <strong style={{ display: 'block', color: '#166534', fontSize: '0.78rem' }}>
+              Concluída em {formatDateTimeBR(selectedTask.concluidoEm)}
+              {selectedTask.concluidoPor ? ` por ${selectedTask.concluidoPor}` : ''}
+            </strong>
+            {selectedTask.relatoConclusao && (
+              <span style={{ display: 'block', marginTop: '4px', color: '#166534', fontSize: '0.78rem' }}>
+                Registro: {selectedTask.relatoConclusao}
+              </span>
+            )}
+          </div>
+        )}
+
         <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
           Observações / bloqueio
           <textarea
@@ -308,8 +326,11 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                         background: '#e6fbf1',
                         padding: '2px 8px',
                         borderRadius: '6px',
+                        textAlign: 'right',
                       }}>
-                        ✓ Concluído
+                        ✓ {item.concluidoEm
+                          ? `Concluído em ${formatDateTimeBR(item.concluidoEm)}${item.concluidoPor ? ` por ${item.concluidoPor}` : ''}`
+                          : 'Concluído'}
                       </span>
                     )}
                   </div>

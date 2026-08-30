@@ -3,6 +3,7 @@ import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
 import { activityWriteError } from './rpcCompatibility';
 import { toLocalDateKey } from '../utils/localDateKey';
 import type { CompletionEvidence } from '../utils/completionEvidence';
+import { buildTaskAuditSummaries, type TaskAuditSummary, type TarefaChecklistEventRow } from './taskChecklistAudit';
 
 export { toLocalDateKey } from '../utils/localDateKey';
 
@@ -59,7 +60,7 @@ export interface TarefaGestor {
   prioridade: PrioridadeAtividade;
   status: StatusAtividadeGestor;
   origem: 'Rotina' | 'Manual' | 'Usuario' | 'Gestor';
-  checklist: Array<{ titulo: string; concluida: boolean }>;
+  checklist: Array<{ titulo: string; concluida: boolean; concluidoEm?: string; concluidoPor?: string }>;
   notas: string;
   dataHoraConclusao?: string;
   observacaoFalta?: string;
@@ -73,6 +74,8 @@ export interface TarefaGestor {
   conclusaoSolicitadaEm?: string;
   revisadoEm?: string;
   concluidoEm?: string;
+  concluidoPor?: string;
+  relatoConclusao?: string;
   bloqueada?: boolean;
   motivoBloqueio?: MotivoBloqueioAtividade;
   bloqueadaDesde?: string;
@@ -187,7 +190,7 @@ const toClienteRotina = (row: ClienteRotinaRow): ClienteRotina => ({
     : [],
 });
 
-const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
+const toTarefa = (row: TarefaGestorRow, audit?: TaskAuditSummary): TarefaGestor => ({
   id: row.id,
   rotinaId: row.rotina_id || undefined,
   clienteId: row.cliente_id || undefined,
@@ -202,7 +205,12 @@ const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   prioridade: row.prioridade || 'Média',
   status: row.status || 'Pendente',
   origem: row.origem || 'Manual',
-  checklist: Array.isArray(row.checklist) ? row.checklist : [],
+  checklist: Array.isArray(row.checklist)
+    ? row.checklist.map((item, index) => {
+      const completion = item.concluida ? audit?.checklistByIndex.get(index) : undefined;
+      return completion ? { ...item, ...completion } : item;
+    })
+    : [],
   notas: row.notas || '',
   dataHoraConclusao: row.data_hora_conclusao || undefined,
   observacaoFalta: row.observacao_falta || undefined,
@@ -216,6 +224,8 @@ const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   conclusaoSolicitadaEm: row.conclusao_solicitada_em || undefined,
   revisadoEm: row.revisado_em || undefined,
   concluidoEm: row.concluido_em || undefined,
+  concluidoPor: audit?.concluidoPor,
+  relatoConclusao: audit?.relatoConclusao,
 });
 
 export const rotinasAtividadesService = {
@@ -302,9 +312,23 @@ export const rotinasAtividadesService = {
       nome,
     }));
 
+    const tarefas = (tarefasData || []) as TarefaGestorRow[];
+    const { data: eventosData, error: eventosError } = tarefas.length > 0
+      ? await supabase
+        .from('atividades_tarefa_eventos')
+        .select('tarefa_id,tipo,ator_nome,motivo,dados,criado_em')
+        .eq('empresa_id', empresaId)
+        .in('tarefa_id', tarefas.map((tarefa) => tarefa.id))
+        .in('tipo', ['checklist', 'concluida'])
+        .order('criado_em', { ascending: false })
+      : { data: [], error: null };
+
+    if (eventosError) throw eventosError;
+    const auditByTask = buildTaskAuditSummaries((eventosData || []) as TarefaChecklistEventRow[]);
+
     return {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
-      tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
+      tarefas: tarefas.map((tarefa) => toTarefa(tarefa, auditByTask.get(tarefa.id))),
       usuarios,
       revisores: ((revisoresData || []) as Array<{
         config_usuario_id: string;
