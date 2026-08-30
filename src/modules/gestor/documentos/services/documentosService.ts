@@ -121,6 +121,7 @@ const mapEmpresaRow = (row: EmpresaRow): Company => ({
   documentos: [],
   pastasDocumentos: normalizeFolderPaths(row.pastas_documentos),
   categoriasDocumentos: normalizeDocumentCategoryNames(row.categorias_documentos),
+  polos: row.polos || [],
 });
 
 const getUserId = async () => {
@@ -250,7 +251,7 @@ export const documentosService = {
   async listCompanies(): Promise<Company[]> {
     const { data, error } = await supabase
       .from('clientes')
-      .select('id,nome,razao_social,cnpj,status,tipo,tipo_estabelecimento,email,telefone,endereco,cidade,uf,pastas_documentos,categorias_documentos')
+      .select('id,nome,razao_social,cnpj,status,tipo,tipo_estabelecimento,email,telefone,endereco,cidade,uf,pastas_documentos,categorias_documentos,polos')
       .order('nome', { ascending: true });
 
     if (error) throw new Error(`Erro ao buscar clientes no Supabase: ${error.message}`);

@@ -81,7 +81,7 @@ export const invalidateDocumentosQueries = (
 export const useDocumentosBaseQueries = (activeTab: DocumentosQueryTab) => {
   const shouldLoadSettings = activeTab !== 'solicitacoes' && activeTab !== 'compartilhados';
   const shouldLoadPersonalDocs = activeTab === 'meus' || activeTab === 'todos';
-  const shouldLoadCompanyDocs = activeTab === 'empresas' || activeTab === 'inativas' || activeTab === 'todos';
+  const shouldLoadCompanyDocs = activeTab === 'meus' || activeTab === 'empresas' || activeTab === 'inativas' || activeTab === 'todos';
 
   const settingsQuery = useQuery({
     queryKey: documentosKeys.settings(),

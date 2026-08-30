@@ -15,6 +15,7 @@ import { RenameFileModal } from './RenameFileModal';
 import { DocumentMoveDrawer, type DocumentMoveTarget } from './DocumentMoveDrawer';
 import { buildBreadcrumb, getDirectChildren, moveFolderTree } from '../utils/folderPaths';
 import { matchesDocumentFileType } from '../utils/fileTypeFilters';
+import { BibliotecaFiliaisFolders } from './BibliotecaFiliaisFolders';
 
 interface MeusDocumentosTabProps {
   meusDocs: MeusDocumentosData;
@@ -32,6 +33,8 @@ interface MeusDocumentosTabProps {
   onDownloadFolder?: (folderPath: string) => void;
   onDownload?: (doc: CompanyDocument) => void;
   onNotify?: (message: string) => void;
+  companies?: Company[];
+  onOpenBranchFolder?: (companyId: string, folderPath: string, companyName: string) => void;
 }
 
 export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
@@ -50,6 +53,8 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
   onDownloadFolder,
   onDownload,
   onNotify,
+  companies = [],
+  onOpenBranchFolder,
 }) => {
   // path completo da pasta atual (null = raiz)
   const [selectedFolder, setSelectedFolder] = useState<string | null>(() => initialSelectedFolder || null);
@@ -408,6 +413,10 @@ export const MeusDocumentosTab: React.FC<MeusDocumentosTabProps> = ({
             })}
           </div>
         </div>
+      )}
+
+      {isFolderNavigationVisible && selectedFolder === null && (
+        <BibliotecaFiliaisFolders companies={companies} onOpenBranchFolder={onOpenBranchFolder} />
       )}
 
       {/* Render Files */}

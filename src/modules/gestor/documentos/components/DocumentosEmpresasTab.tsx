@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentQuickPreview } from '../../gestao-empresarial/components/DocumentQuickPreview';
@@ -57,6 +57,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   onNotify,
 }) => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(() => initialSelectedCompanyId || null);
+  const previousSelectedCompanyId = useRef(selectedCompanyId);
 
   // Modals and operations state
   const [previewDoc, setPreviewDoc] = useState<CompanyDocument | null>(null);
@@ -82,9 +83,10 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     onCompanyChange?.(selectedCompanyId, selectedCompany?.nome);
   }, [onCompanyChange, selectedCompanyId, selectedCompany?.nome]);
 
-  // Clean folder path if we switch or reset the selected company
+  // Preserve a folder explicitly opened from Biblioteca; reset only after a manual company switch.
   useEffect(() => {
-    onFolderChange(null);
+    if (previousSelectedCompanyId.current !== selectedCompanyId) onFolderChange(null);
+    previousSelectedCompanyId.current = selectedCompanyId;
   }, [selectedCompanyId, onFolderChange]);
 
   const foldersList = useMemo(() => {

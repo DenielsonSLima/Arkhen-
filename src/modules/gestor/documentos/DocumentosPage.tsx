@@ -24,14 +24,12 @@ const DocumentosEmpresasTab = React.lazy(() => import('./components/DocumentosEm
 const TodosDocumentosTab = React.lazy(() => import('./components/TodosDocumentosTab').then((module) => ({ default: module.TodosDocumentosTab })));
 const SharedDocumentsTab = React.lazy(() => import('./components/SharedDocumentsTab').then((module) => ({ default: module.SharedDocumentsTab })));
 const SolicitacoesDocumentosTab = React.lazy(() => import('./components/SolicitacoesDocumentosTab').then((module) => ({ default: module.SolicitacoesDocumentosTab })));
-
 interface DocumentosPageProps {
   initialActiveTab?: DocumentosTab;
   initialPersonalFolder?: string | null;
   initialCompanyId?: string | null;
   onViewContextChange?: (context: InternalTabContext) => void;
 }
-
 export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   initialActiveTab,
   initialPersonalFolder,
@@ -94,22 +92,23 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       current.id === id && current.name === name ? current : { id, name }
     ));
   }, []);
-
+  const handleOpenBranchFolder = useCallback((companyId: string, folderPath: string, companyName: string) => {
+    setSelectedCompanyContext({ id: companyId, name: companyName });
+    setCompanyFolder(folderPath);
+    setActiveTab('empresas');
+  }, []);
   const showSuccessToast = useCallback((message: string) => {
     setSuccessToast(message);
   }, []);
-
   useEffect(() => {
     if (!successToast) return;
     const timer = window.setTimeout(() => setSuccessToast(null), 3200);
     return () => window.clearTimeout(timer);
   }, [successToast]);
-
   const titleSuffix = useMemo(
     () => getDocumentosTitleSuffix(activeTab, personalFolder, selectedCompanyContext.name),
     [activeTab, personalFolder, selectedCompanyContext.name],
   );
-
   useEffect(() => {
     onViewContextChange?.({
       titleSuffix,
@@ -120,7 +119,6 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       },
     });
   }, [activeTab, onViewContextChange, personalFolder, selectedCompanyContext.id, titleSuffix]);
-
   useEffect(() => {
     setCompanyFolder(null);
     setSelectedCompanyContext({ id: null });
@@ -411,6 +409,8 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 onDownloadFolder={(folderPath) => handleDownloadFolderZip('meus', folderPath)}
                 onDownload={handleDownloadDocument}
                 onNotify={showSuccessToast}
+                companies={companies}
+                onOpenBranchFolder={handleOpenBranchFolder}
               />
             ) : activeTab === 'empresas' || activeTab === 'inativas' ? (
               <DocumentosEmpresasTab
@@ -421,7 +421,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 searchTerm={searchTerm}
                 selectedCategoryFilter={selectedCategoryFilter}
                 fileTypeFilter={fileTypeFilter}
-                initialSelectedCompanyId={initialCompanyId}
+                initialSelectedCompanyId={selectedCompanyContext.id}
                 onCompanyChange={handleCompanyChange}
                 viewMode={viewMode}
                 onSaveCompanyDocs={saveCompanyDocs}

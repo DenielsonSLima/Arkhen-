@@ -60,6 +60,7 @@ export interface EmpresaRow {
   uf: string | null;
   pastas_documentos: string[] | null;
   categorias_documentos: string[] | null;
+  polos: NonNullable<Company['polos']> | null;
 }
 
 export interface DocumentCategoryRow {
