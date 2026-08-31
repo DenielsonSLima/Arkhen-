@@ -35,7 +35,7 @@ export const ClienteLogoUpload: React.FC<ClienteLogoUploadProps> = ({ logo, onLo
         ) : (
           <div className="logo-upload-placeholder">
             <ImagePlus size={28} />
-            <span>Logo do Cliente</span>
+            <span>Logo do Parceiro</span>
             <small>{isUploading ? 'Enviando...' : 'Clique para enviar PNG/JPG'}</small>
           </div>
         )}

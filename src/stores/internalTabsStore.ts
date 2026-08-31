@@ -24,6 +24,16 @@ export interface InternalTabsState {
 const STORAGE_KEY = 'contabil_internal_tabs_state';
 let tabSequence = 0;
 
+const normalizePersistedTitle = (moduleId: string, title: string) => {
+  if (moduleId === 'clientes' && title.startsWith('Clientes')) {
+    return `Parceiros${title.slice('Clientes'.length)}`;
+  }
+  if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Clientes')) {
+    return `Categorias de Parceiros${title.slice('Categorias de Clientes'.length)}`;
+  }
+  return title;
+};
+
 // Estado inicial
 let state: InternalTabsState = {
   tabs: [],
@@ -88,11 +98,15 @@ const hydrateFromStorage = (raw: string | null) => {
             const moduleId = isLegacyTab ? tab.id : tab.moduleId;
             const id = isLegacyTab ? `${tab.id}__migrated_${index}` : tab.id;
             if (isLegacyTab) legacyIdMap.set(tab.id, id);
+            const baseTitle = normalizePersistedTitle(
+              moduleId,
+              typeof tab.baseTitle === 'string' ? tab.baseTitle : tab.title,
+            );
             return {
               id,
               moduleId,
-              baseTitle: typeof tab.baseTitle === 'string' ? tab.baseTitle : tab.title,
-              title: tab.title,
+              baseTitle,
+              title: normalizePersistedTitle(moduleId, tab.title),
               iconName: tab.iconName,
               context: tab.context,
             };

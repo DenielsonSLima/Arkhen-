@@ -62,19 +62,19 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
         <span><strong>IE/IM:</strong> {company.inscricaoEstadual || '-'}</span>
         <span><strong>Email:</strong> {company.email || '-'}</span>
         <span><strong>Telefone:</strong> {company.telefone || '-'}</span>
-        <span><strong>Tipo:</strong> {company.categoriaCliente || 'Cliente Contábil'}</span>
+        <span><strong>Categoria:</strong> {company.categoriaCliente || 'Cliente Contábil'}</span>
       </div>
       
       <div className="company-card-footer" onClick={(event) => event.stopPropagation()}>
         <span><Building2 size={14} /> {company.polos?.length || 0} filiais</span>
         <div style={{ display: 'flex', gap: '4px' }}>
-          <button className="btn-icon-table" onClick={(event) => onEdit(event, company)} title="Editar Cliente">
+          <button className="btn-icon-table" onClick={(event) => onEdit(event, company)} title="Editar parceiro">
             <Edit3 size={14} />
           </button>
-          <button className="btn-icon-table" onClick={() => onToggleStatus(company)} title={isAtiva ? 'Inativar Cliente' : 'Ativar Cliente'}>
+          <button className="btn-icon-table" onClick={() => onToggleStatus(company)} title={isAtiva ? 'Inativar parceiro' : 'Ativar parceiro'}>
             {company.status === 'Inativa' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
           </button>
-          <button className="btn-icon-table delete" onClick={() => onDelete(company.id)} title="Excluir Cliente">
+          <button className="btn-icon-table delete" onClick={() => onDelete(company.id)} title="Excluir parceiro">
             <Trash2 size={14} />
           </button>
         </div>

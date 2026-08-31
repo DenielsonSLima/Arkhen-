@@ -47,7 +47,7 @@ const normalizeResponse = (value: unknown): SystemModulesResponse => {
 
 const fallbackModules: SystemModuleConfig[] = [
   ['inicio', 'Início', 'Painel inicial e indicadores do escritório.', 'Essenciais', true],
-  ['clientes', 'Clientes', 'Carteira, empresas e dados cadastrais.', 'Essenciais', true],
+  ['clientes', 'Parceiros', 'Carteira, empresas e dados cadastrais.', 'Essenciais', true],
   ['atividades', 'Atividades', 'Filas, rotinas e acompanhamento operacional.', 'Operação', false],
   ['conformidade', 'Conformidade', 'Obrigações e situação fiscal dos clientes.', 'Operação', false],
   ['protocolos', 'Protocolos', 'Solicitações, protocolos e entregas.', 'Operação', false],

@@ -1,5 +1,9 @@
 import { supabase } from '../../../../lib/supabase';
 import {
+  getClienteContabilPartnerTypeId,
+  isPartnerClassificationSchemaError,
+} from '../../gestao-empresarial/services/partnerClassificationService';
+import {
   gerarCorFundo,
   getCurrentEmpresaId,
   isUuid,
@@ -123,11 +127,30 @@ export async function getUsuarioAgendaAtual(): Promise<UsuarioAgenda | null> {
 
 export async function getEmpresasAgenda(): Promise<Array<{ id: string; nome: string }>> {
   const empresaId = await getCurrentEmpresaId();
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('id,nome')
-    .eq('empresa_id', empresaId)
-    .order('nome', { ascending: true });
+  const partnerTypeId = await getClienteContabilPartnerTypeId();
+  const request = partnerTypeId
+    ? supabase
+      .from('clientes')
+      .select('id,nome')
+      .eq('empresa_id', empresaId)
+      .eq('tipo_parceiro_id', partnerTypeId)
+      .order('nome', { ascending: true })
+    : supabase
+      .from('clientes')
+      .select('id,nome')
+      .eq('empresa_id', empresaId)
+      .order('nome', { ascending: true });
+
+  const { data, error } = await request;
+  if (error && partnerTypeId && isPartnerClassificationSchemaError(error.message)) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('clientes')
+      .select('id,nome')
+      .eq('empresa_id', empresaId)
+      .order('nome', { ascending: true });
+    if (legacyError) throw legacyError;
+    return (legacyData || []).map((cliente) => ({ id: cliente.id, nome: cliente.nome }));
+  }
 
   if (error) throw error;
   return (data || []).map((cliente) => ({ id: cliente.id, nome: cliente.nome }));

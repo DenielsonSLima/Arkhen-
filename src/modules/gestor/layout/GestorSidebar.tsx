@@ -26,7 +26,7 @@ const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-tipos-empresa', label: 'Tipos de Empresa' },
   { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
   { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
-  { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },
+  { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Parceiros' },
   { id: 'parametrizacao-cnae', label: 'CNAE' },
   { id: 'parametrizacao-regras', label: 'Impostos' },
   { id: 'parametrizacao-parametros-calculo', label: 'Parâmetros de Cálculo' },
@@ -48,7 +48,7 @@ const ATIVIDADES_ITEMS = [
 
 const MENU_ITEMS = {
   inicio: { id: 'inicio', label: 'Início', icon: LayoutDashboard },
-  clientes: { id: 'clientes', label: 'Clientes', icon: Building2 },
+  clientes: { id: 'clientes', label: 'Parceiros', icon: Building2 },
   parametrizacao: { id: 'parametrizacao', label: 'Parametrização', icon: Database },
   atividades: { id: 'atividades', label: 'Atividades', icon: ClipboardList },
   conformidade: { id: 'conformidade', label: 'Conformidade', icon: ShieldCheck },

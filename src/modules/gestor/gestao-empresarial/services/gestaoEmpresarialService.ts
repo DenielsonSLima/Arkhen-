@@ -1,5 +1,9 @@
 import { supabase } from '../../../../lib/supabase';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
+import {
+  getClienteContabilPartnerTypeId,
+  isPartnerClassificationSchemaError,
+} from './partnerClassificationService';
 
 export interface SalaryHistoryEntry {
   data: string;
@@ -98,6 +102,9 @@ export interface Company {
   cnaeDescricao?: string;
   tipo: 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
   categoriaCliente?: string;
+  tipoParceiroId?: string;
+  tipoEmpresaId?: string;
+  naturezaJuridicaId?: string;
   tipoEstabelecimento: 'Matriz' | 'Filial';
   logo?: string;
   funcionariosCount: number;
@@ -145,6 +152,9 @@ interface ClienteRow {
   cnpj: string | null;
   tipo: CompanyType | null;
   categoria_cliente: string | null;
+  tipo_parceiro_id?: string | null;
+  tipo_empresa_id?: string | null;
+  natureza_juridica_id?: string | null;
   tipo_estabelecimento: CompanyEstablishmentType | null;
   logo: string | null;
   funcionarios_count: number | null;
@@ -208,6 +218,9 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   cnaeDescricao: row.cnae_descricao || undefined,
   tipo: row.tipo || 'Simples Nacional',
   categoriaCliente: row.categoria_cliente || undefined,
+  tipoParceiroId: row.tipo_parceiro_id || undefined,
+  tipoEmpresaId: row.tipo_empresa_id || undefined,
+  naturezaJuridicaId: row.natureza_juridica_id || undefined,
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
   logo: row.logo || undefined,
   funcionariosCount: row.funcionarios_count || row.funcionarios?.length || 0,
@@ -234,7 +247,8 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   createdAt: row.created_at || undefined,
 });
 
-const mapCompanyToPayload = (company: Company) => ({
+const mapCompanyToPayload = (company: Company) => {
+  const payload: Record<string, unknown> = {
   nome: company.nome || '',
   razao_social: company.razaoSocial || company.nome || '',
   cnae: company.cnae || null,
@@ -265,7 +279,20 @@ const mapCompanyToPayload = (company: Company) => ({
   historico_corporativo: company.historicoCorporativo || [],
   certificados: company.certificados || [],
   polos: company.polos || [],
-});
+  };
+
+  if (
+    company.tipoParceiroId !== undefined
+    || company.tipoEmpresaId !== undefined
+    || company.naturezaJuridicaId !== undefined
+  ) {
+    payload.tipo_parceiro_id = company.tipoParceiroId || null;
+    payload.tipo_empresa_id = company.tipoEmpresaId || null;
+    payload.natureza_juridica_id = company.naturezaJuridicaId || null;
+  }
+
+  return payload;
+};
 
 const mapCompanyToPayloadWithoutCnae = (company: Company) => {
   const { cnae, cnaeDescricao, ...payload } = mapCompanyToPayload(company) as Record<string, unknown>;
@@ -313,6 +340,13 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
     if (error) throw error;
     return mapRowToCompany(data as ClienteRow);
   } catch (error) {
+    if (error instanceof Error && isPartnerClassificationSchemaError(error.message)) {
+      throw new Error(
+        'A estrutura de classificações de parceiros ainda não está disponível neste ambiente. '
+        + 'Aplique a migration do projeto antes de salvar o novo cadastro.'
+      );
+    }
+
     if (error instanceof Error && isCnaeSchemaError(error.message)) {
       if (isUpdate) {
         const { data, error: fallbackError } = await supabase
@@ -340,15 +374,40 @@ const saveWithFallback = async (updatedCompany: Company, isUpdate: boolean) => {
   }
 };
 
-export const gestaoEmpresarialService = {
-  async getCompanies(): Promise<Company[]> {
-    const { data, error } = await supabase
+const loadCompanies = async (tipoParceiroId?: string): Promise<Company[]> => {
+  const request = tipoParceiroId
+    ? supabase
+      .from('clientes')
+      .select('*')
+      .eq('tipo_parceiro_id', tipoParceiroId)
+      .order('nome', { ascending: true })
+    : supabase
       .from('clientes')
       .select('*')
       .order('nome', { ascending: true });
 
-    if (error) throw new Error(`Erro ao buscar clientes: ${error.message}`);
-    return ((data || []) as ClienteRow[]).map(mapRowToCompany);
+  const { data, error } = await request;
+  if (error) throw new Error(`Erro ao buscar parceiros: ${error.message}`);
+  return ((data || []) as ClienteRow[]).map(mapRowToCompany);
+};
+
+export const gestaoEmpresarialService = {
+  async getPartners(): Promise<Company[]> {
+    return loadCompanies();
+  },
+
+  async getCompanies(): Promise<Company[]> {
+    const clientPartnerTypeId = await getClienteContabilPartnerTypeId();
+    if (!clientPartnerTypeId) return loadCompanies();
+
+    try {
+      return await loadCompanies(clientPartnerTypeId);
+    } catch (error) {
+      if (error instanceof Error && isPartnerClassificationSchemaError(error.message)) {
+        return loadCompanies();
+      }
+      throw error;
+    }
   },
 
   async getCompanyById(id: string): Promise<Company | null> {

@@ -1,5 +1,9 @@
 import { supabase } from '../../../../lib/supabase';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
+import {
+  getClienteContabilPartnerTypeId,
+  isPartnerClassificationSchemaError,
+} from '../../gestao-empresarial/services/partnerClassificationService';
 
 export interface ClienteEmpresa {
   id: string;
@@ -143,12 +147,30 @@ const toInstancia = (row: InstanciaRow): AtividadeInstancia => ({
 
 export const atividadesService = {
   async getClientes(): Promise<ClienteEmpresa[]> {
-    const { data, error } = await supabase
-      .from('clientes')
-      .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
-      .eq('status', 'Ativa')
-      .order('nome', { ascending: true });
+    const partnerTypeId = await getClienteContabilPartnerTypeId();
+    const request = partnerTypeId
+      ? supabase
+        .from('clientes')
+        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .eq('status', 'Ativa')
+        .eq('tipo_parceiro_id', partnerTypeId)
+        .order('nome', { ascending: true })
+      : supabase
+        .from('clientes')
+        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .eq('status', 'Ativa')
+        .order('nome', { ascending: true });
 
+    const { data, error } = await request;
+    if (error && partnerTypeId && isPartnerClassificationSchemaError(error.message)) {
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('clientes')
+        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .eq('status', 'Ativa')
+        .order('nome', { ascending: true });
+      if (legacyError) throw legacyError;
+      return ((legacyData || []) as ClienteRow[]).map(toCliente);
+    }
     if (error) throw error;
     return ((data || []) as ClienteRow[]).map(toCliente);
   },
@@ -156,12 +178,13 @@ export const atividadesService = {
   async saveCliente(cliente: ClienteEmpresa): Promise<ClienteEmpresa> {
     const empresaId = await getCurrentEmpresaId();
     const isUpdating = isUuid(cliente.id);
+    const partnerTypeId = await getClienteContabilPartnerTypeId();
 
     if (!isUpdating) {
       await planosContratacaoService.assertCanCreateCompany();
     }
 
-    const payload = {
+    const basePayload = {
       empresa_id: empresaId,
       nome: cliente.nome,
       cnpj: cliente.cnpj,
@@ -171,12 +194,21 @@ export const atividadesService = {
       modelos_ativos: cliente.modelosAtivos || [],
       status: 'Ativa',
     };
+    const payload = partnerTypeId
+      ? { ...basePayload, tipo_parceiro_id: partnerTypeId }
+      : basePayload;
 
-    const request = isUpdating
-      ? supabase.from('clientes').update(payload).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
-      : supabase.from('clientes').insert(payload).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single();
+    const save = async (data: typeof basePayload | typeof payload) => (
+      isUpdating
+        ? supabase.from('clientes').update(data).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
+        : supabase.from('clientes').insert(data).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
+    );
 
-    const { data, error } = await request;
+    let { data, error } = await save(payload);
+    if (error && partnerTypeId && isPartnerClassificationSchemaError(error.message)) {
+      ({ data, error } = await save(basePayload));
+    }
+
     if (error) throw error;
     return toCliente(data as ClienteRow);
   },

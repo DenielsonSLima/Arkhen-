@@ -11,7 +11,7 @@ export type GlobalSearchResult = {
   id: string;
   label: string;
   description: string;
-  type: 'Módulo' | 'Cliente' | 'Documento' | 'Configuração';
+  type: 'Módulo' | 'Parceiro' | 'Documento' | 'Configuração';
   moduleId: string;
   context?: InternalTabContext;
   configSubTab?: string;
@@ -90,7 +90,7 @@ export const useGestorGlobalSearch = (
         id: `company-${company.id}`,
         label: company.nome,
         description: `${company.cnpj} • ${company.status}`,
-        type: 'Cliente',
+        type: 'Parceiro',
         moduleId: 'clientes',
         context: { titleSuffix: company.nome, data: { selectedCompanyId: company.id } },
       }));

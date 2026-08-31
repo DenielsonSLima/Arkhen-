@@ -36,7 +36,7 @@ export const GestorHeader: React.FC<GestorHeaderProps> = ({
         <Search size={18} className="search-icon" />
         <input
           type="text"
-          placeholder="Buscar clientes, empresas, documentos..."
+          placeholder="Buscar parceiros, empresas, documentos..."
           value={searchTerm}
           onChange={(event) => onSearchTermChange(event.target.value)}
           onFocus={() => onSearchFocusChange(true)}

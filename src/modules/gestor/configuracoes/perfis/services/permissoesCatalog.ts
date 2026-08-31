@@ -6,10 +6,10 @@ export interface PermissaoCatalogItem {
 
 export const permissoesCatalog: PermissaoCatalogItem[] = [
   { chave: 'inicio:view', nome: 'Ver inicio', grupo: 'Operacao' },
-  { chave: 'clientes:view', nome: 'Ver clientes', grupo: 'Clientes' },
-  { chave: 'clientes:create', nome: 'Criar clientes', grupo: 'Clientes' },
-  { chave: 'clientes:update', nome: 'Editar clientes', grupo: 'Clientes' },
-  { chave: 'clientes:delete', nome: 'Excluir clientes', grupo: 'Clientes' },
+  { chave: 'clientes:view', nome: 'Ver parceiros', grupo: 'Parceiros' },
+  { chave: 'clientes:create', nome: 'Criar parceiros', grupo: 'Parceiros' },
+  { chave: 'clientes:update', nome: 'Editar parceiros', grupo: 'Parceiros' },
+  { chave: 'clientes:delete', nome: 'Excluir parceiros', grupo: 'Parceiros' },
   { chave: 'parametrizacao:view', nome: 'Ver parametrizacao', grupo: 'Cadastros' },
   { chave: 'parametrizacao:manage', nome: 'Gerenciar parametrizacao', grupo: 'Cadastros' },
   { chave: 'agenda:view', nome: 'Ver agenda', grupo: 'Operacao' },

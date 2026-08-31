@@ -19,6 +19,11 @@ import {
   type CatalogoItem,
   type CatalogoTipo,
 } from '../services/catalogosService';
+import {
+  NATUREZAS_JURIDICAS_DEFAULTS,
+  TIPOS_EMPRESA_DEFAULTS,
+  TIPOS_PARCEIROS_DEFAULTS,
+} from '../services/partnerClassificationCatalogDefaults';
 import './ParametrizacaoPlaceholder.css';
 
 type ParametrizacaoKind = 'tipos-empresa' | 'natureza-juridica' | 'tipos-parceiros' | 'tipos-documentos';
@@ -39,44 +44,36 @@ interface ParametrizacaoKindConfig {
   integrationNote: string;
 }
 
+const toParametrizacaoItems = (items: CatalogoDefaultItem[]): ParametrizacaoItem[] => (
+  items.map((item) => ({
+    id: item.codigo,
+    nome: item.nome,
+    descricao: item.descricao,
+    status: item.ativo === false ? 'Inativo' : item.sistema ? 'Padrão' : 'Ativo',
+  }))
+);
+
 const PARAMETRIZACAO_CONFIGS: Record<ParametrizacaoKind, ParametrizacaoKindConfig> = {
   'tipos-empresa': {
     title: 'Tipos de Empresa',
-    description: 'Classifique clientes por porte, enquadramento operacional e modelo de atendimento do escritório.',
+    description: 'Classifique parceiros por porte, enquadramento operacional e modelo de relacionamento com o escritório.',
     icon: <Building2 size={22} />,
-    integrationNote: 'Vinculado diretamente ao cadastro de Clientes na aba de dados fiscais/societários para segmentar as rotinas do escritório.',
-    defaultItems: [
-      { id: 'te-1', nome: 'Pessoa Física', descricao: 'Cliente PF/autônomo sem CNPJ, usado para atendimentos e rotinas pessoais.', status: 'Padrão' },
-      { id: 'te-2', nome: 'MEI', descricao: 'Microempreendedor individual com rotinas simplificadas.', status: 'Padrão' },
-      { id: 'te-3', nome: 'Microempresa', descricao: 'Empresa cliente com faturamento e obrigações de pequeno porte.', status: 'Ativo' },
-      { id: 'te-4', nome: 'Empresa de Pequeno Porte', descricao: 'Cliente com maior volume fiscal, contábil e trabalhista.', status: 'Ativo' },
-      { id: 'te-5', nome: 'Isenta / Imune', descricao: 'Entidade ou operação com tratamento tributário diferenciado.', status: 'Ativo' },
-      { id: 'te-6', nome: 'Holding / Patrimonial', descricao: 'Empresa com acompanhamento societário e documental específico.', status: 'Ativo' },
-    ],
+    integrationNote: 'Vinculado diretamente ao cadastro de Parceiros na aba de dados fiscais e societários para segmentar as rotinas do escritório.',
+    defaultItems: toParametrizacaoItems(TIPOS_EMPRESA_DEFAULTS),
   },
   'natureza-juridica': {
     title: 'Natureza Jurídica',
-    description: 'Organize as naturezas jurídicas usadas no cadastro e nas rotinas fiscais dos clientes.',
+    description: 'Organize as naturezas jurídicas usadas no cadastro e nas rotinas fiscais dos parceiros.',
     icon: <Landmark size={22} />,
-    integrationNote: 'Alimenta o cadastro societário de Clientes e impacta as simulações tributárias de constituição de novas empresas.',
-    defaultItems: [
-      { id: 'nj-1', nome: 'Empresário Individual', descricao: 'Pessoa física titular de atividade empresarial.', status: 'Ativo' },
-      { id: 'nj-2', nome: 'Sociedade Limitada', descricao: 'Empresa formada por sócios com quotas de participação.', status: 'Padrão' },
-      { id: 'nj-3', nome: 'Sociedade Limitada Unipessoal', descricao: 'Modelo societário com um único titular.', status: 'Ativo' },
-      { id: 'nj-4', nome: 'Associação Privada', descricao: 'Entidade sem fins lucrativos com obrigações próprias.', status: 'Ativo' },
-    ],
+    integrationNote: 'Alimenta o cadastro societário de Parceiros e impacta as simulações tributárias de constituição de novas empresas.',
+    defaultItems: toParametrizacaoItems(NATUREZAS_JURIDICAS_DEFAULTS),
   },
   'tipos-parceiros': {
     title: 'Tipos de Parceiros',
     description: 'Padronize categorias de parceiros, canais comerciais e relações de indicação.',
     icon: <Handshake size={22} />,
     integrationNote: 'Utilizado no CRM e no controle financeiro de faturamento para calcular comissões e rastrear origem de leads.',
-    defaultItems: [
-      { id: 'tp-1', nome: 'Cliente Contábil', descricao: 'Empresa atendida diretamente pelo escritório.', status: 'Padrão' },
-      { id: 'tp-2', nome: 'Parceiro Comercial', descricao: 'Origem de indicações e oportunidades comerciais.', status: 'Ativo' },
-      { id: 'tp-3', nome: 'Fornecedor', descricao: 'Prestador ou fornecedor vinculado às rotinas internas.', status: 'Ativo' },
-      { id: 'tp-4', nome: 'Correspondente', descricao: 'Parceiro operacional para demandas locais.', status: 'Ativo' },
-    ],
+    defaultItems: toParametrizacaoItems(TIPOS_PARCEIROS_DEFAULTS),
   },
   'tipos-documentos': {
     title: 'Tipos de Documentos',

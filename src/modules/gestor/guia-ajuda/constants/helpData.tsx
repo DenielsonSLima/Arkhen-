@@ -32,16 +32,16 @@ export const HELP_DATA: HelpModule[] = [
     ],
   },
   {
-    titulo: 'Clientes',
+    titulo: 'Parceiros',
     icone: <Users size={18} />,
-    descricao: 'Cadastro e gestão dos dados dos clientes da contabilidade.',
-    objetivo: 'Centralizar dados civis/fiscais e histórico de rotina de cada cliente.',
-    comoUsa: 'Abra clientes, filtre por regime/status e selecione uma empresa para ver: dados cadastrais, filiais e obrigações da empresa.',
+    descricao: 'Cadastro e gestão da carteira de parceiros da contabilidade.',
+    objetivo: 'Centralizar dados cadastrais e, para cada cliente contábil, dados fiscais e histórico de rotina.',
+    comoUsa: 'Abra Parceiros, filtre os clientes contábeis por regime/status e selecione uma empresa para ver dados cadastrais, filiais e obrigações.',
     submodulos: [
       {
-        nome: 'Lista de clientes',
+        nome: 'Lista de parceiros',
         descricao: 'Pesquisa por nome, status, regime e mudança de visão em tabela/card.',
-        comoUsar: 'Use para cadastrar, editar ou consultar rapidamente o cadastro principal de cada cliente.',
+        comoUsar: 'Use para cadastrar, editar ou consultar rapidamente o cadastro principal de cada parceiro.',
       },
       {
         nome: 'Detalhes da empresa',
@@ -64,13 +64,13 @@ export const HELP_DATA: HelpModule[] = [
     titulo: 'Parametrização',
     icone: <Database size={18} />,
     descricao: 'Configurações de base do sistema para padronizar prazos, tributos, regimes e parametrizacao.',
-    objetivo: 'Evitar retrabalho e manter consistência entre clientes e contas.',
+    objetivo: 'Evitar retrabalho e manter consistência entre parceiros e contas.',
     comoUsa: 'Preencha as bases antes de começar as operações recorrentes. Isso acelera tarefas e evita erro de classificação.',
     submodulos: [
       { nome: 'Regimes Tributários', descricao: 'Catalogação de regimes e regras principais.', comoUsar: 'Selecione o regime correto em parametrizacao e relatórios.' },
       { nome: 'Catálogo de Obrigações', descricao: 'Tipos de obrigação/protocolo da empresa.', comoUsar: 'Use como padrão ao configurar obrigações por cliente.' },
       { nome: 'Tipos de Empresa / Natureza Jurídica / Parceiros', descricao: 'Classificações da base administrativa.', comoUsar: 'Utilize para filtros e segmentações rápidas.' },
-      { nome: 'Categorias de Clientes', descricao: 'Segmentação de carteira.', comoUsar: 'Crie grupos para relatórios e prioridade operacional.' },
+      { nome: 'Categorias de Parceiros', descricao: 'Segmentação de carteira.', comoUsar: 'Crie grupos para relatórios e prioridade operacional.' },
       { nome: 'Impostos', descricao: 'Regras e tabelas de cálculo.', comoUsar: 'Defina parâmetros para simulações e consistência.' },
       { nome: 'Obrigações', descricao: 'Definição de prazos-padrão.', comoUsar: 'Garante calendário fiscal completo e menos omissões.' },
       { nome: 'Tipos de Documentos', descricao: 'Classificação documental.', comoUsar: 'Usado para organização no módulo Documentos.' },

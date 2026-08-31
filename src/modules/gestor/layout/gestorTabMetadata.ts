@@ -1,11 +1,11 @@
 export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   inicio: { title: 'Início', iconName: 'LayoutDashboard' },
-  clientes: { title: 'Clientes', iconName: 'Building2' },
+  clientes: { title: 'Parceiros', iconName: 'Building2' },
   'parametrizacao-regimes': { title: 'Regimes Tributários', iconName: 'Database' },
   'parametrizacao-tipos-empresa': { title: 'Tipos de Empresa', iconName: 'Database' },
   'parametrizacao-natureza-juridica': { title: 'Natureza Jurídica', iconName: 'Database' },
   'parametrizacao-tipos-parceiros': { title: 'Tipos de Parceiros', iconName: 'Database' },
-  'parametrizacao-categorias-clientes': { title: 'Categorias de Clientes', iconName: 'Database' },
+  'parametrizacao-categorias-clientes': { title: 'Categorias de Parceiros', iconName: 'Database' },
   'parametrizacao-cnae': { title: 'CNAE', iconName: 'Database' },
   'parametrizacao-regras': { title: 'Impostos', iconName: 'Database' },
   'parametrizacao-documentos': { title: 'Tipos de Documentos', iconName: 'Database' },

@@ -16,7 +16,7 @@ const DEFAULT_CATEGORIAS: CatalogoDefaultItem[] = [
   {
     codigo: 'cliente-contabil',
     nome: 'Cliente Contábil',
-    descricao: 'Empresa sob assessoria e contabilidade regular.',
+    descricao: 'Parceiro sob assessoria e contabilidade regular.',
   },
   {
     codigo: 'entidade-isenta',
@@ -31,12 +31,12 @@ const DEFAULT_CATEGORIAS: CatalogoDefaultItem[] = [
   {
     codigo: 'outro',
     nome: 'Outro',
-    descricao: 'Categorias de clientes gerais ou excepcionais.',
+    descricao: 'Categorias de parceiros gerais ou excepcionais.',
   },
   {
     codigo: 'pessoa-fisica',
     nome: 'Pessoa Física',
-    descricao: 'Cliente individual sem CNPJ, rotinas de IRPF ou pessoais.',
+    descricao: 'Parceiro individual sem CNPJ, rotinas de IRPF ou pessoais.',
   },
 ];
 

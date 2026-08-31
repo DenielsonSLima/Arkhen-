@@ -1,74 +1,43 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ArrowLeft, Check, FolderTree, Loader2, Search } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Check, FolderTree, Loader2 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
+import { usePartnerClassifications } from '../hooks/usePartnerClassifications';
 import {
   DEFAULT_PASTAS_DOCUMENTOS,
   expandFolderPaths,
 } from '../../parametrizacao/pastas-padrao/services/pastasPadraoService';
 import { useActivePastasPadraoQuery } from '../../parametrizacao/pastas-padrao/services/usePastasPadraoQueries';
 import { ClienteLogoUpload } from './components/ClienteLogoUpload';
+import { ClienteAddressFields } from './components/ClienteAddressFields';
+import { ClienteContactFields } from './components/ClienteContactFields';
+import { ClienteIdentificationFields } from './components/ClienteIdentificationFields';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
+import {
+  getDefaultCompanyTypeId,
+  type DocumentType,
+  type RegimeCliente,
+} from './clienteFormModel';
 import './ClienteForm.css';
 
 interface ClienteAddFormProps {
-  onSave: (company: Company) => void;
+  onSave: (company: Company) => Promise<void>;
   onCancel: () => void;
   onSearchCNPJ: (cnpj: string) => Promise<CompanyLookupDraft>;
   isSaving: boolean;
 }
 
-type DocumentType = 'CPF' | 'CNPJ';
-type RegimeCliente = Company['tipo'];
-type CategoriaCliente = string;
 type FormStep = 'identificacao' | 'contato' | 'endereco' | 'pastas';
 
-const regimes: RegimeCliente[] = ['PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
 const fallbackPastas = expandFolderPaths(DEFAULT_PASTAS_DOCUMENTOS.map((item) => item.caminho));
 const formSteps: Array<{ id: FormStep; label: string; description: string }> = [
-  { id: 'identificacao', label: '1. Identificação', description: 'Informe documento, regime, razão social e classificação do cliente.' },
+  { id: 'identificacao', label: '1. Identificação', description: 'Informe documento, regime e classificações do parceiro.' },
   { id: 'contato', label: '2. Contatos', description: 'Cadastre o responsável, telefone e e-mail principal.' },
   { id: 'endereco', label: '3. Endereço fiscal', description: 'Preencha a localização fiscal da empresa ou pessoa física.' },
-  { id: 'pastas', label: '4. Pastas padrão', description: 'Revise a estrutura de pastas que será criada em Documentos.' },
+  { id: 'pastas', label: '4. Pastas padrão', description: 'Revise a estrutura de pastas que será criada em Documentos para o parceiro.' },
 ];
-
-// Funções utilitárias de formatação
-const formatCPF = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 11);
-  return digits
-    .replace(/^(\d{3})(\d)/, '$1.$2')
-    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-};
-
-const formatCNPJ = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 14);
-  return digits
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4')
-    .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
-};
-
-const formatPhone = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 10) {
-    return digits
-      .replace(/^(\d{2})(\d)/, '($1) $2')
-      .replace(/^\((\d{2})\)\s*(\d{4})(\d)/, '($1) $2-$3');
-  }
-  return digits
-    .replace(/^(\d{2})(\d)/, '($1) $2')
-    .replace(/^\((\d{2})\)\s*(\d{5})(\d)/, '($1) $2-$3');
-};
-
-const formatCEP = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 8);
-  return digits.replace(/^(\d{5})(\d)/, '$1-$2');
-};
-
 
 export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel, onSearchCNPJ, isSaving }) => {
   const [step, setStep] = useState<FormStep>('identificacao');
@@ -79,7 +48,10 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnae, setCnae] = useState('');
   const [tipo, setTipo] = useState<RegimeCliente>('Simples Nacional');
-  const [categoria, setCategoria] = useState<CategoriaCliente>('Cliente Contábil');
+  const [categoria, setCategoria] = useState('Cliente Contábil');
+  const [tipoParceiroId, setTipoParceiroId] = useState('');
+  const [tipoEmpresaId, setTipoEmpresaId] = useState('');
+  const [naturezaJuridicaId, setNaturezaJuridicaId] = useState('');
   const [logo, setLogo] = useState('');
   
   const [showAddCatModal, setShowAddCatModal] = useState(false);
@@ -105,6 +77,13 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [pastasTouched, setPastasTouched] = useState(false);
   
   const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const {
+    partnerTypes,
+    companyTypes,
+    legalNatures,
+    defaults: classificationDefaults,
+    isLoading: isLoadingClassifications,
+  } = usePartnerClassifications();
   const pastasPadraoQuery = useActivePastasPadraoQuery();
 
   const availablePastas = useMemo(() => {
@@ -119,6 +98,21 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     setSelectedPastas(availablePastas);
   }, [availablePastas, pastasTouched]);
 
+  useEffect(() => {
+    if (!tipoParceiroId && classificationDefaults.partnerType?.id) {
+      setTipoParceiroId(classificationDefaults.partnerType.id);
+    }
+    if (!categoria && classificationDefaults.clientCategory?.nome) {
+      setCategoria(classificationDefaults.clientCategory.nome);
+    }
+    if (docType === 'CPF') {
+      const pessoaFisicaId = getDefaultCompanyTypeId(companyTypes, 'PF');
+      if (pessoaFisicaId && tipoEmpresaId !== pessoaFisicaId) {
+        setTipoEmpresaId(pessoaFisicaId);
+      }
+    }
+  }, [classificationDefaults, companyTypes, docType, tipoEmpresaId, tipoParceiroId, categoria]);
+
 
   const handleDocTypeChange = (type: DocumentType) => {
     setDocType(type);
@@ -127,9 +121,13 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       setTipo('PF');
       setCategoria('Pessoa Física');
       setCnae('');
+      setNaturezaJuridicaId('');
+      setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
       setTipo('Simples Nacional');
       setCategoria('Cliente Contábil');
+      setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
+      setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
     }
   };
 
@@ -170,6 +168,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       cnae,
       tipo,
       categoriaCliente: categoria,
+      tipoParceiroId,
+      tipoEmpresaId: tipoEmpresaId || undefined,
+      naturezaJuridicaId: naturezaJuridicaId || undefined,
       tipoEstabelecimento: 'Matriz',
       logo,
       funcionariosCount: 0,
@@ -200,6 +201,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (docType === 'CPF' && cleanDoc.length !== 11) return 'CPF incompleto.';
     if (!razaoSocial.trim()) return docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.';
     if (!nomeFantasia.trim()) return docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.';
+    if (!tipoParceiroId) return 'Selecione o tipo de parceiro.';
+    if (docType === 'CNPJ' && !tipoEmpresaId) return 'Selecione o tipo de empresa.';
+    if (docType === 'CNPJ' && !naturezaJuridicaId) return 'Selecione a natureza jurídica.';
 
     return null;
   };
@@ -216,7 +220,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     setStep(formSteps[currentStepIndex - 1].id);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 'identificacao') {
       const validationError = validateIdentificacao();
@@ -233,7 +237,11 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       return;
     }
 
-    onSave(buildCompanyDraft());
+    try {
+      await onSave(buildCompanyDraft());
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Erro ao salvar o parceiro.');
+    }
   };
 
   const togglePasta = (path: string) => {
@@ -279,7 +287,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   return (
     <div className="cliente-form-container">
       <div className="cliente-form-header">
-        <h2>Cadastrar Cliente</h2>
+        <h2>Cadastrar Parceiro</h2>
         <p>{currentStepInfo.description}</p>
       </div>
 
@@ -318,253 +326,75 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
 
         <div className="cliente-form-main-fields">
           {step === 'identificacao' && (
-          <div className="form-fields-section">
-            <h4 className="form-fields-section-title">Identificação Básica</h4>
-            <div className="fields-grid">
-              <div className="input-container field-col-6">
-                <label>{docType} *</label>
-                {docType === 'CNPJ' ? (
-                  <div className="cnpj-search-wrapper">
-                    <input
-                      type="text"
-                      className="input-style"
-                      placeholder="00.000.000/0000-00"
-                      value={cnpj}
-                      onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
-                    />
-                    <button
-                      type="button"
-                      className="cnpj-search-btn"
-                      onClick={handleLookup}
-                      disabled={isSearching || !cnpj}
-                    >
-                      {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                      Buscar
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    className="input-style"
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => setCpf(formatCPF(e.target.value))}
-                  />
-                )}
-              </div>
-
-              <div className="input-container field-col-6">
-                <label>Regime / Tipo</label>
-                <select
-                  className="input-style"
-                  value={tipo}
-                  onChange={(e) => setTipo(e.target.value as RegimeCliente)}
-                  disabled={docType === 'CPF'}
-                >
-                  {regimes.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="input-container field-col-6">
-                <label>{docType === 'CNPJ' ? 'Razão Social *' : 'Nome Completo *'}</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder={docType === 'CNPJ' ? 'Ex: Tech Solutions Ltda' : 'Ex: João da Silva'}
-                  value={razaoSocial}
-                  onChange={(e) => setRazaoSocial(e.target.value)}
-                />
-              </div>
-
-              <div className="input-container field-col-6">
-                <label>{docType === 'CNPJ' ? 'Nome Fantasia *' : 'Apelido *'}</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder={docType === 'CNPJ' ? 'Ex: Tech Solutions' : 'Ex: João'}
-                  value={nomeFantasia}
-                  onChange={(e) => setNomeFantasia(e.target.value)}
-                />
-              </div>
-
-              {docType === 'CNPJ' && (
-                <div className="input-container field-col-6">
-                  <label>CNAE</label>
-                  <input
-                    type="text"
-                    className="input-style"
-                    placeholder="Ex: 62.01-5-01"
-                    value={cnae}
-                    onChange={(e) => setCnae(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div className="input-container field-col-6">
-                <label>Categoria do Cliente</label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <select
-                    className="input-style"
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value)}
-                    disabled={docType === 'CPF'}
-                    style={{ flex: 1 }}
-                  >
-                    {availableCategories.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCatModal(true)}
-                    disabled={docType === 'CPF'}
-                    style={{
-                      backgroundColor: 'rgba(197, 146, 53, 0.08)',
-                      border: '1px solid var(--color-gold-primary)',
-                      color: 'var(--color-gold-dark)',
-                      borderRadius: '6px',
-                      width: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: docType === 'CPF' ? 'not-allowed' : 'pointer',
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      transition: 'all 0.2s',
-                      flexShrink: 0
-                    }}
-                    title="Criar nova categoria de cliente"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className="input-container field-col-6">
-                <label>IE / IM</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="Inscrição Estadual ou Municipal"
-                  value={ieIm}
-                  onChange={(e) => setIeIm(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+            <ClienteIdentificationFields
+              docType={docType}
+              cnpj={cnpj}
+              cpf={cpf}
+              razaoSocial={razaoSocial}
+              nomeFantasia={nomeFantasia}
+              cnae={cnae}
+              tipo={tipo}
+              tipoParceiroId={tipoParceiroId}
+              tipoEmpresaId={tipoEmpresaId}
+              naturezaJuridicaId={naturezaJuridicaId}
+              categoria={categoria}
+              ieIm={ieIm}
+              partnerTypes={partnerTypes}
+              companyTypes={companyTypes}
+              legalNatures={legalNatures}
+              availableCategories={availableCategories}
+              isClassificationsLoading={isLoadingClassifications}
+              isSearching={isSearching}
+              isDisabled={isSaving}
+              showDetailedPlaceholders
+              onCnpjChange={setCnpj}
+              onCpfChange={setCpf}
+              onRazaoSocialChange={setRazaoSocial}
+              onNomeFantasiaChange={setNomeFantasia}
+              onCnaeChange={setCnae}
+              onTipoChange={setTipo}
+              onTipoParceiroChange={setTipoParceiroId}
+              onTipoEmpresaChange={setTipoEmpresaId}
+              onNaturezaJuridicaChange={setNaturezaJuridicaId}
+              onCategoriaChange={setCategoria}
+              onIeImChange={setIeIm}
+              onLookup={handleLookup}
+              onOpenCategoryModal={() => setShowAddCatModal(true)}
+            />
           )}
 
           {step === 'contato' && (
-          <div className="form-fields-section">
-            <h4 className="form-fields-section-title">Contatos Principais</h4>
-            <div className="fields-grid">
-              <div className="input-container field-col-4">
-                <label>Contato Responsável</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="Nome do contato"
-                  value={contato}
-                  onChange={(e) => setContato(e.target.value)}
-                />
-              </div>
-
-              <div className="input-container field-col-4">
-                <label>Telefone</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="(00) 00000-0000"
-                  value={telefone}
-                  onChange={(e) => setTelefone(formatPhone(e.target.value))}
-                />
-              </div>
-
-              <div className="input-container field-col-4">
-                <label>E-mail</label>
-                <input
-                  type="email"
-                  className="input-style"
-                  placeholder="financeiro@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+            <ClienteContactFields
+              contato={contato}
+              telefone={telefone}
+              email={email}
+              onContatoChange={setContato}
+              onTelefoneChange={setTelefone}
+              onEmailChange={setEmail}
+            />
           )}
 
           {step === 'endereco' && (
-          <div className="form-fields-section">
-            <h4 className="form-fields-section-title">Localização / Endereço Fiscal</h4>
-            <div className="fields-grid">
-              <div className="input-container field-col-3">
-                <label>CEP</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="00000-000"
-                  value={cep}
-                  onChange={(e) => setCep(formatCEP(e.target.value))}
-                />
-              </div>
-
-              <div className="input-container field-col-6">
-                <label>Endereço (Rua, Número, Comp.)</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="Ex: Av. Paulista, 1200 - Apto 34"
-                  value={endereco}
-                  onChange={(e) => setEndereco(e.target.value)}
-                />
-              </div>
-
-              <div className="input-container field-col-3">
-                <label>Bairro</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="Ex: Bela Vista"
-                  value={bairro}
-                  onChange={(e) => setBairro(e.target.value)}
-                />
-              </div>
-
-              <div className="input-container field-col-9">
-                <label>Cidade</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="Ex: São Paulo"
-                  value={cidade}
-                  onChange={(e) => setCidade(e.target.value)}
-                />
-              </div>
-
-              <div className="input-container field-col-3">
-                <label>UF</label>
-                <input
-                  type="text"
-                  className="input-style"
-                  placeholder="SP"
-                  maxLength={2}
-                  value={uf}
-                  onChange={(e) => setUf(e.target.value.toUpperCase())}
-                />
-              </div>
-            </div>
-          </div>
+            <ClienteAddressFields
+              endereco={endereco}
+              bairro={bairro}
+              cep={cep}
+              cidade={cidade}
+              uf={uf}
+              onEnderecoChange={setEndereco}
+              onBairroChange={setBairro}
+              onCepChange={setCep}
+              onCidadeChange={setCidade}
+              onUfChange={setUf}
+            />
           )}
 
           {step === 'pastas' && (
             <div className="form-fields-section cliente-folder-step">
               <div className="cliente-folder-step-header">
                 <div>
-                  <h4 className="form-fields-section-title">Pastas da Empresa</h4>
-                  <p>Essas pastas ficarão disponíveis na aba Documentos logo após salvar o cliente.</p>
+                  <h4 className="form-fields-section-title">Pastas do parceiro</h4>
+                  <p>Essas pastas ficarão disponíveis na aba Documentos logo após salvar o parceiro.</p>
                 </div>
                 <div className="cliente-folder-step-actions">
                   <button type="button" onClick={selectAllPastas}>Selecionar todas</button>
@@ -610,7 +440,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
             </button>
             <button type="submit" className="btn-submit" disabled={isSaving}>
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-              {isLastStep ? 'Salvar Cliente' : 'Avançar'}
+              {isLastStep ? 'Salvar Parceiro' : 'Avançar'}
             </button>
           </div>
         </div>

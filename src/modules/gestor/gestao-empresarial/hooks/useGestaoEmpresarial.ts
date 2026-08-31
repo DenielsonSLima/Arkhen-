@@ -33,7 +33,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const companiesQuery = useQuery({
     queryKey: clientesKeys.all,
-    queryFn: gestaoEmpresarialService.getCompanies,
+    queryFn: gestaoEmpresarialService.getPartners,
     staleTime: 30_000,
   });
 
@@ -134,7 +134,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
       const savedCompany = await saveMutation.mutateAsync(payload);
       setShowFormModal(false);
       setEditingCompany(null);
-      setSuccessMsg(company.id ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
+      setSuccessMsg(company.id ? 'Parceiro atualizado com sucesso!' : 'Parceiro cadastrado com sucesso!');
       setTimeout(() => setSuccessMsg(null), 3000);
       if (!company.id) setSelectedCompanyId(savedCompany.id);
     } finally {
@@ -144,7 +144,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const syncCompanyCnae = async (company: Company) => {
     if (company.tipo === 'PF') {
-      throw new Error('Cliente PF não possui CNAE.');
+      throw new Error('Parceiro pessoa física não possui CNAE.');
     }
 
     const cnpj = company.cnpj.replace(/\D/g, '');

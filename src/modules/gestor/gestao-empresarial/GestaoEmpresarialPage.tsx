@@ -8,6 +8,7 @@ import { SystemQuickModal } from '../components/SystemQuickModal';
 import { ClienteDetail } from './components/ClienteDetail';
 import { ClienteCard } from './components/ClienteCard';
 import { ClienteAddForm } from './forms/ClienteAddForm';
+import { usePartnerClassifications } from './hooks/usePartnerClassifications';
 import './GestaoEmpresarial.css';
 import './GestaoEmpresarialLayoutFixes.css';
 import '../shared/RegimeBadges.css';
@@ -69,6 +70,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     activeDetailTab,
     isLoading,
   } = useGestaoEmpresarial({ initialCompanyId, initialDetailTab });
+  const { partnerTypes } = usePartnerClassifications();
 
   useLayoutEffect(() => {
     window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
@@ -159,16 +161,19 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
   }
 
   const regimes = ['Todos', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+  const getPartnerTypeName = (company: Company) => (
+    partnerTypes.find((item) => item.id === company.tipoParceiroId)?.nome || '-'
+  );
 
   return (
     <div className="gestao-empresarial-container animate-fade-in">
       <div className="gestao-empresarial-header-row">
         <div className="gestao-empresarial-title">
-          <h1>Clientes</h1>
-          <p>Cadastre clientes, consulte CNPJ, classifique regime, adicione logo e gerencie filiais.</p>
+          <h1>Parceiros</h1>
+          <p>Centralize a carteira de parceiros e mantenha os dados fiscais e operacionais dos clientes contábeis.</p>
         </div>
         <button className="btn-add-user" onClick={openAdd}>
-          <Plus size={16} /> Adicionar Cliente
+          <Plus size={16} /> Adicionar Parceiro
         </button>
       </div>
 
@@ -186,7 +191,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
       <div className="gestao-controls-bar">
         <div className="search-input-wrapper">
           <Search size={16} className="search-icon-inside" />
-          <input type="text" placeholder="Buscar por cliente, razão social ou CNPJ..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+          <input type="text" placeholder="Buscar por parceiro, razão social ou CNPJ..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
         </div>
         <div className="category-filter-tabs">
           {regimes.map((regime) => (
@@ -206,12 +211,12 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
       ) : hasNoResults ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '56px 24px', color: '#111827', fontWeight: 700 }}>
           <Building2 size={22} />
-          <span>Nenhum cliente cadastrado</span>
+          <span>Nenhum parceiro cadastrado</span>
         </div>
       ) : viewMode === 'table' ? (
         <div className="table-responsive">
           <table className="config-table">
-            <thead><tr><th>Cliente</th><th>CNPJ</th><th>Tipo</th><th>Cidade/UF</th><th>Contato</th><th>Status</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Parceiro</th><th>CNPJ</th><th>Regime</th><th>Tipo de parceiro</th><th>Cidade/UF</th><th>Contato</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>{filteredCompanies.map((company) => (
               <tr key={company.id} onClick={() => {
                 setSelectedCompanyId(company.id);
@@ -220,6 +225,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
                 <td><strong>{company.nome}</strong><br /><small>{company.razaoSocial}</small></td>
                 <td>{company.cnpj}</td>
                 <td><span className={`regime-badge ${getRegimeClass(company.tipo)}`}>{company.tipo}</span></td>
+                <td>{getPartnerTypeName(company)}</td>
                 <td>{company.cidade || '-'}{company.uf ? `/${company.uf}` : ''}</td>
                 <td>{company.email || company.telefone || '-'}</td>
                 <td>{company.status}</td>
@@ -239,7 +245,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
                 <h2 className="companies-regime-title">
                   {regime}
                   <span>
-                    {companiesInRegime.length} {companiesInRegime.length === 1 ? 'cliente' : 'clientes'}
+                    {companiesInRegime.length} {companiesInRegime.length === 1 ? 'parceiro' : 'parceiros'}
                   </span>
                 </h2>
                 <div className="companies-cards-grid">
@@ -296,8 +302,8 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
 
       <SystemQuickModal
         isOpen={!!clienteToDelete}
-        title="Excluir Cliente"
-        message={`Tem certeza de que deseja excluir o cliente "${clienteToDelete?.nome || ''}"? Como não há arquivos vinculados em Documentos, as pastas e subpastas vazias dessa empresa também serão removidas.`}
+        title="Excluir Parceiro"
+        message={`Tem certeza de que deseja excluir o parceiro "${clienteToDelete?.nome || ''}"? Como não há arquivos vinculados em Documentos, as pastas e subpastas vazias dessa empresa também serão removidas.`}
         confirmLabel="Excluir"
         cancelLabel="Cancelar"
         danger
@@ -307,9 +313,9 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
 
       <SystemQuickModal
         isOpen={!!clienteWithDocs}
-        title="Cliente com arquivos"
-        message={`O cliente "${clienteWithDocs?.company.nome || ''}" possui ${clienteWithDocs?.count || 0} arquivo(s) na aba Documentos. Para excluir definitivamente, primeiro apague os arquivos da pasta da empresa em Documentos. Como alternativa, você pode apenas inativar a empresa.`}
-        confirmLabel="Inativar empresa"
+        title="Parceiro com arquivos"
+        message={`O parceiro "${clienteWithDocs?.company.nome || ''}" possui ${clienteWithDocs?.count || 0} arquivo(s) na aba Documentos. Para excluir definitivamente, primeiro apague os arquivos da pasta do parceiro. Como alternativa, você pode apenas inativá-lo.`}
+        confirmLabel="Inativar parceiro"
         cancelLabel="Manter ativa"
         danger
         onConfirm={inactivateCompanyWithDocs}

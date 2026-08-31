@@ -95,8 +95,8 @@ export const CategoriaClientePage: React.FC = () => {
               <Database size={22} style={{ color: 'var(--color-gold-primary)' }} />
             </span>
             <div>
-              <h2 className="parametrizacao-page-title">Categorias de Clientes</h2>
-              <p>Gerencie as categorias de clientes usadas para classificar e organizar o atendimento no escritório.</p>
+              <h2 className="parametrizacao-page-title">Categorias de Parceiros</h2>
+              <p>Gerencie as categorias de parceiros usadas para classificar e organizar os relacionamentos do escritório.</p>
             </div>
           </div>
           <button type="button" className="btn-add-user" onClick={handleOpenAdd}>
@@ -134,13 +134,13 @@ export const CategoriaClientePage: React.FC = () => {
               ) : categoriasQuery.error ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', color: '#b91c1c', padding: '32px' }}>
-                    Erro ao carregar categorias de clientes.
+                    Erro ao carregar categorias de parceiros.
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', color: '#64748b', padding: '32px' }}>
-                    Nenhuma categoria de cliente encontrada.
+                    Nenhuma categoria de parceiro encontrada.
                   </td>
                 </tr>
               ) : (
@@ -191,7 +191,7 @@ export const CategoriaClientePage: React.FC = () => {
           <form className="cliente-form-container" onSubmit={handleSave} style={{ maxWidth: '480px' }}>
             <div className="cliente-form-header">
               <h2>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</h2>
-              <p>Preencha os dados da categoria de cliente.</p>
+              <p>Preencha os dados da categoria de parceiro.</p>
             </div>
 
             {error && (

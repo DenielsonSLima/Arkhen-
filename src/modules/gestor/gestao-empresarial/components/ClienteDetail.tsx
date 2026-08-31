@@ -20,6 +20,7 @@ import type { ClientBranch, Company } from '../services/gestaoEmpresarialService
 import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { cnpjLookupService } from '../services/cnpjLookupService';
 import { ClienteEditForm } from '../forms/ClienteEditForm';
+import { PartnerClassificationSummary } from './PartnerClassificationSummary';
 import { FilialForm } from '../forms/FilialForm';
 import { TabProtocolosEntregas } from './TabProtocolosEntregas';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
@@ -137,7 +138,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
             <ArrowLeft size={16} /> Voltar
           </button>
           <div className="breadcrumb-links">
-            <span>Clientes</span>
+            <span>Parceiros</span>
             <span className="divider">/</span>
             <span className="current">{company.nome}</span>
           </div>
@@ -299,10 +300,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
                     <label>Regime de Tributação</label>
                     <p>{company.tipo || '-'}</p>
                   </div>
-                  <div className="detail-field-box">
-                    <label>Categoria do Cliente</label>
-                    <p>{company.categoriaCliente || 'Cliente Contábil'}</p>
-                  </div>
+                  <PartnerClassificationSummary company={company} />
                   <div className="detail-field-box">
                     <label>Inscrição Estadual / IM</label>
                     <p>{company.inscricaoEstadual || '-'}</p>
