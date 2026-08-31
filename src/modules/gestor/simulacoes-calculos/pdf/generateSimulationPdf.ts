@@ -4,6 +4,7 @@ import type {
   SimulationPdfInput,
   SimulationPdfRow,
 } from './simulationPdfTypes';
+import { resolveWatermarkDimensions } from './watermarkGeometry';
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -61,17 +62,13 @@ const drawWatermark = (doc: JsPdfDocument, input: SimulationPdfInput) => {
   const sizePercent = Math.max(0, Math.min(100, watermark.size ?? 35));
   const opacityPercent = Math.max(0, Math.min(100, watermark.opacity ?? 10));
   if (sizePercent === 0 || opacityPercent === 0) return;
-  const maxW = CONTENT_WIDTH * (sizePercent / 100);
-  const maxH = (PAGE_HEIGHT - 40) * (sizePercent / 100);
   const aspect = watermark.aspectRatio && watermark.aspectRatio > 0 ? watermark.aspectRatio : 1;
-
-  let width = maxW;
-  let height = width / aspect;
-
-  if (height > maxH) {
-    height = maxH;
-    width = height * aspect;
-  }
+  const { width, height } = resolveWatermarkDimensions(
+    PAGE_WIDTH,
+    PAGE_HEIGHT,
+    aspect,
+    sizePercent,
+  );
 
   const position = watermark.position ?? 'centro';
   let x = (PAGE_WIDTH - width) / 2;
