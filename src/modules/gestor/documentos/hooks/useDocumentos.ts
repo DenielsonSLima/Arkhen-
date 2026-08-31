@@ -152,7 +152,7 @@ export const useDocumentos = (options: UseDocumentosOptions = {}) => {
     realtimeError: documentosRealtime.error,
     isRealtimeConnected: documentosRealtime.isConnected,
     isLoading: settingsQuery.isLoading
-      || (activeTab === 'meus' && (personalDocsQuery.isLoading || companiesQuery.isLoading || companyDocsQuery.isLoading))
+      || (activeTab === 'meus' && personalDocsQuery.isLoading)
       || ((activeTab === 'empresas' || activeTab === 'inativas') && (companiesQuery.isLoading || companyDocsQuery.isLoading))
       || (activeTab === 'todos' && (personalDocsQuery.isLoading || companiesQuery.isLoading || companyDocsQuery.isLoading)),
   };

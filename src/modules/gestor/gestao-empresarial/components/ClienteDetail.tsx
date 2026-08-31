@@ -87,7 +87,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
 
   const handleSaveBranch = async (branch: ClientBranch) => {
     const nextBranches = branch.id && polos.some((p) => p.id === branch.id)
-      ? polos.map((p) => (p.id === branch.id ? branch : p))
+      ? polos.map((p) => (p.id === branch.id ? { ...p, ...branch } : p))
       : [...polos, { ...branch, id: branch.id || `polo-${Date.now()}`, companyId: company.id }];
     
     await onUpdateCompany({ ...company, polos: nextBranches });

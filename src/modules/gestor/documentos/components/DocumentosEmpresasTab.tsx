@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { DocumentQuickPreview } from '../../gestao-empresarial/components/DocumentQuickPreview';
@@ -6,22 +6,25 @@ import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { OrganizedDocumentList } from './OrganizedDocumentList';
 import type { DocumentGroupBy, DocumentSortBy } from '../utils/documentOrganization';
 
-// Imported modular modals and utilities
 import { RenameFileModal } from './RenameFileModal';
 import { DocumentMoveDrawer, type DocumentMoveTarget } from './DocumentMoveDrawer';
 import { DocumentosEmpresasBrowser } from './DocumentosEmpresasBrowser';
-import { getDirectChildren, moveFolderTree } from '../utils/folderPaths';
+import { moveFolderTree } from '../utils/folderPaths';
 import { matchesDocumentFileType } from '../utils/fileTypeFilters';
+import { useCompanyLibraryWorkspace } from '../hooks/useCompanyLibraryWorkspace';
 
 interface DocumentosEmpresasTabProps {
   companies: Company[];
+  statusFilter: Company['status'];
   selectedDocIds: string[];
   toggleSelectDoc: (docId: string) => void;
   searchTerm: string;
   selectedCategoryFilter: string;
   fileTypeFilter: string;
   initialSelectedCompanyId?: string | null;
-  onCompanyChange?: (companyId: string | null, companyName?: string) => void;
+  initialSelectedEntryKey?: string | null;
+  onCompanyChange?: (companyId: string | null, companyName?: string, entryKey?: string | null) => void;
+  onClearSearch?: () => void;
   viewMode: 'list' | 'grid' | 'compact';
   onSaveCompanyDocs?: (company: Company) => Promise<void> | void;
   selectedFolder: string | null;
@@ -39,13 +42,16 @@ type CompanyDocumentWithCompany = CompanyDocument & {
 
 export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   companies,
+  statusFilter,
   selectedDocIds,
   toggleSelectDoc,
   searchTerm,
   selectedCategoryFilter,
   fileTypeFilter,
   initialSelectedCompanyId,
+  initialSelectedEntryKey,
   onCompanyChange,
+  onClearSearch,
   viewMode: initialViewMode,
   onSaveCompanyDocs,
   selectedFolder,
@@ -56,10 +62,6 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   onDownload,
   onNotify,
 }) => {
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(() => initialSelectedCompanyId || null);
-  const previousSelectedCompanyId = useRef(selectedCompanyId);
-
-  // Modals and operations state
   const [previewDoc, setPreviewDoc] = useState<CompanyDocument | null>(null);
   const [renameDocId, setRenameDocId] = useState<string | null>(null);
   const [renameDocName, setRenameDocName] = useState('');
@@ -74,51 +76,43 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   } | null>(null);
 
   const viewMode = initialViewMode;
-
-  const selectedCompany = useMemo(() => {
-    return companies.find(c => c.id === selectedCompanyId) || null;
-  }, [companies, selectedCompanyId]);
-
-  useEffect(() => {
-    onCompanyChange?.(selectedCompanyId, selectedCompany?.nome);
-  }, [onCompanyChange, selectedCompanyId, selectedCompany?.nome]);
-
-  // Preserve a folder explicitly opened from Biblioteca; reset only after a manual company switch.
-  useEffect(() => {
-    if (previousSelectedCompanyId.current !== selectedCompanyId) onFolderChange(null);
-    previousSelectedCompanyId.current = selectedCompanyId;
-  }, [selectedCompanyId, onFolderChange]);
-
-  const foldersList = useMemo(() => {
-    return selectedCompany?.pastasDocumentos || [];
-  }, [selectedCompany?.pastasDocumentos]);
-
-  const documents = useMemo(() => {
-    return selectedCompany?.documentos || [];
-  }, [selectedCompany?.documentos]);
-
-  const isProtectedBranchFolder = (path: string) => path === 'Filiais'
-    || (selectedCompany?.polos || []).some((branch) => branch.documentFolderPath === path || branch.documentFolderPath?.startsWith(`${path}/`));
-
-  // Subpastas diretas da pasta atual do cliente selecionado
-  const currentSubFolders = useMemo(
-    () => getDirectChildren(foldersList, selectedFolder),
-    [foldersList, selectedFolder]
+  const {
+    entries,
+    selectedEntryKey,
+    setSelectedEntryKey,
+    selectedEntry,
+    selectedCompany,
+    workspaceRootPath,
+    currentFolder,
+    foldersList,
+    workspaceDocuments,
+    ownerFolders,
+    ownerDocuments,
+    currentSubFolders,
+    isAtWorkspaceRoot,
+    parentFolder,
+    siblingFolders,
+    breadcrumbs,
+    protectedBranchRoots,
+  } = useCompanyLibraryWorkspace({
+    companies,
+    statusFilter,
+    initialSelectedCompanyId,
+    initialSelectedEntryKey,
+    selectedFolder,
+    onFolderChange,
+    onCompanyChange,
+  });
+  const isProtectedBranchFolder = (path: string) => protectedBranchRoots.some(
+    (root) => path === root || root.startsWith(`${path}/`),
   );
-  const parentFolder = useMemo(() => {
-    if (!selectedFolder) return null;
-    const parts = selectedFolder.split('/');
-    parts.pop();
-    return parts.length > 0 ? parts.join('/') : null;
-  }, [selectedFolder]);
-  const siblingFolders = useMemo(() => {
-    if (!selectedFolder) return [];
-    const currentName = selectedFolder.split('/').at(-1);
-    return getDirectChildren(foldersList, parentFolder).filter((folder) => folder !== currentName);
-  }, [foldersList, parentFolder, selectedFolder]);
+  const isWorkspaceFolder = (path: string) => foldersList.includes(path);
+  const isWorkspaceTarget = (path: string | null) => (
+    path === workspaceRootPath || (path !== null && isWorkspaceFolder(path))
+  );
   const moveTargets = useMemo<DocumentMoveTarget[]>(() => {
     const targets: DocumentMoveTarget[] = [];
-    if (selectedFolder) {
+    if (currentFolder && !isAtWorkspaceRoot) {
       targets.push({
         key: parentFolder ?? '__root__',
         label: parentFolder ? `Voltar para ${parentFolder.split('/').at(-1)}` : 'Mover para a raiz',
@@ -136,8 +130,8 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
       });
     }
     currentSubFolders.forEach((shortName) => {
-      const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
-      const filesInFolder = documents.filter(d => {
+      const fullPath = currentFolder ? `${currentFolder}/${shortName}` : shortName;
+      const filesInFolder = workspaceDocuments.filter(d => {
         if (!d.pasta) return false;
         return d.pasta === fullPath || d.pasta.startsWith(fullPath + '/');
       }).length;
@@ -149,57 +143,43 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
       });
     });
     return targets;
-  }, [currentSubFolders, documents, parentFolder, selectedFolder, siblingFolders]);
-
-  // Custom company breadcrumbs
-  const breadcrumbs = useMemo(() => {
-    const crumbs: { label: string; path: string | null }[] = [{ label: selectedCompany?.nome || '', path: null }];
-    if (!selectedFolder) return crumbs;
-    const parts = selectedFolder.split('/');
-    parts.forEach((part, index) => {
-      crumbs.push({ label: part, path: parts.slice(0, index + 1).join('/') });
-    });
-    return crumbs;
-  }, [selectedCompany?.nome, selectedFolder]);
+  }, [currentFolder, currentSubFolders, isAtWorkspaceRoot, parentFolder, siblingFolders, workspaceDocuments]);
 
   const isFolderNavigationVisible = !searchTerm.trim()
     && selectedCategoryFilter === 'Todos'
     && fileTypeFilter === 'Todos';
   const hasFolderContent = isFolderNavigationVisible && currentSubFolders.length > 0;
 
-  // Flat array of all documents from all companies, with company names injected
   const allCompaniesDocs = useMemo(() => {
-    return companies.flatMap(c => 
-      (c.documentos || []).map(d => ({
+    return entries.flatMap(entry =>
+      entry.documents.map(d => ({
         ...d,
-        empresaNome: c.nome
+        empresaNome: entry.displayName
       }))
     );
-  }, [companies]);
+  }, [entries]);
 
   const selectedCompanyDocs = useMemo<CompanyDocumentWithCompany[]>(() => {
-    if (!selectedCompany) return [];
-    return documents.map(d => ({
+    if (!selectedEntry) return [];
+    return workspaceDocuments.map(d => ({
       ...d,
-      empresaNome: selectedCompany.nome,
+      empresaNome: selectedEntry.displayName,
     }));
-  }, [selectedCompany, documents]);
+  }, [selectedEntry, workspaceDocuments]);
 
-  // Filtered documents list
   const filteredDocs = useMemo(() => {
-    let list = selectedCompany ? selectedCompanyDocs : allCompaniesDocs;
+    let list = selectedEntry ? selectedCompanyDocs : allCompaniesDocs;
 
-    if (selectedCompany && !searchTerm.trim()) {
+    if (selectedEntry && !searchTerm.trim()) {
       const isFileFilterActive = selectedCategoryFilter !== 'Todos' || fileTypeFilter !== 'Todos';
       list = list.filter(d => {
         const folder = d.pasta ?? null;
-        if (isFileFilterActive && !selectedFolder) return true;
-        if (!isFileFilterActive || !selectedFolder) return folder === selectedFolder;
-        return folder === selectedFolder || Boolean(folder?.startsWith(`${selectedFolder}/`));
+        if (isFileFilterActive && !currentFolder) return true;
+        if (!isFileFilterActive || !currentFolder) return folder === currentFolder;
+        return folder === currentFolder || Boolean(folder?.startsWith(`${currentFolder}/`));
       });
     }
 
-    // Apply category filter
     if (selectedCategoryFilter !== 'Todos') {
       list = list.filter(d => d.tipo === selectedCategoryFilter);
     }
@@ -208,7 +188,6 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
       list = list.filter(d => matchesDocumentFileType(d, fileTypeFilter));
     }
 
-    // Apply search filter
     if (searchTerm.trim()) {
       const lowerSearch = searchTerm.toLowerCase();
       list = list.filter(d => 
@@ -220,17 +199,14 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     }
 
     return list;
-  }, [selectedCompany, selectedCompanyDocs, allCompaniesDocs, selectedCategoryFilter, fileTypeFilter, searchTerm, selectedFolder]);
+  }, [selectedEntry, selectedCompanyDocs, allCompaniesDocs, selectedCategoryFilter, fileTypeFilter, searchTerm, currentFolder]);
 
-  // Determine if we should show the folder layout or unrolled search results
-  const isGlobalSearchActive = selectedCompanyId === null && searchTerm.trim() !== '';
-
-  // --- Core CRUD Handlers for Company Folder / Files ---
+  const isGlobalSearchActive = selectedEntryKey === null && searchTerm.trim() !== '';
 
   const handleDeleteFolder = (shortName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!selectedCompany) return;
-    const fullPath = selectedFolder ? `${selectedFolder}/${shortName}` : shortName;
+    const fullPath = currentFolder ? `${currentFolder}/${shortName}` : shortName;
 
     if (isProtectedBranchFolder(fullPath)) {
       setQuickModal({ title: 'Pasta vinculada à filial', message: 'Esta pasta é criada automaticamente para a filial e não pode ser removida pela Biblioteca.' });
@@ -238,7 +214,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     }
 
     const prefix = fullPath + '/';
-    const folderFiles = documents.filter(
+    const folderFiles = ownerDocuments.filter(
       d => d.pasta === fullPath || (d.pasta && d.pasta.startsWith(prefix))
     );
 
@@ -258,28 +234,39 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
       onConfirm: () => {
         onSaveCompanyDocs?.({
           ...selectedCompany,
-          pastasDocumentos: foldersList.filter(f => f !== fullPath && !f.startsWith(prefix))
+          pastasDocumentos: ownerFolders.filter(f => f !== fullPath && !f.startsWith(prefix))
         });
       },
     });
   };
 
-  const handleMoveFolder = (sourcePath: string, targetPath: string | null) => {
+  const handleMoveFolder = async (sourcePath: string, targetPath: string | null) => {
     if (!selectedCompany) return;
+    if (!isWorkspaceFolder(sourcePath) || !isWorkspaceTarget(targetPath)) {
+      setQuickModal({ title: 'Movimentação inválida', message: 'A pasta não pertence à empresa ou filial selecionada.' });
+      return;
+    }
     if (isProtectedBranchFolder(sourcePath)) {
       setQuickModal({ title: 'Pasta vinculada à filial', message: 'Esta pasta é criada automaticamente para a filial e não pode ser movida pela Biblioteca.' });
       return;
     }
-    const moved = moveFolderTree(sourcePath, targetPath, foldersList, documents);
+    const moved = moveFolderTree(sourcePath, targetPath, ownerFolders, ownerDocuments);
     if (!moved) return;
     const updatedCompany: Company = {
       ...selectedCompany,
       pastasDocumentos: moved.pastas,
       documentos: moved.documentos
     };
-    onSaveCompanyDocs?.(updatedCompany);
-    if (selectedFolder && (selectedFolder === sourcePath || selectedFolder.startsWith(sourcePath + '/'))) {
-      onFolderChange(moved.movePath(selectedFolder));
+    try {
+      await onSaveCompanyDocs?.(updatedCompany);
+      if (currentFolder && (currentFolder === sourcePath || currentFolder.startsWith(sourcePath + '/'))) {
+        onFolderChange(moved.movePath(currentFolder));
+      }
+    } catch (error) {
+      setQuickModal({
+        title: 'Falha ao mover pasta',
+        message: error instanceof Error ? error.message : 'Não foi possível mover a pasta.',
+      });
     }
     setDraggedFolder(null);
     setDropTargetFolder(null);
@@ -287,22 +274,33 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
 
   const handleMoveFileToFolder = async (docId: string, targetFolder: string | null) => {
     if (!selectedCompany) return;
-    const docIds = documents.map(doc => doc.id);
+    if (!workspaceDocuments.some((document) => document.id === docId) || !isWorkspaceTarget(targetFolder)) {
+      setQuickModal({ title: 'Movimentação inválida', message: 'O arquivo ou a pasta de destino não pertence à empresa ou filial selecionada.' });
+      return;
+    }
+    const docIds = workspaceDocuments.map(doc => doc.id);
     const idsToMove = selectedDocIds.includes(docId) ? selectedDocIds.filter(id => docIds.includes(id)) : [docId];
-    const updatedDocs = documents.map(d =>
+    const updatedDocs = ownerDocuments.map(d =>
       idsToMove.includes(d.id) ? { ...d, pasta: targetFolder || undefined } : d
     );
     const updatedCompany: Company = {
       ...selectedCompany,
       documentos: updatedDocs
     };
-    await onSaveCompanyDocs?.(updatedCompany);
-    const movedDoc = documents.find(d => d.id === docId);
-    onNotify?.(
-      idsToMove.length > 1
-        ? `${idsToMove.length} arquivos movidos com sucesso.`
-        : `Arquivo "${movedDoc?.nome || 'selecionado'}" movido com sucesso.`
-    );
+    try {
+      await onSaveCompanyDocs?.(updatedCompany);
+      const movedDoc = workspaceDocuments.find(d => d.id === docId);
+      onNotify?.(
+        idsToMove.length > 1
+          ? `${idsToMove.length} arquivos movidos com sucesso.`
+          : `Arquivo "${movedDoc?.nome || 'selecionado'}" movido com sucesso.`
+      );
+    } catch (error) {
+      setQuickModal({
+        title: 'Falha ao mover arquivo',
+        message: error instanceof Error ? error.message : 'Não foi possível mover o arquivo.',
+      });
+    }
   };
 
   const handleDropItem = (event: React.DragEvent, targetFolder: string | null) => {
@@ -315,10 +313,10 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
     try {
       const item = JSON.parse(payload) as { kind?: string; id?: string; path?: string };
       if (item.kind === 'document' && item.id) {
-        handleMoveFileToFolder(item.id, targetFolder);
+        void handleMoveFileToFolder(item.id, targetFolder);
       }
       if (item.kind === 'folder' && item.path) {
-        handleMoveFolder(item.path, targetFolder);
+        void handleMoveFolder(item.path, targetFolder);
       }
     } catch {
       // Invalid drag payloads are ignored.
@@ -333,7 +331,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
 
   const handleRenameFileSubmit = async (newName: string) => {
     if (!selectedCompany || !renameDocId) return;
-    const updatedDocs = documents.map(d => d.id === renameDocId ? { ...d, nome: newName } : d);
+    const updatedDocs = ownerDocuments.map(d => d.id === renameDocId ? { ...d, nome: newName } : d);
     const updatedCompany: Company = {
       ...selectedCompany,
       documentos: updatedDocs
@@ -352,8 +350,8 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
       confirmLabel: 'Excluir',
       danger: true,
       onConfirm: async () => {
-        const deletedDoc = documents.find(d => d.id === docId);
-        const updatedDocs = documents.filter(d => d.id !== docId);
+        const deletedDoc = workspaceDocuments.find(d => d.id === docId);
+        const updatedDocs = ownerDocuments.filter(d => d.id !== docId);
         await onSaveCompanyDocs?.({
           ...selectedCompany,
           documentos: updatedDocs
@@ -364,17 +362,19 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
   };
 
   const goBack = () => {
-    if (!selectedFolder) return;
-    const parts = selectedFolder.split('/');
-    parts.pop();
-    onFolderChange(parts.length === 0 ? null : parts.join('/'));
+    if (!currentFolder || isAtWorkspaceRoot) return;
+    onFolderChange(parentFolder);
   };
 
   const handleBackClick = () => {
-    if (selectedFolder !== null) {
+    if (isGlobalSearchActive) {
+      onClearSearch?.();
+      return;
+    }
+    if (!isAtWorkspaceRoot) {
       goBack();
     } else {
-      setSelectedCompanyId(null);
+      setSelectedEntryKey(null);
     }
   };
 
@@ -387,27 +387,28 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
           event.dataTransfer.dropEffect = 'move';
         }
       }}
-      onDrop={(event) => handleDropItem(event, selectedFolder)}
+      onDrop={(event) => handleDropItem(event, currentFolder)}
       style={{ padding: '4px 0' }}
     >
       <div className="documents-move-layout">
         <div className="documents-move-main">
           <DocumentosEmpresasBrowser
-            companies={companies}
-            selectedCompanyId={selectedCompanyId}
-            selectedCompany={selectedCompany}
-            selectedFolder={selectedFolder}
+            entries={entries}
+            selectedEntryKey={selectedEntryKey}
+            selectedEntry={selectedEntry}
+            workspaceRootPath={workspaceRootPath}
+            selectedFolder={currentFolder}
             breadcrumbs={breadcrumbs}
             filteredDocsCount={filteredDocs.length}
             isGlobalSearchActive={isGlobalSearchActive}
             isFolderNavigationVisible={isFolderNavigationVisible}
             currentSubFolders={currentSubFolders}
-            documents={documents}
+            documents={workspaceDocuments}
             draggedFolder={draggedFolder}
             dropTargetFolder={dropTargetFolder}
             onBackClick={handleBackClick}
             onFolderChange={onFolderChange}
-            onCompanySelect={setSelectedCompanyId}
+            onEntrySelect={setSelectedEntryKey}
             onDraggedFolderChange={setDraggedFolder}
             onDropTargetChange={setDropTargetFolder}
             canDropOnFolder={canDropOnFolder}
@@ -421,7 +422,7 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
               <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
                 {searchTerm || selectedCategoryFilter !== 'Todos' || fileTypeFilter !== 'Todos'
                   ? 'Nenhum arquivo encontrado para os filtros aplicados.'
-                  : selectedFolder ? 'Nenhum arquivo nesta pasta.' : 'Nenhum arquivo solto nesta empresa.'}
+                  : currentFolder !== workspaceRootPath ? 'Nenhum arquivo nesta pasta.' : 'Nenhum arquivo solto nesta empresa ou filial.'}
               </p>
             </div>
           ) : filteredDocs.length > 0 ? (
@@ -431,13 +432,13 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
               sortBy={sortBy}
               viewMode={viewMode}
               onPreview={setPreviewDoc}
-              onRename={selectedCompanyId !== null ? (docId, currentName) => {
+              onRename={selectedEntryKey !== null ? (docId, currentName) => {
                 setRenameDocId(docId);
                 setRenameDocName(currentName);
               } : undefined}
               onDownload={onDownload}
-              onMove={selectedCompanyId !== null ? () => undefined : undefined}
-              onDelete={selectedCompanyId !== null ? handleDeleteFile : undefined}
+              onMove={selectedEntryKey !== null ? () => undefined : undefined}
+              onDelete={selectedEntryKey !== null ? handleDeleteFile : undefined}
               selectedDocIds={selectedDocIds}
               onToggleSelect={toggleSelectDoc}
             />
@@ -445,12 +446,12 @@ export const DocumentosEmpresasTab: React.FC<DocumentosEmpresasTabProps> = ({
           </DocumentosEmpresasBrowser>
         </div>
 
-        {isFolderNavigationVisible && selectedCompanyId !== null && (
+        {isFolderNavigationVisible && selectedEntryKey !== null && (
           <DocumentMoveDrawer
-            key={`documentos_move_drawer_company_${selectedCompanyId}`}
+            key={`documentos_move_drawer_company_${selectedEntryKey}`}
             targets={moveTargets}
             dropTargetKey={dropTargetFolder}
-            storageKey={`documentos_move_drawer_company_${selectedCompanyId}`}
+            storageKey={`documentos_move_drawer_company_${selectedEntryKey}`}
             canDropOnFolder={canDropOnFolder}
             onDropItem={handleDropItem}
             onDropTargetChange={setDropTargetFolder}
