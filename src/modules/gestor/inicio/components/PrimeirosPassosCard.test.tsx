@@ -46,4 +46,21 @@ describe('PrimeirosPassosCard', () => {
       configSubTab: 'marca-dagua',
     });
   });
+
+  it('direciona rotinas e obrigações para a configuração do cliente', () => {
+    const onNavigate = vi.fn();
+    render(
+      <PrimeirosPassosCard
+        status={incompleteStatus}
+        isLoading={false}
+        isError={false}
+        onNavigate={onNavigate}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /rotinas e obrigações/i }));
+
+    expect(onNavigate).toHaveBeenCalledWith({ moduleId: 'clientes' });
+  });
 });

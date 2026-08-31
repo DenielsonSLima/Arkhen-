@@ -5,8 +5,13 @@ describe('queryErrorPolicy', () => {
   it.each([
     { status: 401 },
     { statusCode: 403 },
+    { status: 400 },
+    { statusCode: 404 },
+    { code: '22023' },
     { code: '42501' },
+    { code: '42883' },
     { code: 'PGRST003' },
+    { code: 'PGRST202' },
     { cause: { code: '42501' } },
   ])('não repete erro terminal %#', (error) => {
     expect(isNonRetryableQueryError(error)).toBe(true);

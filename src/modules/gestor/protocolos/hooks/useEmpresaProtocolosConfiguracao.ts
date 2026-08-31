@@ -14,7 +14,12 @@ export const useEmpresaProtocolosConfiguracao = (company: Company) => {
     const channel = subscribeRealtimeChannel(`protocolos-empresa-${company.id}`, (ch) => (
       ch.on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_protocolos_empresas',
+          filter: `cliente_id=eq.${company.id}`,
+        },
         () => void queryClient.invalidateQueries({ queryKey: empresaProtocolosKeys.detail(company.id) }),
       )
     ));
@@ -26,7 +31,8 @@ export const useEmpresaProtocolosConfiguracao = (company: Company) => {
 
   const saveMutation = useMutation({
     mutationFn: empresaProtocolosQueries.save,
-    onSuccess: async () => {
+    onSuccess: async (configuracao) => {
+      queryClient.setQueryData(empresaProtocolosKeys.detail(company.id), configuracao);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: empresaProtocolosKeys.detail(company.id) }),
         invalidateAfterMutation(queryClient, 'protocolos'),
@@ -41,5 +47,6 @@ export const useEmpresaProtocolosConfiguracao = (company: Company) => {
     ),
     isSaving: saveMutation.isPending,
     saveError: saveMutation.error,
+    resetSaveError: saveMutation.reset,
   };
 };

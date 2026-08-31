@@ -7,50 +7,51 @@ vi.mock('../../../../lib/supabase', () => ({
   supabase: { from: fromMock, rpc: rpcMock },
 }));
 
-import { inicioSetupService } from './inicioSetupService';
+import { inicioSetupService, type InicioSetupStatus } from './inicioSetupService';
 
-describe('inicioSetupService tenant scope', () => {
+const status: InicioSetupStatus = {
+  empresaCompleta: true,
+  logoConfigurado: true,
+  marcasDaguaConfiguradas: true,
+  identidadeCompleta: true,
+  clientesAtivos: 1,
+  clientesComModelos: 1,
+  modelosAtivos: 3,
+  modelosVinculados: true,
+  rotinasAtivas: 2,
+  tarefasAtivas: 1,
+  operacaoPlanejada: true,
+  usuariosAtivos: 1,
+  essenciaisConcluidos: 4,
+  essenciaisTotal: 4,
+  configuracaoEssencialCompleta: true,
+  configuracaoRecomendadaCompleta: true,
+};
+
+describe('inicioSetupService', () => {
   beforeEach(() => {
     fromMock.mockReset();
     rpcMock.mockReset();
-    rpcMock.mockResolvedValue({ data: 'empresa-ativa', error: null });
   });
 
-  it('fixa todas as leituras na empresa ativa além de manter o RLS', async () => {
-    const scopedTables: string[] = [];
-    fromMock.mockImplementation((table: string) => {
-      const isConfig = table === 'configuracoes_empresa' || table === 'configuracoes_marca_dagua';
-      const isClients = table === 'clientes';
-      const terminal = isConfig
-        ? { data: null, error: null }
-        : isClients ? { data: [], error: null } : { count: 0, error: null };
-      const builder = {
-        select: vi.fn(),
-        eq: vi.fn(),
-        maybeSingle: vi.fn(() => Promise.resolve(terminal)),
-      };
-      builder.select.mockReturnValue(builder);
-      builder.eq.mockImplementation((column: string, value: unknown) => {
-        if (column === 'empresa_id') {
-          scopedTables.push(`${table}:${value}`);
-          return builder;
-        }
-        return Promise.resolve(terminal);
-      });
-      return builder;
-    });
+  it('obtém o status preparado no banco, sem leituras diretas no cliente', async () => {
+    rpcMock.mockResolvedValue({ data: status, error: null });
 
-    await inicioSetupService.getStatus();
+    await expect(inicioSetupService.getStatus()).resolves.toEqual(status);
 
-    expect(rpcMock).toHaveBeenCalledWith('current_empresa_id');
-    expect(scopedTables).toEqual([
-      'configuracoes_empresa:empresa-ativa',
-      'configuracoes_marca_dagua:empresa-ativa',
-      'clientes:empresa-ativa',
-      'atividades_modelos:empresa-ativa',
-      'atividades_rotinas:empresa-ativa',
-      'atividades_tarefas:empresa-ativa',
-      'configuracoes_usuarios:empresa-ativa',
-    ]);
+    expect(rpcMock).toHaveBeenCalledWith('obter_status_configuracao_inicio');
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it('não mascara uma falha da RPC', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: 'acesso negado' } });
+
+    await expect(inicioSetupService.getStatus()).rejects.toThrow('acesso negado');
+  });
+
+  it('rejeita uma resposta inválida para não exibir progresso incorreto', async () => {
+    rpcMock.mockResolvedValue({ data: { clientesAtivos: '1' }, error: null });
+
+    await expect(inicioSetupService.getStatus()).rejects.toThrow('formato inválido');
   });
 });

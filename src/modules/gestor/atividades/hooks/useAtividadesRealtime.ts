@@ -17,11 +17,10 @@ export const useAtividadesRealtime = (enabled = true, onChange?: () => void) => 
     if (!enabled) return;
 
     const invalidate = () => {
-      void invalidateAfterMutation(queryClient, 'atividades');
-      if (!onChangeRef.current) return;
       if (refreshTimerRef.current !== null) window.clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = window.setTimeout(() => {
         refreshTimerRef.current = null;
+        void invalidateAfterMutation(queryClient, 'atividades');
         onChangeRef.current?.();
       }, 180);
     };

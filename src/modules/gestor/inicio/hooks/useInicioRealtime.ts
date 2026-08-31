@@ -77,12 +77,13 @@ export const useInicioRealtime = (enabled = true) => {
 
     const channel = subscribeRealtimeChannel('inicio-realtime', (ch) =>
       ch
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, () => scheduleInvalidation('dashboard', 'deadlines', 'workspace'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, () => scheduleInvalidation('dashboard', 'deadlines', 'workspace'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, () => scheduleInvalidation('dashboard', 'deadlines', 'workspace', 'setup'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, () => scheduleInvalidation('dashboard', 'deadlines', 'workspace', 'setup'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_modelos' }, () => scheduleInvalidation('models'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, () => scheduleInvalidation('agenda-events'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_padroes_eventos' }, () => scheduleInvalidation('agenda-patterns'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => scheduleInvalidation('dashboard', 'clients', 'setup'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, () => scheduleInvalidation('setup'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, () => scheduleInvalidation('dashboard'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_empresa' }, () => scheduleInvalidation('setup', 'company'))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_marca_dagua' }, () => scheduleInvalidation('setup', 'watermark'))

@@ -25,7 +25,7 @@ export const NovoModeloFormModal: React.FC<NovoModeloFormModalProps> = ({
   onSubmit,
 }) => (
   <div
-    className="confirm-modal-backdrop"
+    className="confirm-modal-backdrop config-fluxos-modal"
     onClick={onCancel}
     style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
   >

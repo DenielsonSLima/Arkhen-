@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -49,6 +49,8 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   const { openTab } = useInternalTabs();
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
   const [saved, setSaved] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const isDirtyRef = useRef(false);
   const [submitError, setSubmitError] = useState('');
   const {
     data: configuracao,
@@ -57,12 +59,17 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     isSaving,
     saveConfiguracao,
     saveError,
+    resetSaveError,
   } = useEmpresaProtocolosConfiguracao(company);
   const catalogo = configuracao?.catalogo ?? EMPTY_CATALOGO;
   const loadError = configuracaoError || saveError;
 
   useEffect(() => {
-    if (configuracao) setConfigs(configuracao.configs);
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (configuracao && !isDirtyRef.current) setConfigs(configuracao.configs);
   }, [configuracao]);
 
   const configById = useMemo(() => {
@@ -80,6 +87,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
   const toggleEntrega = (id: string) => {
     setSaved(false);
+    setIsDirty(true);
     setConfigs((current) => current.map((item) => (
       item.entregaId === id ? { ...item, ativo: !item.ativo } : item
     )));
@@ -87,6 +95,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
   const handleChangePeriodicidade = (id: string, periodicidade: TipoFechamentoEntrega) => {
     setSaved(false);
+    setIsDirty(true);
     setConfigs((current) => current.map((item) => (
       item.entregaId === id ? { ...item, periodicidade } : item
     )));
@@ -95,8 +104,11 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   const handleSave = async () => {
     setSaved(false);
     setSubmitError('');
+    resetSaveError();
     try {
-      await saveConfiguracao(configs);
+      const configuracaoSalva = await saveConfiguracao(configs);
+      setConfigs(configuracaoSalva.configs);
+      setIsDirty(false);
       setSaved(true);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Não foi possível sincronizar as obrigações.');

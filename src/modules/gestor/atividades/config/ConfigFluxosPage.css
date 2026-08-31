@@ -1,0 +1,411 @@
+.config-fluxos-page,
+.config-fluxos-page * {
+  box-sizing: border-box;
+}
+
+.config-fluxos-page.submodule-content-card {
+  width: 100%;
+  padding: 32px;
+  color: var(--color-text-dark, #0f172a);
+  background: #ffffff;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.config-fluxos-page .submodule-card-header {
+  margin-bottom: 24px;
+}
+
+.config-fluxos-page .submodule-card-header.flex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.config-fluxos-page .submodule-card-header h2 {
+  margin: 0 0 4px;
+  color: var(--color-text-dark, #0f172a);
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.config-fluxos-page .submodule-card-header p {
+  margin: 0;
+  color: var(--color-text-dark-muted, #64748b);
+  font-size: 0.82rem;
+}
+
+.config-fluxos-page .tab-buttons-header {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.config-fluxos-page .btn-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  color: #64748b;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: var(--transition-normal);
+}
+
+.config-fluxos-page .btn-tab:hover {
+  color: var(--color-text-dark, #0f172a);
+}
+
+.config-fluxos-page .btn-tab.active {
+  color: var(--color-gold-dark, #9a6b17);
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+}
+
+.config-fluxos-page .success-banner {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: #2e7d32;
+  background: rgba(76, 175, 80, 0.08);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.config-fluxos-page .sub-loading {
+  padding: 40px;
+  color: var(--color-text-dark-muted, #64748b);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.config-fluxos-page .tab-pane {
+  width: 100%;
+  color: var(--color-text-dark, #0f172a);
+}
+
+.config-fluxos-page .fluxo-setup-box {
+  padding: 24px;
+  margin-top: 20px;
+  color: var(--color-text-dark, #0f172a);
+  background: #fafafa;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+}
+
+.config-fluxos-page .models-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.config-fluxos-page .model-preset-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  color: var(--color-text-dark, #0f172a);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+  transition: var(--transition-normal);
+}
+
+.config-fluxos-page .model-preset-card:hover,
+.config-fluxos-page .model-preset-card.gold-border {
+  border-color: var(--color-gold-primary, #c59235);
+  box-shadow: 0 4px 14px rgba(197, 146, 53, 0.16);
+}
+
+.config-fluxos-page .model-preset-card.gold-border {
+  outline: 1px solid rgba(197, 146, 53, 0.28);
+}
+
+.config-fluxos-page .model-preset-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.config-fluxos-page .model-preset-header h4 {
+  margin: 0;
+  color: var(--color-text-dark, #0f172a);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.config-fluxos-page .model-preset-header p {
+  margin: 0;
+  color: var(--color-text-dark-muted, #64748b);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.config-fluxos-page .model-preset-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 100px;
+  padding: 8px 12px;
+  overflow-wrap: anywhere;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+.config-fluxos-page .gold-text {
+  color: var(--color-gold-dark, #9a6b17);
+}
+
+.config-fluxos-page .model-stage-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.config-fluxos-page .model-stage-input-row input,
+.config-fluxos-page .fluxo-setup-box > div:last-child > input {
+  min-width: 0;
+  color: #0f172a;
+}
+
+.config-fluxos-page .btn-remove-stage {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  color: #ef4444;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.config-fluxos-page .btn-remove-stage:hover {
+  background: #ffebee;
+}
+
+.config-fluxos-page .btn-add-user,
+.config-fluxos-page .btn-save-settings,
+.config-fluxos-modal .btn-add-user,
+.config-fluxos-modal .btn-save-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 9px 14px;
+  color: #ffffff;
+  background: var(--color-gold-gradient);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(197, 146, 53, 0.15);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: var(--transition-normal);
+}
+
+.config-fluxos-page .btn-add-user:hover,
+.config-fluxos-page .btn-save-settings:hover,
+.config-fluxos-modal .btn-add-user:hover,
+.config-fluxos-modal .btn-save-settings:hover {
+  box-shadow: 0 6px 14px rgba(197, 146, 53, 0.25);
+  transform: translateY(-1px);
+}
+
+.config-fluxos-page .table-responsive {
+  width: 100%;
+  margin-top: 16px;
+  overflow-x: auto;
+  border: 1px solid #eef1f5;
+  border-radius: 8px;
+}
+
+.config-fluxos-page .config-table {
+  width: 100%;
+  color: var(--color-text-dark, #0f172a);
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.config-fluxos-page .config-table th {
+  padding: 12px 16px;
+  color: var(--color-text-dark, #0f172a);
+  background: #fafafa;
+  border-bottom: 2px solid #eef1f5;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.config-fluxos-page .config-table td {
+  padding: 12px 16px;
+  color: var(--color-text-dark, #0f172a);
+  border-bottom: 1px solid #eef1f5;
+  font-size: 0.82rem;
+}
+
+.config-fluxos-page .config-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.config-fluxos-page .config-table tbody tr:hover td {
+  background: #fcfcfc;
+}
+
+.config-fluxos-page .checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-dark, #0f172a);
+  cursor: pointer;
+  font-size: 0.85rem;
+  user-select: none;
+}
+
+.config-fluxos-page .checkbox-container input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.config-fluxos-page .checkbox-checkmark {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  background: #fafafa;
+  border: 1px solid #d2d4d7;
+  border-radius: 4px;
+  transition: var(--transition-normal);
+}
+
+.config-fluxos-page .checkbox-container input:focus-visible ~ .checkbox-checkmark {
+  outline: 3px solid rgba(197, 146, 53, 0.24);
+  outline-offset: 2px;
+}
+
+.config-fluxos-page .checkbox-container input:checked ~ .checkbox-checkmark {
+  background: var(--color-gold-primary, #c59235);
+  border-color: var(--color-gold-primary, #c59235);
+}
+
+.config-fluxos-page .checkbox-checkmark::after {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  display: none;
+  width: 4px;
+  height: 8px;
+  content: '';
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.config-fluxos-page .checkbox-container input:checked ~ .checkbox-checkmark::after {
+  display: block;
+}
+
+.config-fluxos-page .partner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.config-fluxos-page .partner-badge.mei {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.config-fluxos-page .partner-badge.lucro-presumido {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.config-fluxos-page .partner-badge.lucro-real {
+  color: #6d28d9;
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
+.config-fluxos-modal {
+  color: var(--color-text-dark, #0f172a);
+  background: rgba(15, 23, 42, 0.52);
+}
+
+@media (max-width: 1240px) {
+  .config-fluxos-page .models-preset-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .config-fluxos-page .models-preset-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .config-fluxos-page .submodule-card-header.flex-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .config-fluxos-page.submodule-content-card {
+    padding: 20px;
+  }
+
+  .config-fluxos-page .models-preset-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .config-fluxos-page .tab-buttons-header,
+  .config-fluxos-page .btn-tab {
+    width: 100%;
+  }
+
+  .config-fluxos-page .btn-tab {
+    justify-content: center;
+  }
+
+  .config-fluxos-page .model-stage-input-row,
+  .config-fluxos-page .fluxo-setup-box > div:last-child {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+}

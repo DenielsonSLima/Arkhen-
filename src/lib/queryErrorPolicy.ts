@@ -1,5 +1,15 @@
-const NON_RETRYABLE_STATUS = new Set([401, 403]);
-const NON_RETRYABLE_CODES = new Set(['401', '403', '42501', 'PGRST003']);
+const NON_RETRYABLE_STATUS = new Set([400, 401, 403, 404]);
+const NON_RETRYABLE_CODES = new Set([
+  '400',
+  '401',
+  '403',
+  '404',
+  '22023',
+  '42501',
+  '42883',
+  'PGRST003',
+  'PGRST202',
+]);
 
 type QueryErrorShape = {
   code?: unknown;

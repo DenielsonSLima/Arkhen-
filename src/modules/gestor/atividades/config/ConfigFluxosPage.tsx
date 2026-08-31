@@ -4,6 +4,7 @@ import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade } from '../services/atividadesService';
 import { MODELOS_PADRAO, REGIMES_APLICAVEIS, emptyNewModel } from './defaultChecklistModels';
 import { NovoModeloFormModal } from './forms/NovoModeloFormModal';
+import './ConfigFluxosPage.css';
 
 export const ConfigFluxosPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'modelos' | 'empresas'>('modelos');
@@ -168,7 +169,7 @@ export const ConfigFluxosPage: React.FC = () => {
 
   return (
     <>
-    <div className="submodule-content-card animate-fade-in">
+    <div className="config-fluxos-page submodule-content-card animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
           <h2>Modelos de Fechamento</h2>

@@ -1,27 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fromMock = vi.hoisted(() => vi.fn());
 const rpcMock = vi.hoisted(() => vi.fn());
-const getCompaniesMock = vi.hoisted(() => vi.fn());
 const getCompanyByIdMock = vi.hoisted(() => vi.fn());
-const getCatalogoMock = vi.hoisted(() => vi.fn());
-const getCatalogoAtivoMock = vi.hoisted(() => vi.fn());
-const listCatalogoTodosMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../../lib/supabase', () => ({
-  supabase: { from: fromMock, rpc: rpcMock },
+  supabase: { rpc: rpcMock },
 }));
 vi.mock('../../gestao-empresarial/services/gestaoEmpresarialService', () => ({
   gestaoEmpresarialService: {
-    getCompanies: getCompaniesMock,
     getCompanyById: getCompanyByIdMock,
-  },
-}));
-vi.mock('./protocolosCatalogoService', () => ({
-  protocolosCatalogoService: {
-    getCatalogoPorRegime: getCatalogoMock,
-    getCatalogoAtivo: getCatalogoAtivoMock,
-    listCatalogoTodos: listCatalogoTodosMock,
   },
 }));
 import { protocolosService } from './protocolosService';
@@ -47,6 +34,11 @@ const catalogo = [{
   status: 'Ativo',
   regimes: ['Simples Nacional'],
 }];
+
+const configuracaoCanonica = {
+  catalogo,
+  configs: [{ entregaId: 'xml-nfe', ativo: false, periodicidade: 'mensal' }],
+};
 
 const makeProtocol = (overrides: Record<string, unknown> = {}) => ({
   id: `${company.id}-2026-08-xml-nfe-mensal`,
@@ -76,47 +68,24 @@ const makeProtocol = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const setReads = ({ configs = null }: {
-  configs?: unknown;
-} = {}) => {
-  fromMock.mockImplementation((table: string) => {
-    if (table === 'configuracoes_protocolos_empresas') {
-      const builder = {
-        select: vi.fn(),
-        eq: vi.fn(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: configs === null ? null : { configs },
-          error: null,
-        }),
-      };
-      builder.select.mockReturnValue(builder);
-      builder.eq.mockReturnValue(builder);
-      return builder;
-    }
-    throw new Error(`Tabela inesperada: ${table}`);
-  });
-};
-
 describe('protocolosService integrity', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-25T12:00:00Z'));
     vi.clearAllMocks();
-    getCompaniesMock.mockResolvedValue([company]);
-    getCatalogoMock.mockReturnValue(catalogo);
-    getCatalogoAtivoMock.mockReturnValue(catalogo);
-    listCatalogoTodosMock.mockResolvedValue(catalogo);
     rpcMock.mockResolvedValue({ data: [], error: null });
   });
 
   afterEach(() => vi.useRealTimers());
 
-  it('mantém o estado vazio quando o cliente não configurou entregas', async () => {
-    setReads({ configs: null });
+  it('lê catálogo e configuração canônicos pelo RPC do cliente', async () => {
+    rpcMock.mockResolvedValue({ data: configuracaoCanonica, error: null });
 
-    await expect(protocolosService.getProtocolos()).resolves.toEqual([]);
-    const config = await protocolosService.getEntregasEmpresaConfig(company as never);
-    expect(config).toEqual([expect.objectContaining({ entregaId: 'xml-nfe', ativo: false })]);
+    await expect(protocolosService.getConfiguracaoEmpresa(company as never))
+      .resolves.toEqual(configuracaoCanonica);
+    expect(rpcMock).toHaveBeenCalledWith('obter_configuracao_protocolos_cliente', {
+      p_cliente_id: company.id,
+    });
   });
 
   it('consome a projeção operacional pronta da RPC', async () => {
@@ -139,20 +108,26 @@ describe('protocolosService integrity', () => {
       .resolves.toEqual([expect.objectContaining({ prazo: '2026-09-23' })]);
   });
 
-  it('salva a configuração somente pela RPC tenant-safe', async () => {
-    setReads({ configs: [] });
-    rpcMock.mockResolvedValue({ data: [{ entregaId: 'xml-nfe', ativo: true }], error: null });
+  it('envia a seleção sem recalcular regime ou prazo e retorna a resposta canônica', async () => {
+    const selection = [{ entregaId: 'xml-nfe', ativo: true, periodicidade: 'quinzenal' as const }];
+    const canonicalAfterSave = {
+      ...configuracaoCanonica,
+      configs: [{ entregaId: 'xml-nfe', ativo: true, periodicidade: 'quinzenal' as const }],
+    };
+    rpcMock.mockImplementation(async (name: string) => (
+      name === 'salvar_configuracoes_protocolos_cliente'
+        ? { data: selection, error: null }
+        : { data: canonicalAfterSave, error: null }
+    ));
 
-    await expect(protocolosService.saveEntregasEmpresa(company as never, ['xml-nfe']))
-      .resolves.toEqual([expect.objectContaining({ entregaId: 'xml-nfe', ativo: true })]);
-
+    await expect(protocolosService.saveEntregasEmpresaConfig(company as never, selection))
+      .resolves.toEqual(canonicalAfterSave);
     expect(rpcMock).toHaveBeenCalledWith('salvar_configuracoes_protocolos_cliente', {
       p_cliente_id: company.id,
-      p_configs: [expect.objectContaining({
-        entregaId: 'xml-nfe',
-        ativo: true,
-        periodicidade: 'mensal',
-      })],
+      p_configs: selection,
+    });
+    expect(rpcMock).toHaveBeenCalledWith('obter_configuracao_protocolos_cliente', {
+      p_cliente_id: company.id,
     });
   });
 

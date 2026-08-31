@@ -138,6 +138,7 @@ describe('useAtividadesRealtime', () => {
   });
 
   it('invalida atividades e todos os módulos dependentes', async () => {
+    vi.useFakeTimers();
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries').mockResolvedValue(undefined);
     const Wrapper = ({ children }: PropsWithChildren) => (
@@ -148,7 +149,9 @@ describe('useAtividadesRealtime', () => {
 
     await act(async () => {
       activeChannel?.callbacks[0]?.();
-      await Promise.resolve();
+      activeChannel?.callbacks[1]?.();
+      activeChannel?.callbacks[2]?.();
+      await vi.advanceTimersByTimeAsync(180);
     });
 
     expect(invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
@@ -158,5 +161,6 @@ describe('useAtividadesRealtime', () => {
       ['conformidade'],
     ]);
     hook.unmount();
+    vi.useRealTimers();
   });
 });

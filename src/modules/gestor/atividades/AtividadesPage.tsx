@@ -64,7 +64,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     initialCompanyId,
     initialCompetencia,
     responsaveisPorGrupo,
-    enabled: activeView !== 'fechamentos',
+    enabled: activeView === 'equipe',
   });
 
   useAtividadesRealtime(true, activeView === 'fechamentos' ? undefined : refresh);

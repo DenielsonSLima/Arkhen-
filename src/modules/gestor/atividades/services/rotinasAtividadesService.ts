@@ -270,6 +270,7 @@ export const rotinasAtividadesService = {
         .select('id,auth_user_id,nome,perfil_id')
         .eq('empresa_id', empresaId)
         .eq('status', 'Ativo')
+        .not('auth_user_id', 'is', null)
         .order('nome', { ascending: true }),
       supabase
         .from('clientes')
@@ -291,23 +292,20 @@ export const rotinasAtividadesService = {
     const usuariosMap = new Map<string, UsuarioAtividade & { perfilVinculado: boolean }>();
     (usuariosData || []).forEach((usuario) => {
       const userId = usuario.auth_user_id as string | null;
-      const key = userId ? `auth:${userId}` : `config:${usuario.id}`;
+      if (!userId) return;
+      const key = `auth:${userId}`;
       const atual = usuariosMap.get(key);
       const perfilVinculado = Boolean(usuario.perfil_id);
       if (!atual || (!atual.perfilVinculado && perfilVinculado)) {
         usuariosMap.set(key, {
           configUsuarioId: usuario.id,
-          userId: userId || undefined,
+          userId,
           nome: usuario.nome,
           perfilVinculado,
         });
       }
     });
-    const usuarios: UsuarioAtividade[] = Array.from(usuariosMap.values()).map(({ configUsuarioId, userId, nome }) => ({
-      configUsuarioId,
-      userId,
-      nome,
-    }));
+    const usuarios: UsuarioAtividade[] = Array.from(usuariosMap.values()).map(({ configUsuarioId, userId, nome }) => ({ configUsuarioId, userId, nome }));
 
     const tarefas = (tarefasData || []) as TarefaGestorRow[];
     const { data: eventosData, error: eventosError } = tarefas.length > 0

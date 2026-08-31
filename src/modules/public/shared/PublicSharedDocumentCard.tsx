@@ -44,15 +44,17 @@ export const PublicSharedDocumentCard: React.FC<PublicSharedDocumentCardProps> =
   onPreview,
   onDownload,
 }) => {
+  const safePreviewUrl = previewUrl?.trim() || null;
+  const safePreviewImageUrl = previewImageUrl?.trim() || null;
   const mode = getDocumentMode(document.documento);
   const icon = mode === 'image' ? <ImageIcon size={16} /> : <FileText size={16} />;
   const selectedStyle = isSelected ? 'rgba(197, 146, 53, 0.14)' : '#ffffff';
   const selectedBorder = isSelected ? '1px solid rgba(197, 146, 53, 0.46)' : '1px solid #e2e8f0';
   const subtitle = fallbackLabelByMode[mode];
-  const hasPdfSource = mode === 'pdf' && Boolean(previewUrl);
-  const isPdfReady = mode === 'pdf' && previewStatus === 'ready' && Boolean(previewImageUrl);
+  const hasPdfSource = mode === 'pdf' && Boolean(safePreviewUrl);
+  const isPdfReady = mode === 'pdf' && previewStatus === 'ready' && Boolean(safePreviewImageUrl);
   const isPdfLoading = hasPdfSource && (previewStatus === 'loading' || previewStatus === undefined);
-  const hasImagePreview = mode === 'image' && Boolean(previewUrl);
+  const hasImagePreview = mode === 'image' && Boolean(safePreviewUrl);
 
   return (
     <article
@@ -140,16 +142,16 @@ export const PublicSharedDocumentCard: React.FC<PublicSharedDocumentCardProps> =
         <div style={{ height: '94px', background: '#0f172a', position: 'relative', overflow: 'hidden' }}>
           {hasImagePreview ? (
             <img
-              src={previewUrl || ''}
+              src={safePreviewUrl!}
               alt={document.documento}
               style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.93 }}
               loading="lazy"
             />
           ) : null}
 
-          {isPdfReady && previewImageUrl ? (
+          {isPdfReady && safePreviewImageUrl ? (
             <img
-              src={previewImageUrl}
+              src={safePreviewImageUrl}
               alt={`Prévia de ${document.documento}`}
               style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'top center', background: '#ffffff' }}
               loading="lazy"
@@ -177,7 +179,7 @@ export const PublicSharedDocumentCard: React.FC<PublicSharedDocumentCardProps> =
             </div>
           ) : null}
 
-          {!previewUrl && !hasImagePreview && !isPdfReady && !isPdfLoading ? (
+          {!safePreviewUrl && !hasImagePreview && !isPdfReady && !isPdfLoading ? (
             <div
               style={{
                 width: '100%',

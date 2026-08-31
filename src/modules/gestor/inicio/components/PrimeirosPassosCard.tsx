@@ -65,14 +65,14 @@ export const PrimeirosPassosCard: React.FC<PrimeirosPassosCardProps> = ({
     },
     {
       id: 'modelos',
-      title: 'Modelos de fechamento',
+      title: 'Rotinas e obrigações',
       description: status.modelosVinculados
-        ? `${status.clientesComModelos}/${status.clientesAtivos} clientes com checklists vinculados.`
-        : 'Revise os checklists e vincule os modelos adequados a cada regime.',
-      action: status.modelosVinculados ? 'Revisar modelos' : 'Configurar modelos',
+        ? `${status.clientesComModelos}/${status.clientesAtivos} clientes com obrigações configuradas.`
+        : 'Escolha as obrigações aplicáveis e a periodicidade de cada cliente.',
+      action: status.modelosVinculados ? 'Ver clientes' : 'Configurar obrigações',
       complete: status.modelosVinculados,
       icon: <ClipboardCheck size={20} />,
-      target: { moduleId: 'parametrizacao-checklists' },
+      target: { moduleId: 'clientes' },
     },
     {
       id: 'operacao',

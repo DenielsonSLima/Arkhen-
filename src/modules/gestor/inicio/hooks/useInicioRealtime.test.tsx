@@ -6,15 +6,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const realtimeMock = vi.hoisted(() => ({
-  callbacks: [] as Array<() => void>,
+  callbacks: new Map<string, () => void>(),
   removeChannel: vi.fn(),
 }));
 
 vi.mock('../../../../lib/realtimeChannel', () => ({
   subscribeRealtimeChannel: vi.fn((_scope: string, configure: (channel: any) => any) => {
     const channel = {
-      on: vi.fn((_type: string, _filter: unknown, callback: () => void) => {
-        realtimeMock.callbacks.push(callback);
+      on: vi.fn((_type: string, filter: { table: string }, callback: () => void) => {
+        realtimeMock.callbacks.set(filter.table, callback);
         return channel;
       }),
     };
@@ -31,13 +31,13 @@ import { useInicioRealtime } from './useInicioRealtime';
 describe('useInicioRealtime', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    realtimeMock.callbacks.length = 0;
+    realtimeMock.callbacks.clear();
     realtimeMock.removeChannel.mockClear();
   });
 
   afterEach(() => vi.useRealTimers());
 
-  it('agrupa mudanças de tarefas e atualiza painel, vencimentos e workspace', async () => {
+  it('agrupa mudanças operacionais e atualiza o setup junto ao painel', async () => {
     const queryClient = new QueryClient();
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const wrapper = ({ children }: PropsWithChildren) => (
@@ -45,18 +45,23 @@ describe('useInicioRealtime', () => {
     );
     const hook = renderHook(() => useInicioRealtime(true), { wrapper });
 
+    expect(realtimeMock.callbacks.has('atividades_rotinas')).toBe(true);
+    expect(realtimeMock.callbacks.has('atividades_tarefas')).toBe(true);
+    expect(realtimeMock.callbacks.has('configuracoes_protocolos_empresas')).toBe(true);
+
     await act(async () => {
-      realtimeMock.callbacks[0]?.();
-      realtimeMock.callbacks[1]?.();
-      realtimeMock.callbacks[1]?.();
+      realtimeMock.callbacks.get('atividades_rotinas')?.();
+      realtimeMock.callbacks.get('atividades_tarefas')?.();
+      realtimeMock.callbacks.get('configuracoes_protocolos_empresas')?.();
       await vi.advanceTimersByTimeAsync(200);
     });
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['inicio', 'dashboard'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['inicio', 'vencimentos'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['atividades', 'workspace'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['inicio', 'setup'] });
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: ['inicio'] });
-    expect(invalidate).toHaveBeenCalledTimes(3);
+    expect(invalidate).toHaveBeenCalledTimes(4);
     hook.unmount();
   });
 });
