@@ -18,6 +18,7 @@ import type { ProtocoloTipoConfig } from '../../protocolos/services/protocolosCa
 import { useEmpresaProtocolosConfiguracao } from '../../protocolos/hooks/useEmpresaProtocolosConfiguracao';
 import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
+import { SystemToast, type SystemToastData } from '../../components/SystemToast';
 import './TabProtocolosEntregas.css';
 
 interface TabProtocolosEntregasProps {
@@ -51,18 +52,17 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const isDirtyRef = useRef(false);
-  const [submitError, setSubmitError] = useState('');
+  const [toast, setToast] = useState<SystemToastData | null>(null);
   const {
     data: configuracao,
     error: configuracaoError,
     isLoading,
     isSaving,
     saveConfiguracao,
-    saveError,
     resetSaveError,
   } = useEmpresaProtocolosConfiguracao(company);
   const catalogo = configuracao?.catalogo ?? EMPTY_CATALOGO;
-  const loadError = configuracaoError || saveError;
+  const loadError = configuracaoError;
 
   useEffect(() => {
     isDirtyRef.current = isDirty;
@@ -71,6 +71,12 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   useEffect(() => {
     if (configuracao && !isDirtyRef.current) setConfigs(configuracao.configs);
   }, [configuracao]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const configById = useMemo(() => {
     const map = new Map<string, ProtocoloEmpresaConfig>();
@@ -103,15 +109,26 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
   const handleSave = async () => {
     setSaved(false);
-    setSubmitError('');
     resetSaveError();
     try {
       const configuracaoSalva = await saveConfiguracao(configs);
       setConfigs(configuracaoSalva.configs);
       setIsDirty(false);
       setSaved(true);
+      setToast({
+        id: Date.now(),
+        type: 'success',
+        title: 'Rotinas sincronizadas',
+        message: 'A configuração foi salva. Agora defina os responsáveis em Rotinas Programadas.',
+      });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Não foi possível sincronizar as obrigações.');
+      const message = error instanceof Error ? error.message : 'Não foi possível sincronizar as obrigações.';
+      setToast({
+        id: Date.now(),
+        type: 'error',
+        title: 'Não foi possível sincronizar',
+        message,
+      });
     }
   };
 
@@ -140,12 +157,13 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     return `${origem} • ${tipo} • rotina ${periodicidadeLabel} • prazo dia ${entrega.diaLimite}`;
   };
 
-  const errorMessage = submitError || (loadError instanceof Error
+  const errorMessage = loadError instanceof Error
     ? loadError.message
-    : loadError ? 'Não foi possível sincronizar as obrigações.' : '');
+    : loadError ? 'Não foi possível carregar as obrigações.' : '';
 
   return (
     <div className="tab-panel-content protocolos-config-panel" style={{ position: 'relative', opacity: isLoading ? 0.7 : 1 }}>
+      <SystemToast toast={toast} onClose={() => setToast(null)} />
       {isLoading ? (
         <div className="protocolos-loading">
           <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: '2px' }} />

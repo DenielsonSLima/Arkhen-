@@ -69,5 +69,19 @@ describe('TabProtocolosEntregas', () => {
     await waitFor(() => expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('quinzenal'));
     expect(hookMock.value.saveConfiguracao).toHaveBeenCalledWith(submittedConfig);
     expect(hookMock.value.resetSaveError).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('status').textContent).toContain('Rotinas sincronizadas');
+    expect(screen.getByRole('status').textContent).toContain('Agora defina os responsáveis');
+  });
+
+  it('exibe o erro no toast visual do sistema', async () => {
+    hookMock.value.saveConfiguracao = vi.fn().mockRejectedValue(new Error('Falha segura do servidor.'));
+    render(<TabProtocolosEntregas company={company} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /salvar e sincronizar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Não foi possível sincronizar');
+      expect(screen.getByRole('alert').textContent).toContain('Falha segura do servidor.');
+    });
   });
 });
