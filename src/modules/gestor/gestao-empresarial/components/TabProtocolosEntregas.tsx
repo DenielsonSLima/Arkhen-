@@ -165,13 +165,13 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
       </div>
 
       <div className="protocolos-guidance" role="note">
-        Ao salvar, cada obrigação ativa é sincronizada com uma rotina da empresa e com as tarefas do período atual. A execução e a atribuição de responsável são acompanhadas em Atividades; nenhum envio é disparado aqui.
+        Ao salvar, cada obrigação ativa é sincronizada com uma rotina da empresa. Em Rotinas Programadas, defina o responsável; então a tarefa da competência e o cartão de fechamento serão criados automaticamente. Nenhum envio é disparado aqui.
       </div>
 
       <div className="protocolos-config-summary">
         <div><span>Empresa</span><strong>{company.nome}</strong></div>
         <div><span>Obrigações ativas</span><strong>{configs.filter((item) => item.ativo).length}</strong></div>
-        <div><span>Automação</span><strong>Rotina + tarefa por período</strong></div>
+        <div><span>Próxima etapa</span><strong>Definir responsável</strong></div>
       </div>
 
       <div className="protocolos-category-grid">

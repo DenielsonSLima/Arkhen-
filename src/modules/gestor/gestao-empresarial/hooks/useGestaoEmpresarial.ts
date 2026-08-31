@@ -5,6 +5,7 @@ import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
 import type { Company } from '../services/gestaoEmpresarialService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
+import { filterCompanies } from '../utils/filterCompanies';
 
 export type EmpresaDetailTab = 'dados' | 'filiais' | 'protocolos';
 
@@ -63,20 +64,12 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     return companies.find((c) => c.id === selectedCompanyId) || null;
   }, [companies, selectedCompanyId]);
 
-  const filteredCompanies = useMemo(() => {
-    return companies.filter((company) => {
-      const matchesSearch =
-        company.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.razaoSocial.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.cnpj.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''));
-
-      const matchesRegime =
-        selectedRegime === 'Todos' || company.tipo === selectedRegime;
-      const matchesStatus = activeStatusTab === 'Ativos' ? company.status !== 'Inativa' : company.status === 'Inativa';
-
-      return matchesSearch && matchesRegime && matchesStatus;
-    });
-  }, [activeStatusTab, companies, searchQuery, selectedRegime]);
+  const filteredCompanies = useMemo(() => filterCompanies(
+    companies,
+    searchQuery,
+    selectedRegime,
+    activeStatusTab,
+  ), [activeStatusTab, companies, searchQuery, selectedRegime]);
 
   const handleSelectCompany = (id: string | null) => {
     setSelectedCompanyId(id);
