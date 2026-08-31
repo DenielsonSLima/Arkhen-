@@ -35,7 +35,7 @@ export const TabelasTributariasPage: React.FC = () => {
     <div className="submodule-content-card tabelas-tributarias-page animate-fade-in">
       <header className="tributarias-header">
         <div>
-          <h2><BookOpenCheck size={21} /> Tabelas Tributárias</h2>
+          <h2 className="parametrizacao-page-title"><BookOpenCheck size={21} /> Tabelas Tributárias</h2>
           <p>Regras oficiais versionadas por vigência, utilizadas pelas simulações no Supabase.</p>
         </div>
         <button className="btn-cancel" onClick={() => query.refetch()} disabled={query.isFetching}>

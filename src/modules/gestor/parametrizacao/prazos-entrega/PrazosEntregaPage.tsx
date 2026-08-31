@@ -100,7 +100,7 @@ export const PrazosEntregaPage: React.FC = () => {
     <div className="submodule-content-card prazos-entrega-page animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Obrigações</h2>
+          <h2 className="parametrizacao-page-title">Obrigações</h2>
           <p>Configure obrigações, vencimentos, competência de referência e fechamento por tipo de empresa.</p>
         </div>
         <div className="tab-buttons-header">

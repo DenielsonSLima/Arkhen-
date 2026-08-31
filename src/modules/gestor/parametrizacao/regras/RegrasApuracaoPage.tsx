@@ -60,7 +60,7 @@ export const RegrasApuracaoPage: React.FC = () => {
       {/* Header */}
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Impostos</h2>
+          <h2 className="parametrizacao-page-title">Impostos</h2>
           <p>Parametrize regras de PIS/COFINS, alíquotas e parâmetros fiscais usados nas rotinas do escritório.</p>
         </div>
         <div className="tab-buttons-header">

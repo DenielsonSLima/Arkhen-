@@ -177,7 +177,7 @@ export const ProtocolosTiposPage: React.FC = () => {
     <div className="submodule-content-card protocolos-tipos-page animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Catálogo de Obrigações e Protocolos</h2>
+          <h2 className="parametrizacao-page-title">Catálogo de Obrigações e Protocolos</h2>
           <p>Cadastre e ajuste quais obrigações/documentos existem no escritório e a rotina padrão por regime.</p>
         </div>
         <div className="tab-buttons-header">

@@ -137,7 +137,7 @@ export const CategoriaFinanceiraPage: React.FC = () => {
               <Database size={22} style={{ color: 'var(--color-gold-primary)' }} />
             </span>
             <div>
-              <h2>Categorias Financeiras</h2>
+              <h2 className="parametrizacao-page-title">Categorias Financeiras</h2>
               <p>Gerencie as classificações de despesas fixas e variáveis para controle e lançamento do Contas a Pagar.</p>
             </div>
           </div>

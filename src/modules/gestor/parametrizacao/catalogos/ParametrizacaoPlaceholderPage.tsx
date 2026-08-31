@@ -232,7 +232,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
           <div className="parametrizacao-title">
             <span className="parametrizacao-title-icon">{config.icon}</span>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1e293b' }}>{config.title}</h2>
+              <h2 className="parametrizacao-page-title">{config.title}</h2>
               <p style={{ fontSize: '0.875rem', color: '#64748b' }}>{config.description}</p>
             </div>
           </div>

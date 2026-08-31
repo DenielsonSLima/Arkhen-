@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import '../parametrizacao/ParametrizacaoTitles.css';
 import type { InternalTabContext } from '../../../stores/internalTabsStore';
 import { InicioPage } from '../inicio/InicioPage';
 import { RegimesTributariosPage } from '../parametrizacao/regimes/RegimesTributariosPage';

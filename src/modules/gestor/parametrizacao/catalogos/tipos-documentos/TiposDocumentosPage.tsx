@@ -97,7 +97,7 @@ export const TiposDocumentosPage: React.FC = () => {
           <div className="parametrizacao-title">
             <span className="parametrizacao-title-icon"><FileText size={22} /></span>
             <div>
-              <h2>Tipos de Documentos</h2>
+              <h2 className="parametrizacao-page-title">Tipos de Documentos</h2>
               <p>Padronize os tipos usados nos anexos, contratos, procurações e documentos por empresa.</p>
             </div>
           </div>

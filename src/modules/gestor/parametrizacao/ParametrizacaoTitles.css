@@ -1,0 +1,8 @@
+.submodule-content-card h2.parametrizacao-page-title {
+  margin: 0;
+  color: var(--color-text-dark);
+  font-family: var(--font-sans);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.2;
+}

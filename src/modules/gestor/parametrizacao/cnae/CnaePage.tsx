@@ -40,7 +40,7 @@ export const CnaePage: React.FC = () => {
         <div className="cnae-title-block">
           <span className="cnae-title-icon"><BookOpenCheck size={22} /></span>
           <div>
-            <h2>Catálogo de Atividades Econômicas (CNAE)</h2>
+            <h2 className="parametrizacao-page-title">Catálogo de Atividades Econômicas (CNAE)</h2>
             <p>Classificações padrão do sistema. O escritório escolhe quais atividades ficam disponíveis para uso.</p>
           </div>
         </div>

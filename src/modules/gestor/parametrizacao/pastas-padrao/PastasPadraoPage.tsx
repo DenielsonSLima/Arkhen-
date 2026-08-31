@@ -110,7 +110,7 @@ export const PastasPadraoPage: React.FC = () => {
           <div className="parametrizacao-title">
             <span className="parametrizacao-title-icon"><FolderTree size={22} /></span>
             <div>
-              <h2>Pastas Padrão de Documentos</h2>
+              <h2 className="parametrizacao-page-title">Pastas Padrão de Documentos</h2>
               <p>Defina a estrutura criada automaticamente na aba Documentos de cada empresa cliente.</p>
             </div>
           </div>

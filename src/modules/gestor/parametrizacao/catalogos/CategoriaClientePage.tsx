@@ -95,7 +95,7 @@ export const CategoriaClientePage: React.FC = () => {
               <Database size={22} style={{ color: 'var(--color-gold-primary)' }} />
             </span>
             <div>
-              <h2>Categorias de Clientes</h2>
+              <h2 className="parametrizacao-page-title">Categorias de Clientes</h2>
               <p>Gerencie as categorias de clientes usadas para classificar e organizar o atendimento no escritório.</p>
             </div>
           </div>

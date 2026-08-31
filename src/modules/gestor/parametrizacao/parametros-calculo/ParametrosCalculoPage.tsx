@@ -96,7 +96,7 @@ export const ParametrosCalculoPage: React.FC = () => {
     <div className="submodule-content-card parametros-calculo-page animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Parâmetros de Cálculo</h2>
+          <h2 className="parametrizacao-page-title">Parâmetros de Cálculo</h2>
           <p>Gerencie listas usadas nas simulações: tipos de rescisão, anexos do DAS e regimes de PIS/COFINS.</p>
         </div>
         <div className="tab-buttons-header">

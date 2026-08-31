@@ -170,7 +170,7 @@ export const ConfigFluxosPage: React.FC = () => {
     <div className="submodule-content-card animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2>Parametrização de Fluxos de Atividades</h2>
+          <h2 className="parametrizacao-page-title">Parametrização de Fluxos de Atividades</h2>
           <p>Gerencie os modelos de checklists contábeis e controle quais atividades são exigidas por cada cliente.</p>
         </div>
         <div className="tab-buttons-header">
