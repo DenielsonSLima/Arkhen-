@@ -28,12 +28,14 @@ interface DocumentosPageProps {
   initialActiveTab?: DocumentosTab;
   initialPersonalFolder?: string | null;
   initialCompanyId?: string | null;
+  initialCompanyEntryKey?: string | null;
   onViewContextChange?: (context: InternalTabContext) => void;
 }
 export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   initialActiveTab,
   initialPersonalFolder,
   initialCompanyId,
+  initialCompanyEntryKey,
   onViewContextChange,
 }) => {
   const {
@@ -71,8 +73,9 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   const [shareRefreshKey, setShareRefreshKey] = useState(0);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [lastAccess, setLastAccess] = useState<string | null>(null);
-  const [selectedCompanyContext, setSelectedCompanyContext] = useState<{ id: string | null; name?: string }>(() => ({
+  const [selectedCompanyContext, setSelectedCompanyContext] = useState<{ id: string | null; name?: string; entryKey?: string | null }>(() => ({
     id: initialCompanyId || null,
+    entryKey: initialCompanyEntryKey || null,
   }));
   const [companyFolder, setCompanyFolder] = useState<string | null>(null);
   const [quickModal, setQuickModal] = useState<DocumentosQuickModalState | null>(null);
@@ -81,22 +84,20 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
   const personalCategoriesList = useMemo(() => (
     (meusDocs.categorias || []).filter((item) => item.ativo).map((item) => item.nome)
   ), [meusDocs.categorias]);
-  const activeCompanies = useMemo(() => (
-    companies.filter((company) => company.status !== 'Inativa')
-  ), [companies]);
-  const inactiveCompanies = useMemo(() => (
-    companies.filter((company) => company.status === 'Inativa')
-  ), [companies]);
-  const handleCompanyChange = useCallback((id: string | null, name?: string) => {
+  const handleCompanyChange = useCallback((id: string | null, name?: string, entryKey?: string | null) => {
     setSelectedCompanyContext((current) => (
-      current.id === id && current.name === name ? current : { id, name }
+      current.id === id && current.name === name && current.entryKey === entryKey
+        ? current
+        : { id, name, entryKey }
     ));
   }, []);
-  const handleOpenBranchFolder = useCallback((companyId: string, folderPath: string, companyName: string) => {
-    setSelectedCompanyContext({ id: companyId, name: companyName });
-    setCompanyFolder(folderPath);
-    setActiveTab('empresas');
-  }, []);
+  const handleTabChange = useCallback((nextTab: DocumentosTab) => {
+    if (nextTab !== activeTab) {
+      setCompanyFolder(null);
+      setSelectedCompanyContext({ id: null, entryKey: null });
+    }
+    setActiveTab(nextTab);
+  }, [activeTab, setActiveTab]);
   const showSuccessToast = useCallback((message: string) => {
     setSuccessToast(message);
   }, []);
@@ -116,14 +117,10 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
         activeTab,
         personalFolder,
         selectedCompanyId: selectedCompanyContext.id,
+        selectedCompanyEntryKey: selectedCompanyContext.entryKey,
       },
     });
-  }, [activeTab, onViewContextChange, personalFolder, selectedCompanyContext.id, titleSuffix]);
-  useEffect(() => {
-    setCompanyFolder(null);
-    setSelectedCompanyContext({ id: null });
-  }, [activeTab]);
-
+  }, [activeTab, onViewContextChange, personalFolder, selectedCompanyContext.entryKey, selectedCompanyContext.id, titleSuffix]);
   useEffect(() => {
     let mounted = true;
     void (async () => {
@@ -131,25 +128,20 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       if (mounted && saved) {
         setLastAccess(new Date(saved).toLocaleString('pt-BR'));
       }
-
       await documentosPreferencesService.setPageLastAccess(new Date().toISOString());
     })();
-
     return () => {
       mounted = false;
     }
   }, []);
-
   const handleCreatePersonalFolder = useCallback((folderName: string) => {
     const normalizedName = normalizeFolderPath(folderName);
     if (!normalizedName) return;
     const fullPath = personalFolder ? `${personalFolder}/${normalizedName}` : normalizedName;
-
     if (personalFoldersList.some((folder) => normalizeFolderPath(folder).toLowerCase() === fullPath.toLowerCase())) {
       setQuickModal({ title: 'Pasta já Existe', message: 'Uma pasta com este nome já existe aqui.' });
       return;
     }
-
     saveMeusDocs({ ...meusDocs, pastas: [...personalFoldersList, fullPath] });
     setShowCreateFolderModal(false);
   }, [meusDocs, personalFolder, personalFoldersList, saveMeusDocs]);
@@ -244,26 +236,23 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
     return companies.find(c => c.id === selectedCompanyContext.id) || null;
   }, [companies, selectedCompanyContext.id]);
 
-  const companyFoldersList = useMemo(() => {
-    return selectedCompany?.pastasDocumentos || [];
-  }, [selectedCompany]);
-
-  const companyDocuments = useMemo(() => {
-    return selectedCompany?.documentos || [];
-  }, [selectedCompany]);
-
-  const companyCategoriesList = useMemo(() => {
-    return normalizeDocumentCategoryNames(selectedCompany?.categoriasDocumentos);
-  }, [selectedCompany]);
+  const companyFoldersList = useMemo(() => selectedCompany?.pastasDocumentos || [], [selectedCompany]);
+  const companyDocuments = useMemo(() => selectedCompany?.documentos || [], [selectedCompany]);
+  const companyCategoriesList = useMemo(
+    () => normalizeDocumentCategoryNames(selectedCompany?.categoriasDocumentos),
+    [selectedCompany],
+  );
 
   const companyCategoriesForModal = useMemo<DocumentCategory[]>(() => (
     companyCategoriesList.map((name) => createDocumentCategory(name, isDefaultDocumentCategoryName(name)))
   ), [companyCategoriesList]);
-
   const handleCreateCompanyFolder = useCallback((folderName: string) => {
     if (!selectedCompany) return;
     const normalizedName = normalizeFolderPath(folderName);
-    if (!normalizedName) return;
+    if (!normalizedName || normalizedName.includes('/') || normalizedName === '.' || normalizedName === '..') {
+      setQuickModal({ title: 'Nome de pasta inválido', message: 'Use um nome simples, sem barras, "." ou "..".' });
+      return;
+    }
     const fullPath = companyFolder ? `${companyFolder}/${normalizedName}` : normalizedName;
 
     if (companyFoldersList.some((folder) => normalizeFolderPath(folder).toLowerCase() === fullPath.toLowerCase())) {
@@ -275,8 +264,14 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
       ...selectedCompany,
       pastasDocumentos: [...companyFoldersList, fullPath]
     };
-    saveCompanyDocs(updatedCompany);
-    setShowCreateFolderModal(false);
+    void saveCompanyDocs(updatedCompany).then(() => {
+      setShowCreateFolderModal(false);
+    }).catch((error: unknown) => {
+      setQuickModal({
+        title: 'Falha ao criar pasta',
+        message: error instanceof Error ? error.message : 'Não foi possível criar a pasta.',
+      });
+    });
   }, [selectedCompany, companyFolder, companyFoldersList, saveCompanyDocs]);
 
   const handleUploadCompanyFile = useCallback(async (file: File, category: string, description: string, targetFolder: string, dataValidade?: string) => {
@@ -360,7 +355,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
     <div className="gestao-empresarial-container animate-fade-in" style={{ padding: '12px 16px' }}>
       <DocumentosToolbar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         lastAccess={lastAccess}
         showActions={showActions}
         selectedCount={selectedDocIds.length}
@@ -386,7 +381,6 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
         onViewModeChange={setViewMode}
       />
 
-      {/* Tab contents */}
       <div className="detail-tab-content">
         {isLoading ? (
           <DocumentosLoadingState />
@@ -409,20 +403,21 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
                 onDownloadFolder={(folderPath) => handleDownloadFolderZip('meus', folderPath)}
                 onDownload={handleDownloadDocument}
                 onNotify={showSuccessToast}
-                companies={companies}
-                onOpenBranchFolder={handleOpenBranchFolder}
               />
             ) : activeTab === 'empresas' || activeTab === 'inativas' ? (
               <DocumentosEmpresasTab
                 key={activeTab}
-                companies={activeTab === 'inativas' ? inactiveCompanies : activeCompanies}
+                companies={companies}
+                statusFilter={activeTab === 'inativas' ? 'Inativa' : 'Ativa'}
                 selectedDocIds={selectedDocIds}
                 toggleSelectDoc={toggleSelectDoc}
                 searchTerm={searchTerm}
                 selectedCategoryFilter={selectedCategoryFilter}
                 fileTypeFilter={fileTypeFilter}
                 initialSelectedCompanyId={selectedCompanyContext.id}
+                initialSelectedEntryKey={selectedCompanyContext.entryKey}
                 onCompanyChange={handleCompanyChange}
+                onClearSearch={() => setSearchTerm('')}
                 viewMode={viewMode}
                 onSaveCompanyDocs={saveCompanyDocs}
                 selectedFolder={companyFolder}
@@ -486,7 +481,7 @@ export const DocumentosPage: React.FC<DocumentosPageProps> = ({
         onCloseShare={() => setShowShareModal(false)}
         onShareCreated={(links) => {
           setShareRefreshKey((current) => current + 1);
-          setActiveTab('compartilhados');
+          handleTabChange('compartilhados');
           clearSelection();
           showSuccessToast(`${links.length} link(s) de compartilhamento gerado(s).`);
         }}

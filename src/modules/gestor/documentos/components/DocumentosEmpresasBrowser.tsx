@@ -7,15 +7,14 @@ import {
   FolderOpen,
   Trash2,
 } from 'lucide-react';
-import type {
-  Company,
-  CompanyDocument,
-} from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import type { CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import type { CompanyLibraryEntry } from '../utils/companyLibraryEntries';
 
 interface DocumentosEmpresasBrowserProps {
-  companies: Company[];
-  selectedCompanyId: string | null;
-  selectedCompany: Company | null;
+  entries: CompanyLibraryEntry[];
+  selectedEntryKey: string | null;
+  selectedEntry: CompanyLibraryEntry | null;
+  workspaceRootPath: string | null;
   selectedFolder: string | null;
   breadcrumbs: Array<{ label: string; path: string | null }>;
   filteredDocsCount: number;
@@ -28,7 +27,7 @@ interface DocumentosEmpresasBrowserProps {
   children: React.ReactNode;
   onBackClick: () => void;
   onFolderChange: (folder: string | null) => void;
-  onCompanySelect: (companyId: string) => void;
+  onEntrySelect: (entryKey: string) => void;
   onDraggedFolderChange: (folder: string | null) => void;
   onDropTargetChange: React.Dispatch<React.SetStateAction<string | null>>;
   canDropOnFolder: (event: React.DragEvent, targetFolder: string | null) => boolean;
@@ -38,9 +37,10 @@ interface DocumentosEmpresasBrowserProps {
 }
 
 export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps> = ({
-  companies,
-  selectedCompanyId,
-  selectedCompany,
+  entries,
+  selectedEntryKey,
+  selectedEntry,
+  workspaceRootPath,
   selectedFolder,
   breadcrumbs,
   filteredDocsCount,
@@ -53,7 +53,7 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
   children,
   onBackClick,
   onFolderChange,
-  onCompanySelect,
+  onEntrySelect,
   onDraggedFolderChange,
   onDropTargetChange,
   canDropOnFolder,
@@ -62,7 +62,7 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
   onDownloadFolder,
 }) => (
   <>
-    {(selectedCompanyId !== null || isGlobalSearchActive) && (
+    {(selectedEntryKey !== null || isGlobalSearchActive) && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           <button
@@ -73,14 +73,14 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
           </button>
 
           <button
-            onClick={() => onFolderChange(null)}
+            onClick={() => onFolderChange(workspaceRootPath)}
             style={{
               border: 'none', background: 'none', cursor: 'pointer', padding: '2px 4px',
-              fontSize: '0.88rem', fontWeight: selectedFolder === null ? 800 : 600,
-              color: selectedFolder === null ? 'var(--color-gold-dark)' : '#64748b',
+              fontSize: '0.88rem', fontWeight: selectedFolder === workspaceRootPath ? 800 : 600,
+              color: selectedFolder === workspaceRootPath ? 'var(--color-gold-dark)' : '#64748b',
             }}
           >
-            {selectedCompany?.nome || 'Documentos da Empresa'}
+            {selectedEntry?.displayName || 'Documentos da Empresa'}
           </button>
 
           {selectedFolder && breadcrumbs.slice(1).map((crumb, index) => (
@@ -111,42 +111,41 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
       </div>
     )}
 
-    {(selectedCompanyId !== null || isGlobalSearchActive) && (
+    {(selectedEntryKey !== null || isGlobalSearchActive) && (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           {isGlobalSearchActive
             ? 'Busca Global entre Clientes'
-            : `Arquivos da Empresa (${filteredDocsCount})`}
+            : `Arquivos da ${selectedEntry?.tipoEstabelecimento === 'Filial' ? 'Filial' : 'Empresa'} (${filteredDocsCount})`}
         </div>
       </div>
     )}
 
-    {selectedCompanyId === null && !isGlobalSearchActive ? (
+    {selectedEntryKey === null && !isGlobalSearchActive ? (
       <div>
-        {companies.length === 0 ? (
+        {entries.length === 0 ? (
           <div className="empty-tab-state" style={{ padding: '40px 20px', border: '1px dashed #cbd5e1', borderRadius: '12px', backgroundColor: '#fafbfc' }}>
             <AlertCircle size={32} style={{ color: '#94a3b8', marginBottom: '8px' }} />
             <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
-              Nenhuma empresa cliente cadastrada no Supabase.
+              Nenhuma empresa ou filial cadastrada no Supabase.
             </p>
           </div>
         ) : (
           <div className="docs-folders-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-            {companies.map((company) => {
-              const filesCount = company.documentos.length;
-              const branchesCount = company.polos?.length || 0;
+            {entries.map((entry) => {
+              const filesCount = entry.documents.length;
               return (
                 <div
-                  key={company.id}
+                  key={entry.key}
                   className="doc-folder-card"
-                  onClick={() => onCompanySelect(company.id)}
+                  onClick={() => onEntrySelect(entry.key)}
                   style={{ position: 'relative', alignItems: 'flex-start', paddingTop: '14px', paddingBottom: '14px' }}
                 >
                   <FolderOpen className="doc-folder-icon" size={22} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
                   <div className="doc-folder-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>{company.nome}</h4>
+                    <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>{entry.displayName}</h4>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>
-                      CNPJ: {company.cnpj || 'Não cadastrado'}
+                      CNPJ: {entry.cnpj || 'Não cadastrado'}
                     </span>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                       <span style={{
@@ -154,11 +153,11 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
                         fontWeight: 600,
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        backgroundColor: company.tipoEstabelecimento === 'Matriz' ? '#eff6ff' : '#f5f5f4',
-                        color: company.tipoEstabelecimento === 'Matriz' ? '#1e40af' : '#44403c',
-                        border: company.tipoEstabelecimento === 'Matriz' ? '1px solid #bfdbfe' : '1px solid #e7e5e4',
+                        backgroundColor: entry.tipoEstabelecimento === 'Matriz' ? '#eff6ff' : '#f5f5f4',
+                        color: entry.tipoEstabelecimento === 'Matriz' ? '#1e40af' : '#44403c',
+                        border: entry.tipoEstabelecimento === 'Matriz' ? '1px solid #bfdbfe' : '1px solid #e7e5e4',
                       }}>
-                        {company.tipoEstabelecimento}
+                        {entry.tipoEstabelecimento}
                       </span>
                       <span style={{
                         fontSize: '0.65rem',
@@ -169,13 +168,8 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
                         color: '#92400e',
                         border: '1px solid #fde68a',
                       }}>
-                        {company.tipo}
+                        {entry.ownerCompany.tipo}
                       </span>
-                      {branchesCount > 0 && (
-                        <span title="As pastas das filiais estão dentro desta empresa" style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
-                          {branchesCount} {branchesCount === 1 ? 'filial' : 'filiais'}
-                        </span>
-                      )}
                       <span style={{
                         fontSize: '0.65rem',
                         fontWeight: 600,
@@ -199,11 +193,11 @@ export const DocumentosEmpresasBrowser: React.FC<DocumentosEmpresasBrowserProps>
     ) : (
       <div>
         {isFolderNavigationVisible
-          && selectedCompanyId !== null
-          && (selectedFolder || currentSubFolders.length > 0) && (
+          && selectedEntryKey !== null
+          && (selectedFolder !== workspaceRootPath || currentSubFolders.length > 0) && (
           <div style={{ marginBottom: '24px' }}>
             <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-              {selectedFolder ? 'Subpastas' : 'Pastas da empresa'}
+              {selectedFolder !== workspaceRootPath ? 'Subpastas' : `Pastas da ${selectedEntry?.tipoEstabelecimento === 'Filial' ? 'filial' : 'empresa'}`}
             </div>
             <div className="docs-folders-grid">
               {currentSubFolders.map((shortName, index) => {

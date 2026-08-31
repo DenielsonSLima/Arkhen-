@@ -129,6 +129,7 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
             initialActiveTab={initialContext?.data?.activeTab as DocumentosTab | undefined}
             initialPersonalFolder={initialContext?.data?.personalFolder as string | null | undefined}
             initialCompanyId={initialContext?.data?.selectedCompanyId as string | null | undefined}
+            initialCompanyEntryKey={initialContext?.data?.selectedCompanyEntryKey as string | null | undefined}
             onViewContextChange={onContextChange}
           />
         </React.Suspense>

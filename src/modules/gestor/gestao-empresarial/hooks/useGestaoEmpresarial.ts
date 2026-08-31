@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
@@ -17,6 +17,11 @@ interface UseGestaoEmpresarialOptions {
 export const clientesKeys = {
   all: ['clientes'] as const,
 };
+
+export const invalidateClientesRelatedQueries = (queryClient: QueryClient) => Promise.all([
+  queryClient.invalidateQueries({ queryKey: clientesKeys.all }),
+  queryClient.invalidateQueries({ queryKey: ['documentos', 'companies'] }),
+]);
 
 const EMPTY_COMPANIES: Company[] = [];
 
@@ -78,30 +83,22 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const saveMutation = useMutation({
     mutationFn: gestaoEmpresarialService.saveCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: () => invalidateClientesRelatedQueries(queryClient),
   });
 
   const deleteMutation = useMutation({
     mutationFn: gestaoEmpresarialService.deleteCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: () => invalidateClientesRelatedQueries(queryClient),
   });
 
   const inativarMutation = useMutation({
     mutationFn: gestaoEmpresarialService.inativarCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: () => invalidateClientesRelatedQueries(queryClient),
   });
 
   const reativarMutation = useMutation({
     mutationFn: gestaoEmpresarialService.reativarCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: () => invalidateClientesRelatedQueries(queryClient),
   });
 
   const handleUpdateCompany = async (updatedCompany: Company) => {
