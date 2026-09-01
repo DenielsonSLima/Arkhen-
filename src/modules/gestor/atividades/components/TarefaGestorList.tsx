@@ -3,14 +3,14 @@ import { CheckCircle2, Trash2 } from 'lucide-react';
 import {
   formatDateBR,
   todayKey,
-  type StatusAtividadeGestor,
   type TarefaGestor,
+  type TarefaProgressoPatch,
 } from '../services/rotinasAtividadesService';
 
 interface TarefaGestorListProps {
   tarefas: TarefaGestor[];
   emptyText: string;
-  onUpdate: (id: string, patch: Partial<TarefaGestor>) => void;
+  onUpdate: (id: string, patch: TarefaProgressoPatch) => void;
   onDelete?: (id: string) => void;
   onToggleChecklist?: (taskId: string, index: number, concluida: boolean) => void;
 }
@@ -70,14 +70,9 @@ export const TarefaGestorList: React.FC<TarefaGestorListProps> = ({
           )}
 
           <div className="gestor-task-footer">
-            <select
-              value={tarefa.status}
-              onChange={(event) => onUpdate(tarefa.id, { status: event.target.value as StatusAtividadeGestor })}
-            >
-              <option value="Pendente">Pendente</option>
-              <option value="Em andamento">Em andamento</option>
-              <option value="Concluída">Concluída</option>
-            </select>
+            <span className="gestor-task-status-readonly" title="O status é atualizado pelas etapas do checklist">
+              {tarefa.status}
+            </span>
             <input
               value={tarefa.notas}
               onChange={(event) => onUpdate(tarefa.id, { notas: event.target.value })}

@@ -4,6 +4,7 @@ import {
   rotinasAtividadesService,
   type RotinaAtividade,
   type TarefaGestor,
+  type TarefaProgressoPatch,
 } from '../services/rotinasAtividadesService';
 
 export const atividadesKeys = {
@@ -69,6 +70,36 @@ export const useAtividadesWorkspace = () => {
     onSuccess: invalidateWorkspace,
   });
 
+  const updateTarefaProgressMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: TarefaProgressoPatch }) => (
+      rotinasAtividadesService.updateTarefaProgress(id, patch)
+    ),
+    onSuccess: invalidateWorkspace,
+  });
+
+  const updateTarefaChecklistMutation = useMutation({
+    mutationFn: ({
+      id,
+      index,
+      concluida,
+      evidencia,
+      justificativa,
+    }: {
+      id: string;
+      index: number;
+      concluida: boolean;
+      evidencia?: string;
+      justificativa?: string;
+    }) => rotinasAtividadesService.updateTarefaChecklist(
+      id,
+      index,
+      concluida,
+      evidencia,
+      justificativa,
+    ),
+    onSuccess: invalidateWorkspace,
+  });
+
   const workspace = workspaceQuery.data || {
     rotinas: [],
     tarefas: [],
@@ -92,21 +123,22 @@ export const useAtividadesWorkspace = () => {
     saveTarefa: (tarefa: TarefaGestor) => saveTarefaMutation.mutate(tarefa),
     saveTarefaAsync: (tarefa: TarefaGestor) => saveTarefaMutation.mutateAsync(tarefa),
     deleteTarefa: (id: string) => deleteTarefaMutation.mutate(id),
-    updateTarefa: (id: string, patch: Partial<TarefaGestor>) => {
-      const current = workspace.tarefas.find((tarefa) => tarefa.id === id);
-      if (current) saveTarefaMutation.mutate({ ...current, ...patch });
-    },
-    toggleChecklist: (taskId: string, index: number, concluida: boolean) => {
-      const current = workspace.tarefas.find((tarefa) => tarefa.id === taskId);
-      if (!current) return;
-      const checklist = current.checklist.map((item, itemIndex) => (
-        itemIndex === index ? { ...item, concluida } : item
-      ));
-      const done = checklist.length > 0 && checklist.every((item) => item.concluida);
-      saveTarefaMutation.mutate({
-        ...current,
-        checklist,
-        status: done ? 'Concluída' : current.status === 'Concluída' ? 'Em andamento' : current.status,
+    updateTarefa: (id: string, patch: TarefaProgressoPatch) => (
+      updateTarefaProgressMutation.mutate({ id, patch })
+    ),
+    toggleChecklist: (
+      taskId: string,
+      index: number,
+      concluida: boolean,
+      evidencia?: string,
+      justificativa?: string,
+    ) => {
+      updateTarefaChecklistMutation.mutate({
+        id: taskId,
+        index,
+        concluida,
+        evidencia,
+        justificativa,
       });
     },
   }), [
@@ -116,7 +148,8 @@ export const useAtividadesWorkspace = () => {
     deleteTarefaMutation,
     saveRotinaMutation,
     saveTarefaMutation,
-    workspace.tarefas,
+    updateTarefaChecklistMutation,
+    updateTarefaProgressMutation,
   ]);
 
   return {
@@ -135,8 +168,16 @@ export const useAtividadesWorkspace = () => {
     isSaving: saveTarefaMutation.isPending
       || saveRotinaMutation.isPending
       || deleteRotinaMutation.isPending
+      || deleteTarefaMutation.isPending
       || assignResponsibleMutation.isPending
-      || assignResponsibleBatchMutation.isPending,
-    saveError: saveTarefaMutation.error || saveRotinaMutation.error || null,
+      || assignResponsibleBatchMutation.isPending
+      || updateTarefaProgressMutation.isPending
+      || updateTarefaChecklistMutation.isPending,
+    saveError: saveTarefaMutation.error
+      || saveRotinaMutation.error
+      || deleteTarefaMutation.error
+      || updateTarefaProgressMutation.error
+      || updateTarefaChecklistMutation.error
+      || null,
   };
 };

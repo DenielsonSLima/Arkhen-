@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { formatDateBR, type TarefaGestor } from '../services/rotinasAtividadesService';
+import {
+  formatDateBR,
+  type TarefaGestor,
+  type TarefaProgressoPatch,
+} from '../services/rotinasAtividadesService';
 
 interface TaskDetailsDrawerProps {
   selectedTask: TarefaGestor;
   onClose: () => void;
-  updateTarefa: (id: string, updates: Partial<TarefaGestor>) => void;
-  toggleChecklist: (id: string, idx: number, checked: boolean) => void;
+  updateTarefa: (id: string, updates: TarefaProgressoPatch) => void;
+  toggleChecklist: (
+    id: string,
+    idx: number,
+    checked: boolean,
+    evidencia?: string,
+    justificativa?: string,
+  ) => void;
 }
 
 export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
@@ -15,9 +25,34 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
   updateTarefa,
   toggleChecklist,
 }) => {
+  const [completionNote, setCompletionNote] = useState('');
+  const [completionError, setCompletionError] = useState('');
   const totalItems = selectedTask.checklist.length;
   const completedItems = selectedTask.checklist.filter((item) => item.concluida).length;
   const checklistPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const remainingItems = totalItems - completedItems;
+
+  useEffect(() => {
+    setCompletionNote('');
+    setCompletionError('');
+  }, [selectedTask.id]);
+
+  const handleChecklistChange = (idx: number, checked: boolean) => {
+    const isFinalStep = checked && remainingItems === 1;
+    const justification = completionNote.trim();
+    if (isFinalStep && !justification) {
+      setCompletionError('Informe a evidência ou justificativa para concluir a tarefa.');
+      return;
+    }
+    setCompletionError('');
+    toggleChecklist(
+      selectedTask.id,
+      idx,
+      checked,
+      undefined,
+      isFinalStep ? justification : undefined,
+    );
+  };
 
   return (
     <div style={drawerBackdropStyle} onClick={onClose}>
@@ -177,6 +212,34 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
         {/* Checklist Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
           <strong style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>Checklist de Etapas</strong>
+          {remainingItems === 1 && selectedTask.status !== 'Concluída' && (
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
+              Evidência ou justificativa da conclusão
+              <textarea
+                value={completionNote}
+                onChange={(event) => {
+                  setCompletionNote(event.target.value);
+                  if (event.target.value.trim()) setCompletionError('');
+                }}
+                rows={3}
+                maxLength={4000}
+                placeholder="Ex.: documentos conferidos e protocolo validado."
+                aria-describedby={completionError ? 'task-completion-error' : undefined}
+                style={{
+                  border: completionError ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  font: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+              {completionError && (
+                <span id="task-completion-error" role="alert" style={{ color: '#b91c1c', fontWeight: 600 }}>
+                  {completionError}
+                </span>
+              )}
+            </label>
+          )}
           {selectedTask.checklist.length === 0 ? (
             <span style={{ color: '#64748b', fontSize: '0.82rem' }}>Nenhuma etapa cadastrada.</span>
           ) : (
@@ -203,12 +266,13 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                         type="checkbox"
                         id={`step-${selectedTask.id}-${idx}`}
                         checked={isItemDone}
-                        onChange={(e) => toggleChecklist(selectedTask.id, idx, e.target.checked)}
+                        disabled={selectedTask.status === 'Concluída'}
+                        onChange={(e) => handleChecklistChange(idx, e.target.checked)}
                         style={{
                           width: '16px',
                           height: '16px',
                           accentColor: '#c59235',
-                          cursor: 'pointer',
+                          cursor: selectedTask.status === 'Concluída' ? 'not-allowed' : 'pointer',
                         }}
                       />
                       <label

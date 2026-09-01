@@ -74,14 +74,6 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
       .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
   }, [tarefas, initialPeriodo, dataBase, showInternasOnly]);
 
-  const handleToggleConcluir = (tarefa: TarefaGestor) => {
-    const isDone = tarefa.status === 'Concluída';
-    updateTarefa(tarefa.id, {
-      status: isDone ? 'Pendente' : 'Concluída',
-      dataHoraConclusao: isDone ? undefined : new Date().toLocaleString('pt-BR'),
-    });
-  };
-
   const handleSalvarTarefaUsuario = (dados: any) => {
     const nova: TarefaGestor = {
       ...dados,
@@ -128,7 +120,6 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
     );
   };
 
-  // Cálculo da régua de 5 períodos
   const timelineItems = useMemo(() => {
     if (initialPeriodo === 'dia') {
       return [-2, -1, 0, 1, 2].map((offset) => addDaysKey(dataBase, offset));
@@ -167,7 +158,6 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
     return val.slice(0, 7) === dataBase.slice(0, 7);
   };
 
-  // Cálculo de progresso de um período específico para exibir na timeline
   const getPeriodProgress = (val: string) => {
     const periodTasks = tarefas.filter((t) => {
       if (showInternasOnly && t.categoria !== 'Interna') return false;
@@ -188,14 +178,11 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      
-      {/* 5-Period Timeline Toolbar & Progress Indicator */}
       <div style={timelineWrapperStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button onClick={() => shiftDate(-1)} style={timelineArrowBtnStyle} type="button">
             <ChevronLeft size={16} />
           </button>
-          
           <div style={{ display: 'flex', gap: '6px' }}>
             {timelineItems.map((val) => {
               const active = isTimelineItemActive(val);
@@ -259,17 +246,13 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleConcluir(tarefa)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '2px' }}
-                  >
+                  <span title="O status é atualizado pelas etapas do checklist" style={{ marginTop: '2px' }}>
                     {tarefa.status === 'Concluída' ? (
                       <CheckCircle2 size={20} color="#10b981" />
                     ) : (
                       <Circle size={20} color="var(--color-gold-primary)" />
                     )}
-                  </button>
+                  </span>
                   <div>
                     <h3 style={{
                       fontSize: '0.92rem',
@@ -359,7 +342,6 @@ export const AbaMinhasAtividades: React.FC<AbaMinhasAtividadesProps> = ({
   );
 };
 
-// Estilos Tema Claro
 const gridContainerStyle = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))',

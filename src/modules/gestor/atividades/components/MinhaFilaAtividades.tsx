@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
-import { addDaysKey, formatDateBR, todayKey, type TarefaGestor } from '../services/rotinasAtividadesService';
+import {
+  addDaysKey,
+  formatDateBR,
+  todayKey,
+  type TarefaGestor,
+} from '../services/rotinasAtividadesService';
+import { getTarefasDoUsuarioAtual } from '../utils/minhaFila';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
 
@@ -72,6 +78,10 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
   const [searchTerm, setSearchTerm] = useState('');
   const [referenceDate, setReferenceDate] = useState(todayKey());
   const usuarioLogado = usuarioAtual?.nome || 'Usuário';
+  const minhasTarefas = useMemo(
+    () => getTarefasDoUsuarioAtual(tarefas, usuarioAtual),
+    [tarefas, usuarioAtual],
+  );
 
   const handlePrevPeriod = () => {
     if (activeFilter === 'hoje') {
@@ -95,12 +105,12 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
 
   // Se o filtro mudar, sincroniza ou reseta datas adequadas se necessário
   const counts = useMemo(() => FILTROS.reduce<Record<MinhaFilaFiltro, number>>((acc, filtro) => {
-    acc[filtro.id] = tarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
+    acc[filtro.id] = minhasTarefas.filter((tarefa) => matchesFilter(tarefa, filtro.id, referenceDate)).length;
     return acc;
-  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [tarefas, referenceDate]);
+  }, { hoje: 0, semana: 0, mes: 0, atrasadas: 0, internas: 0 }), [minhasTarefas, referenceDate]);
 
   const filteredTasks = useMemo(() => (
-    tarefas
+    minhasTarefas
       .filter((tarefa) => {
         const matchesDate = matchesFilter(tarefa, activeFilter, referenceDate);
         if (!matchesDate) return false;
@@ -120,22 +130,15 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
         if (isBlocked(a) !== isBlocked(b)) return isBlocked(a) ? -1 : 1;
         return a.vencimento.localeCompare(b.vencimento);
       })
-  ), [activeFilter, referenceDate, searchTerm, tarefas]);
+  ), [activeFilter, minhasTarefas, referenceDate, searchTerm]);
 
   const selectedTask = useMemo(() => (
-    tarefas.find((tarefa) => tarefa.id === selectedTaskId) || null
-  ), [tarefas, selectedTaskId]);
+    minhasTarefas.find((tarefa) => tarefa.id === selectedTaskId) || null
+  ), [minhasTarefas, selectedTaskId]);
 
   const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
     setFeedback({ texto, tipo });
     window.setTimeout(() => setFeedback(null), 3000);
-  };
-
-  const handleToggleConcluir = (tarefa: TarefaGestor) => {
-    updateTarefa(tarefa.id, {
-      status: isDone(tarefa) ? 'Pendente' : 'Concluída',
-      dataHoraConclusao: isDone(tarefa) ? undefined : new Date().toLocaleString('pt-BR'),
-    });
   };
 
   const handleSalvarTarefaUsuario = (dados: any) => {
@@ -262,9 +265,9 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
         <div style={listStyle}>
           {filteredTasks.map((tarefa) => (
             <article key={tarefa.id} style={taskCardStyle}>
-              <button type="button" onClick={() => handleToggleConcluir(tarefa)} style={checkBtnStyle}>
+              <span title="O status é atualizado pelas etapas do checklist" style={checkBtnStyle}>
                 {isDone(tarefa) ? <CheckCircle2 size={19} color="#10b981" /> : <Circle size={19} color="#c59235" />}
-              </button>
+              </span>
 
               <button type="button" onClick={() => setSelectedTaskId(tarefa.id)} style={taskMainBtnStyle}>
                 <div style={taskTitleRowStyle}>

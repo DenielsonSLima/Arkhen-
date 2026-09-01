@@ -234,6 +234,7 @@
 
 .gestor-task-footer input,
 .gestor-task-footer select,
+.gestor-task-status-readonly,
 .atividades-toolbar input,
 .atividades-toolbar select {
   background: #f8fafc;
@@ -241,6 +242,13 @@
   border-radius: 8px;
   min-height: 36px;
   padding: 7px 9px;
+}
+
+.gestor-task-status-readonly {
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .gestor-task-footer button {

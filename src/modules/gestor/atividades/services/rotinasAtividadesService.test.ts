@@ -19,6 +19,7 @@ import {
   ROTINAS_BATCH_LIMIT,
   rotinasAtividadesService,
   type RotinaAtividade,
+  type TarefaGestor,
 } from './rotinasAtividadesService';
 
 const makeRotina = (overrides: Partial<RotinaAtividade> = {}): RotinaAtividade => ({
@@ -40,6 +41,23 @@ const makeRotina = (overrides: Partial<RotinaAtividade> = {}): RotinaAtividade =
   checklist: ['Conferir documentos'],
   observacoes: '',
   incluirFinaisDeSemana: false,
+  ...overrides,
+});
+
+const makeTarefa = (overrides: Partial<TarefaGestor> = {}): TarefaGestor => ({
+  id: 'task-local',
+  titulo: 'Conferir documentos',
+  categoria: 'Fiscal',
+  frequencia: 'Única',
+  responsavel: 'Ana',
+  responsavelConfigUsuarioId: '44444444-4444-4444-8444-444444444444',
+  cliente: 'Empresa Alfa',
+  vencimento: '2026-09-05',
+  prioridade: 'Média',
+  status: 'Pendente',
+  origem: 'Usuario',
+  checklist: [{ titulo: 'Validar XML', concluida: false }],
+  notas: '',
   ...overrides,
 });
 
@@ -148,5 +166,68 @@ describe('rotinasAtividadesService', () => {
       '55555555-5555-4555-8555-555555555555',
     )).rejects.toThrow('Selecione no máximo 200 rotinas por lote.');
     expect(supabaseMock.rpc).not.toHaveBeenCalled();
+  });
+
+  it('cria tarefa somente pela RPC operacional, sem enviar status controlado pelo servidor', async () => {
+    await rotinasAtividadesService.saveTarefa(makeTarefa());
+
+    expect(supabaseMock.rpc).toHaveBeenCalledOnce();
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('salvar_tarefa_operacional', {
+      p_tarefa_id: null,
+      p_payload: expect.objectContaining({
+        titulo: 'Conferir documentos',
+        responsavel_config_usuario_id: '44444444-4444-4444-8444-444444444444',
+        vencimento: '2026-09-05',
+        prazo_legal: '2026-09-05',
+        prazo_interno: '2026-09-05',
+        checklist: [{ titulo: 'Validar XML', concluida: false }],
+      }),
+    });
+    const payload = supabaseMock.rpc.mock.calls[0][1].p_payload;
+    expect(payload).not.toHaveProperty('status');
+    expect(payload).not.toHaveProperty('empresa_id');
+    expect(payload).not.toHaveProperty('responsavel_user_id');
+  });
+
+  it('envia apenas o progresso permitido para a RPC parcial', async () => {
+    const id = '77777777-7777-4777-8777-777777777777';
+
+    await rotinasAtividadesService.updateTarefaProgress(id, {
+      notas: 'Documento conferido',
+      observacaoFalta: '',
+    });
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('atualizar_progresso_tarefa_operacional', {
+      p_tarefa_id: id,
+      p_payload: {
+        notas: 'Documento conferido',
+        observacao_falta: null,
+      },
+    });
+  });
+
+  it('delega checklist ao fluxo que deriva status e preserva evidência/revisão', async () => {
+    const id = '77777777-7777-4777-8777-777777777777';
+
+    await rotinasAtividadesService.updateTarefaChecklist(id, 0, true, 'arquivo.pdf', 'Validado');
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('atualizar_tarefa_operacional_checklist', {
+      p_tarefa_id: id,
+      p_indice: 0,
+      p_concluida: true,
+      p_evidencia: 'arquivo.pdf',
+      p_justificativa: 'Validado',
+    });
+  });
+
+  it('arquiva tarefa pela RPC canônica sem update direto na tabela', async () => {
+    const id = '77777777-7777-4777-8777-777777777777';
+
+    await rotinasAtividadesService.deleteTarefa(id);
+
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('salvar_tarefa_operacional', {
+      p_tarefa_id: id,
+      p_payload: { ativo: false },
+    });
   });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, Eye, Trash2 } from 'lucide-react';
-import { formatDateBR, type StatusAtividadeGestor } from '../../services/rotinasAtividadesService';
+import { formatDateBR } from '../../services/rotinasAtividadesService';
 import { getPct } from './utils';
 import type { TaskInspectorProps } from './types';
 import { deleteOutlineBtnStyle, styles } from './styles';
@@ -48,15 +48,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <ProgressBar value={pct} />
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>{done}/{total || 1} itens feitos</span>
-                <select
-                  value={tarefa.status}
-                  onChange={(event) => updateTarefa(tarefa.id, { status: event.target.value as StatusAtividadeGestor })}
-                  style={styles.statusSelect}
-                >
-                  <option value="Pendente">Pendente</option>
-                  <option value="Em andamento">Em andamento</option>
-                  <option value="Concluída">Concluída</option>
-                </select>
+                <span style={{ ...styles.statusSelect, cursor: 'default' }} title="O status é atualizado pelas etapas do checklist">
+                  {tarefa.status}
+                </span>
               </div>
             </article>
           );
@@ -121,10 +115,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               />
             </label>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
-            <button onClick={() => updateTarefa(selectedTask.id, { status: 'Concluída', dataHoraConclusao: new Date().toLocaleString('pt-BR') })} style={styles.primaryBtn} type="button">
-              <CheckCircle2 size={15} /> Marcar concluída
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
             <button onClick={() => deleteTarefa(selectedTask.id)} style={deleteOutlineBtnStyle} type="button">
               <Trash2 size={14} /> Excluir
             </button>

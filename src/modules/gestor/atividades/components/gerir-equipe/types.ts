@@ -1,5 +1,8 @@
 import type { CompanyActivityGroup } from '../../hooks/useAtividades';
-import type { TarefaGestor } from '../../services/rotinasAtividadesService';
+import type {
+  TarefaGestor,
+  TarefaProgressoPatch,
+} from '../../services/rotinasAtividadesService';
 
 export type PeriodoFiltro = 'dia' | 'semana' | 'mes' | 'empresas';
 
@@ -40,7 +43,7 @@ export interface TaskInspectorProps {
   setSelectedTaskId: (id: string | null) => void;
   taskSummary: TaskSummary;
   toggleChecklist: (taskId: string, index: number, concluida: boolean) => void;
-  updateTarefa: (id: string, patch: Partial<TarefaGestor>) => void;
+  updateTarefa: (id: string, patch: TarefaProgressoPatch) => void;
 }
 
 export interface CompanyInspectorProps {

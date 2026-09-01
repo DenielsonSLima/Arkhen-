@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarClock, Repeat2, X } from 'lucide-react';
 import type { ClienteEmpresa, ModeloAtividade } from '../services/atividadesService';
 import {
@@ -116,6 +117,15 @@ export const RotinaFormDrawer: React.FC<RotinaFormDrawerProps> = ({
   }, [onClose]);
 
   useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
 
@@ -192,24 +202,26 @@ export const RotinaFormDrawer: React.FC<RotinaFormDrawerProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="rotinas-drawer-backdrop">
       <aside
         ref={drawerRef}
-        className="rotinas-drawer"
+        className="rotinas-drawer rotinas-drawer--fullscreen"
         role="dialog"
         aria-modal="true"
         aria-labelledby="rotina-form-title"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="rotinas-drawer__header">
-          <div>
-            <span className="rotinas-eyebrow"><Repeat2 size={14} /> {company.nome}</span>
-            <h2 id="rotina-form-title">{rotina ? 'Editar rotina' : 'Nova rotina recorrente'}</h2>
+          <div className="rotinas-drawer__header-inner">
+            <div>
+              <span className="rotinas-eyebrow"><Repeat2 size={14} /> {company.nome}</span>
+              <h2 id="rotina-form-title">{rotina ? 'Editar rotina' : 'Nova rotina recorrente'}</h2>
+            </div>
+            <button ref={closeRef} type="button" className="rotinas-icon-button" onClick={onClose} aria-label="Fechar formulário">
+              <X size={19} />
+            </button>
           </div>
-          <button ref={closeRef} type="button" className="rotinas-icon-button" onClick={onClose} aria-label="Fechar formulário">
-            <X size={19} />
-          </button>
         </header>
 
         <form className="rotinas-form" onSubmit={handleSubmit}>
@@ -379,6 +391,7 @@ export const RotinaFormDrawer: React.FC<RotinaFormDrawerProps> = ({
           </footer>
         </form>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 };

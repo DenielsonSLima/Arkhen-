@@ -1,6 +1,11 @@
 import { supabase } from '../../../../lib/supabase';
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
 import { atividadesService, type ClienteEmpresa, type ModeloAtividade } from './atividadesService';
+import {
+  tarefasOperacionaisService,
+  type TarefaProgressoPatch,
+} from './tarefasOperacionaisService';
+export type { TarefaProgressoPatch } from './tarefasOperacionaisService';
 export type FrequenciaPersistidaAtividade =
   | 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Trimestral' | 'Semestral'
   | 'Personalizada';
@@ -426,50 +431,30 @@ export const rotinasAtividadesService = {
   },
 
   async saveTarefa(tarefa: TarefaGestor) {
-    const empresaId = await getCurrentEmpresaId();
-    let responsavelUserId = tarefa.responsavelUserId;
-    if (!isUuid(responsavelUserId) && tarefa.origem === 'Usuario') {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      responsavelUserId = authData.user?.id;
-    }
-    const payload = {
-      empresa_id: empresaId,
-      rotina_id: isUuid(tarefa.rotinaId) ? tarefa.rotinaId : null,
-      titulo: tarefa.titulo,
-      categoria: tarefa.categoria,
-      frequencia: tarefa.frequencia || 'Única',
-      responsavel_nome: tarefa.responsavel || null,
-      responsavel_user_id: isUuid(responsavelUserId) ? responsavelUserId : null,
-      responsavel_config_usuario_id: isUuid(tarefa.responsavelConfigUsuarioId)
-        ? tarefa.responsavelConfigUsuarioId
-        : null,
-      cliente_nome: tarefa.cliente || 'Escritório',
-      vencimento: tarefa.vencimento || todayKey(),
-      prioridade: tarefa.prioridade,
-      status: tarefa.status,
-      origem: tarefa.origem,
-      checklist: tarefa.checklist || [],
-      notas: tarefa.notas || null,
-      data_hora_conclusao: tarefa.dataHoraConclusao || null,
-      observacao_falta: tarefa.observacaoFalta || null,
-      ativo: true,
-    };
-
-    const request = isUuid(tarefa.id)
-      ? supabase.from('atividades_tarefas').update(payload).eq('id', tarefa.id).eq('empresa_id', empresaId)
-      : supabase.from('atividades_tarefas').insert(payload);
-
-    const { error } = await request;
-    if (error) throw error;
-    return this.getWorkspace();
+    return tarefasOperacionaisService.save(tarefa);
   },
 
   async deleteTarefa(id: string) {
-    if (!isUuid(id)) return this.getWorkspace();
-    const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase.from('atividades_tarefas').update({ ativo: false }).eq('id', id).eq('empresa_id', empresaId);
-    if (error) throw error;
-    return this.getWorkspace();
+    return tarefasOperacionaisService.archive(id);
+  },
+
+  async updateTarefaProgress(id: string, patch: TarefaProgressoPatch) {
+    return tarefasOperacionaisService.updateProgress(id, patch);
+  },
+
+  async updateTarefaChecklist(
+    id: string,
+    index: number,
+    concluida: boolean,
+    evidencia?: string,
+    justificativa?: string,
+  ) {
+    return tarefasOperacionaisService.updateChecklist(
+      id,
+      index,
+      concluida,
+      evidencia,
+      justificativa,
+    );
   },
 };
