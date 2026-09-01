@@ -9,6 +9,8 @@ import {
 } from '../services/categoriaClienteService';
 import './ParametrizacaoPlaceholder.css'; // Usando os mesmos estilos comuns de parametrização
 
+const EMPTY_CATEGORIAS: CategoriaCliente[] = [];
+
 export const CategoriaClientePage: React.FC = () => {
   const queryClient = useQueryClient();
   const categoriasQuery = useQuery({
@@ -16,7 +18,7 @@ export const CategoriaClientePage: React.FC = () => {
     queryFn: categoriaClienteService.getAll,
     staleTime: 5 * 60 * 1000,
   });
-  const categories = categoriasQuery.data || [];
+  const categories = categoriasQuery.data ?? EMPTY_CATEGORIAS;
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoriaCliente | null>(null);
@@ -96,8 +98,8 @@ export const CategoriaClientePage: React.FC = () => {
               <Database size={22} style={{ color: 'var(--color-gold-primary)' }} />
             </span>
             <div>
-              <h2 className="parametrizacao-page-title">Categorias de Parceiros</h2>
-              <p>Gerencie as categorias de parceiros usadas para classificar e organizar os relacionamentos do escritório.</p>
+              <h2 className="parametrizacao-page-title">Categorias de Clientes</h2>
+              <p>Gerencie as categorias usadas para segmentar e organizar os clientes contábeis do escritório.</p>
             </div>
           </div>
           <button type="button" className="btn-add-user" onClick={handleOpenAdd}>
@@ -135,13 +137,13 @@ export const CategoriaClientePage: React.FC = () => {
               ) : categoriasQuery.error ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', color: '#b91c1c', padding: '32px' }}>
-                    Erro ao carregar categorias de parceiros.
+                    Erro ao carregar categorias de clientes.
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', color: '#64748b', padding: '32px' }}>
-                    Nenhuma categoria de parceiro encontrada.
+                    Nenhuma categoria de cliente encontrada.
                   </td>
                 </tr>
               ) : (
@@ -192,7 +194,7 @@ export const CategoriaClientePage: React.FC = () => {
           <form className="cliente-form-container" onSubmit={handleSave} style={{ maxWidth: '480px' }}>
             <div className="cliente-form-header">
               <h2>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</h2>
-              <p>Preencha os dados da categoria de parceiro.</p>
+              <p>Preencha os dados da categoria de cliente.</p>
             </div>
 
             {error && (

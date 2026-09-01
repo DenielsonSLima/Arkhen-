@@ -33,8 +33,8 @@ export const NovaCategoriaClienteModal: React.FC<NovaCategoriaClienteModalProps>
   >
     <div className="cliente-form-container" style={{ maxWidth: '400px', width: '95%' }}>
       <div className="cliente-form-header">
-        <h2>Nova Categoria de Parceiro</h2>
-        <p>Cadastre uma nova categoria para classificar parceiros.</p>
+        <h2>Nova Categoria de Cliente</h2>
+        <p>Cadastre uma nova categoria para segmentar clientes contábeis.</p>
       </div>
 
       {error && (

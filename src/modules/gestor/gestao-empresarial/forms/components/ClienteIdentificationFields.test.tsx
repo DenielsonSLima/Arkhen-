@@ -48,7 +48,8 @@ const baseProps = {
     ativo: true,
     ordem: 10,
   }],
-  availableCategories: ['Cliente Contábil'],
+  partnerCategories: [{ id: 'category-client', nome: 'Cliente Contábil' }],
+  isClienteContabilPartner: true,
   isClassificationsLoading: false,
   isSearching: false,
   onCnpjChange: handler(),
@@ -83,12 +84,51 @@ describe('ClienteIdentificationFields', () => {
       <ClienteIdentificationFields
         {...baseProps}
         categoria="Nova categoria"
-        availableCategories={['Cliente Contábil', 'Nova categoria']}
+        partnerCategories={[
+          { id: 'category-client', nome: 'Cliente Contábil' },
+          { id: 'category-new', nome: 'Nova categoria' },
+        ]}
       />,
     );
 
-    const categorySelect = screen.getByRole('combobox', { name: 'Categoria do parceiro' });
+    const categorySelect = screen.getByRole('combobox', { name: 'Categoria do cliente' });
     expect((categorySelect as HTMLSelectElement).value).toBe('Nova categoria');
     expect((within(categorySelect).getByRole('option', { name: 'Nova categoria' }) as HTMLOptionElement).value).toBe('Nova categoria');
+  });
+
+  it('deduplica tipo e categoria dentro de suas próprias fontes sem perder a seleção', () => {
+    render(
+      <ClienteIdentificationFields
+        {...baseProps}
+        tipoParceiroId="partner-type-selected"
+        categoria=" cliente  contábil "
+        partnerTypes={[
+          { ...baseProps.partnerTypes[0], id: 'partner-type-primary' },
+          { ...baseProps.partnerTypes[0], id: 'partner-type-selected', nome: ' cliente  contábil ' },
+          { ...baseProps.partnerTypes[0], id: 'partner-type-supplier', codigo: 'fornecedor', nome: 'Fornecedor' },
+        ]}
+        partnerCategories={[
+          { id: 'category-primary', nome: 'Cliente Contábil' },
+          { id: 'category-selected', nome: ' cliente  contábil ' },
+          { id: 'category-premium', nome: 'Premium' },
+        ]}
+      />,
+    );
+
+    const [, partnerSelect] = screen.getAllByRole('combobox');
+    const categorySelect = screen.getByRole('combobox', { name: 'Categoria do cliente' });
+
+    expect((partnerSelect as HTMLSelectElement).value).toBe('partner-type-selected');
+    expect((categorySelect as HTMLSelectElement).value).toBe(' cliente  contábil ');
+    expect(within(partnerSelect).queryByRole('option', { name: 'Premium' })).toBeNull();
+    expect(within(categorySelect).queryByRole('option', { name: 'Fornecedor' })).toBeNull();
+    expect(within(partnerSelect).getAllByRole('option')).toHaveLength(3);
+    expect(within(categorySelect).getAllByRole('option')).toHaveLength(3);
+  });
+
+  it('oculta a categoria de cliente para parceiros que não são clientes contábeis', () => {
+    render(<ClienteIdentificationFields {...baseProps} isClienteContabilPartner={false} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Categoria do cliente' })).toBeNull();
   });
 });

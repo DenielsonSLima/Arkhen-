@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
+import { isClienteContabilPartnerType } from '../services/partnerClassificationService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
 import { usePartnerClassifications } from '../hooks/usePartnerClassifications';
 import { ClienteLogoUpload } from './components/ClienteLogoUpload';
@@ -9,6 +10,7 @@ import { ClienteAddressFields } from './components/ClienteAddressFields';
 import { ClienteContactFields } from './components/ClienteContactFields';
 import { ClienteIdentificationFields } from './components/ClienteIdentificationFields';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
+import { FormLoadErrorBanner } from './components/FormLoadErrorBanner';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
 import {
   getDefaultCompanyTypeId,
@@ -17,6 +19,7 @@ import {
   type DocumentType,
   type RegimeCliente,
 } from './clienteFormModel';
+import { hasSelectedPartnerCategory } from './partnerClassificationOptions';
 import './ClienteForm.css';
 
 interface ClienteEditFormProps {
@@ -35,7 +38,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
   const [nomeFantasia, setNomeFantasia] = useState(company.nome || '');
   const [cnae, setCnae] = useState(company.cnae || '');
   const [tipo, setTipo] = useState<RegimeCliente>(company.tipo || 'Simples Nacional');
-  const [categoria, setCategoria] = useState(company.categoriaCliente || 'Cliente Contábil');
+  const [categoria, setCategoria] = useState(company.categoriaCliente || '');
   const [tipoParceiroId, setTipoParceiroId] = useState(company.tipoParceiroId || '');
   const [tipoEmpresaId, setTipoEmpresaId] = useState(company.tipoEmpresaId || '');
   const [naturezaJuridicaId, setNaturezaJuridicaId] = useState(company.naturezaJuridicaId || '');
@@ -62,7 +65,15 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
   const [isSearching, setIsSearching] = useState(false);
   const [savingState, setSavingState] = useState(false);
   
-  const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const {
+    availableCategories,
+    availableCategoryOptions,
+    addCategory,
+    isAddingCategory,
+    isLoading: isLoadingCategories,
+    isError: categoriesError,
+    retry: retryCategories,
+  } = useClienteCategorias();
   const {
     partnerTypes,
     companyTypes,
@@ -72,6 +83,11 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     isError: classificationsError,
     retry: retryClassifications,
   } = usePartnerClassifications();
+  const isClienteContabilPartner = isClienteContabilPartnerType(
+    partnerTypes.find((item) => item.id === tipoParceiroId),
+  );
+  const requiredCategoryError = isClienteContabilPartner && categoriesError;
+  const isLoadingRequiredCategories = isClienteContabilPartner && isLoadingCategories;
 
   useEffect(() => {
     const nextDocType = getDocumentType(company);
@@ -82,7 +98,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     setNomeFantasia(company.nome || '');
     setCnae(company.cnae || '');
     setTipo(company.tipo || 'Simples Nacional');
-    setCategoria(company.categoriaCliente || 'Cliente Contábil');
+    setCategoria(company.categoriaCliente || '');
     setTipoParceiroId(company.tipoParceiroId || '');
     setTipoEmpresaId(company.tipoEmpresaId || '');
     setNaturezaJuridicaId(company.naturezaJuridicaId || '');
@@ -102,6 +118,9 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     if (!tipoParceiroId && classificationDefaults.partnerType?.id) {
       setTipoParceiroId(classificationDefaults.partnerType.id);
     }
+    if (isClienteContabilPartner && !categoria && availableCategories.length) {
+      setCategoria(getActiveCategoryName(availableCategories, 'Cliente Contábil'));
+    }
     if (docType === 'CPF') {
       const pessoaFisicaId = getDefaultCompanyTypeId(companyTypes, 'PF');
       if (pessoaFisicaId && tipoEmpresaId !== pessoaFisicaId) {
@@ -117,23 +136,18 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     if (!naturezaJuridicaId && classificationDefaults.legalNature?.id) {
       setNaturezaJuridicaId(classificationDefaults.legalNature.id);
     }
-  }, [classificationDefaults, companyTypes, docType, naturezaJuridicaId, tipo, tipoEmpresaId, tipoParceiroId]);
+  }, [availableCategories, categoria, classificationDefaults, companyTypes, docType, isClienteContabilPartner, naturezaJuridicaId, tipo, tipoEmpresaId, tipoParceiroId]);
 
   const handleDocTypeChange = (type: DocumentType) => {
     setDocType(type);
     setErrorMsg(null);
     if (type === 'CPF') {
       setTipo('PF');
-      setCategoria(getActiveCategoryName(availableCategories, 'Pessoa Física'));
       setCnae('');
       setNaturezaJuridicaId('');
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
       setTipo('Simples Nacional');
-      setCategoria(getActiveCategoryName(
-        availableCategories,
-        classificationDefaults.clientCategory?.nome,
-      ));
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
       setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
     }
@@ -190,8 +204,8 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
       setErrorMsg(docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.');
       return;
     }
-    if (!availableCategories.includes(categoria)) {
-      setErrorMsg('Selecione uma categoria ativa do parceiro.');
+    if (isClienteContabilPartner && !hasSelectedPartnerCategory(availableCategoryOptions, categoria)) {
+      setErrorMsg('Selecione uma categoria ativa do cliente.');
       return;
     }
     if (!tipoParceiroId) {
@@ -217,7 +231,7 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
         cnpj: activeDoc,
         cnae,
         tipo,
-        categoriaCliente: categoria,
+        categoriaCliente: isClienteContabilPartner ? categoria : undefined,
         tipoParceiroId,
         tipoEmpresaId: tipoEmpresaId || undefined,
         naturezaJuridicaId: naturezaJuridicaId || undefined,
@@ -278,15 +292,19 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
         </div>
       )}
 
-      {classificationsError && (
-        <div className="form-alert-banner error" role="alert" style={{ marginBottom: 16 }}>
-          <AlertCircle size={18} />
-          <span>Não foi possível carregar as classificações obrigatórias.</span>
-          <button type="button" onClick={() => { void retryClassifications(); }}>
-            Tentar novamente
-          </button>
-        </div>
-      )}
+      <FormLoadErrorBanner
+        visible={classificationsError}
+        message="Não foi possível carregar as classificações obrigatórias."
+        onRetry={() => { void retryClassifications(); }}
+        withSpacing
+      />
+
+      <FormLoadErrorBanner
+        visible={requiredCategoryError}
+        message="Não foi possível carregar as categorias dos clientes."
+        onRetry={() => { void retryCategories(); }}
+        withSpacing
+      />
 
       {successMsg && (
         <div className="form-alert-banner" style={{ marginBottom: 16 }}>
@@ -318,10 +336,16 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             partnerTypes={partnerTypes}
             companyTypes={companyTypes}
             legalNatures={legalNatures}
-            availableCategories={availableCategories}
-            isClassificationsLoading={isLoadingClassifications || classificationsError}
+            partnerCategories={availableCategoryOptions}
+            isClienteContabilPartner={isClienteContabilPartner}
+            isClassificationsLoading={
+              isLoadingClassifications
+              || classificationsError
+              || isLoadingRequiredCategories
+              || requiredCategoryError
+            }
             isSearching={isSearching}
-            isDisabled={isSavingFinal || classificationsError}
+            isDisabled={isSavingFinal || classificationsError || requiredCategoryError}
             onCnpjChange={setCnpj}
             onCpfChange={setCpf}
             onRazaoSocialChange={setRazaoSocial}
@@ -365,7 +389,13 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             <button
               type="submit"
               className="btn-submit"
-              disabled={isSavingFinal || isLoadingClassifications || classificationsError}
+              disabled={
+                isSavingFinal
+                || isLoadingClassifications
+                || classificationsError
+                || isLoadingRequiredCategories
+                || requiredCategoryError
+              }
             >
               {isSavingFinal ? <Loader2 size={16} className="animate-spin" /> : null}
               Salvar Alterações

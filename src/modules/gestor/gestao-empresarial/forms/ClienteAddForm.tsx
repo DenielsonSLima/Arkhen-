@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ArrowLeft, Check, FolderTree, Loader2 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
+import { isClienteContabilPartnerType } from '../services/partnerClassificationService';
 import { useClienteCategorias } from '../hooks/useClienteCategorias';
 import { usePartnerClassifications } from '../hooks/usePartnerClassifications';
 import {
@@ -13,7 +14,9 @@ import { ClienteLogoUpload } from './components/ClienteLogoUpload';
 import { ClienteAddressFields } from './components/ClienteAddressFields';
 import { ClienteContactFields } from './components/ClienteContactFields';
 import { ClienteIdentificationFields } from './components/ClienteIdentificationFields';
+import { ClienteFormSteps } from './components/ClienteFormSteps';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
+import { FormLoadErrorBanner } from './components/FormLoadErrorBanner';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
 import {
   getDefaultCompanyTypeId,
@@ -21,6 +24,8 @@ import {
   type DocumentType,
   type RegimeCliente,
 } from './clienteFormModel';
+import { hasSelectedPartnerCategory } from './partnerClassificationOptions';
+import { CLIENTE_FORM_STEPS, type ClienteFormStep } from './clienteFormStepsModel';
 import './ClienteForm.css';
 
 interface ClienteAddFormProps {
@@ -30,18 +35,10 @@ interface ClienteAddFormProps {
   isSaving: boolean;
 }
 
-type FormStep = 'identificacao' | 'contato' | 'endereco' | 'pastas';
-
 const fallbackPastas = expandFolderPaths(DEFAULT_PASTAS_DOCUMENTOS.map((item) => item.caminho));
-const formSteps: Array<{ id: FormStep; label: string; description: string }> = [
-  { id: 'identificacao', label: '1. Identificação', description: 'Informe documento, regime e classificações do parceiro.' },
-  { id: 'contato', label: '2. Contatos', description: 'Cadastre o responsável, telefone e e-mail principal.' },
-  { id: 'endereco', label: '3. Endereço fiscal', description: 'Preencha a localização fiscal da empresa ou pessoa física.' },
-  { id: 'pastas', label: '4. Pastas padrão', description: 'Revise a estrutura de pastas que será criada em Documentos para o parceiro.' },
-];
 
 export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel, onSearchCNPJ, isSaving }) => {
-  const [step, setStep] = useState<FormStep>('identificacao');
+  const [step, setStep] = useState<ClienteFormStep>('identificacao');
   const [docType, setDocType] = useState<DocumentType>('CNPJ');
   const [cnpj, setCnpj] = useState('');
   const [cpf, setCpf] = useState('');
@@ -54,16 +51,13 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [tipoEmpresaId, setTipoEmpresaId] = useState('');
   const [naturezaJuridicaId, setNaturezaJuridicaId] = useState('');
   const [logo, setLogo] = useState('');
-  
   const [showAddCatModal, setShowAddCatModal] = useState(false);
   const [newCatNome, setNewCatNome] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
   const [newCatError, setNewCatError] = useState('');
-  
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [contato, setContato] = useState('');
-  
   const [endereco, setEndereco] = useState('');
   const [bairro, setBairro] = useState('');
   const [cep, setCep] = useState('');
@@ -76,8 +70,15 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [isSearching, setIsSearching] = useState(false);
   const [selectedPastas, setSelectedPastas] = useState<string[]>(fallbackPastas);
   const [pastasTouched, setPastasTouched] = useState(false);
-  
-  const { availableCategories, addCategory, isAddingCategory } = useClienteCategorias();
+  const {
+    availableCategories,
+    availableCategoryOptions,
+    addCategory,
+    isAddingCategory,
+    isLoading: isLoadingCategories,
+    isError: categoriesError,
+    retry: retryCategories,
+  } = useClienteCategorias();
   const {
     partnerTypes,
     companyTypes,
@@ -88,6 +89,11 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     retry: retryClassifications,
   } = usePartnerClassifications();
   const pastasPadraoQuery = useActivePastasPadraoQuery();
+  const isClienteContabilPartner = isClienteContabilPartnerType(
+    partnerTypes.find((item) => item.id === tipoParceiroId),
+  );
+  const requiredCategoryError = isClienteContabilPartner && categoriesError;
+  const isLoadingRequiredCategories = isClienteContabilPartner && isLoadingCategories;
 
   const availablePastas = useMemo(() => {
     const paths = pastasPadraoQuery.data && pastasPadraoQuery.data.length > 0
@@ -105,10 +111,10 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (!tipoParceiroId && classificationDefaults.partnerType?.id) {
       setTipoParceiroId(classificationDefaults.partnerType.id);
     }
-    if (!categoria && availableCategories.length) {
+    if (isClienteContabilPartner && !categoria && availableCategories.length) {
       setCategoria(getActiveCategoryName(
         availableCategories,
-        classificationDefaults.clientCategory?.nome,
+        'Cliente Contábil',
       ));
     }
     if (docType === 'CPF') {
@@ -125,24 +131,19 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     docType,
     tipoEmpresaId,
     tipoParceiroId,
+    isClienteContabilPartner,
   ]);
-
 
   const handleDocTypeChange = (type: DocumentType) => {
     setDocType(type);
     setErrorMsg(null);
     if (type === 'CPF') {
       setTipo('PF');
-      setCategoria(getActiveCategoryName(availableCategories, 'Pessoa Física'));
       setCnae('');
       setNaturezaJuridicaId('');
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
       setTipo('Simples Nacional');
-      setCategoria(getActiveCategoryName(
-        availableCategories,
-        classificationDefaults.clientCategory?.nome,
-      ));
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
       setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
     }
@@ -184,7 +185,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       cnpj: activeDoc,
       cnae,
       tipo,
-      categoriaCliente: categoria,
+      categoriaCliente: isClienteContabilPartner ? categoria : undefined,
       tipoParceiroId,
       tipoEmpresaId: tipoEmpresaId || undefined,
       naturezaJuridicaId: naturezaJuridicaId || undefined,
@@ -218,7 +219,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (docType === 'CPF' && cleanDoc.length !== 11) return 'CPF incompleto.';
     if (!razaoSocial.trim()) return docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.';
     if (!nomeFantasia.trim()) return docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.';
-    if (!availableCategories.includes(categoria)) return 'Selecione uma categoria ativa do parceiro.';
+    if (isClienteContabilPartner && !hasSelectedPartnerCategory(availableCategoryOptions, categoria)) return 'Selecione uma categoria ativa do cliente.';
     if (!tipoParceiroId) return 'Selecione o tipo de parceiro.';
     if (docType === 'CNPJ' && !tipoEmpresaId) return 'Selecione o tipo de empresa.';
     if (docType === 'CNPJ' && !naturezaJuridicaId) return 'Selecione a natureza jurídica.';
@@ -226,8 +227,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     return null;
   };
 
-  const currentStepIndex = formSteps.findIndex((item) => item.id === step);
-  const currentStepInfo = formSteps[currentStepIndex] || formSteps[0];
+  const currentStepIndex = CLIENTE_FORM_STEPS.findIndex((item) => item.id === step);
+  const currentStepInfo = CLIENTE_FORM_STEPS[currentStepIndex] || CLIENTE_FORM_STEPS[0];
   const isLastStep = step === 'pastas';
 
   const goToPreviousStep = () => {
@@ -235,7 +236,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       onCancel();
       return;
     }
-    setStep(formSteps[currentStepIndex - 1].id);
+    setStep(CLIENTE_FORM_STEPS[currentStepIndex - 1].id);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -251,7 +252,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     setErrorMsg(null);
 
     if (!isLastStep) {
-      setStep(formSteps[currentStepIndex + 1].id);
+      setStep(CLIENTE_FORM_STEPS[currentStepIndex + 1].id);
       return;
     }
 
@@ -309,16 +310,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         <p>{currentStepInfo.description}</p>
       </div>
 
-      <div className="cliente-form-steps" aria-label="Etapas do cadastro">
-        {formSteps.map((item, index) => (
-          <span
-            key={item.id}
-            className={step === item.id ? 'active' : index < currentStepIndex ? 'done' : ''}
-          >
-            {item.label}
-          </span>
-        ))}
-      </div>
+      <ClienteFormSteps currentStep={step} currentStepIndex={currentStepIndex} />
 
       {errorMsg && (
         <div className="form-alert-banner error">
@@ -327,15 +319,17 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         </div>
       )}
 
-      {classificationsError && (
-        <div className="form-alert-banner error" role="alert">
-          <AlertCircle size={18} />
-          <span>Não foi possível carregar as classificações obrigatórias.</span>
-          <button type="button" onClick={() => { void retryClassifications(); }}>
-            Tentar novamente
-          </button>
-        </div>
-      )}
+      <FormLoadErrorBanner
+        visible={classificationsError}
+        message="Não foi possível carregar as classificações obrigatórias."
+        onRetry={() => { void retryClassifications(); }}
+      />
+
+      <FormLoadErrorBanner
+        visible={requiredCategoryError}
+        message="Não foi possível carregar as categorias dos clientes."
+        onRetry={() => { void retryCategories(); }}
+      />
 
       {successMsg && (
         <div className="form-alert-banner">
@@ -370,10 +364,16 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               partnerTypes={partnerTypes}
               companyTypes={companyTypes}
               legalNatures={legalNatures}
-              availableCategories={availableCategories}
-              isClassificationsLoading={isLoadingClassifications || classificationsError}
+              partnerCategories={availableCategoryOptions}
+              isClienteContabilPartner={isClienteContabilPartner}
+              isClassificationsLoading={
+                isLoadingClassifications
+                || classificationsError
+                || isLoadingRequiredCategories
+                || requiredCategoryError
+              }
               isSearching={isSearching}
-              isDisabled={isSaving || classificationsError}
+              isDisabled={isSaving || classificationsError || requiredCategoryError}
               showDetailedPlaceholders
               onCnpjChange={setCnpj}
               onCpfChange={setCpf}
@@ -469,7 +469,13 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
             <button
               type="submit"
               className="btn-submit"
-              disabled={isSaving || isLoadingClassifications || classificationsError}
+              disabled={
+                isSaving
+                || isLoadingClassifications
+                || classificationsError
+                || isLoadingRequiredCategories
+                || requiredCategoryError
+              }
             >
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
               {isLastStep ? 'Salvar Parceiro' : 'Avançar'}

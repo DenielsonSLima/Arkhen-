@@ -173,19 +173,21 @@ export const ObrigacoesPage: React.FC = () => {
 
       <section className="obrigacoes-page__filters" aria-label="Filtros das obrigações">
         <label className="obrigacoes-page__search">
-          <Search size={18} />
-          <span className="sr-only">Buscar obrigação</span>
-          <input
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Buscar por obrigação, categoria ou etapa..."
-          />
+          <span className="obrigacoes-page__filter-label">Buscar obrigação</span>
+          <span className="obrigacoes-page__search-control">
+            <Search size={17} aria-hidden="true" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por obrigação, categoria ou etapa..."
+            />
+          </span>
         </label>
         <label>
-          <span>Regime</span>
+          <span className="obrigacoes-page__filter-label">Regime</span>
           <select
             value={regime}
             onChange={(event) => {
@@ -198,7 +200,7 @@ export const ObrigacoesPage: React.FC = () => {
           </select>
         </label>
         <label>
-          <span>Categoria</span>
+          <span className="obrigacoes-page__filter-label">Categoria</span>
           <select
             value={categoria}
             onChange={(event) => {
@@ -211,7 +213,7 @@ export const ObrigacoesPage: React.FC = () => {
           </select>
         </label>
         <label>
-          <span>Status</span>
+          <span className="obrigacoes-page__filter-label">Status</span>
           <select
             value={status}
             onChange={(event) => {

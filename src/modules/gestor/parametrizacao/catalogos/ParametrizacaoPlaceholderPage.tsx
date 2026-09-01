@@ -72,9 +72,9 @@ const PARAMETRIZACAO_CONFIGS: Record<ParametrizacaoKind, ParametrizacaoKindConfi
   },
   'tipos-parceiros': {
     title: 'Tipos de Parceiros',
-    description: 'Padronize categorias de parceiros, canais comerciais e relações de indicação.',
+    description: 'Defina o papel de cada parceiro no relacionamento com o escritório.',
     icon: <Handshake size={22} />,
-    integrationNote: 'Utilizado no CRM e no controle financeiro de faturamento para calcular comissões e rastrear origem de leads.',
+    integrationNote: 'Classifica cada cadastro como cliente contábil, fornecedor, correspondente ou parceiro comercial; a categoria permanece uma classificação separada.',
     defaultItems: toParametrizacaoItems(TIPOS_PARCEIROS_DEFAULTS),
   },
   'tipos-documentos': {
@@ -122,6 +122,8 @@ interface ParametrizacaoPlaceholderPageProps {
   kind: ParametrizacaoKind;
 }
 
+const EMPTY_PARAMETRIZACAO_ITEMS: ParametrizacaoItem[] = [];
+
 export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPageProps> = ({ kind }) => {
   const config = PARAMETRIZACAO_CONFIGS[kind];
   const tipo = KIND_TO_TIPO[kind];
@@ -148,7 +150,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
   const [error, setError] = useState('');
   const editingProtectedItem = kind === 'tipos-parceiros'
     && editingItem?.codigo === 'cliente_contabil';
-  const items = catalogosQuery.data || [];
+  const items = catalogosQuery.data ?? EMPTY_PARAMETRIZACAO_ITEMS;
   const saveMutation = useMutation({
     mutationFn: () => catalogosService.save({
       id: editingItem?.id,

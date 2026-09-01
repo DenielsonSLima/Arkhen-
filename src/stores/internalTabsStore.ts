@@ -34,8 +34,8 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'clientes' && title.startsWith('Clientes')) {
     return `Parceiros${title.slice('Clientes'.length)}`;
   }
-  if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Clientes')) {
-    return `Categorias de Parceiros${title.slice('Categorias de Clientes'.length)}`;
+  if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Parceiros')) {
+    return `Categorias de Clientes${title.slice('Categorias de Parceiros'.length)}`;
   }
   if (moduleId === 'protocolos') {
     const legacyPrefix = title.startsWith('Protocolos e Documentos')

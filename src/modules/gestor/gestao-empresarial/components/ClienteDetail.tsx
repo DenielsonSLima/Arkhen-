@@ -194,7 +194,11 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
             <div className="company-title-row">
               <h2>{company.nome}</h2>
               <span className="regime-badge-clear">{company.tipo}</span>
-              <span className="category-badge-clear">{normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</span>
+              {isAccountingClient && (
+                <span className="category-badge-clear">
+                  {normalizeCatalogLabel(company.categoriaCliente || 'Sem categoria')}
+                </span>
+              )}
               <span className={`status-badge-clear ${isAtiva ? 'active' : 'inactive'}`}>
                 <span className="status-dot"></span>
                 {company.status}
@@ -308,7 +312,10 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
                     <label>Regime de Tributação</label>
                     <p>{company.tipo || '-'}</p>
                   </div>
-                  <PartnerClassificationSummary company={company} />
+                  <PartnerClassificationSummary
+                    company={company}
+                    showClientCategory={isAccountingClient}
+                  />
                   <div className="detail-field-box">
                     <label>Inscrição Estadual / IM</label>
                     <p>{company.inscricaoEstadual || '-'}</p>

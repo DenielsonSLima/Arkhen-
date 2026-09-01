@@ -25,7 +25,7 @@ const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-tipos-empresa', label: 'Tipos de Empresa' },
   { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
   { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
-  { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Parceiros' },
+  { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },
   { id: 'parametrizacao-cnae', label: 'CNAE' },
   { id: 'parametrizacao-regras', label: 'Impostos' },
   { id: 'parametrizacao-parametros-calculo', label: 'Parâmetros de Cálculo' },

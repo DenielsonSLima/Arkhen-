@@ -4,6 +4,12 @@ import { normalizeCatalogLabel } from '../../../shared/catalogLabel';
 import type { CatalogoItem } from '../../../parametrizacao/services/catalogosService';
 import type { DocumentType, RegimeCliente } from '../clienteFormModel';
 import { CLIENTE_REGIMES, formatCNPJ, formatCPF } from '../clienteFormModel';
+import {
+  getSelectedPartnerCategoryValue,
+  getUniqueCatalogOptions,
+  getUniquePartnerCategoryOptions,
+  type PartnerCategoryOption,
+} from '../partnerClassificationOptions';
 
 interface ClienteIdentificationFieldsProps {
   docType: DocumentType;
@@ -21,7 +27,8 @@ interface ClienteIdentificationFieldsProps {
   partnerTypes: CatalogoItem[];
   companyTypes: CatalogoItem[];
   legalNatures: CatalogoItem[];
-  availableCategories: string[];
+  partnerCategories: PartnerCategoryOption[];
+  isClienteContabilPartner: boolean;
   isClassificationsLoading: boolean;
   isSearching: boolean;
   isDisabled?: boolean;
@@ -53,7 +60,10 @@ const ClassificationSelect = ({
   placeholder: string;
   onChange: (value: string) => void;
   disabled: boolean;
-}) => (
+}) => {
+  const visibleOptions = getUniqueCatalogOptions(options, value);
+
+  return (
   <select
     className="input-style"
     value={value}
@@ -61,11 +71,12 @@ const ClassificationSelect = ({
     disabled={disabled}
   >
     <option value="">{placeholder}</option>
-    {options.map((item) => (
+    {visibleOptions.map((item) => (
       <option key={item.id} value={item.id}>{normalizeCatalogLabel(item.nome)}</option>
     ))}
   </select>
-);
+  );
+};
 
 export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsProps> = ({
   docType,
@@ -83,7 +94,8 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
   partnerTypes,
   companyTypes,
   legalNatures,
-  availableCategories,
+  partnerCategories,
+  isClienteContabilPartner,
   isClassificationsLoading,
   isSearching,
   isDisabled = false,
@@ -105,6 +117,8 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
   const classificationsPlaceholder = isClassificationsLoading
     ? 'Carregando opções...'
     : 'Selecione uma opção';
+  const categoryOptions = getUniquePartnerCategoryOptions(partnerCategories, categoria);
+  const selectedCategoryValue = getSelectedPartnerCategoryValue(categoryOptions, categoria);
 
   return (
     <div className="form-fields-section">
@@ -232,47 +246,49 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
           )}
         </div>
 
-        <div className="input-container field-col-6">
-          <label>Categoria do parceiro</label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <select
-              aria-label="Categoria do parceiro"
-              className="input-style"
-              value={availableCategories.includes(categoria) ? categoria : ''}
-              onChange={(event) => onCategoriaChange(event.target.value)}
-              disabled={isDisabled}
-              style={{ flex: 1 }}
-            >
-              <option value="">Selecione uma categoria ativa</option>
-              {availableCategories.map((item) => (
-                <option key={item} value={item}>{normalizeCatalogLabel(item)}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={onOpenCategoryModal}
-              disabled={isDisabled}
-              style={{
-                backgroundColor: 'rgba(197, 146, 53, 0.08)',
-                border: '1px solid var(--color-gold-primary)',
-                color: 'var(--color-gold-dark)',
-                borderRadius: '6px',
-                width: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                transition: 'all 0.2s',
-                flexShrink: 0,
-              }}
-              title="Criar nova categoria de parceiro"
-            >
-              +
-            </button>
+        {isClienteContabilPartner && (
+          <div className="input-container field-col-6">
+            <label>Categoria do cliente *</label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <select
+                aria-label="Categoria do cliente"
+                className="input-style"
+                value={selectedCategoryValue}
+                onChange={(event) => onCategoriaChange(event.target.value)}
+                disabled={isDisabled}
+                style={{ flex: 1 }}
+              >
+                <option value="">Selecione uma categoria ativa</option>
+                {categoryOptions.map((item) => (
+                  <option key={item.id} value={item.nome}>{normalizeCatalogLabel(item.nome)}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onOpenCategoryModal}
+                disabled={isDisabled}
+                style={{
+                  backgroundColor: 'rgba(197, 146, 53, 0.08)',
+                  border: '1px solid var(--color-gold-primary)',
+                  color: 'var(--color-gold-dark)',
+                  borderRadius: '6px',
+                  width: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  fontSize: '1.2rem',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s',
+                  flexShrink: 0,
+                }}
+                title="Criar nova categoria de cliente"
+              >
+                +
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="input-container field-col-6">
           <label>IE / IM</label>

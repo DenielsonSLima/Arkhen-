@@ -74,19 +74,36 @@ const sortByName = (items: CatalogoItem[]) => (
   [...items].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
 );
 
+const normalizedNameKey = (value: string) => (
+  normalizeCatalogLabel(value).toLocaleLowerCase('pt-BR')
+);
+
+const throwCatalogError = (error: { code?: string; message?: string }) => {
+  if (error.code === '23505') {
+    throw new Error('Já existe um registro com esse nome neste catálogo.');
+  }
+  throw error;
+};
+
 const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[]) => {
   if (!defaults.length) return;
 
   const empresaId = await getCurrentEmpresaId();
   const { data, error } = await supabase
     .from(TABLE)
-    .select('codigo')
+    .select('codigo,nome')
     .eq('empresa_id', empresaId)
     .eq('tipo', tipo);
 
   if (error) throw error;
   const existingCodes = new Set((data || []).map((item) => String(item.codigo)));
-  const missingDefaults = defaults.filter((item) => !existingCodes.has(item.codigo));
+  const existingNames = new Set(
+    (data || []).map((item) => normalizedNameKey(String(item.nome || ''))),
+  );
+  const missingDefaults = defaults.filter((item) => (
+    !existingCodes.has(item.codigo)
+    && !existingNames.has(normalizedNameKey(item.nome))
+  ));
   if (missingDefaults.length === 0) return;
 
   const { error: insertError } = await supabase.from(TABLE).upsert(
@@ -106,7 +123,7 @@ const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[
     },
   );
 
-  if (insertError && insertError.code !== '42501') throw insertError;
+  if (insertError && insertError.code !== '42501') throwCatalogError(insertError);
 };
 
 export const catalogosService = {
@@ -138,7 +155,7 @@ export const catalogosService = {
         })
         .eq('id', input.id);
 
-      if (error) throw error;
+      if (error) throwCatalogError(error);
       return nome;
     }
 
@@ -155,7 +172,7 @@ export const catalogosService = {
       ordem: 100,
     });
 
-    if (error) throw error;
+    if (error) throwCatalogError(error);
     return nome;
   },
 

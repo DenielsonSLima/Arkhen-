@@ -14,29 +14,39 @@ export interface CategoriaCliente {
 
 const DEFAULT_CATEGORIAS: CatalogoDefaultItem[] = [
   {
-    codigo: 'cliente-contabil',
+    codigo: 'cliente_contabil',
     nome: 'Cliente Contábil',
-    descricao: 'Parceiro sob assessoria e contabilidade regular.',
+    descricao: 'Categoria padrão para clientes contábeis.',
+    sistema: true,
+    ordem: 10,
   },
   {
-    codigo: 'entidade-isenta',
+    codigo: 'pessoa_fisica',
+    nome: 'Pessoa Física',
+    descricao: 'Categoria para atendimento de pessoa física.',
+    sistema: true,
+    ordem: 20,
+  },
+  {
+    codigo: 'entidade_isenta',
     nome: 'Entidade Isenta',
-    descricao: 'Entidades sem fins lucrativos ou orgaos isentos.',
+    descricao: 'Categoria para entidades isentas ou imunes.',
+    sistema: true,
+    ordem: 30,
   },
   {
-    codigo: 'holding-patrimonial',
+    codigo: 'holding_patrimonial',
     nome: 'Holding / Patrimonial',
-    descricao: 'Empresas com gestao societaria e patrimonial especifica.',
+    descricao: 'Categoria para holdings e estruturas patrimoniais.',
+    sistema: true,
+    ordem: 40,
   },
   {
     codigo: 'outro',
     nome: 'Outro',
-    descricao: 'Categorias de parceiros gerais ou excepcionais.',
-  },
-  {
-    codigo: 'pessoa-fisica',
-    nome: 'Pessoa Física',
-    descricao: 'Parceiro individual sem CNPJ, rotinas de IRPF ou pessoais.',
+    descricao: 'Categoria complementar.',
+    sistema: true,
+    ordem: 50,
   },
 ];
 

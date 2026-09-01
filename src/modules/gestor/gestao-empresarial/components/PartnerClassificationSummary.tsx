@@ -5,13 +5,17 @@ import { usePartnerClassifications } from '../hooks/usePartnerClassifications';
 
 interface PartnerClassificationSummaryProps {
   company: Company;
+  showClientCategory: boolean;
 }
 
 const getItemName = (items: Array<{ id: string; nome: string }>, id?: string) => (
   normalizeCatalogLabel(items.find((item) => item.id === id)?.nome) || '-'
 );
 
-export const PartnerClassificationSummary: React.FC<PartnerClassificationSummaryProps> = ({ company }) => {
+export const PartnerClassificationSummary: React.FC<PartnerClassificationSummaryProps> = ({
+  company,
+  showClientCategory,
+}) => {
   const { partnerTypes, companyTypes, legalNatures, isLoading } = usePartnerClassifications();
   const pendingValue = isLoading ? 'Carregando...' : '-';
 
@@ -29,10 +33,12 @@ export const PartnerClassificationSummary: React.FC<PartnerClassificationSummary
         <label>Natureza jurídica</label>
         <p>{company.naturezaJuridicaId ? getItemName(legalNatures, company.naturezaJuridicaId) : pendingValue}</p>
       </div>
-      <div className="detail-field-box">
-        <label>Categoria do parceiro</label>
-        <p>{normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</p>
-      </div>
+      {showClientCategory && (
+        <div className="detail-field-box">
+          <label>Categoria do cliente</label>
+          <p>{normalizeCatalogLabel(company.categoriaCliente || 'Sem categoria')}</p>
+        </div>
+      )}
     </>
   );
 };

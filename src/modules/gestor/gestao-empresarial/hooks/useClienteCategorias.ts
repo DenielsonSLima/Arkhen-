@@ -17,13 +17,18 @@ export const useClienteCategorias = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: categoriaClienteKeys.all }),
   });
 
-  const availableCategories = (categoriasQuery.data || [])
-    .filter((category) => category.status === 'Ativa')
-    .map((category) => category.nome);
+  const availableCategoryOptions = (categoriasQuery.data || [])
+    .filter((category) => category.status === 'Ativa');
+  const availableCategories = availableCategoryOptions.map((category) => category.nome);
 
   return {
     availableCategories,
+    availableCategoryOptions,
     addCategory: addCategoryMutation.mutateAsync,
     isAddingCategory: addCategoryMutation.isPending,
+    isLoading: categoriasQuery.isLoading,
+    isError: categoriasQuery.isError,
+    error: categoriasQuery.error,
+    retry: categoriasQuery.refetch,
   };
 };

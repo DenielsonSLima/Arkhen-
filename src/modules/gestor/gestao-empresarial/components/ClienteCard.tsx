@@ -5,6 +5,7 @@ import type { Company } from '../services/gestaoEmpresarialService';
 
 interface ClienteCardProps {
   company: Company;
+  isAccountingClient: boolean;
   onSelect: (id: string) => void;
   onEdit: (event: React.MouseEvent, company: Company) => void;
   onToggleStatus: (company: Company) => void;
@@ -30,6 +31,7 @@ const getRegimeClass = (regime: string) => {
 
 export const ClienteCard: React.FC<ClienteCardProps> = ({
   company,
+  isAccountingClient,
   onSelect,
   onEdit,
   onToggleStatus,
@@ -63,7 +65,9 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
         <span><strong>IE/IM:</strong> {company.inscricaoEstadual || '-'}</span>
         <span><strong>Email:</strong> {company.email || '-'}</span>
         <span><strong>Telefone:</strong> {company.telefone || '-'}</span>
-        <span><strong>Categoria:</strong> {normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</span>
+        {isAccountingClient && (
+          <span><strong>Categoria do cliente:</strong> {normalizeCatalogLabel(company.categoriaCliente || 'Sem categoria')}</span>
+        )}
       </div>
       
       <div className="company-card-footer" onClick={(event) => event.stopPropagation()}>

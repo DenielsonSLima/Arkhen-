@@ -293,6 +293,9 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
                     <ClienteCard
                       key={company.id}
                       company={company}
+                      isAccountingClient={isClienteContabilPartnerType(
+                        partnerTypes.find((item) => item.id === company.tipoParceiroId),
+                      )}
                       onSelect={(companyId) => {
                         setSelectedCompanyId(companyId);
                         requestGestorScrollReset();
