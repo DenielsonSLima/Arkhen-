@@ -1,9 +1,12 @@
 import React from 'react';
 import { CalendarDays, Clock3, LockKeyhole, Plus, ShieldCheck, X } from 'lucide-react';
 import type { PerfilAcesso } from '../../perfis/services/perfisService';
-import type { SaveUsuarioInput, UsuarioAccessInterval, UsuarioStatus } from '../services/usuariosService';
+import type { SaveUsuarioInput, UsuarioAccessInterval } from '../services/usuariosService';
 import { getPermissaoLabel } from '../../perfis/services/permissoesCatalog';
+import { UsuarioIdentityFields } from './UsuarioIdentityFields';
+import type { UsuarioFormErrors } from './usuarioFormModel';
 import './UsuarioForm.css';
+import './UsuarioAccessRules.css';
 
 const diasSemana = [
   { value: 0, label: 'Dom' },
@@ -23,6 +26,8 @@ interface UsuarioFormProps {
   value: SaveUsuarioInput;
   perfis: PerfilAcesso[];
   isSaving: boolean;
+  errors?: UsuarioFormErrors;
+  errorMessage?: string | null;
   onChange: (value: SaveUsuarioInput) => void;
   onSubmit: (event: React.FormEvent) => void;
   onCancel: () => void;
@@ -32,14 +37,12 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   value,
   perfis,
   isSaving,
+  errors = {},
+  errorMessage,
   onChange,
   onSubmit,
   onCancel,
 }) => {
-  const setField = <K extends keyof SaveUsuarioInput>(field: K, fieldValue: SaveUsuarioInput[K]) => {
-    onChange({ ...value, [field]: fieldValue });
-  };
-
   const setAccess = (patch: Partial<SaveUsuarioInput['accessConfig']>) => {
     onChange({ ...value, accessConfig: { ...value.accessConfig, ...patch } });
   };
@@ -107,13 +110,16 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
     ? value.accessConfig.intervals.map((interval) => `${interval.start} às ${interval.end}`).join(' / ')
     : 'Sem bloqueio por horário';
 
-  const selectedPerfilObj = perfis.find((p) => p.nome === value.perfil);
+  const selectedPerfilObj = perfis.find((perfil) => perfil.id === value.perfilId)
+    || perfis.find((perfil) => perfil.nome === value.perfil);
 
   const isEdit = !!value.id;
   const title = isEdit ? 'Editar Usuário' : 'Cadastrar Usuário';
   const subtitle = isEdit
     ? 'Clique em salvar para aplicar os dados e regras de acesso.'
-    : 'O usuário ficará pendente até confirmar o acesso no Supabase Auth.';
+    : value.formaAcesso === 'cpf'
+      ? 'O funcionário poderá entrar com CPF e a senha inicial definida.'
+      : 'O usuário seguirá o fluxo legado de acesso por e-mail.';
 
   return (
     <div className="usuario-modal-wrapper animate-fade-in">
@@ -135,91 +141,17 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
 
       <form onSubmit={onSubmit} className="usuario-modal-form">
         <div className="usuario-modal-content-scroll">
+          {errorMessage && <div className="form-alert-banner error usuario-modal-error" role="alert">{errorMessage}</div>}
           <div className="usuario-modal-columns">
             {/* Coluna Esquerda: Dados Gerais */}
             <div className="usuario-modal-col-left">
-              <div className="usuario-section-title-wrapper">
-                <span className="usuario-access-eyebrow">Identificação</span>
-                <h4>Dados do Usuário</h4>
-              </div>
-
-              <div className="usuario-fields-grid">
-                <div className="form-item-group span-2">
-                  <label>Nome Completo</label>
-                  <input
-                    value={value.nome}
-                    onChange={(e) => setField('nome', e.target.value)}
-                    disabled={isSaving}
-                    required
-                    placeholder="Digite o nome completo"
-                  />
-                </div>
-
-                <div className="form-item-group span-2">
-                  <label>E-mail</label>
-                  <input
-                    type="email"
-                    value={value.email}
-                    onChange={(e) => setField('email', e.target.value)}
-                    disabled={isSaving}
-                    required
-                    placeholder="exemplo@email.com"
-                  />
-                </div>
-
-                <div className="form-item-group">
-                  <label>CPF</label>
-                  <input
-                    value={value.cpf}
-                    onChange={(e) => setField('cpf', e.target.value)}
-                    disabled={isSaving}
-                    required
-                    placeholder="000.000.000-00"
-                  />
-                </div>
-
-                <div className="form-item-group">
-                  <label>Telefone</label>
-                  <input
-                    value={value.telefone}
-                    onChange={(e) => setField('telefone', e.target.value)}
-                    disabled={isSaving}
-                    required
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-
-                <div className="form-item-group">
-                  <label>Perfil de Acesso</label>
-                  <select
-                    value={value.perfil}
-                    onChange={(e) => setField('perfil', e.target.value)}
-                    disabled={isSaving}
-                  >
-                    {perfis.map((perfil) => (
-                      <option key={perfil.id} value={perfil.nome}>
-                        {perfil.nome}
-                      </option>
-                    ))}
-                    {perfis.length === 0 && (
-                      <option value={value.perfil}>{value.perfil}</option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="form-item-group">
-                  <label>Status</label>
-                  <select
-                    value={value.status}
-                    onChange={(e) => setField('status', e.target.value as UsuarioStatus)}
-                    disabled={isSaving}
-                  >
-                    <option value="Ativo">Ativo</option>
-                    <option value="Pendente">Pendente</option>
-                    <option value="Inativo">Inativo</option>
-                  </select>
-                </div>
-              </div>
+              <UsuarioIdentityFields
+                value={value}
+                perfis={perfis}
+                isSaving={isSaving}
+                errors={errors}
+                onChange={onChange}
+              />
 
               {selectedPerfilObj && (
                 <div className="usuario-perfil-permissoes-info animate-fade-in">

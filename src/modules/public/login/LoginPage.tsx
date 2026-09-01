@@ -3,10 +3,11 @@ import { LoginBanner } from './components/LoginBanner';
 import { LoginForm } from './forms/LoginForm';
 import { SignupForm } from './forms/SignupForm';
 import { useLogin } from './hooks/useLogin';
+import type { LoginResponse } from './services/loginService';
 import './Login.css';
 
 interface LoginPageProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (response: LoginResponse) => void;
   onBackToLanding?: () => void;
 }
 

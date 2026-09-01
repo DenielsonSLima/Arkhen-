@@ -1,7 +1,13 @@
 import { supabase } from '../../../../lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { usuariosService, type UsuarioAccessConfig } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
+import { usuariosService, type Usuario } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
 import { passwordRecoveryService } from './passwordRecoveryService';
+import {
+  CpfLoginUnavailableError,
+  parseLoginIdentifier,
+  signInWithCpf,
+} from './loginIdentifierService';
+import { isValidCpf, normalizeCpf } from '../../../../lib/cpf';
 
 export interface LoginPayload {
   usuario: string;
@@ -34,17 +40,28 @@ export interface LoginResponse {
     email: string;
     empresaId: string;
     role: 'funcionario' | 'gestor';
+    cpf?: string;
+    perfil?: string;
+    authMethod?: 'email' | 'cpf';
   };
 }
 
 const getRedirectUrl = () => window.location.origin;
 
-type OnboardingResult = { empresa_id?: string; nome?: string; email?: string } | null;
+type OnboardingResult = {
+  empresa_id?: string;
+  nome?: string;
+  email?: string;
+  cpf?: string;
+  perfil?: string;
+  auth_method?: 'email' | 'cpf';
+} | null;
 
 interface AccountAuthorizationResult {
   allowed: boolean;
   message: string;
   onboarding: OnboardingResult;
+  blockedByAccess?: boolean;
 }
 
 const onboardingRequests = new Map<string, Promise<OnboardingResult>>();
@@ -70,30 +87,40 @@ const buildOnboardingPayload = (payload?: Partial<SignupPayload>) => {
   return rpcPayload;
 };
 
-const timeToMinutes = (value: string) => {
-  const [hours, minutes] = value.split(':').map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-};
+const toOnboardingResult = (usuario: Usuario): OnboardingResult => ({
+  empresa_id: usuario.empresaId,
+  nome: usuario.nome,
+  email: usuario.email,
+  cpf: usuario.cpf,
+  perfil: usuario.perfil,
+  auth_method: usuario.formaAcesso,
+});
 
-const validateAccessWindow = (config: UsuarioAccessConfig) => {
-  if (!config.enabled) return { allowed: true, message: '' };
+const authorizationErrorMessage = (error: unknown) => (
+  error instanceof Error && error.message
+    ? error.message
+    : 'Não foi possível validar sua permissão de acesso.'
+);
 
-  const now = new Date();
-  const currentDay = now.getDay();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const dayAllowed = config.days.includes(currentDay);
-  const timeAllowed = config.intervals.some((interval) => {
-    const start = timeToMinutes(interval.start);
-    const end = timeToMinutes(interval.end);
-    return currentMinutes >= start && currentMinutes <= end;
-  });
+const authorizationFailure = (
+  error: unknown,
+  onboarding: OnboardingResult = null,
+): AccountAuthorizationResult => ({
+  allowed: false,
+  message: authorizationErrorMessage(error),
+  onboarding,
+  blockedByAccess: Boolean(
+    typeof error === 'object'
+    && error !== null
+    && 'blockedByPolicy' in error
+    && error.blockedByPolicy === true
+  ),
+});
 
-  if (dayAllowed && timeAllowed) return { allowed: true, message: '' };
-  return {
-    allowed: false,
-    message: config.message || 'Seu acesso não está permitido neste dia ou horário. Entre em contato com o gestor.',
-  };
-};
+const isCpfEmployeeAccount = (user: User) => (
+  user.app_metadata?.account_type === 'employee_cpf'
+  || user.app_metadata?.login_method === 'cpf'
+);
 
 const completeOnboarding = (userId: string, payload?: Partial<SignupPayload>) => {
   const cacheKey = userId.trim();
@@ -131,35 +158,58 @@ const authorizeAuthenticatedUser = async (
   user: User,
   payload?: Partial<SignupPayload>,
 ): Promise<AccountAuthorizationResult> => {
-  const onboarding = await completeOnboarding(user.id, payload);
-  const email = user.email?.trim().toLowerCase();
-  if (!email) {
-    return { allowed: false, message: 'E-mail do usuário autenticado não encontrado.', onboarding };
+  let configuredUser: Usuario | null;
+  try {
+    configuredUser = await usuariosService.getUsuarioAtual();
+  } catch (error) {
+    return authorizationFailure(error);
+  }
+  if (configuredUser) {
+    if (configuredUser.formaAcesso === 'email') {
+      try {
+        await completeOnboarding(user.id, payload);
+        configuredUser = await usuariosService.getUsuarioAtual();
+      } catch (error) {
+        return authorizationFailure(error);
+      }
+      if (!configuredUser) {
+        return {
+          allowed: false,
+          message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
+          onboarding: null,
+          blockedByAccess: true,
+        };
+      }
+    }
+    return { allowed: true, message: '', onboarding: toOnboardingResult(configuredUser) };
   }
 
-  const usuarioConfig = await usuariosService.vincularAuthUserPorEmail(email, user.id);
+  if (isCpfEmployeeAccount(user)) {
+    return {
+      allowed: false,
+      message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
+      onboarding: null,
+      blockedByAccess: true,
+    };
+  }
+
+  const onboarding = await completeOnboarding(user.id, payload);
+  let usuarioConfig: Usuario | null;
+  try {
+    usuarioConfig = await usuariosService.getUsuarioAtual();
+  } catch (error) {
+    return authorizationFailure(error, onboarding);
+  }
   if (!usuarioConfig) {
     return {
       allowed: false,
       message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
       onboarding,
+      blockedByAccess: true,
     };
   }
 
-  if (usuarioConfig.status === 'Inativo') {
-    return {
-      allowed: false,
-      message: 'Seu usuário está inativo. Entre em contato com o gestor para reativar o acesso.',
-      onboarding,
-    };
-  }
-
-  const access = validateAccessWindow(usuarioConfig.accessConfig);
-  if (!access.allowed) {
-    return { allowed: false, message: access.message, onboarding };
-  }
-
-  return { allowed: true, message: '', onboarding };
+  return { allowed: true, message: '', onboarding: toOnboardingResult(usuarioConfig) };
 };
 
 export const loginService = {
@@ -168,30 +218,54 @@ export const loginService = {
       return { success: false, message: 'Usuário e senha são obrigatórios.' };
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: payload.usuario,
-      password: payload.senha,
-    });
-
-    if (error) {
-      return { success: false, message: error.message || 'Não foi possível autenticar.' };
+    const identifier = parseLoginIdentifier(payload.usuario);
+    if (!identifier) {
+      return { success: false, message: 'E-mail/CPF ou senha inválidos.' };
     }
 
-    const authorization = await authorizeAuthenticatedUser(data.user);
+    let authenticatedUser: User;
+    if (identifier.type === 'cpf') {
+      try {
+        authenticatedUser = await signInWithCpf(identifier.value, payload.senha);
+      } catch (error) {
+        if (error instanceof CpfLoginUnavailableError) {
+          return { success: false, message: error.message };
+        }
+        return { success: false, message: 'E-mail/CPF ou senha inválidos.' };
+      }
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: identifier.value,
+        password: payload.senha,
+      });
+      if (error) {
+        return { success: false, message: 'E-mail/CPF ou senha inválidos.' };
+      }
+      authenticatedUser = data.user;
+    }
+
+    const authorization = await authorizeAuthenticatedUser(authenticatedUser);
     if (!authorization.allowed) {
       await supabase.auth.signOut();
-      return { success: false, blockedByAccess: true, message: authorization.message };
+      return {
+        success: false,
+        blockedByAccess: authorization.blockedByAccess,
+        message: authorization.message,
+      };
     }
 
     return {
       success: true,
       message: 'Login realizado com sucesso!',
       user: {
-        id: data.user.id,
-        nome: authorization.onboarding?.nome || data.user.user_metadata?.nome || data.user.email?.split('@')[0] || 'Usuário',
-        email: data.user.email || payload.usuario,
+        id: authenticatedUser.id,
+        nome: authorization.onboarding?.nome || authenticatedUser.user_metadata?.nome || authenticatedUser.email?.split('@')[0] || 'Usuário',
+        email: identifier.type === 'cpf' ? '' : authenticatedUser.email || identifier.value,
         empresaId: authorization.onboarding?.empresa_id || '',
-        role: payload.role,
+        role: identifier.type === 'cpf' ? 'funcionario' : payload.role,
+        cpf: authorization.onboarding?.cpf || '',
+        perfil: authorization.onboarding?.perfil,
+        authMethod: identifier.type,
       },
     };
   },
@@ -199,6 +273,23 @@ export const loginService = {
   async cadastrar(payload: SignupPayload): Promise<LoginResponse> {
     if (!payload.nome.trim() || !payload.empresaNome.trim() || !payload.email.trim() || !payload.senha) {
       return { success: false, message: 'Preencha nome, empresa, e-mail e senha.' };
+    }
+
+    const normalizedName = payload.nome.trim().replace(/\s+/g, ' ');
+    const phoneDigits = (payload.telefone || '').replace(/\D/g, '');
+    if (
+      normalizedName.length < 2
+      || normalizedName.length > 150
+      || !/\p{L}/u.test(normalizedName)
+      || /[\p{Cc}<>]/u.test(normalizedName)
+    ) {
+      return { success: false, message: 'Informe um nome válido com até 150 caracteres.' };
+    }
+    if (!isValidCpf(payload.cpf || '')) {
+      return { success: false, message: 'Informe um CPF válido.' };
+    }
+    if (![10, 11].includes(phoneDigits.length)) {
+      return { success: false, message: 'Informe um telefone válido com 10 ou 11 dígitos.' };
     }
 
     if (payload.senha.length < 6) {
@@ -217,11 +308,11 @@ export const loginService = {
       options: {
         emailRedirectTo: getRedirectUrl(),
         data: {
-          nome: payload.nome.trim(),
+          nome: normalizedName,
           empresa_nome: payload.empresaNome.trim(),
           cnpj: payload.cnpj.trim(),
-          cpf: payload.cpf?.trim() || '',
-          telefone: payload.telefone?.trim() || '',
+          cpf: normalizeCpf(payload.cpf || ''),
+          telefone: phoneDigits,
           cep: payload.cep?.trim() || '',
           endereco: payload.endereco?.trim() || '',
           cidade: payload.cidade?.trim() || '',
@@ -242,17 +333,24 @@ export const loginService = {
       const authorization = await authorizeAuthenticatedUser(data.user, payload);
       if (!authorization.allowed) {
         await supabase.auth.signOut();
-        return { success: false, blockedByAccess: true, message: authorization.message };
+        return {
+          success: false,
+          blockedByAccess: authorization.blockedByAccess,
+          message: authorization.message,
+        };
       }
       return {
         success: true,
         message: 'Cadastro criado e sessão iniciada.',
         user: {
           id: data.user?.id || '',
-          nome: payload.nome,
+          nome: normalizedName,
           email: data.user?.email || payload.email,
           empresaId: authorization.onboarding?.empresa_id || '',
           role: 'gestor',
+          cpf: authorization.onboarding?.cpf || payload.cpf || '',
+          perfil: authorization.onboarding?.perfil || 'Gestor',
+          authMethod: 'email',
         },
       };
     }

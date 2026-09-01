@@ -14,7 +14,10 @@ export const useSaveUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (input: SaveUsuarioInput) => usuariosService.saveUsuario(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.perfisAcesso() }),
+    ]),
   });
 };
 
@@ -23,6 +26,20 @@ export const useInativarUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (id: string) => usuariosService.inativarUsuario(id),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.perfisAcesso() }),
+    ]),
+  });
+};
+
+export const useRedefinirSenhaFuncionarioMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ usuarioId, password }: { usuarioId: string; password: string }) => (
+      usuariosService.redefinirSenhaFuncionario(usuarioId, password)
+    ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
   });
 };
@@ -32,6 +49,9 @@ export const useExcluirUsuarioMutation = () => {
 
   return useMutation({
     mutationFn: (usuario: Usuario) => usuariosService.excluirUsuario(usuario),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.perfisAcesso() }),
+    ]),
   });
 };

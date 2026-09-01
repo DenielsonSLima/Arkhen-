@@ -19,9 +19,24 @@ const createInitialsAvatar = (name: string) => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-export const syncAuthenticatedUserProfile = (user: User) => {
+interface AuthenticatedProfileContext {
+  nome?: string;
+  email?: string;
+  cpf?: string;
+  perfil?: string;
+  authMethod?: 'email' | 'cpf';
+}
+
+export const syncAuthenticatedUserProfile = (
+  user: User,
+  context: AuthenticatedProfileContext = {},
+) => {
   try {
     const metadata = user.user_metadata || {};
+    const isCpfAccount = context.authMethod
+      ? context.authMethod === 'cpf'
+      : user.app_metadata?.account_type === 'employee_cpf'
+        || user.app_metadata?.login_method === 'cpf';
     const saved = persistedStorage.getItem('gestor_user_profile');
     let localProfile: Record<string, any> = {};
     if (saved) {
@@ -37,11 +52,20 @@ export const syncAuthenticatedUserProfile = (user: User) => {
       || localProfile.avatar?.startsWith('data:image/svg+xml')
       ? ''
       : localProfile.avatar;
-    const nome = metadata.nome || metadata.name || storedName || 'Usuário';
+    const nome = isCpfAccount
+      ? context.nome || storedName || 'Usuário'
+      : metadata.nome || metadata.name || context.nome || storedName || 'Usuário';
     persistedStorage.setItem('gestor_user_profile', JSON.stringify({
       nome,
-      email: user.email || storedEmail || '',
-      perfil: localProfile.perfil || 'Administrador',
+      email: isCpfAccount ? '' : context.email || user.email || storedEmail || '',
+      cpf: isCpfAccount
+        ? context.cpf || localProfile.cpf || ''
+        : context.cpf || metadata.cpf || localProfile.cpf || '',
+      dataNascimento: metadata.data_nascimento || localProfile.dataNascimento || '',
+      perfil: isCpfAccount
+        ? context.perfil || localProfile.perfil || 'Funcionário'
+        : context.perfil || metadata.perfil || localProfile.perfil || 'Administrador',
+      authMethod: isCpfAccount ? 'cpf' : 'email',
       avatar: metadata.avatar_url || metadata.picture || storedAvatar || createInitialsAvatar(nome),
       googleLinked: localProfile.googleLinked || false,
       googleEmail: localProfile.googleEmail || undefined,

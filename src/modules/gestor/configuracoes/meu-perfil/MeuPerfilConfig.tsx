@@ -4,11 +4,8 @@ import {
   Calendar,
   Camera,
   CheckCircle,
-  Eye,
-  EyeOff,
   IdCard,
   Link as LinkIcon,
-  Lock,
   Mail,
   Save,
   ShieldCheck,
@@ -19,7 +16,8 @@ import { supabase } from '../../../../lib/supabase';
 import { persistedStorage } from '../../../../lib/persistedStorage';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
 import { passwordRecoveryService } from '../../../public/login/services/passwordRecoveryService';
-
+import { ProfileSecurityCards } from './components/ProfileSecurityCards';
+import { profilePasswordService } from './profilePasswordService';
 interface UserProfile {
   nome: string;
   email: string;
@@ -27,10 +25,10 @@ interface UserProfile {
   avatar: string;
   cpf: string;
   dataNascimento: string;
+  authMethod: 'email' | 'cpf';
   googleLinked: boolean;
   googleEmail?: string;
 }
-
 const DEFAULT_USER: UserProfile = {
   nome: 'Usuário',
   email: '',
@@ -38,9 +36,9 @@ const DEFAULT_USER: UserProfile = {
   avatar: '',
   cpf: '',
   dataNascimento: '',
+  authMethod: 'email',
   googleLinked: false,
 };
-
 const sanitizeAvatar = (avatar: unknown) => typeof avatar === 'string'
   && !avatar.includes('images.unsplash.com')
   && !avatar.startsWith('data:image/svg+xml') ? avatar : '';
@@ -53,7 +51,6 @@ const normalizeStoredProfile = (storedProfile: Partial<UserProfile>): UserProfil
   email: storedProfile.email === 'joao.silva@arkhen.com.br' ? '' : storedProfile.email || '',
   avatar: sanitizeAvatar(storedProfile.avatar),
 });
-
 const getStoredProfile = (): UserProfile => {
   try {
     const saved = persistedStorage.getItem('gestor_user_profile');
@@ -63,7 +60,6 @@ const getStoredProfile = (): UserProfile => {
     return DEFAULT_USER;
   }
 };
-
 export const MeuPerfilConfig: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'dados' | 'seguranca'>('dados');
@@ -72,54 +68,49 @@ export const MeuPerfilConfig: React.FC = () => {
   const [email, setEmail] = useState(profile.email);
   const [cpf, setCpf] = useState(profile.cpf);
   const [dataNascimento, setDataNascimento] = useState(profile.dataNascimento);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
   const updateProfileData = (updated: UserProfile) => {
     setProfile(updated);
     persistedStorage.setItem('gestor_user_profile', JSON.stringify(updated));
     window.dispatchEvent(new Event('profile_updated'));
   };
-
   const showSuccess = (message: string) => {
     setSuccessMsg(message);
     setErrorMsg(null);
     window.setTimeout(() => setSuccessMsg(null), 3500);
   };
-
   const showError = (message: string) => {
     setErrorMsg(message);
     setSuccessMsg(null);
   };
-
   useEffect(() => {
     const loadAuthProfile = async () => {
       const [{ data: userData }, identitiesResult] = await Promise.all([
         supabase.auth.getUser(),
         supabase.auth.getUserIdentities(),
       ]);
-
       const user = userData.user;
       if (!user) return;
-
       const metadata = user.user_metadata || {};
+      const isCpfAccount = user.app_metadata?.account_type === 'employee_cpf'
+        || user.app_metadata?.login_method === 'cpf';
       const googleIdentity = identitiesResult.data?.identities.find((identity) => identity.provider === 'google');
       const localProfile = getStoredProfile();
       const updated: UserProfile = {
         ...localProfile,
-        nome: metadata.nome || metadata.name || localProfile.nome,
-        email: user.email || localProfile.email,
+        nome: isCpfAccount
+          ? localProfile.nome
+          : metadata.nome || metadata.name || localProfile.nome,
+        email: isCpfAccount ? '' : user.email || localProfile.email,
         avatar: sanitizeAvatar(metadata.avatar_url || metadata.picture || localProfile.avatar),
-        cpf: metadata.cpf || localProfile.cpf || '',
+        cpf: isCpfAccount ? localProfile.cpf : metadata.cpf || localProfile.cpf || '',
         dataNascimento: metadata.data_nascimento || localProfile.dataNascimento || '',
+        authMethod: isCpfAccount ? 'cpf' : 'email',
         googleLinked: Boolean(googleIdentity),
         googleEmail: googleIdentity?.identity_data?.email || undefined,
       };
@@ -138,20 +129,19 @@ export const MeuPerfilConfig: React.FC = () => {
 
   const handleUpdateInfo = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!nome.trim() || !email.trim()) {
-      showError('Preencha nome e e-mail.');
+    if (!nome.trim() || (profile.authMethod === 'email' && !email.trim())) {
+      showError(profile.authMethod === 'cpf' ? 'Preencha o nome.' : 'Preencha nome e e-mail.');
       return;
     }
 
     setIsSavingInfo(true);
     try {
       const nextMetadata = {
-        nome: nome.trim(),
-        cpf: cpf.trim(),
+        ...(profile.authMethod === 'email' ? { nome: nome.trim(), cpf: cpf.trim() } : {}),
         data_nascimento: dataNascimento,
         ...(profile.avatar ? { avatar_url: profile.avatar } : {}),
       };
-      const payload = email.trim() !== profile.email
+      const payload = profile.authMethod === 'email' && email.trim() !== profile.email
         ? { email: email.trim(), data: nextMetadata }
         : { data: nextMetadata };
       const { data, error } = await supabase.auth.updateUser(payload);
@@ -160,13 +150,13 @@ export const MeuPerfilConfig: React.FC = () => {
 
       const updated = {
         ...profile,
-        nome: nome.trim(),
-        email: data.user.email || email.trim(),
-        cpf: cpf.trim(),
+        nome: profile.authMethod === 'cpf' ? profile.nome : nome.trim(),
+        email: profile.authMethod === 'cpf' ? '' : data.user.email || email.trim(),
+        cpf: profile.authMethod === 'cpf' ? profile.cpf : cpf.trim(),
         dataNascimento,
       };
       updateProfileData(updated);
-      showSuccess(email.trim() !== profile.email ? 'Dados salvos. Confirme o novo e-mail se solicitado.' : 'Dados cadastrais atualizados.');
+      showSuccess(profile.authMethod === 'email' && email.trim() !== profile.email ? 'Dados salvos. Confirme o novo e-mail se solicitado.' : 'Dados cadastrais atualizados.');
     } catch (error: any) {
       showError(error.message || 'Erro ao salvar os dados cadastrais.');
     } finally {
@@ -174,26 +164,20 @@ export const MeuPerfilConfig: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (newPassword.length < 6) {
-      showError('A nova senha deve possuir no mínimo 6 caracteres.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      showError('A confirmação não bate com a nova senha.');
-      return;
-    }
-
+  const handleChangePassword = async (password: string) => {
     setIsChangingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      setNewPassword('');
-      setConfirmPassword('');
+      if (profile.authMethod === 'cpf') {
+        await profilePasswordService.changeOwnCpfPassword(password);
+      } else {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+      }
       showSuccess('Senha alterada com sucesso.');
+      return true;
     } catch (error: any) {
       showError(error.message || 'Erro ao alterar senha.');
+      return false;
     } finally {
       setIsChangingPassword(false);
     }
@@ -268,8 +252,7 @@ export const MeuPerfilConfig: React.FC = () => {
       const publicUrl = await uploadImageAsset(file, 'avatars', data.user.id);
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
-          nome: profile.nome,
-          cpf: profile.cpf,
+          ...(profile.authMethod === 'email' ? { nome: profile.nome, cpf: profile.cpf } : {}),
           data_nascimento: profile.dataNascimento,
           avatar_url: publicUrl,
         },
@@ -394,17 +377,20 @@ export const MeuPerfilConfig: React.FC = () => {
             </h4>
 
             {[
-              { label: 'Nome Completo', value: nome, setter: setNome, type: 'text', icon: <User size={15} />, required: true },
-              { label: 'E-mail corporativo', value: email, setter: setEmail, type: 'email', icon: <Mail size={15} />, required: true },
-              { label: 'CPF', value: cpf, setter: setCpf, type: 'text', icon: <IdCard size={15} />, required: false },
-              { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, type: 'date', icon: <Calendar size={15} />, required: false },
+              { label: 'Nome Completo', value: nome, setter: setNome, type: 'text', icon: <User size={15} />, required: true, disabled: profile.authMethod === 'cpf' },
+              ...(profile.authMethod === 'email' ? [
+                { label: 'E-mail corporativo', value: email, setter: setEmail, type: 'email', icon: <Mail size={15} />, required: true, disabled: false },
+              ] : []),
+              { label: 'CPF', value: cpf, setter: setCpf, type: 'text', icon: <IdCard size={15} />, required: false, disabled: profile.authMethod === 'cpf' },
+              { label: 'Data de nascimento', value: dataNascimento, setter: setDataNascimento, type: 'date', icon: <Calendar size={15} />, required: false, disabled: false },
             ].map((field) => (
               <div key={field.label} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{field.label}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', display: 'flex' }}>{field.icon}</span>
-                  <input type={field.type} value={field.value} onChange={(event) => field.setter(event.target.value)} style={inputStyle} required={field.required} disabled={isSavingInfo} />
+                  <input type={field.type} value={field.value} onChange={(event) => field.setter(event.target.value)} style={inputStyle} required={field.required} disabled={isSavingInfo || field.disabled} />
                 </div>
+                {field.disabled && <span style={{ color: '#64748b', fontSize: '0.72rem' }}>Alteração disponível ao gestor da contabilidade.</span>}
               </div>
             ))}
 
@@ -421,53 +407,16 @@ export const MeuPerfilConfig: React.FC = () => {
 
       {activeTab === 'seguranca' && (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(320px, 1fr)', gap: '24px', marginTop: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <form onSubmit={handleChangePassword} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
-              Alterar Senha de Acesso
-            </h4>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.45 }}>
-              Altera a senha da sessão autenticada atual. Para receber um link por e-mail, use a opção de redefinição abaixo.
-            </p>
-
-            {[
-              { label: 'Nova Senha', value: newPassword, setter: setNewPassword, show: showNew, setShow: setShowNew, placeholder: 'Min. 6 caracteres' },
-              { label: 'Confirmar Nova Senha', value: confirmPassword, setter: setConfirmPassword, show: showConfirm, setShow: setShowConfirm, placeholder: 'Repita a nova senha' },
-            ].map((field) => (
-              <div key={field.label} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>{field.label}</label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                  <input type={field.show ? 'text' : 'password'} value={field.value} onChange={(event) => field.setter(event.target.value)} placeholder={field.placeholder} style={{ ...inputStyle, paddingRight: 38 }} disabled={isChangingPassword} />
-                  <button type="button" onClick={() => field.setShow(!field.show)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
-                    {field.show ? <EyeOff size={15} style={{ color: '#64748b' }} /> : <Eye size={15} style={{ color: '#64748b' }} />}
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="submit" className="btn-save-settings" disabled={isChangingPassword}>
-                {isChangingPassword ? 'Alterando...' : 'Alterar Senha'}
-              </button>
-            </div>
-          </form>
-
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
-              Redefinição por E-mail
-            </h4>
-            <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', lineHeight: 1.45 }}>
-              Envia um link seguro para o e-mail cadastrado. Esse é o caminho recomendado quando quiser confirmar a troca fora da sessão atual.
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 14, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
-              <span style={{ color: '#1e293b', fontSize: '0.82rem', fontWeight: 700 }}>{profile.email}</span>
-              <button type="button" className="btn-save-settings" onClick={handleSendPasswordResetEmail} disabled={isSendingResetEmail}>
-                <Mail size={14} /> {isSendingResetEmail ? 'Enviando...' : 'Enviar e-mail'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProfileSecurityCards
+          authMethod={profile.authMethod}
+          cpf={profile.cpf}
+          email={profile.email}
+          isChangingPassword={isChangingPassword}
+          isSendingResetEmail={isSendingResetEmail}
+          onChangePassword={handleChangePassword}
+          onSendResetEmail={() => { void handleSendPasswordResetEmail(); }}
+          onError={showError}
+        />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>

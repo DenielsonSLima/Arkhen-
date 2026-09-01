@@ -11,7 +11,7 @@ import { useConfiguracoesRealtime } from './modules/gestor/configuracoes/hooks/u
 import { usePersistedStorageRealtime } from './modules/gestor/configuracoes/hooks/usePersistedStorageRealtime';
 import { internalTabsStore } from './stores/internalTabsStore';
 import { getInitialAuthLocation, supabase } from './lib/supabase';
-import { loginService } from './modules/public/login/services/loginService';
+import { loginService, type LoginResponse } from './modules/public/login/services/loginService';
 import { persistedStorage } from './lib/persistedStorage';
 import { LandingPage } from './modules/public/landing/LandingPage';
 import { DemoWebsite } from './modules/public/demowebsite/DemoWebsite';
@@ -127,7 +127,13 @@ function App() {
       if (!authorization.allowed) {
         throw new Error(authorization.message);
       }
-      syncAuthenticatedUserProfile(user);
+      syncAuthenticatedUserProfile(user, {
+        nome: authorization.onboarding?.nome,
+        email: authorization.onboarding?.email,
+        cpf: authorization.onboarding?.cpf,
+        perfil: authorization.onboarding?.perfil,
+        authMethod: authorization.onboarding?.auth_method,
+      });
       persistedStorage.setItem('contabil_auth', 'gestor');
       setAuthError(null);
       viewRef.current = 'gestor';
@@ -251,7 +257,7 @@ function App() {
     if (view === 'gestor') internalTabsStore.resetToInicio();
   }, [view]);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (response: LoginResponse) => {
     passwordRecoveryContextRef.current = false;
     passwordRecoverySessionRef.current = null;
     setPasswordRecoveryStatus('error');
@@ -272,7 +278,15 @@ function App() {
       setView('gestor');
     }
     void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) syncAuthenticatedUserProfile(data.user);
+      if (data.user) {
+        syncAuthenticatedUserProfile(data.user, {
+          nome: response.user?.nome,
+          email: response.user?.email,
+          cpf: response.user?.cpf,
+          perfil: response.user?.perfil,
+          authMethod: response.user?.authMethod,
+        });
+      }
     }).catch((error) => {
       console.error('Erro ao sincronizar perfil após o login:', error);
     });

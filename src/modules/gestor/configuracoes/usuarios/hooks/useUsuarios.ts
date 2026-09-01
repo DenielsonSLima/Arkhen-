@@ -3,18 +3,28 @@ import type { SaveUsuarioInput, Usuario } from '../services/usuariosService';
 import {
   useExcluirUsuarioMutation,
   useInativarUsuarioMutation,
+  useRedefinirSenhaFuncionarioMutation,
   useSaveUsuarioMutation,
   useUsuariosQuery,
 } from '../queries/useUsuariosQueries';
 import { usePerfisAcessoQuery } from '../../perfis/queries/usePerfisQueries';
+import {
+  getDefaultCpfAccessProfile,
+  validateUsuarioForm,
+  type UsuarioFormErrors,
+} from '../forms/usuarioFormModel';
 
-const defaultForm = (perfil = 'Assistente'): SaveUsuarioInput => ({
+const defaultForm = (perfil = 'Funcionário', perfilId?: string): SaveUsuarioInput => ({
   nome: '',
+  formaAcesso: 'cpf',
   email: '',
   cpf: '',
   telefone: '',
+  senha: '',
+  confirmacaoSenha: '',
+  perfilId,
   perfil,
-  status: 'Pendente',
+  status: 'Ativo',
   accessConfig: {
     enabled: false,
     days: [1, 2, 3, 4, 5],
@@ -26,9 +36,13 @@ const defaultForm = (perfil = 'Assistente'): SaveUsuarioInput => ({
 const toForm = (usuario: Usuario): SaveUsuarioInput => ({
   id: usuario.id,
   nome: usuario.nome,
-  email: usuario.email,
+  formaAcesso: usuario.formaAcesso,
+  email: usuario.email || '',
   cpf: usuario.cpf,
   telefone: usuario.telefone,
+  senha: '',
+  confirmacaoSenha: '',
+  perfilId: usuario.perfilId || undefined,
   perfil: usuario.perfil,
   status: usuario.status,
   accessConfig: usuario.accessConfig,
@@ -39,30 +53,33 @@ export const useUsuarios = () => {
   const perfisQuery = usePerfisAcessoQuery();
   const saveMutation = useSaveUsuarioMutation();
   const inativarMutation = useInativarUsuarioMutation();
+  const resetPasswordMutation = useRedefinirSenhaFuncionarioMutation();
   const excluirMutation = useExcluirUsuarioMutation();
   const [showForm, setShowForm] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
+  const [passwordResetUsuario, setPasswordResetUsuario] = useState<Usuario | null>(null);
   const [formValue, setFormValue] = useState<SaveUsuarioInput>(() => defaultForm());
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<UsuarioFormErrors>({});
 
   const perfis = useMemo(() => perfisQuery.data || [], [perfisQuery.data]);
   const usuarios = useMemo(() => usuariosQuery.data || [], [usuariosQuery.data]);
 
   const openCreate = () => {
-    const defaultPerfil = perfis.find((perfil) => perfil.nome.toLowerCase().includes('assistente'))?.nome
-      || perfis.find((perfil) => perfil.nome.toLowerCase().includes('operacional'))?.nome
-      || perfis[0]?.nome
-      || 'Assistente';
+    const defaultPerfil = getDefaultCpfAccessProfile(perfis);
     setSelectedUsuario(null);
-    setFormValue(defaultForm(defaultPerfil));
+    setFormValue(defaultForm(defaultPerfil?.nome || 'Funcionário', defaultPerfil?.id));
+    setFormErrors({});
     setErrorMsg(null);
     setShowForm(true);
   };
 
   const openEdit = (usuario: Usuario) => {
     setSelectedUsuario(usuario);
-    setFormValue(toForm(usuario));
+    const perfil = perfis.find((item) => item.nome === usuario.perfil);
+    setFormValue({ ...toForm(usuario), perfilId: usuario.perfilId || perfil?.id });
+    setFormErrors({});
     setErrorMsg(null);
     setShowForm(true);
   };
@@ -70,14 +87,28 @@ export const useUsuarios = () => {
   const closeForm = () => {
     setShowForm(false);
     setSelectedUsuario(null);
+    setFormErrors({});
+    setErrorMsg(null);
+  };
+
+  const updateFormValue = (value: SaveUsuarioInput) => {
+    setFormValue(value);
+    setFormErrors({});
     setErrorMsg(null);
   };
 
   const handleSave = async (event: FormEvent) => {
     event.preventDefault();
     setErrorMsg(null);
+    const validation = validateUsuarioForm(formValue, perfis);
+    if (!validation.success) {
+      setFormErrors(validation.errors);
+      setErrorMsg(validation.message);
+      return;
+    }
+    setFormErrors({});
     try {
-      await saveMutation.mutateAsync(formValue);
+      await saveMutation.mutateAsync(validation.data);
       setSuccessMsg(formValue.id ? 'Usuário atualizado com sucesso.' : 'Usuário cadastrado com sucesso.');
       closeForm();
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -108,6 +139,24 @@ export const useUsuarios = () => {
     }
   };
 
+  const openPasswordReset = (usuario: Usuario) => {
+    setPasswordResetUsuario(usuario);
+    setErrorMsg(null);
+  };
+
+  const closePasswordReset = () => {
+    if (!resetPasswordMutation.isPending) setPasswordResetUsuario(null);
+  };
+
+  const handlePasswordReset = async (password: string) => {
+    if (!passwordResetUsuario) return;
+    await resetPasswordMutation.mutateAsync({ usuarioId: passwordResetUsuario.id, password });
+    const nome = passwordResetUsuario.nome;
+    setPasswordResetUsuario(null);
+    setSuccessMsg(`Senha de ${nome} redefinida com sucesso.`);
+    setTimeout(() => setSuccessMsg(null), 3000);
+  };
+
   return {
     usuarios,
     perfis,
@@ -115,8 +164,11 @@ export const useUsuarios = () => {
     isSaving: saveMutation.isPending,
     showForm,
     selectedUsuario,
+    passwordResetUsuario,
+    isResettingPassword: resetPasswordMutation.isPending,
     formValue,
-    setFormValue,
+    setFormValue: updateFormValue,
+    formErrors,
     successMsg,
     errorMsg,
     openCreate,
@@ -125,5 +177,8 @@ export const useUsuarios = () => {
     handleSave,
     handleInativar,
     handleExcluir,
+    openPasswordReset,
+    closePasswordReset,
+    handlePasswordReset,
   };
 };

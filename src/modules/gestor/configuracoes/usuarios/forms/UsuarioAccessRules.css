@@ -1,0 +1,186 @@
+/* Access Editor (Custom Setup) */
+.usuario-access-editor {
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fafbfc;
+}
+
+.usuario-editor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.usuario-editor-row label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.usuario-editor-row p {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.usuario-quick-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.usuario-quick-actions button {
+  background: #ffffff;
+  border: 1px solid #dce3ec;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.usuario-quick-actions button:hover {
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-primary);
+  background: #fffdf9;
+}
+
+/* Days Selection Grid */
+.usuario-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.usuario-day-button {
+  background: #ffffff;
+  border: 1px solid #dce3ec;
+  border-radius: 6px;
+  padding: 8px 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-align: center;
+}
+
+.usuario-day-button:hover {
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-primary);
+}
+
+.usuario-day-button.active {
+  background: var(--color-gold-primary);
+  border-color: var(--color-gold-primary);
+  color: #ffffff;
+}
+
+/* Time Interval Editor */
+.usuario-interval-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.usuario-interval-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.usuario-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usuario-time-field span {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.usuario-time-field input {
+  border: 1px solid #dce3ec;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 0.76rem;
+  outline: none;
+}
+
+.usuario-time-field input:focus {
+  border-color: var(--color-border-focus);
+}
+
+.usuario-remove-interval {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  margin-top: 14px; /* Center-align below the time labels */
+}
+
+.usuario-remove-interval:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.usuario-add-interval {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  padding: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: var(--transition-normal);
+}
+
+.usuario-add-interval:hover {
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-primary);
+  background: #fffdf9;
+}
+
+/* Access Restrict Message */
+.usuario-access-message {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-dark);
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  transition: var(--transition-normal);
+}
+
+.usuario-access-message:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}

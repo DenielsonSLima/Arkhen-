@@ -4,10 +4,11 @@ import { useLogin } from '../hooks/useLogin';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
 import { CURRENT_RELEASE } from '../../../../internal/version/release';
+import type { LoginResponse } from '../services/loginService';
 
 interface LoginFormProps {
   loginState: ReturnType<typeof useLogin>;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (response: LoginResponse) => void;
   onBackToLanding?: () => void;
 }
 
@@ -37,7 +38,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     const res = await handleLogin(e);
     if (res && res.success) {
-      onLoginSuccess();
+      onLoginSuccess(res);
     }
   };
 
@@ -178,6 +179,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
               {isLoading ? 'ENVIANDO...' : 'ENVIAR INSTRUÇÕES'}
             </button>
 
+            <p style={{ margin: '12px 0 0', color: '#64748b', fontSize: '0.76rem', lineHeight: 1.45, textAlign: 'center' }}>
+              Acessa com CPF? Solicite uma nova senha ao gestor da contabilidade.
+            </p>
+
             <div className="back-to-login-container">
               <a href="#login" className="back-to-login-link" onClick={handleToggleToLogin}>
                 <ArrowLeft size={16} />
@@ -194,7 +199,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
               {/* User Input */}
               <div className="form-group">
                 <label htmlFor="usuario" className="form-label">
-                  Usuário
+                  E-mail ou CPF
                 </label>
                 <div className="input-wrapper">
                   <span className="input-icon">
@@ -202,9 +207,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
                   </span>
                   <input
                     id="usuario"
-                    type="email"
+                    type="text"
+                    inputMode="text"
+                    autoComplete="username"
                     className="form-input"
-                    placeholder="Digite seu e-mail"
+                    placeholder="Digite seu e-mail ou CPF"
                     value={usuario}
                     onChange={(e) => setUsuario(e.target.value)}
                     disabled={isLoading}
@@ -224,6 +231,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
                   <input
                     id="senha"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     className="form-input"
                     placeholder="Digite sua senha"
                     value={senha}

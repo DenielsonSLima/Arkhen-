@@ -1,8 +1,10 @@
 import React from 'react';
-import { Edit2, Trash2, UserPlus, UserX } from 'lucide-react';
+import { Edit2, KeyRound, Trash2, UserPlus, UserX } from 'lucide-react';
 import { useUsuarios } from './hooks/useUsuarios';
 import { UsuarioForm } from './forms/UsuarioForm';
+import { UsuarioPasswordResetModal } from './forms/UsuarioPasswordResetModal';
 import type { Usuario } from './services/usuariosService';
+import { formatCpf } from '../../../../lib/cpf';
 
 const weekdays = [1, 2, 3, 4, 5];
 
@@ -26,8 +28,11 @@ export const UsuariosConfig: React.FC = () => {
     isLoading,
     isSaving,
     showForm,
+    passwordResetUsuario,
+    isResettingPassword,
     formValue,
     setFormValue,
+    formErrors,
     successMsg,
     errorMsg,
     openCreate,
@@ -36,6 +41,9 @@ export const UsuariosConfig: React.FC = () => {
     handleSave,
     handleInativar,
     handleExcluir,
+    openPasswordReset,
+    closePasswordReset,
+    handlePasswordReset,
   } = useUsuarios();
 
   if (isLoading) {
@@ -64,6 +72,8 @@ export const UsuariosConfig: React.FC = () => {
               value={formValue}
               perfis={perfis}
               isSaving={isSaving}
+              errors={formErrors}
+              errorMessage={errorMsg}
               onChange={setFormValue}
               onSubmit={handleSave}
               onCancel={closeForm}
@@ -72,11 +82,21 @@ export const UsuariosConfig: React.FC = () => {
         </div>
       )}
 
+      {passwordResetUsuario && (
+        <UsuarioPasswordResetModal
+          usuario={passwordResetUsuario}
+          isSaving={isResettingPassword}
+          onCancel={closePasswordReset}
+          onSubmit={handlePasswordReset}
+        />
+      )}
+
       <div className="table-responsive">
         <table className="config-table">
           <thead>
             <tr>
               <th>Nome</th>
+              <th>Acesso</th>
               <th>E-mail</th>
               <th>CPF</th>
               <th>Telefone</th>
@@ -90,8 +110,9 @@ export const UsuariosConfig: React.FC = () => {
             {usuarios.map((user) => (
               <tr key={user.id} onClick={() => openEdit(user)} style={{ cursor: 'pointer' }}>
                 <td><strong>{user.nome}</strong></td>
-                <td>{user.email}</td>
-                <td>{user.cpf || '-'}</td>
+                <td>{user.formaAcesso === 'cpf' ? 'CPF + senha' : 'E-mail'}</td>
+                <td>{user.email || '-'}</td>
+                <td>{user.cpf ? formatCpf(user.cpf) : '-'}</td>
                 <td>{user.telefone || '-'}</td>
                 <td>{user.perfil}</td>
                 <td>
@@ -124,23 +145,38 @@ export const UsuariosConfig: React.FC = () => {
                         <UserX size={14} />
                       </button>
                     )}
-                    <button
-                      className="btn-action-responsavel"
-                      title="Excluir se não houver histórico"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleExcluir(user);
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {user.formaAcesso === 'cpf' && user.authUserId && (
+                      <button
+                        className="btn-action-responsavel"
+                        title="Redefinir senha"
+                        aria-label={`Redefinir senha de ${user.nome}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openPasswordReset(user);
+                        }}
+                      >
+                        <KeyRound size={14} />
+                      </button>
+                    )}
+                    {!user.authUserId && (
+                      <button
+                        className="btn-action-responsavel"
+                        title="Excluir cadastro sem conta de acesso"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleExcluir(user);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
             {usuarios.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={9} style={{ textAlign: 'center', color: '#64748b' }}>
                   Nenhum usuário cadastrado para esta empresa.
                 </td>
               </tr>
