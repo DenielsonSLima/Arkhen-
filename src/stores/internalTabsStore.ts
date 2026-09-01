@@ -24,6 +24,12 @@ export interface InternalTabsState {
 const STORAGE_KEY = 'contabil_internal_tabs_state';
 let tabSequence = 0;
 
+const normalizeModuleId = (moduleId: string) => (
+  moduleId === 'parametrizacao-protocolos' || moduleId === 'parametrizacao-checklists'
+    ? 'parametrizacao-prazos-entrega'
+    : moduleId
+);
+
 const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'clientes' && title.startsWith('Clientes')) {
     return `Parceiros${title.slice('Clientes'.length)}`;
@@ -44,6 +50,20 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
     && title.startsWith('Rotinas e Modelos')
   ) {
     return `Rotinas${title.slice('Rotinas e Modelos'.length)}`;
+  }
+  if (
+    moduleId === 'parametrizacao-prazos-entrega'
+    || moduleId === 'parametrizacao-protocolos'
+    || moduleId === 'parametrizacao-checklists'
+  ) {
+    const legacyPrefix = title.startsWith('Catálogo de Obrigações')
+      ? 'Catálogo de Obrigações'
+      : title.startsWith('Modelos de Checklists')
+        ? 'Modelos de Checklists'
+        : title.startsWith('Obrigações')
+          ? 'Obrigações'
+          : '';
+    if (legacyPrefix) return `Obrigações${title.slice(legacyPrefix.length)}`;
   }
   if (moduleId === 'simulacoes-calculos') {
     return 'Calculadora de Rescisão';
@@ -114,7 +134,7 @@ const hydrateFromStorage = (raw: string | null) => {
             && tab.id !== 'planejamento-tributario'
           )).map((tab: InternalTab, index: number) => {
             const isLegacyTab = typeof tab.moduleId !== 'string';
-            const moduleId = isLegacyTab ? tab.id : tab.moduleId;
+            const moduleId = normalizeModuleId(isLegacyTab ? tab.id : tab.moduleId);
             const id = isLegacyTab ? `${tab.id}__migrated_${index}` : tab.id;
             if (isLegacyTab) legacyIdMap.set(tab.id, id);
             const baseTitle = normalizePersistedTitle(
@@ -253,13 +273,14 @@ export const internalTabsStore = {
   activateModule(moduleId: string) {
     setState(current => ({
       ...current,
-      activeTabId: moduleId,
+      activeTabId: normalizeModuleId(moduleId),
       notice: null,
     }));
   },
 
   openTab(moduleId: string, title: string, iconName: string, context?: InternalTabContext) {
-    if (moduleId === 'inicio') {
+    const normalizedModuleId = normalizeModuleId(moduleId);
+    if (normalizedModuleId === 'inicio') {
       setState(current => ({ ...current, activeTabId: 'inicio', notice: null }));
       return;
     }
@@ -273,8 +294,9 @@ export const internalTabsStore = {
       return;
     }
 
-    const duplicateCount = state.tabs.filter((tab) => tab.moduleId === moduleId).length;
-    const id = `${moduleId}__${Date.now()}_${tabSequence++}`;
+    const duplicateCount = state.tabs.filter((tab) => tab.moduleId === normalizedModuleId).length;
+    const id = `${normalizedModuleId}__${Date.now()}_${tabSequence++}`;
+    const normalizedTitle = normalizePersistedTitle(normalizedModuleId, title);
 
     // Adiciona nova aba
     setState(current => ({
@@ -283,9 +305,13 @@ export const internalTabsStore = {
         ...current.tabs,
         {
           id,
-          moduleId,
-          baseTitle: title,
-          title: context?.titleSuffix ? `${title} / ${context.titleSuffix}` : duplicateCount > 0 ? `${title} ${duplicateCount + 1}` : title,
+          moduleId: normalizedModuleId,
+          baseTitle: normalizedTitle,
+          title: context?.titleSuffix
+            ? `${normalizedTitle} / ${context.titleSuffix}`
+            : duplicateCount > 0
+              ? `${normalizedTitle} ${duplicateCount + 1}`
+              : normalizedTitle,
           iconName,
           context,
         },

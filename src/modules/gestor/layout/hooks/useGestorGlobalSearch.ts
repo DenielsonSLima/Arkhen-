@@ -7,6 +7,11 @@ import { isRouteEnabled } from '../../configuracoes/modulos-sistema/services/mod
 import type { SystemModuleId } from '../../configuracoes/modulos-sistema/services/modulosSistemaService';
 import { TAB_INFOS } from '../gestorTabMetadata';
 
+const LEGACY_OBRIGACOES_MODULE_IDS = new Set([
+  'parametrizacao-protocolos',
+  'parametrizacao-checklists',
+]);
+
 export type GlobalSearchResult = {
   id: string;
   label: string;
@@ -56,7 +61,9 @@ export const useGestorGlobalSearch = (
       context: { titleSuffix: 'Todos os Documentos', data: { activeTab: 'todos' } },
     });
     const moduleResults: GlobalSearchResult[] = Object.entries(TAB_INFOS)
-      .filter(([, info]) => includes(info.title))
+      .filter(([moduleId, info]) => (
+        !LEGACY_OBRIGACOES_MODULE_IDS.has(moduleId) && includes(info.title)
+      ))
       .slice(0, 4)
       .map(([moduleId, info]) => ({
         id: `module-${moduleId}`,

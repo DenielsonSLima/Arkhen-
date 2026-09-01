@@ -28,6 +28,8 @@ const catalogo = [{
   categoria: 'Fiscal',
   orgao: 'Receita Federal',
   diaLimite: 25,
+  temVencimento: false,
+  etapas: ['Conferir dados', 'Transmitir obrigação'],
   descricao: 'Obrigação fiscal',
   status: 'Ativo',
   regimes: ['Simples Nacional'],
@@ -64,6 +66,9 @@ describe('TabProtocolosEntregas', () => {
     render(<TabProtocolosEntregas company={company} />);
 
     const checkbox = await screen.findByRole('checkbox', { name: /dctfweb/i }) as HTMLInputElement;
+    expect(screen.getByText('Sem prazo fixo')).toBeTruthy();
+    expect(screen.getByText('2 etapas')).toBeTruthy();
+    expect(screen.getByText(/Etapas: Conferir dados.*Transmitir obrigação/)).toBeTruthy();
     fireEvent.click(checkbox);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'quinzenal' } });
     fireEvent.click(screen.getByRole('button', { name: /salvar entregas/i }));
@@ -111,5 +116,45 @@ describe('TabProtocolosEntregas', () => {
       expect(hookMock.value.refetch).toHaveBeenCalledOnce();
       expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('trimestral');
     });
+  });
+
+  it('reconcilia cards novos e removidos sem perder a edição local', async () => {
+    const view = render(<TabProtocolosEntregas company={company} />);
+    fireEvent.click(await screen.findByRole('checkbox', { name: /dctfweb/i }));
+
+    const novaObrigacao = {
+      ...catalogo[0],
+      id: 'sped-fiscal',
+      nome: 'SPED Fiscal',
+    };
+    hookMock.value = {
+      ...hookMock.value,
+      data: {
+        catalogo: [...catalogo, novaObrigacao],
+        configs: [
+          ...initialConfigs,
+          { entregaId: 'sped-fiscal', ativo: false, periodicidade: 'mensal' },
+        ],
+        updatedAt: initialUpdatedAt,
+      },
+    };
+    view.rerender(<TabProtocolosEntregas company={company} />);
+
+    await waitFor(() => {
+      expect((screen.getByRole('checkbox', { name: /dctfweb/i }) as HTMLInputElement).checked).toBe(true);
+      expect(screen.getByRole('checkbox', { name: /sped fiscal/i })).toBeTruthy();
+    });
+
+    hookMock.value = {
+      ...hookMock.value,
+      data: {
+        catalogo: [novaObrigacao],
+        configs: [{ entregaId: 'sped-fiscal', ativo: false, periodicidade: 'mensal' }],
+        updatedAt: initialUpdatedAt,
+      },
+    };
+    view.rerender(<TabProtocolosEntregas company={company} />);
+
+    await waitFor(() => expect(screen.queryByText('DCTFWeb')).toBeNull());
   });
 });

@@ -57,6 +57,10 @@ const configEnvelope: ConfiguracaoProtocolosEmpresa = {
     categoria: 'Fiscal',
     orgao: 'Receita Federal',
     diaLimite: 25,
+    diaPrimeiraQuinzena: 10,
+    diaSegundaQuinzena: 25,
+    temVencimento: true,
+    etapas: ['Conferir dados', 'Transmitir obrigação'],
     descricao: 'Obrigação mensal',
     status: 'Ativo',
     regimes: ['Simples Nacional'],
@@ -192,8 +196,38 @@ describe('protocolosService RPC contract', () => {
     expect(supabaseMock.rpc).toHaveBeenCalledWith('obter_configuracao_protocolos_cliente', {
       p_cliente_id: company.id,
     });
-    expect(result.catalogo[0]).toMatchObject({ id: 'dctfweb', diaLimite: 25 });
+    expect(result.catalogo[0]).toMatchObject({
+      id: 'dctfweb',
+      diaLimite: 25,
+      diaPrimeiraQuinzena: 10,
+      diaSegundaQuinzena: 25,
+      temVencimento: true,
+      etapas: ['Conferir dados', 'Transmitir obrigação'],
+    });
     expect(result.configs[0]).toMatchObject({ entregaId: 'dctfweb', diaMes: 25 });
+  });
+
+  it('normaliza obrigação sem vencimento e preserva somente etapas válidas', async () => {
+    supabaseMock.rpc.mockResolvedValueOnce({
+      data: {
+        ...configEnvelope,
+        catalogo: [{
+          ...configEnvelope.catalogo[0],
+          diaLimite: null,
+          temVencimento: false,
+          etapas: [' Conferir dados ', '', 'Transmitir obrigação'],
+        }],
+      },
+      error: null,
+    });
+
+    const result = await protocolosService.getConfiguracaoEmpresa(company);
+
+    expect(result.catalogo[0]).toMatchObject({
+      temVencimento: false,
+      etapas: ['Conferir dados', 'Transmitir obrigação'],
+    });
+    expect(result.catalogo[0].diaLimite).toBeUndefined();
   });
 
   it('salva a configuração pela RPC e relê o envelope canônico', async () => {

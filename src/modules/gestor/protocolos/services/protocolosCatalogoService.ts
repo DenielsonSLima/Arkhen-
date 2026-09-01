@@ -6,7 +6,12 @@ import type { RegimeEmpresa, TipoFechamentoEntrega } from '../../parametrizacao/
 export type StatusProtocoloTipo = 'Ativo' | 'Inativo';
 export type ProtocoloOrigemPadrao = 'Cliente envia' | 'Escritório envia' | 'Ambos';
 
-export interface ProtocoloTipoConfig extends EntregaModelo {
+export interface ProtocoloTipoConfig extends Omit<EntregaModelo, 'diaLimite'> {
+  diaLimite?: number;
+  diaPrimeiraQuinzena?: number;
+  diaSegundaQuinzena?: number;
+  temVencimento: boolean;
+  etapas: string[];
   descricao: string;
   status: StatusProtocoloTipo;
   regimes: RegimeEmpresa[];
@@ -68,6 +73,8 @@ const getDefaultOrigemPadrao = (entregaId: string): ProtocoloOrigemPadrao => {
 const makeDefaultCatalog = (): ProtocoloTipoConfig[] => (
   ENTREGA_CATALOGO.map((item) => ({
     ...item,
+    temVencimento: true,
+    etapas: [],
     descricao: `Obrigação padrão do escritório para ${item.nome.toLowerCase()}.`,
     status: 'Ativo',
     regimes: getDefaultRegimesForEntrega(item.id),
@@ -123,6 +130,8 @@ const fromRow = (row: ProtocoloTipoRow): ProtocoloTipoConfig => ({
   categoria: row.categoria,
   orgao: row.orgao || undefined,
   diaLimite: Math.min(Math.max(Math.round(Number(row.dia_limite || 1)), 1), 31),
+  temVencimento: true,
+  etapas: [],
   descricao: row.descricao || '',
   status: row.ativo === false ? 'Inativo' : 'Ativo',
   regimes: normalizeRegimes(row.regimes),

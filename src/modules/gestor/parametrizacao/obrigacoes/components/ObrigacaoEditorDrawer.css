@@ -1,0 +1,230 @@
+.obrigacoes-primary-button,
+.obrigacoes-secondary-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: .82rem;
+  font-weight: 700;
+  gap: 7px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 15px;
+  transition: transform 160ms ease;
+}
+.obrigacoes-primary-button { background: var(--color-gold-primary, #c59235); color: #fff; }
+.obrigacoes-secondary-button { background: #fff; border-color: #cbd5e1; color: #475569; }
+.obrigacoes-primary-button:hover:not(:disabled),
+.obrigacoes-secondary-button:hover:not(:disabled) { transform: translateY(-1px); }
+.obrigacoes-primary-button:disabled,
+.obrigacoes-secondary-button:disabled { cursor: not-allowed; opacity: .58; }
+
+.obrigacao-form-field input,
+.obrigacao-form-field select,
+.obrigacao-form-field textarea,
+.obrigacao-etapa-row input {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: #111827;
+  font: inherit;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.obrigacao-form-field input:focus,
+.obrigacao-form-field select:focus,
+.obrigacao-form-field textarea:focus,
+.obrigacao-etapa-row input:focus {
+  border-color: var(--color-gold-primary, #c59235);
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, .13);
+}
+
+.obrigacao-etapa-row__actions button,
+.obrigacao-drawer__close {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  padding: 0 8px;
+}
+.obrigacao-etapa-row__actions button:disabled,
+.obrigacao-drawer__close:disabled { cursor: not-allowed; opacity: .45; }
+
+.obrigacao-drawer-backdrop {
+  align-items: stretch;
+  background: rgba(15, 23, 42, .56);
+  display: flex;
+  inset: 0;
+  justify-content: flex-end;
+  position: fixed;
+  z-index: 4000;
+}
+.obrigacao-drawer {
+  background: #f8fafc;
+  box-shadow: -20px 0 60px rgba(15, 23, 42, .22);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 100%;
+  width: min(780px, 94vw);
+}
+.obrigacao-drawer__header {
+  align-items: flex-start;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 22px 26px;
+}
+.obrigacao-drawer__eyebrow {
+  align-items: center;
+  color: #9a681a;
+  display: inline-flex;
+  font-size: .68rem;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.obrigacao-drawer__header h2 { color: #0f172a; font-size: 1.3rem; margin: 6px 0 0; }
+.obrigacao-drawer__header p { color: #64748b; font-size: .78rem; margin: 5px 0 0; }
+.obrigacao-drawer__close { flex: 0 0 36px; height: 36px; padding: 0; }
+.obrigacao-drawer__form { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.obrigacao-drawer__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 20px 26px 28px;
+}
+.obrigacao-drawer__footer {
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 26px;
+}
+.obrigacao-form-alert { background: #fff7ed; border: 1px solid #fdba74; border-radius: 9px; color: #9a3412; font-size: .78rem; padding: 11px 13px; }
+.obrigacao-form-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.obrigacao-form-section.compact { padding: 13px 18px; }
+.obrigacao-form-section__heading,
+.obrigacao-form-section__title { align-items: flex-start; display: flex; gap: 9px; }
+.obrigacao-form-section__heading > svg,
+.obrigacao-form-section__title > svg { color: #b17b20; margin-top: 1px; }
+.obrigacao-form-section__heading.split { justify-content: space-between; }
+.obrigacao-form-section h3,
+.obrigacao-etapas-editor h4 { color: #0f172a; font-size: .85rem; margin: 0; }
+.obrigacao-form-section__heading p,
+.obrigacao-etapas-editor__heading p { color: #64748b; font-size: .7rem; margin: 3px 0 0; }
+
+.obrigacao-form-grid { display: grid; gap: 12px; }
+.obrigacao-form-grid.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.obrigacao-form-grid.nested { gap: 8px; }
+.obrigacao-form-field { display: flex; flex-direction: column; gap: 6px; }
+.obrigacao-form-field > span { color: #475569; font-size: .7rem; font-weight: 750; }
+.obrigacao-form-field input,
+.obrigacao-form-field select,
+.obrigacao-form-field textarea { font-size: .8rem; min-height: 40px; padding: 9px 11px; width: 100%; }
+.obrigacao-form-field textarea { line-height: 1.45; resize: vertical; }
+
+.obrigacao-switch,
+.obrigacao-check-option { align-items: center; cursor: pointer; display: flex; gap: 9px; }
+.obrigacao-switch { color: #475569; font-size: .72rem; font-weight: 750; }
+.obrigacao-check-option { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; padding: 11px 12px; }
+.obrigacao-check-option span,
+.obrigacao-check-option strong,
+.obrigacao-check-option small { display: block; }
+.obrigacao-check-option strong { color: #334155; font-size: .73rem; }
+.obrigacao-check-option small { color: #64748b; font-size: .66rem; margin-top: 2px; }
+.obrigacao-form-note { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; color: #64748b; font-size: .73rem; padding: 11px; }
+
+.obrigacao-regimes-grid { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.obrigacao-regimes-grid label {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  font-size: .72rem;
+  font-weight: 700;
+  gap: 7px;
+  padding: 10px;
+}
+.obrigacao-regimes-grid label.is-selected { background: rgba(197, 146, 53, .08); border-color: rgba(197, 146, 53, .55); color: #855c18; }
+
+.obrigacao-etapas-editor,
+.obrigacao-etapas-editor__list { display: flex; flex-direction: column; }
+.obrigacao-etapas-editor { gap: 12px; }
+.obrigacao-etapas-editor__heading { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+.obrigacao-etapas-editor__heading > span { background: #f1f5f9; border-radius: 999px; color: #64748b; font-size: .66rem; font-weight: 750; padding: 5px 8px; }
+.obrigacao-etapas-editor__list { gap: 8px; }
+.obrigacao-etapa-row { align-items: center; display: grid; gap: 8px; grid-template-columns: 28px minmax(0, 1fr) auto; }
+.obrigacao-etapa-row__order {
+  align-items: center;
+  background: #1e293b;
+  border-radius: 7px;
+  color: #fff;
+  display: flex;
+  font-size: .67rem;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+}
+.obrigacao-etapa-row__field input { font-size: .76rem; height: 38px; padding: 8px 10px; width: 100%; }
+.obrigacao-etapa-row__actions { display: flex; gap: 4px; }
+.obrigacao-etapa-row__actions button { height: 30px; padding: 0; width: 30px; }
+.obrigacao-etapa-row__actions button.danger { color: #b91c1c; }
+.obrigacao-add-stage {
+  align-items: center;
+  align-self: flex-start;
+  background: rgba(197, 146, 53, .08);
+  border: 1px dashed rgba(197, 146, 53, .65);
+  border-radius: 8px;
+  color: #855c18;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: .72rem;
+  font-weight: 750;
+  gap: 6px;
+  padding: 8px 11px;
+}
+.obrigacao-add-stage:disabled { cursor: not-allowed; opacity: .5; }
+.obrigacao-field-error { color: #b91c1c; font-size: .7rem; margin: -4px 0 0; }
+
+@media (max-width: 720px) {
+  .obrigacao-form-section__heading.split { align-items: stretch; flex-direction: column; }
+  .obrigacao-form-grid.two-columns,
+  .obrigacao-regimes-grid { grid-template-columns: 1fr; }
+  .obrigacao-drawer { width: 100vw; }
+  .obrigacao-drawer__header,
+  .obrigacao-drawer__body,
+  .obrigacao-drawer__footer { padding-left: 16px; padding-right: 16px; }
+  .obrigacao-etapa-row { align-items: start; grid-template-columns: 28px minmax(0, 1fr); }
+  .obrigacao-etapa-row__actions { grid-column: 2; }
+}
+
+@media (max-width: 480px) {
+  .obrigacoes-primary-button,
+  .obrigacoes-secondary-button { flex: 1; }
+  .obrigacao-drawer__footer { flex-direction: column-reverse; }
+}

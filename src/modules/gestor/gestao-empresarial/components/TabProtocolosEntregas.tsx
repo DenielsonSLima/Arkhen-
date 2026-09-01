@@ -78,13 +78,26 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     setHasConflict(false);
     setConfigs([]);
     setConfigVersion(null);
-  }, [company.id]);
+  }, [company.id, company.status, company.tipo, company.tipoParceiroId]);
 
   useEffect(() => {
-    if (configuracao && !isDirtyRef.current) {
+    if (!configuracao) return;
+    if (!isDirtyRef.current) {
       setConfigs(configuracao.configs);
       setConfigVersion(configuracao.updatedAt);
+      return;
     }
+
+    // Mantém escolhas locais, mas acompanha a composição mais recente do
+    // catálogo: adiciona cards novos e remove os que deixaram de ser aplicáveis.
+    setConfigs((current) => {
+      const localById = new Map(current.map((item) => [item.entregaId, item]));
+      return configuracao.configs.map((serverItem) => ({
+        ...serverItem,
+        ...(localById.get(serverItem.entregaId) ?? {}),
+        entregaId: serverItem.entregaId,
+      }));
+    });
   }, [configuracao]);
 
   useEffect(() => {
@@ -189,7 +202,22 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
       : ['folha-pagamento', 'notas-fiscais', 'extrato-bancario', 'guias-pagas'].includes(entrega.id)
       ? 'arquivo mensal'
     : 'obrigação/documento';
-    return `${origem} • ${tipo} • rotina ${periodicidadeLabel} • prazo dia ${entrega.diaLimite}`;
+    return `${origem} • ${tipo} • rotina ${periodicidadeLabel}`;
+  };
+
+  const getPrazoDescricao = (entrega: typeof catalogo[number]) => {
+    if (!entrega.temVencimento) return 'Sem prazo fixo';
+    if (entrega.periodicidadePadrao === 'quinzenal') {
+      return `Prazos: dias ${entrega.diaPrimeiraQuinzena ?? 15} e ${entrega.diaSegundaQuinzena ?? entrega.diaLimite ?? 30}`;
+    }
+    return entrega.diaLimite ? `Prazo: dia ${entrega.diaLimite}` : 'Prazo a definir';
+  };
+
+  const getEtapasDescricao = (etapas: string[]) => {
+    if (etapas.length === 0) return 'Etapas: nenhuma definida';
+    const visibleEtapas = etapas.slice(0, 3).join(' • ');
+    const remaining = etapas.length - 3;
+    return `Etapas: ${visibleEtapas}${remaining > 0 ? ` • +${remaining}` : ''}`;
   };
 
   const errorMessage = configuracaoError instanceof Error
@@ -282,27 +310,44 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
               {entregas.map((entrega) => {
                 const config = configById.get(entrega.id);
                 const checked = config?.ativo ?? false;
+                const etapas = entrega.etapas ?? [];
+                const checkboxId = `obrigacao-${company.id}-${entrega.id}`;
+                const periodicidadeId = `periodicidade-${company.id}-${entrega.id}`;
                 return (
-                  <label key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
+                  <div key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
                     <input
+                      id={checkboxId}
                       type="checkbox"
                       disabled={isLoading || isSaving}
                       checked={checked}
                       onChange={() => toggleEntrega(entrega.id)}
+                      aria-label={`${checked ? 'Desativar' : 'Ativar'} ${entrega.nome}`}
                     />
-                    <span className="protocolo-option-marker">
+                    <label htmlFor={checkboxId} className="protocolo-option-marker">
                       {checked ? <CheckCircle2 size={16} /> : <Send size={16} />}
-                    </span>
-                    <span className="protocolo-option-text">
+                    </label>
+                    <label htmlFor={checkboxId} className="protocolo-option-text">
                       <strong>{entrega.nome}</strong>
                       <small>{getEntregaDescricao(entrega, config)}</small>
-                    </span>
+                      <span className="protocolo-option-meta">
+                        <span>{getPrazoDescricao(entrega)}</span>
+                        <span>{etapas.length} {etapas.length === 1 ? 'etapa' : 'etapas'}</span>
+                      </span>
+                      <small
+                        className="protocolo-option-etapas"
+                        title={etapas.length > 0 ? etapas.join(' • ') : undefined}
+                      >
+                        {getEtapasDescricao(etapas)}
+                      </small>
+                    </label>
                     <div className="protocolo-option-periodicidade">
-                      <span className="protocolo-option-periodicidade-label">
+                      <label htmlFor={periodicidadeId} className="protocolo-option-periodicidade-label">
                         <CalendarClock size={13} />
                         <strong>Rotina</strong>
-                      </span>
+                      </label>
                       <select
+                        id={periodicidadeId}
+                        aria-label={`Rotina de ${entrega.nome}`}
                         value={config?.periodicidade ?? entrega.periodicidadePadrao}
                         disabled={isLoading || isSaving || !checked}
                         onChange={(event) => handleChangePeriodicidade(entrega.id, event.target.value as TipoFechamentoEntrega)}
@@ -314,7 +359,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                         ))}
                       </select>
                     </div>
-                  </label>
+                  </div>
                 );
               })}
             </div>

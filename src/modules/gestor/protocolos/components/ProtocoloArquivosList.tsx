@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -52,6 +52,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const [previewFile, setPreviewFile] = useState<ProtocoloEntrega | null>(null);
   const [novaAnotacao, setNovaAnotacao] = useState('');
   const [updatingId, setUpdatingId] = useState('');
+  const updatingRef = useRef(false);
   const [operationError, setOperationError] = useState('');
 
   const hasGlobalItems = items.length > 0;
@@ -80,6 +81,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
   const displayedItems = tabItems[activeTab] || [];
 
   const handleStatusToggle = async (item: ProtocoloEntrega) => {
+    if (updatingRef.current) return;
     if (!item.podeAlterarStatus) {
       setOperationError('Seu perfil pode consultar este item, mas não pode concluir ou reabrir.');
       return;
@@ -95,6 +97,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 
     const newStatus = item.status === 'Concluído' ? 'Pendente' : 'Concluído';
     const updates: ProtocoloUpdate = { status: newStatus, anotacao };
+    updatingRef.current = true;
     setUpdatingId(item.id);
     setOperationError('');
     try {
@@ -105,11 +108,13 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
       console.error('Falha ao atualizar item de acompanhamento.', error);
       setOperationError(error instanceof Error ? error.message : 'Não foi possível atualizar o item.');
     } finally {
+      updatingRef.current = false;
       setUpdatingId('');
     }
   };
 
   const handleAddAnotacao = async () => {
+    if (updatingRef.current) return;
     const anotacao = novaAnotacao.trim();
     if (!previewFile || anotacao.length < MIN_EVIDENCIA_LENGTH) return;
     if (!previewFile.podeAnotar) {
@@ -117,6 +122,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
       return;
     }
 
+    updatingRef.current = true;
     setUpdatingId(previewFile.id);
     setOperationError('');
     try {
@@ -127,6 +133,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
       console.error('Falha ao adicionar anotação ao item de acompanhamento.', error);
       setOperationError(error instanceof Error ? error.message : 'Não foi possível salvar a anotação.');
     } finally {
+      updatingRef.current = false;
       setUpdatingId('');
     }
   };
@@ -161,6 +168,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                   type="button"
                   role="tab"
                   aria-selected={activeTab === key}
+                  disabled={Boolean(updatingId)}
                   className={`protocolo-flow-tab ${activeTab === key ? 'active' : ''}`}
                   onClick={() => setActiveTab(key)}
                 >
@@ -206,10 +214,12 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
 	                        tabIndex={0}
 	                        aria-label={`Ver detalhes de ${item.entregaNome}`}
 	                        onClick={() => {
+	                          if (updatingRef.current) return;
 	                          setPreviewFile(item);
 	                          setNovaAnotacao('');
 	                        }}
 	                        onKeyDown={(event) => {
+	                          if (updatingRef.current) return;
 	                          if (event.key === 'Enter' || event.key === ' ') {
 	                            event.preventDefault();
 	                            setPreviewFile(item);
@@ -248,7 +258,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                         <div className="protocolo-file-actions">
                           <button
                             type="button"
-                            disabled={updatingId === item.id}
+                            disabled={Boolean(updatingId)}
                             title="Anotações"
                             onClick={(event) => {
                               event.stopPropagation();
@@ -261,7 +271,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                           <button
                             type="button"
                             className={item.status === 'Concluído' ? 'danger' : 'approve'}
-                            disabled={updatingId === item.id || !item.podeAlterarStatus}
+                            disabled={Boolean(updatingId) || !item.podeAlterarStatus}
                             title={!item.podeAlterarStatus
                               ? 'Seu perfil não pode alterar o status'
                               : item.status === 'Concluído' ? 'Reabrir item' : 'Concluir item'}
@@ -329,7 +339,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                     type="button"
                     className={previewFile.status === 'Concluído' ? 'reject' : 'approve'}
                     disabled={!previewFile.podeAlterarStatus
-                      || updatingId === previewFile.id
+                      || Boolean(updatingId)
                       || novaAnotacao.trim().length < MIN_EVIDENCIA_LENGTH}
                     onClick={() => handleStatusToggle(previewFile)}
                   >
@@ -358,7 +368,8 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                   <textarea
                     value={novaAnotacao}
                     maxLength={MAX_EVIDENCIA_LENGTH}
-                    disabled={!previewFile.podeAnotar && !previewFile.podeAlterarStatus}
+                    disabled={Boolean(updatingId)
+                      || (!previewFile.podeAnotar && !previewFile.podeAlterarStatus)}
                     placeholder="Descreva o que foi validado ou o motivo da reabertura (mínimo 8 caracteres)."
                     onChange={(event) => setNovaAnotacao(event.target.value)}
                   />
@@ -368,7 +379,7 @@ export const ProtocoloArquivosList: React.FC<ProtocoloArquivosListProps> = ({
                   onClick={handleAddAnotacao}
                   disabled={!previewFile.podeAnotar
                     || novaAnotacao.trim().length < MIN_EVIDENCIA_LENGTH
-                    || updatingId === previewFile.id}
+                    || Boolean(updatingId)}
                 >
                   <Plus size={14} /> Adicionar
                 </button>

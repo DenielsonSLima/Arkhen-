@@ -63,18 +63,16 @@ export const HELP_DATA: HelpModule[] = [
   {
     titulo: 'Parametrização',
     icone: <Database size={18} />,
-    descricao: 'Configurações de base do sistema para padronizar prazos, tributos, regimes e parametrizacao.',
+    descricao: 'Configurações de base do sistema para padronizar prazos, tributos, regimes e fluxos.',
     objetivo: 'Evitar retrabalho e manter consistência entre parceiros e contas.',
     comoUsa: 'Preencha as bases antes de começar as operações recorrentes. Isso acelera tarefas e evita erro de classificação.',
     submodulos: [
       { nome: 'Regimes Tributários', descricao: 'Catalogação de regimes e regras principais.', comoUsar: 'Selecione o regime correto em parametrizacao e relatórios.' },
-      { nome: 'Catálogo de Obrigações', descricao: 'Tipos de obrigação e entrega da empresa.', comoUsar: 'Use como padrão ao configurar obrigações por cliente.' },
+      { nome: 'Obrigações', descricao: 'Cards com prazo opcional, regimes aplicáveis e etapas do fluxo.', comoUsar: 'Crie cada variante de obrigação e depois ative o fluxo nas empresas compatíveis.' },
       { nome: 'Tipos de Empresa / Natureza Jurídica / Parceiros', descricao: 'Classificações da base administrativa.', comoUsar: 'Utilize para filtros e segmentações rápidas.' },
       { nome: 'Categorias de Parceiros', descricao: 'Segmentação de carteira.', comoUsar: 'Crie grupos para relatórios e prioridade operacional.' },
       { nome: 'Impostos', descricao: 'Regras e tabelas de cálculo.', comoUsar: 'Defina parâmetros para simulações e consistência.' },
-      { nome: 'Obrigações', descricao: 'Definição de prazos-padrão.', comoUsar: 'Garante calendário fiscal completo e menos omissões.' },
       { nome: 'Tipos de Documentos', descricao: 'Classificação documental.', comoUsar: 'Usado para organização no módulo Documentos.' },
-      { nome: 'Modelos de Checklists', descricao: 'Padrões de rotina por cliente/tarefa.', comoUsar: 'Use nas áreas de atividades e rotinas para uniformizar passos.' },
     ],
   },
   {

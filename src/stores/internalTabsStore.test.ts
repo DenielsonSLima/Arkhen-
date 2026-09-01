@@ -57,7 +57,7 @@ describe('internalTabsStore', () => {
     expect(JSON.parse(storedState!).activeTabId).toContain('documentos');
   });
 
-  it('migrates legacy Rotinas and Acompanhamento titles while preserving suffixes', async () => {
+  it('migrates legacy Rotinas, Acompanhamento and Obrigações tabs', async () => {
     sessionStorage.setItem('contabil_internal_tabs_state', JSON.stringify({
       persistEnabled: true,
       activeTabId: 'protocolos__legacy',
@@ -76,6 +76,13 @@ describe('internalTabsStore', () => {
           title: 'Rotinas e Modelos / Empresa Alfa',
           iconName: 'Repeat',
         },
+        {
+          id: 'parametrizacao-checklists__legacy',
+          moduleId: 'parametrizacao-checklists',
+          baseTitle: 'Modelos de Checklists',
+          title: 'Modelos de Checklists',
+          iconName: 'ClipboardList',
+        },
       ],
     }));
     vi.resetModules();
@@ -90,6 +97,11 @@ describe('internalTabsStore', () => {
       expect.objectContaining({
         baseTitle: 'Rotinas',
         title: 'Rotinas / Empresa Alfa',
+      }),
+      expect.objectContaining({
+        moduleId: 'parametrizacao-prazos-entrega',
+        baseTitle: 'Obrigações',
+        title: 'Obrigações',
       }),
     ]);
   });

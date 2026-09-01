@@ -6,6 +6,7 @@ import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
 import type { Company } from '../services/gestaoEmpresarialService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
 import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
+import { empresaProtocolosKeys } from '../../protocolos/queries/empresaProtocolosQueries';
 
 export type EmpresaDetailTab = 'dados' | 'filiais' | 'protocolos';
 
@@ -17,6 +18,7 @@ interface UseGestaoEmpresarialOptions {
 export const clientesKeys = {
   all: ['clientes'] as const,
 };
+const EMPTY_COMPANIES: Company[] = [];
 
 export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) => {
   const queryClient = useQueryClient();
@@ -38,12 +40,13 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     staleTime: 30_000,
   });
 
-  const companies = companiesQuery.data || [];
+  const companies = companiesQuery.data ?? EMPTY_COMPANIES;
   const isLoading = companiesQuery.isLoading;
 
   const invalidatePartnersAndRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: clientesKeys.all });
     void queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+    void queryClient.invalidateQueries({ queryKey: empresaProtocolosKeys.all });
   }, [queryClient]);
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
             cnae: company.cnae || lookup.cnae,
             cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
           };
-        } catch (error) {
+        } catch {
           // Mantém o fluxo de salvamento sem bloquear caso a consulta CNPJ esteja indisponível.
         }
       }

@@ -128,6 +128,14 @@ const asOptionalInteger = (value: unknown) => (
   typeof value === 'number' && Number.isInteger(value) ? value : undefined
 );
 
+const normalizeEtapas = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((etapa): etapa is string => typeof etapa === 'string')
+    .map((etapa) => etapa.trim())
+    .filter(Boolean);
+};
+
 const normalizeAnotacoes = (value: unknown): Anotacao[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((raw) => {
@@ -228,13 +236,26 @@ const normalizeCatalogItem = (raw: unknown): ProtocoloTipoConfig | null => {
     || item.origemPadrao === 'Ambos'
     ? item.origemPadrao
     : 'Ambos';
+  const rawDiaLimite = asOptionalInteger(item.diaLimite)
+    ?? asOptionalInteger(item.diaVencimento);
+  const temVencimento = item.temVencimento !== false;
 
   return {
     id,
     nome,
     categoria: asString(item.categoria) as EntregaModelo['categoria'],
     orgao: asOptionalString(item.orgao),
-    diaLimite: typeof item.diaLimite === 'number' ? item.diaLimite : 1,
+    diaLimite: temVencimento
+      ? Math.min(Math.max(rawDiaLimite ?? 1, 1), 31)
+      : undefined,
+    diaPrimeiraQuinzena: Math.min(Math.max(
+      asOptionalInteger(item.diaPrimeiraQuinzena) ?? 15, 1,
+    ), 31),
+    diaSegundaQuinzena: Math.min(Math.max(
+      asOptionalInteger(item.diaSegundaQuinzena) ?? rawDiaLimite ?? 30, 1,
+    ), 31),
+    temVencimento,
+    etapas: normalizeEtapas(item.etapas),
     descricao: asString(item.descricao),
     status: item.status === 'Inativo' ? 'Inativo' : 'Ativo',
     regimes,

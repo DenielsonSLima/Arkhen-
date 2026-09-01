@@ -7,8 +7,7 @@ import { CnaePage } from '../parametrizacao/cnae/CnaePage';
 import { RegrasApuracaoPage } from '../parametrizacao/regras/RegrasApuracaoPage';
 import { ParametrosCalculoPage } from '../parametrizacao/parametros-calculo/ParametrosCalculoPage';
 import { TabelasTributariasPage } from '../parametrizacao/tabelas-tributarias/TabelasTributariasPage';
-import { PrazosEntregaPage } from '../parametrizacao/prazos-entrega/PrazosEntregaPage';
-import { ProtocolosTiposPage } from '../parametrizacao/protocolos/ProtocolosTiposPage';
+import { ObrigacoesPage } from '../parametrizacao/obrigacoes/ObrigacoesPage';
 import { ParametrizacaoPlaceholderPage } from '../parametrizacao/catalogos/ParametrizacaoPlaceholderPage';
 import { CategoriaClientePage } from '../parametrizacao/catalogos/CategoriaClientePage';
 import { CategoriaFinanceiraPage } from '../parametrizacao/catalogos/CategoriaFinanceiraPage';
@@ -17,7 +16,6 @@ import { PastasPadraoPage } from '../parametrizacao/pastas-padrao/PastasPadraoPa
 import { GestaoEmpresarialPage } from '../gestao-empresarial/GestaoEmpresarialPage';
 import type { EmpresaDetailTab } from '../gestao-empresarial/hooks/useGestaoEmpresarial';
 import { AtividadesPage } from '../atividades/AtividadesPage';
-import { ConfigFluxosPage } from '../atividades/config/ConfigFluxosPage';
 import { SimulacoesCalculosPage } from '../simulacoes-calculos/SimulacoesCalculosPage';
 import type { DocumentosTab } from '../documentos/hooks/useDocumentos';
 import { ConformidadePage } from '../conformidade/ConformidadePage';
@@ -78,9 +76,9 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
     case 'parametrizacao-pastas-padrao': return <PastasPadraoPage />;
     case 'parametrizacao-parametros-calculo': return <ParametrosCalculoPage />;
     case 'parametrizacao-tabelas-tributarias': return <TabelasTributariasPage />;
-    case 'parametrizacao-prazos-entrega': return <PrazosEntregaPage />;
-    case 'parametrizacao-protocolos': return <ProtocolosTiposPage />;
-    case 'parametrizacao-checklists': return <ConfigFluxosPage />;
+    case 'parametrizacao-prazos-entrega':
+    case 'parametrizacao-protocolos':
+    case 'parametrizacao-checklists': return <ObrigacoesPage />;
     case 'atividades':
       return (
         <AtividadesPage

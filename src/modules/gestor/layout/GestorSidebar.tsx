@@ -22,7 +22,6 @@ const ALL_MENU_IDS = [...DEFAULT_MENU_ORDER];
 
 const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-regimes', label: 'Regimes Tributários' },
-  { id: 'parametrizacao-protocolos', label: 'Catálogo de Obrigações' },
   { id: 'parametrizacao-tipos-empresa', label: 'Tipos de Empresa' },
   { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
   { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
@@ -34,7 +33,6 @@ const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-prazos-entrega', label: 'Obrigações' },
   { id: 'parametrizacao-documentos', label: 'Tipos de Documentos' },
   { id: 'parametrizacao-pastas-padrao', label: 'Pastas Padrão' },
-  { id: 'parametrizacao-checklists', label: 'Modelos de Checklists' },
   { id: 'parametrizacao-categoria-financeira', label: 'Categorias Financeiras' },
 ];
 
