@@ -1,0 +1,216 @@
+.protocolo-review-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
+.protocolo-file-manage-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.protocolo-file-manage-actions button {
+  min-height: 34px;
+}
+.protocolo-review-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.protocolo-review-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.protocolo-review-actions button.approve {
+  border-color: rgba(16, 185, 129, 0.24);
+  color: #047857;
+  background: rgba(16, 185, 129, 0.06);
+}
+.protocolo-review-actions button.reject {
+  border-color: rgba(239, 68, 68, 0.24);
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.06);
+}
+.protocolo-review-actions button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.protocolo-review-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.protocolo-review-panel label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.protocolo-preview-empty {
+  min-height: 120px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: #64748b;
+  text-align: center;
+  padding: 12px;
+}
+.protocolo-review-panel textarea {
+  min-height: 86px;
+  resize: vertical;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px;
+  color: #0f172a;
+  font-size: 0.78rem;
+  outline: none;
+}
+.protocolo-review-panel textarea:focus {
+  border-color: var(--color-gold-primary);
+  box-shadow: 0 0 0 3px var(--color-gold-glow);
+}
+@media (max-width: 1180px) {
+  .protocolo-files-layout,
+  .protocolo-files-layout.has-preview {
+    grid-template-columns: 1fr;
+  }
+  .protocolo-file-category {
+    overflow-x: auto;
+  }
+  .protocolo-file-row {
+    grid-template-columns: 36px minmax(180px, 1fr) minmax(92px, auto) minmax(96px, auto) minmax(88px, auto) 74px;
+  }
+  .protocolo-file-table-head {
+    display: none;
+  }
+  .protocolo-file-type,
+  .protocolo-date-cell,
+  .protocolo-completed-by,
+  .protocolo-review-status,
+  .protocolo-file-size {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .protocolo-flow-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .protocolo-files-toolbar,
+  .protocolo-file-row {
+    align-items: stretch;
+  }
+  .protocolo-files-toolbar {
+    flex-direction: column;
+  }
+  .protocolo-files-context {
+    margin-left: 0;
+  }
+  .protocolo-file-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .protocolo-file-icon,
+  .protocolo-file-status,
+  .protocolo-file-actions {
+    grid-column: 2;
+  }
+  .protocolo-file-cell {
+    display: none;
+  }
+}
+
+
+.anotacoes-list {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.anotacoes-list h4 {
+  font-size: 0.85rem;
+  color: #334155;
+  margin: 0;
+  font-weight: 600;
+}
+
+.anotacao-item {
+  background-color: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.anotacao-item small {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.anotacao-item p {
+  font-size: 0.8rem;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.no-anotacoes {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.add-anotacao-btn {
+  margin-top: 10px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-anotacao-btn:hover:not(:disabled) {
+  background-color: #e2e8f0;
+}
+
+.add-anotacao-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+
+
+.protocolo-file-actions .approve,
+.protocolo-file-manage-actions .approve {
+  border-color: rgba(16, 185, 129, 0.22);
+  color: #047857;
+  background: rgba(16, 185, 129, 0.04);
+}

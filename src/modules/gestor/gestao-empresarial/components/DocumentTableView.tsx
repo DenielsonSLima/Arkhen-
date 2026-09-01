@@ -141,7 +141,7 @@ export const DocumentTableView: React.FC<DocumentTableViewProps> = ({
                         border: '1px solid #fde68a',
                         color: 'var(--color-gold-dark)',
                         fontSize: isCompact ? '0.64rem' : '0.68rem',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         lineHeight: 1.25,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',

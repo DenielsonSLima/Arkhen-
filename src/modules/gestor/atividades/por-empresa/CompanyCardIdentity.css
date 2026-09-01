@@ -54,7 +54,7 @@
   color: #ffffff;
   background: linear-gradient(135deg, var(--company-card-accent), var(--company-card-accent-dark));
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .company-card-identity-title {
@@ -65,7 +65,7 @@
   margin: 0;
   color: #0f172a;
   font-size: 1.02rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -92,7 +92,7 @@
   border-radius: 999px;
   padding: 2px 6px;
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   text-transform: uppercase;
 }

@@ -27,7 +27,7 @@
 .agenda-trimestre-current-label {
   color: #0f172a;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 700;
   text-align: center;
   text-transform: capitalize;
 }
@@ -35,7 +35,7 @@
 .agenda-trimestre-current-label span {
   color: #64748b;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .agenda-trimestre-nav-btn {
@@ -47,7 +47,7 @@
   cursor: pointer;
   display: inline-flex;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 6px;
   justify-content: center;
   min-height: 34px;
@@ -111,14 +111,14 @@
 .agenda-trimestre-routine-header span {
   color: #a36d12;
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
 .agenda-trimestre-routine-header strong {
   color: #0f172a;
   font-size: 0.9rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: capitalize;
 }
 
@@ -141,7 +141,7 @@
 .agenda-trimestre-title {
   color: #0f172a;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-bottom: 8px;
   text-transform: capitalize;
 }
@@ -162,7 +162,7 @@
 .agenda-trimestre-weekdays span {
   color: #94a3b8;
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
 }
 
@@ -372,7 +372,7 @@
   color: #0f172a;
   display: inline-flex;
   font-size: 0.86rem;
-  font-weight: 900;
+  font-weight: 700;
   gap: 7px;
   letter-spacing: 0;
   margin: 0;
@@ -395,7 +395,7 @@
 .agenda-subsection > strong {
   color: #64748b;
   font-size: 0.7rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 

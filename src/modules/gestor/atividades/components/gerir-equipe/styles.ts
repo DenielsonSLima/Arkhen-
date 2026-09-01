@@ -74,7 +74,7 @@ export const styles: Record<string, CSSProperties> = {
   detailEyebrow: {
     color: 'var(--color-gold-dark)',
     fontSize: '0.68rem',
-    fontWeight: 800,
+    fontWeight: 700,
     textTransform: 'uppercase',
   },
   detailMeta: {
@@ -96,7 +96,7 @@ export const styles: Record<string, CSSProperties> = {
     color: '#64748b',
     display: 'block',
     fontSize: '0.7rem',
-    fontWeight: 900,
+    fontWeight: 700,
     marginBottom: '6px',
     textTransform: 'uppercase',
   },
@@ -108,7 +108,7 @@ export const styles: Record<string, CSSProperties> = {
   detailTitle: {
     color: '#0f172a',
     fontSize: '1rem',
-    fontWeight: 800,
+    fontWeight: 700,
     margin: '3px 0 0 0',
   },
   emptyCard: {

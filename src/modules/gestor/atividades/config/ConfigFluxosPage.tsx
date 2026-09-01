@@ -407,7 +407,7 @@ export const ConfigFluxosPage: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--color-text-dark)' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--color-text-dark)' }}>
                 Criar novo modelo de checklist
               </h3>
               <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '6px 0 0 0' }}>

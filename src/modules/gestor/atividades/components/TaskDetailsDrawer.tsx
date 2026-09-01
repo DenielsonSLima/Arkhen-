@@ -113,14 +113,14 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 800,
+              fontWeight: 700,
               fontSize: '1rem',
               flexShrink: 0,
             }}>
               {(selectedTask.cliente || 'E').substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h2 id={titleId} style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+              <h2 id={titleId} style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
                 {selectedTask.titulo}
               </h2>
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -128,7 +128,7 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                   fontSize: '0.68rem',
                   padding: '2px 8px',
                   borderRadius: '999px',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   background: selectedTask.prioridade === 'Alta' ? '#fee2e2' : selectedTask.prioridade === 'Média' ? '#fff7ed' : '#f1f5f9',
                   color: selectedTask.prioridade === 'Alta' ? '#b91c1c' : selectedTask.prioridade === 'Média' ? '#c2410c' : '#475569',
                   border: '1px solid rgba(0,0,0,0.03)',
@@ -139,7 +139,7 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                   fontSize: '0.68rem',
                   padding: '2px 8px',
                   borderRadius: '999px',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   background: selectedTask.status === 'Concluída' ? '#d1fae5' : selectedTask.status === 'Em andamento' ? '#fef3c7' : '#f1f5f9',
                   color: selectedTask.status === 'Concluída' ? '#065f46' : selectedTask.status === 'Em andamento' ? '#92400e' : '#374151',
                   border: '1px solid rgba(0,0,0,0.03)',

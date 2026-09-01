@@ -71,7 +71,7 @@
   padding: 8px 14px;
   font: inherit;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   transition: 160ms ease;
 }
@@ -142,7 +142,7 @@
   overflow: hidden;
   color: #64748b;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
@@ -163,7 +163,7 @@
   margin-top: 14px;
   color: var(--color-gold-dark);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .rotinas-detail {
@@ -227,7 +227,7 @@
   color: #64748b;
   background: #f8fafc;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -275,7 +275,7 @@
   color: #7c5a18;
   background: #fff7e6;
   font-size: 0.67rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .rotinas-badge--source {
@@ -403,7 +403,7 @@
   color: #64748b;
   background: #f8fafc;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -415,7 +415,7 @@
   max-width: 220px;
   overflow: hidden;
   color: #0f172a;
-  font-weight: 750;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -448,7 +448,7 @@
   gap: 5px;
   color: var(--color-gold-dark);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 

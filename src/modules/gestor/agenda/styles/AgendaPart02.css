@@ -19,7 +19,7 @@
   color: #c2410c;
   display: inline-flex;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
   height: 22px;
   justify-content: center;
 }
@@ -27,7 +27,7 @@
 .agenda-prazo-default-item strong {
   color: #334155;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -102,7 +102,7 @@
   display: inline-flex;
   flex-shrink: 0;
   font-size: 0.62rem;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   padding: 5px 8px;
   text-transform: uppercase;
@@ -263,7 +263,7 @@
   color: #0f172a;
   display: inline-flex;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 8px;
   margin: 0;
 }

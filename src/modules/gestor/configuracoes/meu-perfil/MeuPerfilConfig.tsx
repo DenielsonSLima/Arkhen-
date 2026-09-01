@@ -350,7 +350,7 @@ export const MeuPerfilConfig: React.FC = () => {
               {profile.avatar ? (
                 <img src={profile.avatar} alt="Foto de perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} referrerPolicy="no-referrer" />
               ) : (
-                <span style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center', color: '#475569', fontSize: '1.75rem', fontWeight: 800 }}>
+                <span style={{ display: 'grid', width: '100%', height: '100%', placeItems: 'center', color: '#475569', fontSize: '1.75rem', fontWeight: 700 }}>
                   {profileInitials}
                 </span>
               )}

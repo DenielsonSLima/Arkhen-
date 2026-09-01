@@ -171,7 +171,7 @@ export const MarcaDaguaConfig: React.FC = () => {
             alignItems: 'center',
             gap: '10px',
             fontSize: '0.82rem',
-            fontWeight: 750,
+            fontWeight: 600,
           }}
           role="status"
           aria-live="polite"

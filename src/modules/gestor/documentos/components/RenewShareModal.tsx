@@ -73,7 +73,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
       >
         <div style={{ background: '#0f172a', color: '#ffffff', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 850, color: '#ffffff' }}>Renovar compartilhamento</h3>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>Renovar compartilhamento</h3>
             <p style={{ margin: '4px 0 0', fontSize: '0.74rem', color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {documentosCount > 1 ? `${documento} e mais ${documentosCount - 1} arquivo(s)` : documento}
             </p>
@@ -85,7 +85,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
 
         <div style={{ padding: '18px', display: 'grid', gap: '14px' }}>
           <div>
-            <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>
               Novo prazo do link
             </label>
             <select value={tempoLimite} onChange={(event) => setTempoLimite(event.target.value)} disabled={isRenewing} style={fieldStyle}>
@@ -99,7 +99,7 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
             disabled={isRenewing}
             style={{ border: exigirSenha ? '1px solid #d9a441' : '1px solid #d8e0ea', background: exigirSenha ? '#fffbeb' : '#ffffff', borderRadius: '8px', padding: '11px', cursor: isRenewing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', color: '#0f172a', opacity: isRenewing ? 0.7 : 1 }}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 850, fontSize: '0.82rem' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.82rem' }}>
               <Key size={16} color={exigirSenha ? '#b45309' : '#94a3b8'} />
               Proteger com senha
             </span>
@@ -110,12 +110,12 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
 
           {exigirSenha && (
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>
                 Senha temporária
               </label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input value={senha} onChange={(event) => setSenha(event.target.value)} disabled={isRenewing} style={fieldStyle} />
-                <button type="button" onClick={() => setSenha(generateSharePassword())} disabled={isRenewing} style={{ border: '1px solid #d8e0ea', background: '#ffffff', borderRadius: '8px', padding: '0 10px', color: '#475569', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 800 }}>
+                <button type="button" onClick={() => setSenha(generateSharePassword())} disabled={isRenewing} style={{ border: '1px solid #d8e0ea', background: '#ffffff', borderRadius: '8px', padding: '0 10px', color: '#475569', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
                   Gerar
                 </button>
               </div>
@@ -129,10 +129,10 @@ export const RenewShareModal: React.FC<RenewShareModalProps> = ({
         </div>
 
         <div style={{ padding: '14px 18px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button type="button" onClick={onClose} disabled={isRenewing} style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', borderRadius: '8px', padding: '8px 12px', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 800 }}>
+          <button type="button" onClick={onClose} disabled={isRenewing} style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', borderRadius: '8px', padding: '8px 12px', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
             Cancelar
           </button>
-          <button type="button" onClick={() => onRenew({ tempoLimite, exigirSenha, senha })} disabled={isRenewing} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isRenewing ? 0.72 : 1 }}>
+          <button type="button" onClick={() => onRenew({ tempoLimite, exigirSenha, senha })} disabled={isRenewing} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: isRenewing ? 'not-allowed' : 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isRenewing ? 0.72 : 1 }}>
             <RotateCcw size={15} />
             {isRenewing ? 'Renovando...' : 'Renovar link'}
           </button>

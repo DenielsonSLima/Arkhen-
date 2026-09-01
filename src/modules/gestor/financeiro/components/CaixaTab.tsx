@@ -52,7 +52,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isColored ? 'rgba(255,255,255,0.9)' : '#8a97aa', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {title}
           </span>
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isColored ? '#ffffff' : '#111827', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: isColored ? '#ffffff' : '#111827', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {value}
           </span>
         </div>
@@ -73,7 +73,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{i + 1}. {cat.nome}</span>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ display: 'block', fontSize: '0.95rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(cat.valor)}</span>
+            <span style={{ display: 'block', fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>{onFormatCurrency(cat.valor)}</span>
             <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{cat.percentual}%</span>
           </div>
         </div>
@@ -90,7 +90,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', background: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
         <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#111827', margin: '0 0 4px 0', textTransform: 'uppercase' }}>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', margin: '0 0 4px 0', textTransform: 'uppercase' }}>
             Fluxo de Caixa & Patrimônio
           </h2>
           <p style={{ color: '#667085', margin: 0, fontSize: '0.9rem' }}>
@@ -136,7 +136,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         {/* Chart */}
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
             <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#111827', textTransform: 'uppercase' }}>Desempenho Trimestral</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#111827', textTransform: 'uppercase' }}>Desempenho Trimestral</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Histórico de faturamento, despesas e lucro</p>
             </div>
             <div style={{ height: '320px', width: '100%' }}>
@@ -162,7 +162,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         {/* Saldos Bancários */}
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
             <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#111827', textTransform: 'uppercase' }}>Saldos das Contas</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#111827', textTransform: 'uppercase' }}>Saldos das Contas</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Disponibilidade por carteira</p>
             </div>
             
@@ -170,7 +170,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
               {contas.length === 0 && <div className="financeiro-empty-state">Nenhuma conta cadastrada.</div>}
               {contas.map(conta => (
                 <div key={conta.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px -1px rgba(0,0,0,0.02)' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#c59235', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#c59235', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem' }}>
                     {conta.banco.substring(0, 2).toUpperCase()}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -181,7 +181,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <strong style={{ display: 'block', color: '#111827', fontSize: '1rem', fontWeight: 800 }}>
+                    <strong style={{ display: 'block', color: '#111827', fontSize: '1rem', fontWeight: 700 }}>
                       {onFormatCurrency(conta.saldo)}
                     </strong>
                     <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>Saldo Atual</span>
@@ -192,7 +192,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px dashed #cbd5e1' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Disponibilidade Total</span>
-              <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#6366f1' }}>
+              <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#6366f1' }}>
                 {onFormatCurrency(stats.saldoDisponivel)}
               </span>
             </div>
@@ -203,7 +203,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         {/* Receitas por Tipo de Parceiro */}
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
             <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#111827', textTransform: 'uppercase' }}>Receitas por Parceiro</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#111827', textTransform: 'uppercase' }}>Receitas por Parceiro</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Maiores fontes de receita do período</p>
             </div>
             
@@ -214,7 +214,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
         {/* Despesas por Categoria */}
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
             <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#111827', textTransform: 'uppercase' }}>Despesas por Categoria</h3>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#111827', textTransform: 'uppercase' }}>Despesas por Categoria</h3>
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Maiores ofensores do período selecionado</p>
             </div>
             
@@ -229,12 +229,12 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase' }}>Créditos</h3>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>Créditos</h3>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Últimas entradas</p>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Total Período</span>
-                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(stats.receitasRecebidas)}</strong>
+                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>{onFormatCurrency(stats.receitasRecebidas)}</strong>
               </div>
             </div>
 
@@ -254,7 +254,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
                       <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
-                  <strong style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 800 }}>
+                  <strong style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 700 }}>
                     + {onFormatCurrency(mov.valor)}
                   </strong>
                 </div>
@@ -265,12 +265,12 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
           <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e6edf5' }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase' }}>Débitos</h3>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>Débitos</h3>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Últimas saídas</p>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Total Período</span>
-                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 800, color: '#111827' }}>{onFormatCurrency(stats.despesasPagas)}</strong>
+                <strong style={{ display: 'block', fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>{onFormatCurrency(stats.despesasPagas)}</strong>
               </div>
             </div>
 
@@ -290,7 +290,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
                       <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
-                  <strong style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 800 }}>
+                  <strong style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 700 }}>
                     - {onFormatCurrency(mov.valor)}
                   </strong>
                 </div>

@@ -28,14 +28,14 @@
 .cnae-description-cell > small { color: #64748b; display: block; font-size: .66rem; line-height: 1.45; margin-top: 5px; }
 .cnae-description-cell > .cnae-source-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 0; }
 .cnae-source-links a { align-items: center; color: #a57521; display: inline-flex; font-size: .62rem; font-weight: 700; gap: 3px; }
-.cnae-system-badge { background: #eef2ff; border-radius: 999px; color: #4f46e5; font-size: .58rem; font-weight: 800; padding: 3px 6px; }
+.cnae-system-badge { background: #eef2ff; border-radius: 999px; color: #4f46e5; font-size: .58rem; font-weight: 700; padding: 3px 6px; }
 .cnae-mei-info { display: flex; flex-direction: column; gap: 5px; max-width: 220px; }
 .cnae-mei-info small { color: #64748b; font-size: .64rem; line-height: 1.35; }
-.cnae-yes, .cnae-no { align-items: center; display: inline-flex; font-size: .68rem; font-weight: 750; gap: 4px; }
+.cnae-yes, .cnae-no { align-items: center; display: inline-flex; font-size: .68rem; font-weight: 600; gap: 4px; }
 .cnae-yes { color: #15803d; }
 .cnae-no { color: #b91c1c; }
 .cnae-badges { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 5px; max-width: 220px; }
-.cnae-badge { border-radius: 999px; font-size: .59rem; font-weight: 750; padding: 4px 6px; }
+.cnae-badge { border-radius: 999px; font-size: .59rem; font-weight: 600; padding: 4px 6px; }
 .cnae-badge.mei { background: #dcfce7; color: #166534; }
 .cnae-badge.simples_nacional { background: #fef3c7; color: #92400e; }
 .cnae-badge.lucro_presumido { background: #dbeafe; color: #1e40af; }
@@ -45,7 +45,7 @@
 .cnae-muted { color: #94a3b8; font-size: .65rem; }
 .cnae-table td:nth-child(5) small { color: #64748b; display: block; font-size: .65rem; margin-bottom: 5px; }
 .cnae-table td:nth-child(5) strong { color: #8a651f; }
-.cnae-status-toggle { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px; color: #64748b; cursor: pointer; font-size: .64rem; font-weight: 800; min-width: 68px; padding: 6px 9px; }
+.cnae-status-toggle { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px; color: #64748b; cursor: pointer; font-size: .64rem; font-weight: 700; min-width: 68px; padding: 6px 9px; }
 .cnae-status-toggle.active { background: #dcfce7; border-color: #86efac; color: #166534; }
 .cnae-status-toggle:disabled { cursor: wait; opacity: .65; }
 @media (max-width: 760px) { .cnae-catalog-header { flex-direction: column; } .cnae-summary { width: 100%; } .cnae-summary span { flex: 1; } }

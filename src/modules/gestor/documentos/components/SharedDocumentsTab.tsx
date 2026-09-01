@@ -231,7 +231,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
 
   if (isLoading) {
     return (
-      <div className="animate-fade-in" style={{ padding: '34px 20px', border: '1px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', textAlign: 'center', color: '#64748b', fontWeight: 750 }}>
+      <div className="animate-fade-in" style={{ padding: '34px 20px', border: '1px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>
         Carregando arquivos compartilhados...
       </div>
     );
@@ -241,7 +241,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
     return (
       <div className="animate-fade-in" style={{ padding: '34px 20px', border: '1px dashed #cbd5e1', borderRadius: '10px', background: '#f8fafc', textAlign: 'center' }}>
         <Link2 size={34} style={{ color: '#94a3b8', marginBottom: '10px' }} />
-        <h3 style={{ margin: 0, color: '#0f172a', fontSize: '0.98rem', fontWeight: 850 }}>Nenhum arquivo compartilhado</h3>
+        <h3 style={{ margin: 0, color: '#0f172a', fontSize: '0.98rem', fontWeight: 700 }}>Nenhum arquivo compartilhado</h3>
         <p style={{ margin: '6px auto 0', maxWidth: '420px', color: '#64748b', fontSize: '0.8rem' }}>
           Selecione um arquivo na Biblioteca ou Por Empresa e use Compartilhar para criar o primeiro link.
         </p>
@@ -272,7 +272,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
               key={tab}
               type="button"
               onClick={() => setStatusFilter(tab)}
-              style={{ border: 'none', borderBottom: isActive ? '2px solid var(--color-gold-primary)' : '2px solid transparent', background: 'transparent', color: isActive ? '#b45309' : '#64748b', padding: '8px 10px', cursor: 'pointer', fontWeight: 850, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '7px' }}
+              style={{ border: 'none', borderBottom: isActive ? '2px solid var(--color-gold-primary)' : '2px solid transparent', background: 'transparent', color: isActive ? '#b45309' : '#64748b', padding: '8px 10px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '7px' }}
             >
               {label}
               <span style={{ minWidth: '22px', height: '20px', padding: '0 7px', borderRadius: '999px', background: isActive ? '#fffbeb' : '#f1f5f9', border: isActive ? '1px solid #fde68a' : '1px solid #e2e8f0', color: isActive ? '#b45309' : '#64748b', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem' }}>
@@ -305,7 +305,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
               return (
                 <tr key={batch.groupId}>
                   <td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '3px 8px', fontSize: '0.7rem', fontWeight: 850, background: batch.status === 'Ativo' ? '#f0fdf4' : '#f1f5f9', color: batch.status === 'Ativo' ? '#166534' : '#64748b', border: batch.status === 'Ativo' ? '1px solid #bbf7d0' : '1px solid #e2e8f0' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '999px', padding: '3px 8px', fontSize: '0.7rem', fontWeight: 700, background: batch.status === 'Ativo' ? '#f0fdf4' : '#f1f5f9', color: batch.status === 'Ativo' ? '#166534' : '#64748b', border: batch.status === 'Ativo' ? '1px solid #bbf7d0' : '1px solid #e2e8f0' }}>
                       {batch.status}
                     </span>
                   </td>
@@ -326,7 +326,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                         type="button"
                         onClick={() => handleCopyLinkOnly(batch)}
                         disabled={batch.status === 'Expirado'}
-                        style={{ maxWidth: '240px', border: '1px solid #d8e0ea', background: isLinkCopied ? '#f0fdf4' : '#ffffff', color: isLinkCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '0.72rem' }}
+                        style={{ maxWidth: '240px', border: '1px solid #d8e0ea', background: isLinkCopied ? '#f0fdf4' : '#ffffff', color: isLinkCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.72rem' }}
                         title={batch.link}
                       >
                         {isLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
@@ -354,7 +354,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                         <button
                           type="button"
                           onClick={() => handleTogglePassword(batch.groupId)}
-                          style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#b45309', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800 }}
+                          style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#b45309', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700 }}
                           title="Clique para fixar visualização"
                         >
                           <Key size={13} />
@@ -382,7 +382,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontSize: '0.68rem',
-                              fontWeight: 850
+                              fontWeight: 700
                             }}
                           >
                             {copiedPasswordId === batch.groupId ? <Check size={12} /> : <Clipboard size={12} />}
@@ -407,7 +407,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                         type="button"
                     onClick={() => handleCopy(batch)}
                     disabled={batch.status === 'Expirado'}
-                        style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
+                        style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', opacity: batch.status === 'Expirado' ? 0.5 : 1, borderRadius: '7px', padding: '6px 9px', cursor: batch.status === 'Expirado' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700, fontSize: '0.74rem' }}
                       >
                       {isCopied ? <Check size={13} /> : <Clipboard size={13} />}
                       {isCopied ? 'Copiado' : 'Copiar'}
@@ -415,7 +415,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                     <button
                       type="button"
                       onClick={() => window.open(batch.link, '_blank', 'noopener,noreferrer')}
-                      style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 9px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
+                      style={{ border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 9px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 700, fontSize: '0.74rem' }}
                     >
                       <ExternalLink size={13} />
                       Abrir
@@ -425,7 +425,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
                       onClick={() => (batch.status === 'Ativo' ? handleRevokeClick(batch.groupId) : setRenewModalBatch(batch))}
                         disabled={revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId)}
                         title={batch.status === 'Ativo' ? 'Revogar' : 'Renovar'}
-                        style={{ border: batch.status === 'Ativo' ? '1px solid #fecaca' : '1px solid #fde68a', background: batch.status === 'Ativo' ? '#fef2f2' : '#fffbeb', color: batch.status === 'Ativo' ? '#ef4444' : '#b45309', borderRadius: '7px', padding: '6px 9px', cursor: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontWeight: 800, fontSize: '0.74rem' }}
+                        style={{ border: batch.status === 'Ativo' ? '1px solid #fecaca' : '1px solid #fde68a', background: batch.status === 'Ativo' ? '#fef2f2' : '#fffbeb', color: batch.status === 'Ativo' ? '#ef4444' : '#b45309', borderRadius: '7px', padding: '6px 9px', cursor: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 'not-allowed' : 'pointer', opacity: revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontWeight: 700, fontSize: '0.74rem' }}
                       >
                         {revokingGroupIds.has(batch.groupId) || renewingGroupIds.has(batch.groupId) ? <span style={{ fontSize: '0.58rem' }}>...</span> : batch.status === 'Ativo' ? <ShieldX size={14} /> : <RotateCcw size={14} />}
                         {batch.status === 'Ativo' ? 'Revogar' : 'Renovar'}
@@ -437,7 +437,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             })}
             {paginatedBatches.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '22px', color: '#64748b', fontWeight: 750 }}>
+                <td colSpan={6} style={{ textAlign: 'center', padding: '22px', color: '#64748b', fontWeight: 600 }}>
                   Nenhum compartilhamento encontrado nesta aba.
                 </td>
               </tr>
@@ -446,7 +446,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
         </table>
       </div>
 
-      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', color: '#64748b', fontSize: '0.76rem', fontWeight: 750 }}>
+      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', color: '#64748b', fontSize: '0.76rem', fontWeight: 600 }}>
         <span>
           Mostrando {filteredBatches.length === 0 ? 0 : ((currentPage - 1) * PAGE_SIZE) + 1}-{Math.min(currentPage * PAGE_SIZE, filteredBatches.length)} de {filteredBatches.length}
         </span>
@@ -455,7 +455,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             type="button"
             onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
             disabled={currentPage === 1}
-            style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, fontWeight: 800 }}
+            style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1, fontWeight: 700 }}
           >
             Anterior
           </button>
@@ -464,7 +464,7 @@ export const SharedDocumentsTab: React.FC<SharedDocumentsTabProps> = ({ refreshK
             type="button"
             onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             disabled={currentPage === totalPages}
-            style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, fontWeight: 800 }}
+            style={{ border: '1px solid #d8e0ea', background: '#ffffff', color: '#475569', borderRadius: '7px', padding: '6px 10px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1, fontWeight: 700 }}
           >
             Próxima
           </button>

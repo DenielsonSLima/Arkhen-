@@ -58,7 +58,7 @@ export const DocumentCategoriesModal: React.FC<DocumentCategoriesModalProps> = (
       <div className="modal-container" style={{ maxWidth: '620px' }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Categorias de Documentos</h3>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Categorias de Documentos</h3>
             <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0' }}>{description}</p>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>

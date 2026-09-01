@@ -274,7 +274,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
               <button 
                 type="button" 
                 onClick={() => setShowInlineCategoryForm(prev => !prev)}
-                style={{ background: 'none', border: 'none', color: '#c59235', fontSize: '0.78rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                style={{ background: 'none', border: 'none', color: '#c59235', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 <Plus size={13} />
                 Criar Nova Categoria
@@ -340,7 +340,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
                   <input
                     type="text"
                     required
-                    style={{ fontWeight: 800 }}
+                    style={{ fontWeight: 700 }}
                     value={valorTotalStr}
                     onChange={handleValorChange}
                   />

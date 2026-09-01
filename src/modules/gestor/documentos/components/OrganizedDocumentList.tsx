@@ -100,10 +100,10 @@ export const OrganizedDocumentList: React.FC<OrganizedDocumentListProps> = ({
       {groups.map((group) => (
         <section key={group.key} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h3 style={{ margin: 0, color: '#0f172a', fontSize: '0.82rem', fontWeight: 850, textTransform: 'uppercase', letterSpacing: '0' }}>
+            <h3 style={{ margin: 0, color: '#0f172a', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0' }}>
               {group.label}
             </h3>
-            <span style={{ border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', borderRadius: '999px', padding: '2px 7px', fontSize: '0.68rem', fontWeight: 800 }}>
+            <span style={{ border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', borderRadius: '999px', padding: '2px 7px', fontSize: '0.68rem', fontWeight: 700 }}>
               {group.documents.length}
             </span>
           </div>

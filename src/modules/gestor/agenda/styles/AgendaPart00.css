@@ -161,7 +161,7 @@
   cursor: pointer;
   display: flex;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 8px;
   justify-content: space-between;
   height: var(--agenda-filter-control-height);
@@ -265,7 +265,7 @@
   color: #64748b;
   display: inline-flex;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 6px;
   text-transform: uppercase;
 }
@@ -294,7 +294,7 @@
   cursor: pointer;
   display: inline-flex;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 5px;
   height: 28px;
   min-width: 112px;
@@ -351,7 +351,7 @@
   color: #0f172a;
   font: inherit;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   height: var(--agenda-filter-control-height);
   min-height: var(--agenda-filter-control-height);
   outline: none;

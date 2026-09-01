@@ -78,7 +78,7 @@
   min-width: 0;
   color: #334155;
   font-size: 0.72rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .rotinas-field > span {
@@ -97,7 +97,7 @@
   gap: 8px;
   color: #475569;
   font-size: 0.76rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .rotinas-inline-warning,

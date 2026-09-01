@@ -22,7 +22,7 @@ export const MoveFileModal: React.FC<MoveFileModalProps> = ({
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-container" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>Mover para Pasta</h3>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Mover para Pasta</h3>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>
             <X size={18} />
           </button>

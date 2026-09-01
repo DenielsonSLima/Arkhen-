@@ -156,7 +156,7 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
 
           {/* Despesa Info Card */}
           <div style={{ padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '2px' }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', display: 'block', marginBottom: '2px' }}>
               Despesa Selecionada
             </span>
             <strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'block' }}>{despesa.descricao}</strong>

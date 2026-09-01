@@ -100,7 +100,7 @@ export const TaskObservationEditor: React.FC<TaskObservationEditorProps> = ({
           cursor: isReadOnly || isSaving || !observationDirty ? 'not-allowed' : 'pointer',
           font: 'inherit',
           fontSize: '0.76rem',
-          fontWeight: 800,
+          fontWeight: 700,
           opacity: isReadOnly || !observationDirty ? 0.6 : 1,
           padding: '8px 12px',
         }}

@@ -43,7 +43,7 @@
   background: #f1f5f9;
   color: #64748b;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -70,7 +70,7 @@
 .prazos-regime-context > div:first-child span {
   color: #64748b;
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -109,7 +109,7 @@
 .prazos-context-metrics span {
   color: #64748b;
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 

@@ -30,7 +30,7 @@
 .inicio-user-head > span {
   color: #0f172a;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .inicio-avatar {
@@ -41,7 +41,7 @@
   color: #b45309;
   display: grid;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   height: 38px;
   place-items: center;
   width: 38px;
@@ -79,7 +79,7 @@
   color: #64748b;
   display: block;
   font-size: 0.66rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -102,7 +102,7 @@
   color: #dc2626;
   display: flex;
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   gap: 6px;
   padding: 8px;
 }

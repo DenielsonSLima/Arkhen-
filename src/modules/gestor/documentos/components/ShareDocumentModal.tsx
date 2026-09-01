@@ -128,7 +128,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
       >
         <div style={{ background: '#0f172a', color: '#ffffff', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 850, color: '#ffffff' }}>{title}</h3>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>{title}</h3>
             <p style={{ margin: '4px 0 0', fontSize: '0.74rem', color: '#cbd5e1' }}>Gere links temporários com ou sem senha.</p>
           </div>
           <button type="button" onClick={onClose} style={{ border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', width: '34px', height: '34px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -139,7 +139,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
         <div style={{ padding: '18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>
                 Arquivos selecionados
               </label>
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '174px', overflow: 'auto', background: '#f8fafc' }}>
@@ -153,7 +153,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
             </div>
 
             <div>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>
                 Expiração do link
               </label>
               <select 
@@ -190,7 +190,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
                 opacity: createdLinks.length > 0 ? 0.75 : 1 
               }}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 850, fontSize: '0.82rem' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.82rem' }}>
                 <Key size={16} color={exigirSenha ? '#b45309' : '#94a3b8'} />
                 Proteger com senha
               </span>
@@ -201,7 +201,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
             {exigirSenha && (
               <div>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>
                   Senha temporária
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -226,7 +226,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
                       padding: '0 10px', 
                       color: '#475569', 
                       cursor: createdLinks.length > 0 ? 'not-allowed' : 'pointer', 
-                      fontWeight: 800,
+                      fontWeight: 700,
                       opacity: createdLinks.length > 0 ? 0.75 : 1 
                     }}
                   >
@@ -244,14 +244,14 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
         </div>
 
         {errorMessage && (
-          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.76rem', fontWeight: 750 }}>
+          <div style={{ margin: '0 18px 16px', padding: '10px 12px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.76rem', fontWeight: 600 }}>
             {errorMessage}
           </div>
         )}
 
         {createdLinks.length > 0 && (
           <div style={{ margin: '0 18px 16px', display: 'grid', gap: '8px' }}>
-            <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 750 }}>
+            <div style={{ padding: '10px 12px', borderRadius: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.76rem', fontWeight: 600 }}>
               {createdLinks.length} link(s) gerado(s). Disponível por {tempoLimite}, até {expirationPreview}. {exigirSenha ? 'Senha incluída no compartilhamento.' : 'Acesso sem senha.'}
             </div>
 
@@ -280,7 +280,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
                       borderRadius: '7px', 
                       padding: '7px 12px', 
                       cursor: 'pointer', 
-                      fontWeight: 800, 
+                      fontWeight: 700,
                       display: 'inline-flex', 
                       alignItems: 'center', 
                       gap: '6px', 
@@ -320,7 +320,7 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatDisplayLink(link.link)}</span>
                         </span>
                       </div>
-                      <button type="button" onClick={() => handleCopyOnlyLink(link)} style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', borderRadius: '7px', padding: '7px 10px', cursor: 'pointer', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem' }}>
+                      <button type="button" onClick={() => handleCopyOnlyLink(link)} style={{ border: '1px solid #cbd5e1', background: isCopied ? '#f0fdf4' : '#ffffff', color: isCopied ? '#166534' : '#475569', borderRadius: '7px', padding: '7px 10px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem' }}>
                         {isCopied ? <Check size={14} /> : <Clipboard size={14} />}
                         {isCopied ? 'Copiado' : 'Copiar link'}
                       </button>
@@ -334,12 +334,12 @@ export const ShareDocumentModal: React.FC<ShareDocumentModalProps> = ({
 
         <div style={{ padding: '14px 18px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           {createdLinks.length > 0 && (
-            <button type="button" onClick={handleCopy} style={{ border: '1px solid #cbd5e1', background: copied ? '#f0fdf4' : '#ffffff', color: copied ? '#166534' : '#475569', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+            <button type="button" onClick={handleCopy} style={{ border: '1px solid #cbd5e1', background: copied ? '#f0fdf4' : '#ffffff', color: copied ? '#166534' : '#475569', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
               {copied ? <Check size={15} /> : <Clipboard size={15} />}
               {copied ? 'Copiado' : 'Copiar links'}
             </button>
           )}
-          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate || isCreating} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate && !isCreating ? 'pointer' : 'not-allowed', fontWeight: 850, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isCreating ? 0.72 : 1 }}>
+          <button type="button" onClick={createdLinks.length > 0 ? onClose : handleCreate} disabled={!canCreate || isCreating} style={{ border: 'none', background: 'var(--color-gold-gradient)', color: '#ffffff', borderRadius: '8px', padding: '8px 14px', cursor: canCreate && !isCreating ? 'pointer' : 'not-allowed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '7px', opacity: isCreating ? 0.72 : 1 }}>
             <Share2 size={15} />
             {createdLinks.length > 0 ? 'Concluir' : isCreating ? 'Gerando...' : 'Gerar compartilhamento'}
           </button>

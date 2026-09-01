@@ -25,7 +25,7 @@ const PdfStaticCover: React.FC = () => (
       <span style={{ height: '4px', borderRadius: '999px', background: '#fee2e2', width: '92%' }} />
       <span style={{ height: '4px', borderRadius: '999px', background: '#fee2e2', width: '64%' }} />
     </div>
-    <span style={{ position: 'absolute', top: '7px', right: '7px', borderRadius: '5px', background: 'rgba(220, 38, 38, 0.94)', color: '#ffffff', padding: '2px 5px', fontSize: '0.58rem', fontWeight: 850 }}>
+    <span style={{ position: 'absolute', top: '7px', right: '7px', borderRadius: '5px', background: 'rgba(220, 38, 38, 0.94)', color: '#ffffff', padding: '2px 5px', fontSize: '0.58rem', fontWeight: 700 }}>
       PDF
     </span>
   </div>
@@ -258,7 +258,7 @@ const renderThumbnail = (doc: CompanyDocument) => {
         <div style={{ width: '54px', height: '68px', borderRadius: '8px', background: '#ffffff', border: `1px solid ${meta.border}`, color: meta.color, boxShadow: '0 12px 22px rgba(15, 23, 42, 0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon size={27} />
         </div>
-        <span style={{ position: 'absolute', left: '8px', bottom: '7px', right: '8px', textAlign: 'center', color: meta.color, fontSize: '0.62rem', fontWeight: 850, textTransform: 'uppercase' }}>
+        <span style={{ position: 'absolute', left: '8px', bottom: '7px', right: '8px', textAlign: 'center', color: meta.color, fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase' }}>
           {meta.label}
         </span>
       </div>
@@ -357,7 +357,7 @@ const renderThumbnail = (doc: CompanyDocument) => {
                   border: '1px solid #fde68a',
                   color: 'var(--color-gold-dark)',
                   fontSize: '0.64rem',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   lineHeight: 1.25,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',

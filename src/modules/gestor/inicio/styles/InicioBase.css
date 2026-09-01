@@ -128,7 +128,7 @@
   color: #ffffff;
   display: block;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.1em;
   margin: 0;
   text-transform: uppercase;
@@ -151,7 +151,7 @@
   display: block;
   font-size: 0.82rem;
   font-style: normal;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.72);
 }
@@ -181,7 +181,7 @@
   color: #c59235;
   display: inline-block;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -189,7 +189,7 @@
 
 .inicio-executive-hero h1 {
   font-size: 1.9rem;
-  font-weight: 900;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -267,7 +267,7 @@
   color: #64748b;
   display: block;
   font-size: 0.76rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -305,7 +305,7 @@
 .inicio-panel-header h2 {
   color: #0f172a;
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 700;
   margin: 0;
 }
 

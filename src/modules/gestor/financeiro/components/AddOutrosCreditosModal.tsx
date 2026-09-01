@@ -123,7 +123,7 @@ export const AddOutrosCreditosModal: React.FC<AddOutrosCreditosModalProps> = ({
               <input
                 type="text"
                 required
-                style={{ fontWeight: 800 }}
+                style={{ fontWeight: 700 }}
                 value={valorStr}
                 onChange={handleValorChange}
               />

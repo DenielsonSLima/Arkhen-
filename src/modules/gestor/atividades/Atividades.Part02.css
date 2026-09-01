@@ -1,0 +1,448 @@
+
+.atividade-period-controls input {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 700;
+  min-height: 38px;
+  padding: 7px 10px;
+}
+
+.atividade-period-nav-btn {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  transition: all 0.18s ease;
+  width: 38px;
+}
+
+.atividade-period-nav-btn:hover {
+  border-color: rgba(197, 146, 53, 0.5);
+  color: #aa7c28;
+}
+
+.atividade-period-progress {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.atividade-period-chip {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 74px;
+  padding: 10px 12px;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.atividade-period-chip:hover {
+  border-color: rgba(197, 146, 53, 0.45);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.05);
+}
+
+.atividade-period-chip.active {
+  background: rgba(197, 146, 53, 0.07);
+  border-color: var(--color-gold-primary);
+}
+
+.atividade-period-chip span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.atividade-period-chip strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.atividade-period-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.atividade-period-track div {
+  background: linear-gradient(90deg, #c59235, #f59e0b);
+  border-radius: inherit;
+  height: 100%;
+}
+
+.atividade-period-row {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.atividade-period-row label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  gap: 12px;
+}
+
+.atividade-period-row input[type="checkbox"] {
+  accent-color: var(--color-gold-primary);
+  cursor: pointer;
+  height: 16px;
+  width: 16px;
+}
+
+.atividade-period-row span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.atividade-period-row strong {
+  color: #0f172a;
+  font-size: 0.85rem;
+}
+
+.atividade-period-row small {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.atividade-period-row small.done {
+  align-items: center;
+  color: #10b981;
+  display: flex;
+  gap: 3px;
+}
+
+.atividade-period-row button {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.atividade-period-row button:hover {
+  color: #ef4444;
+}
+
+.atividade-period-notes {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.atividade-period-notes label {
+  align-items: center;
+  color: #475569;
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.atividade-period-notes textarea {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.84rem;
+  min-height: 72px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.atividade-resumo-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.atividade-resumo-cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.atividade-resumo-card,
+.atividade-resumo-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.atividade-resumo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 126px;
+  padding: 16px;
+}
+
+.atividade-resumo-card-title,
+.atividade-resumo-section-title {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  gap: 8px;
+}
+
+.atividade-resumo-card-title span {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.atividade-resumo-card strong {
+  color: #0f172a;
+  font-size: 1.65rem;
+}
+
+.atividade-resumo-card small {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.atividade-resumo-grid {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1.35fr 0.9fr;
+}
+
+.atividade-resumo-panel {
+  padding: 18px;
+}
+
+.atividade-resumo-section-title {
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.atividade-resumo-section-title h3 {
+  color: #0f172a;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.atividade-resumo-day-bars {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.atividade-resumo-day {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 102px;
+  padding: 10px;
+}
+
+.atividade-resumo-day span,
+.atividade-resumo-day small {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.atividade-resumo-day strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.atividade-resumo-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.atividade-resumo-legenda span {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.atividade-resumo-legenda i {
+  border-radius: 999px;
+  display: inline-block;
+  height: 9px;
+  width: 9px;
+}
+
+.atividade-resumo-legenda i.done {
+  background: #16a34a;
+}
+
+.atividade-resumo-legenda i.progress {
+  background: #c59235;
+}
+
+.atividade-resumo-legenda i.pending {
+  background: #f97316;
+}
+
+.atividade-resumo-employees {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.atividade-resumo-employee {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+  padding: 12px;
+}
+
+.atividade-resumo-employee div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.atividade-resumo-employee strong,
+.atividade-resumo-employee b {
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.atividade-resumo-employee span,
+.atividade-resumo-empty {
+  color: #64748b;
+  font-size: 0.76rem;
+  margin: 0;
+}
+
+.atividade-resumo-employee .atividade-period-track {
+  grid-column: 1 / -1;
+}
+
+.funcionario-atividades-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.funcionario-user-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.funcionario-user-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 124px;
+  padding: 14px;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.funcionario-user-card:hover,
+.funcionario-user-card.active {
+  border-color: rgba(197, 146, 53, 0.7);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.funcionario-user-card.active {
+  background: rgba(197, 146, 53, 0.07);
+}
+
+.funcionario-user-card span {
+  align-items: center;
+  color: #475569;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 7px;
+}
+
+.funcionario-user-card strong {
+  color: #0f172a;
+  font-size: 1.5rem;
+}
+
+.funcionario-user-card small {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.funcionario-tabs {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.funcionario-tabs button {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.76rem;
+  font-weight: 700;
+  gap: 6px;
+  justify-content: center;
+  min-height: 50px;
+  padding: 10px 8px;
+}
+
+.funcionario-tabs button:hover,
+.funcionario-tabs button.active {
+  background: rgba(197, 146, 53, 0.06);
+  color: #aa7c28;
+}
+
+.funcionario-tabs button.active {
+  border-bottom-color: var(--color-gold-primary);
+}
+

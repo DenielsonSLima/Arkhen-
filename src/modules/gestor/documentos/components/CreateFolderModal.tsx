@@ -34,7 +34,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
     <div className="modal-backdrop" onClick={handleClose}>
       <div className="modal-container" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
             {parentFolderName ? `Nova Subpasta em "${parentFolderName}"` : 'Criar Nova Pasta'}
           </h3>
           <button onClick={handleClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>

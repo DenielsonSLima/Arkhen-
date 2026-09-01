@@ -85,7 +85,7 @@
 .inicio-agenda-date span {
   color: #64748b;
   font-size: 0.66rem;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -106,14 +106,14 @@
 .inicio-risk-row > span {
   color: #b45309;
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 700;
   text-align: right;
 }
 
 .inicio-status-pill {
   border-radius: 999px;
   font-size: 0.68rem;
-  font-weight: 900;
+  font-weight: 700;
   padding: 6px 9px;
   text-align: center;
   white-space: nowrap;

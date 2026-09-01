@@ -173,7 +173,7 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
       {isDctfWebModel(atv) && (
         <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calculator size={14} style={{ color: 'var(--color-gold-primary)' }} />
               Valores da Competência
             </span>

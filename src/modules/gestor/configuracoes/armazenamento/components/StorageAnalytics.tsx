@@ -94,7 +94,7 @@ export const StorageAnalytics: React.FC<StorageAnalyticsProps> = ({
                     </div>
                   </td>
                   <td>{group.count}</td>
-                  <td style={{ fontWeight: 800, color: '#0f172a' }}>{formatBytes(group.totalBytes)}</td>
+                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{formatBytes(group.totalBytes)}</td>
                   <td>{pct.toFixed(2)}%</td>
                   <td>
                     <div className="arm-table-bar-track">

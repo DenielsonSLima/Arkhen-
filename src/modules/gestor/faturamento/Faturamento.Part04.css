@@ -1,0 +1,92 @@
+
+.faturamento-share-action.disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.faturamento-error-message {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin: 0 20px 14px;
+}
+
+.faturamento-modal-actions {
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: 0;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #e6edf5;
+  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.faturamento-actions-right {
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.faturamento-btn-secondary {
+  padding: 10px 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 640px) {
+  .faturamento-charge-form,
+  .faturamento-success-summary,
+  .faturamento-share-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faturamento-share-modal {
+    height: auto;
+    max-height: calc(100vh - 32px);
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .faturamento-share-preview {
+    min-height: 440px;
+    padding: 22px;
+  }
+
+  .faturamento-share-sidebar {
+    border-left: 0;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .faturamento-form-section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .faturamento-form-section-title span {
+    text-align: left;
+  }
+
+  .faturamento-client-context {
+    grid-template-columns: 1fr;
+  }
+
+  .faturamento-client-context-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .faturamento-success-summary div,
+  .faturamento-success-summary div:nth-child(2n),
+  .faturamento-success-summary div:nth-last-child(-n + 2) {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .faturamento-success-summary div:last-child {
+    border-bottom: 0;
+  }
+}

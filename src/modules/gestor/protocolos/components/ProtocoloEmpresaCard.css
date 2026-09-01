@@ -74,7 +74,7 @@
   background: linear-gradient(135deg, var(--regime-color), var(--regime-color-dark));
   color: #ffffff;
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .protocolo-company-title {
@@ -85,7 +85,7 @@
   margin: 0;
   color: #0f172a;
   font-size: 1.02rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -112,7 +112,7 @@
   border-radius: 999px;
   padding: 2px 6px;
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -166,7 +166,7 @@
   gap: 8px;
   color: #0f172a;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .protocolo-company-filebar strong {
@@ -246,7 +246,7 @@
 
 .protocolo-company-stat-list strong {
   color: #64748b;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .protocolo-company-card-footer {
@@ -275,6 +275,6 @@
 
 .protocolo-company-card-footer > strong {
   color: var(--regime-color-dark);
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }

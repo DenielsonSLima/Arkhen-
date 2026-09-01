@@ -37,7 +37,7 @@
   display: block;
   color: #0f172a;
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .regime-editor-intro span {
@@ -59,7 +59,7 @@
   color: #92691e;
   border: 1px solid rgba(197, 146, 53, 0.22);
   font-size: 0.74rem;
-  font-weight: 850;
+  font-weight: 700;
   letter-spacing: 0.04em;
 }
 
@@ -124,7 +124,7 @@
   justify-content: flex-start;
   color: #92691e;
   font-size: 0.82rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .regime-editor-grid {
@@ -143,7 +143,7 @@
 .regime-editor-field span {
   color: #334155;
   font-size: 0.78rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .regime-editor-field input,
@@ -220,7 +220,7 @@
   display: block;
   color: #0f172a;
   font-size: 0.84rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .regime-editor-list-header small {
@@ -242,7 +242,7 @@
   border: 1px solid #e2e8f0;
   cursor: pointer;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   transition: all 0.18s ease;
 }
 

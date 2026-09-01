@@ -24,7 +24,7 @@
   margin-bottom: 6px;
   color: #c59235;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -33,7 +33,7 @@
   margin: 0 0 5px;
   color: #0f172a;
   font-size: 1.55rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .simulacoes-page-header p {
@@ -51,7 +51,7 @@
   gap: 8px;
   border-radius: 9px;
   cursor: pointer;
-  font-weight: 750;
+  font-weight: 600;
   transition: border-color 0.18s, background 0.18s, opacity 0.18s;
 }
 
@@ -79,7 +79,7 @@
   color: #991b1b;
   padding: 11px 13px;
   font-size: 0.79rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .calc-layout {
@@ -108,7 +108,7 @@
   color: #0f172a;
   padding-bottom: 12px;
   font-size: 0.95rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .calc-field {
@@ -121,7 +121,7 @@
 .calc-field label {
   color: #64748b;
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .calc-field input,
@@ -164,7 +164,7 @@
 
 .tipo-rescisao-btn {
   font-size: 0.78rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .aviso-previo-btn {
@@ -174,7 +174,7 @@
   gap: 3px;
 }
 
-.aviso-previo-btn span { font-size: 0.78rem; font-weight: 750; }
+.aviso-previo-btn span { font-size: 0.78rem; font-weight: 600; }
 .aviso-previo-btn small { font-size: 0.66rem; line-height: 1.25; opacity: 0.75; }
 
 .tipo-rescisao-btn:hover,
@@ -202,7 +202,7 @@
   margin-bottom: 10px;
   color: #0f172a;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .rescisao-select-grid,
@@ -256,7 +256,7 @@
 }
 
 .resultado-row .r-label { color: #64748b; font-weight: 500; }
-.resultado-row .r-valor { color: #0f172a; font-weight: 750; }
+.resultado-row .r-valor { color: #0f172a; font-weight: 600; }
 .resultado-row.perigo .r-valor { color: #ef4444; }
 .resultado-row.azul .r-valor { color: #3b82f6; }
 
@@ -268,7 +268,7 @@
   padding: 12px;
 }
 
-.resultado-row.destaque .r-label { color: #0f172a; font-size: 0.9rem; font-weight: 750; }
+.resultado-row.destaque .r-label { color: #0f172a; font-size: 0.9rem; font-weight: 600; }
 .resultado-row.destaque .r-valor { color: #10b981; font-size: 1.1rem; }
 
 .simulation-estimate-note {
@@ -376,7 +376,7 @@
 }
 
 .simulation-export-actions p { color: #94a3b8; font-size: 0.78rem; line-height: 1.5; }
-.simulation-page-count { color: #c59235; font-size: 0.72rem; font-weight: 750; }
+.simulation-page-count { color: #c59235; font-size: 0.72rem; font-weight: 600; }
 .simulation-export-actions__buttons { display: flex; flex-direction: column; gap: 10px; }
 
 .simulation-download-button,

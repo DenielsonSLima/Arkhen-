@@ -40,7 +40,7 @@
   padding: 9px 12px;
   cursor: pointer;
   font-size: 0.8rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .xml-modelos-tab.active,
@@ -73,7 +73,7 @@
 .xml-modelos-field label {
   color: #334155;
   font-size: 0.76rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .xml-modelos-field input,
@@ -97,7 +97,7 @@
   gap: 8px;
   color: #334155;
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .xml-modelos-preview {
@@ -129,7 +129,7 @@
   padding: 8px 10px;
   text-decoration: none;
   font-size: 0.78rem;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .xml-modelos-actions {

@@ -124,9 +124,9 @@ export const TodosDocumentosTab: React.FC<TodosDocumentosTabProps> = ({
           <span style={{ color: '#64748b', fontSize: '0.69rem' }}>Arquivos pessoais não aparecem dentro das pastas das empresas.</span>
         </div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.68rem', fontWeight: 800 }}>{personalDocumentCount} pessoais</span>
-          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.68rem', fontWeight: 800 }}>{companyDocumentCount} de empresas</span>
-          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', fontSize: '0.68rem', fontWeight: 800 }}>{allDocuments.length} no total</span>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.68rem', fontWeight: 700 }}>{personalDocumentCount} pessoais</span>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.68rem', fontWeight: 700 }}>{companyDocumentCount} de empresas</span>
+          <span style={{ padding: '4px 8px', borderRadius: '999px', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', fontSize: '0.68rem', fontWeight: 700 }}>{allDocuments.length} no total</span>
         </div>
       </div>
       

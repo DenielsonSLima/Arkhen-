@@ -98,7 +98,7 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 300px' }}>
           {renderCompanyLogo(selectedGroup.logo, selectedGroup.clienteNome, selectedGroup.regime, 'large')}
           <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: '1.2' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: '1.2' }}>
               {selectedGroup.clienteNome}
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>

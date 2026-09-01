@@ -101,7 +101,7 @@
 
 .usuario-section-title-wrapper h4 {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #172033;
   margin: 0;
 }
@@ -162,7 +162,7 @@
 .usuario-access-eyebrow {
   color: var(--color-gold-primary);
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   display: block;
@@ -171,14 +171,14 @@
 
 .usuario-access-header h4 {
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #172033;
   margin: 0;
 }
 
 .usuario-access-status {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   border-radius: 999px;
   padding: 6px 12px;
   display: flex;

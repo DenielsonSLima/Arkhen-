@@ -17,7 +17,7 @@
 .atividades-redesign-header h2 {
   color: #0f172a;
   font-size: 1.22rem;
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
 }
 
@@ -33,7 +33,7 @@
   border-radius: 8px;
   color: #aa7c28;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 8px 10px;
 }
 
@@ -73,7 +73,7 @@
 .atividades-overview-card small {
   color: #64748b;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .atividades-overview-card strong {
@@ -125,7 +125,7 @@
 .atividades-team-progress small {
   color: #64748b;
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .atividades-team-progress strong {
@@ -286,7 +286,7 @@
   color: #64748b;
   cursor: pointer;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   min-height: 34px;
   padding: 7px 11px;
 }
@@ -332,7 +332,7 @@
 .funcionario-user-card small {
   color: #64748b;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .atividades-agenda-strip strong,
@@ -437,7 +437,7 @@
   color: #475569;
   cursor: pointer;
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
   min-height: 34px;
   padding: 6px 9px;
 }

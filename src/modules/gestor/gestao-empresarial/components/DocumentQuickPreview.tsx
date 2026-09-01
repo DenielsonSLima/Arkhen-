@@ -331,7 +331,7 @@ export const DocumentQuickPreview: React.FC<DocumentQuickPreviewProps> = ({ docu
           flexShrink: 0
         }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 850, color: '#ffffff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#ffffff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {doc.nome}
             </h3>
             <p style={{ margin: '3px 0 0', color: '#cbd5e1', fontSize: '0.72rem', fontWeight: 700 }}>

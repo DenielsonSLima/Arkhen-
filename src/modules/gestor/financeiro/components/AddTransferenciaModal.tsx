@@ -152,7 +152,7 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
               <input
                 type="text"
                 required
-                style={{ fontWeight: 800 }}
+                style={{ fontWeight: 700 }}
                 value={valorStr}
                 onChange={handleValorChange}
               />

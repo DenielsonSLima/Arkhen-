@@ -79,6 +79,8 @@ body:has(#root .gestor-panel-container),
 }
 
 /* Evita uma camada composta que suavizava o texto depois da transição. */
+body:has(#root .gestor-panel-container) .animate-fade-in,
+body:has(#root .gestor-panel-container) .animate-slide-up,
 .gestor-panel-container .animate-fade-in,
 .gestor-panel-container .animate-slide-up {
   animation-fill-mode: none;
