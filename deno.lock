@@ -1,0 +1,39 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.110.6"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.110.6": "c7330c52c7c1b6215fd602626401ab0ff93bc7a7b75c77ffa80497de1a1733ee"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.109.0",
+        "npm:@tanstack/react-query@^5.101.2",
+        "npm:@testing-library/react@^16.3.0",
+        "npm:@types/jszip@^3.4.0",
+        "npm:@types/node@^24.13.2",
+        "npm:@types/react-dom@^19.2.3",
+        "npm:@types/react@^19.2.17",
+        "npm:@vitejs/plugin-react@^6.0.3",
+        "npm:docx-preview@0.4",
+        "npm:glob@^13.0.6",
+        "npm:html2canvas@^1.4.1",
+        "npm:jsdom@^26.1.0",
+        "npm:jspdf@^4.2.1",
+        "npm:jszip@^3.10.1",
+        "npm:lucide-react@^1.23.0",
+        "npm:oxlint@^1.71.0",
+        "npm:pdfjs-dist@^5.6.205",
+        "npm:react-dom@^19.2.7",
+        "npm:react@^19.2.7",
+        "npm:recharts@^3.9.2",
+        "npm:typescript@~6.0.2",
+        "npm:vite@^8.1.1",
+        "npm:vitest@^4.1.0",
+        "npm:zod@^4.5.4"
+      ]
+    }
+  }
+}
