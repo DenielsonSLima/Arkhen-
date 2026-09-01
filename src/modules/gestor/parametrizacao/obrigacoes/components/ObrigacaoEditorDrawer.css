@@ -89,7 +89,7 @@
   color: #9a681a;
   display: inline-flex;
   font-size: .68rem;
-  font-weight: 800;
+  font-weight: 700;
   gap: 6px;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -138,8 +138,14 @@
 .obrigacao-form-grid { display: grid; gap: 12px; }
 .obrigacao-form-grid.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .obrigacao-form-grid.nested { gap: 8px; }
+.obrigacao-period-grid.is-three-columns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.obrigacao-period-grid.is-three-columns > .obrigacao-form-grid.nested {
+  display: contents;
+}
 .obrigacao-form-field { display: flex; flex-direction: column; gap: 6px; }
-.obrigacao-form-field > span { color: #475569; font-size: .7rem; font-weight: 750; }
+.obrigacao-form-field > span { color: #475569; font-size: .7rem; font-weight: 600; }
 .obrigacao-form-field__help { color: #64748b; font-size: .64rem; line-height: 1.35; }
 .obrigacao-form-field input,
 .obrigacao-form-field select,
@@ -148,7 +154,7 @@
 
 .obrigacao-switch,
 .obrigacao-check-option { align-items: center; cursor: pointer; display: flex; gap: 9px; }
-.obrigacao-switch { color: #475569; font-size: .72rem; font-weight: 750; }
+.obrigacao-switch { color: #475569; font-size: .72rem; font-weight: 600; }
 .obrigacao-check-option { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; padding: 11px 12px; }
 .obrigacao-check-option span,
 .obrigacao-check-option strong,
@@ -177,7 +183,7 @@
 .obrigacao-etapas-editor__list { display: flex; flex-direction: column; }
 .obrigacao-etapas-editor { gap: 12px; }
 .obrigacao-etapas-editor__heading { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
-.obrigacao-etapas-editor__heading > span { background: #f1f5f9; border-radius: 999px; color: #64748b; font-size: .66rem; font-weight: 750; padding: 5px 8px; }
+.obrigacao-etapas-editor__heading > span { background: #f1f5f9; border-radius: 999px; color: #64748b; font-size: .66rem; font-weight: 600; padding: 5px 8px; }
 .obrigacao-etapas-editor__list { gap: 8px; }
 .obrigacao-etapa-row { align-items: center; display: grid; gap: 8px; grid-template-columns: 28px minmax(0, 1fr) auto; }
 .obrigacao-etapa-row__order {
@@ -187,7 +193,7 @@
   color: #fff;
   display: flex;
   font-size: .67rem;
-  font-weight: 800;
+  font-weight: 700;
   height: 28px;
   justify-content: center;
 }
@@ -205,7 +211,7 @@
   cursor: pointer;
   display: inline-flex;
   font-size: .72rem;
-  font-weight: 750;
+  font-weight: 600;
   gap: 6px;
   padding: 8px 11px;
 }
@@ -216,6 +222,11 @@
   .obrigacao-form-section__heading.split { align-items: stretch; flex-direction: column; }
   .obrigacao-form-grid.two-columns,
   .obrigacao-regimes-grid { grid-template-columns: 1fr; }
+  .obrigacao-period-grid.is-three-columns { grid-template-columns: 1fr; }
+  .obrigacao-period-grid.is-three-columns > .obrigacao-form-grid.nested {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
   .obrigacao-drawer { width: 100vw; }
   .obrigacao-drawer__header,
   .obrigacao-drawer__body,

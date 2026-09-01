@@ -172,11 +172,14 @@ export const ObrigacoesPage: React.FC = () => {
       </section>
 
       <section className="obrigacoes-page__filters" aria-label="Filtros das obrigações">
-        <label className="obrigacoes-page__search">
-          <span className="obrigacoes-page__filter-label">Buscar obrigação</span>
-          <span className="obrigacoes-page__search-control">
+        <div className="obrigacoes-page__filter-field obrigacoes-page__search">
+          <label className="obrigacoes-page__filter-label" htmlFor="obrigacoes-search">
+            Buscar obrigação
+          </label>
+          <div className="obrigacoes-page__search-control">
             <Search size={17} aria-hidden="true" />
             <input
+              id="obrigacoes-search"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
@@ -184,11 +187,12 @@ export const ObrigacoesPage: React.FC = () => {
               }}
               placeholder="Buscar por obrigação, categoria ou etapa..."
             />
-          </span>
-        </label>
-        <label>
-          <span className="obrigacoes-page__filter-label">Regime</span>
+          </div>
+        </div>
+        <div className="obrigacoes-page__filter-field">
+          <label className="obrigacoes-page__filter-label" htmlFor="obrigacoes-regime">Regime</label>
           <select
+            id="obrigacoes-regime"
             value={regime}
             onChange={(event) => {
               setRegime(event.target.value as typeof regime);
@@ -198,10 +202,11 @@ export const ObrigacoesPage: React.FC = () => {
             <option value="todos">Todos os regimes</option>
             {OBRIGACAO_REGIMES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-        </label>
-        <label>
-          <span className="obrigacoes-page__filter-label">Categoria</span>
+        </div>
+        <div className="obrigacoes-page__filter-field">
+          <label className="obrigacoes-page__filter-label" htmlFor="obrigacoes-categoria">Categoria</label>
           <select
+            id="obrigacoes-categoria"
             value={categoria}
             onChange={(event) => {
               setCategoria(event.target.value);
@@ -211,10 +216,11 @@ export const ObrigacoesPage: React.FC = () => {
             <option value="todas">Todas as categorias</option>
             {categorias.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-        </label>
-        <label>
-          <span className="obrigacoes-page__filter-label">Status</span>
+        </div>
+        <div className="obrigacoes-page__filter-field">
+          <label className="obrigacoes-page__filter-label" htmlFor="obrigacoes-status">Status</label>
           <select
+            id="obrigacoes-status"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as StatusFilter);
@@ -225,7 +231,7 @@ export const ObrigacoesPage: React.FC = () => {
             <option value="ativos">Disponíveis</option>
             <option value="inativos">Desativados</option>
           </select>
-        </label>
+        </div>
       </section>
 
       <div className="obrigacoes-page__result-line">

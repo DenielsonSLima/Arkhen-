@@ -60,31 +60,8 @@ BEGIN
     RAISE EXCEPTION 'A cadência anual deixou de avançar por 12 meses de calendário.';
   END IF;
 
-  -- Depois do backfill, normalizar novamente deve ser um ponto fixo: isso
-  -- prova que nenhum prazo antigo do JSON do parceiro continua prevalecendo.
-  IF EXISTS (
-    SELECT 1
-    FROM public.clientes cliente
-    WHERE cliente.status = 'Ativa'
-      AND EXISTS (
-        SELECT 1
-        FROM public.parametrizacao_catalogos tipo_parceiro
-        WHERE tipo_parceiro.id = cliente.tipo_parceiro_id
-          AND tipo_parceiro.empresa_id = cliente.empresa_id
-          AND tipo_parceiro.tipo = 'tipos_parceiros'
-          AND tipo_parceiro.codigo IN ('cliente_contabil', 'tp-1')
-          AND tipo_parceiro.ativo = true
-      )
-      AND NOT EXISTS (
-        SELECT 1
-        FROM public.configuracoes_protocolos_empresas cfg
-        WHERE cfg.empresa_id = cliente.empresa_id
-          AND cfg.cliente_id = cliente.id
-      )
-  ) THEN
-    RAISE EXCEPTION 'O backfill não persistiu configuração para todo cliente contábil.';
-  END IF;
-
+  -- Configurações existentes devem ser um ponto fixo. Parceiros novos podem
+  -- permanecer sem linha até a seleção explícita das primeiras obrigações.
   IF EXISTS (
     SELECT 1
     FROM public.configuracoes_protocolos_empresas cfg
@@ -105,12 +82,10 @@ BEGIN
         app_private.normalizar_configs_protocolos_cliente(
           cfg.empresa_id,
           cfg.cliente_id,
-          app_private.mesclar_configs_obrigacoes_legadas(
-            cfg.empresa_id, cfg.cliente_id, cfg.configs
-          )
+          cfg.configs
         )
   ) THEN
-    RAISE EXCEPTION 'O backfill não deixou as configurações em forma canônica.';
+    RAISE EXCEPTION 'Há configuração persistida fora da forma canônica.';
   END IF;
 
   IF EXISTS (

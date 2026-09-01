@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, Loader2, Search } from 'lucide-react';
 import type { ClientBranch } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
+import { parseFilialForm } from './filialFormModel';
 import './ClienteForm.css';
 
 interface FilialFormProps {
@@ -116,23 +117,9 @@ export const FilialForm: React.FC<FilialFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanCnpj = cnpj.replace(/\D/g, '');
-
-    if (!nome.trim()) {
-      setErrorMsg('O Nome da Filial é obrigatório.');
-      return;
-    }
-    if (cleanCnpj && cleanCnpj.length !== 14) {
-      setErrorMsg('CNPJ da filial deve conter 14 dígitos.');
-      return;
-    }
-
-    setSavingState(true);
-    setErrorMsg(null);
+    let values: ReturnType<typeof parseFilialForm>;
     try {
-      await onSave({
-        id: branch?.id || `polo-${Date.now()}`,
-        companyId,
+      values = parseFilialForm({
         nome,
         cnpj,
         email,
@@ -140,17 +127,35 @@ export const FilialForm: React.FC<FilialFormProps> = ({
         contato,
         endereco,
         bairro,
+        cep,
         cidade,
         uf,
+      });
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Revise os dados da filial.');
+      return;
+    }
+
+    setSavingState(true);
+    setErrorMsg(null);
+    try {
+      await onSave({
+        id: branch?.id || '',
+        companyId,
+        filialRef: branch?.filialRef,
+        ...values,
         ativo: branch ? branch.ativo : true,
+        updatedAt: branch?.updatedAt,
       });
       setSuccessMsg('Filial salva com sucesso!');
       setTimeout(() => {
         setSuccessMsg(null);
         onCancel();
       }, 1000);
-    } catch {
-      setErrorMsg('Erro ao salvar os dados da filial.');
+    } catch (error) {
+      setErrorMsg(
+        error instanceof Error ? error.message : 'Erro ao salvar os dados da filial.',
+      );
     } finally {
       setSavingState(false);
     }
@@ -168,14 +173,14 @@ export const FilialForm: React.FC<FilialFormProps> = ({
       </div>
 
       {errorMsg && (
-        <div className="form-alert-banner error" style={{ marginBottom: 16 }}>
+        <div className="form-alert-banner error" role="alert" style={{ marginBottom: 16 }}>
           <AlertCircle size={18} />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="form-alert-banner" style={{ marginBottom: 16 }}>
+        <div className="form-alert-banner" role="status" aria-live="polite" style={{ marginBottom: 16 }}>
           <Check size={18} />
           <span>{successMsg}</span>
         </div>
@@ -186,13 +191,16 @@ export const FilialForm: React.FC<FilialFormProps> = ({
         <div className="form-fields-section" style={{ borderBottom: 'none', paddingBottom: 0 }}>
           <div className="fields-grid">
             <div className="input-container field-col-6">
-              <label>CNPJ da Filial</label>
+              <label htmlFor="filial-cnpj">CNPJ da Filial *</label>
               <div className="cnpj-search-wrapper">
                 <input
                   type="text"
+                  id="filial-cnpj"
+                  name="cnpj"
                   className="input-style"
                   placeholder="00.000.000/0000-00"
                   value={cnpj}
+                  required
                   onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
                 />
                 <button
@@ -208,9 +216,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-6">
-              <label>Nome da Filial *</label>
+              <label htmlFor="filial-nome">Nome da Filial *</label>
               <input
                 type="text"
+                id="filial-nome"
+                name="nome"
                 className="input-style"
                 placeholder="Ex: Filial Campinas"
                 value={nome}
@@ -220,9 +230,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-4">
-              <label>Nome do Contato</label>
+              <label htmlFor="filial-contato">Nome do Contato</label>
               <input
                 type="text"
+                id="filial-contato"
+                name="contato"
                 className="input-style"
                 placeholder="Responsável pela filial"
                 value={contato}
@@ -231,9 +243,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-4">
-              <label>Telefone</label>
+              <label htmlFor="filial-telefone">Telefone</label>
               <input
                 type="text"
+                id="filial-telefone"
+                name="telefone"
                 className="input-style"
                 placeholder="(00) 00000-0000"
                 value={telefone}
@@ -242,9 +256,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-4">
-              <label>E-mail</label>
+              <label htmlFor="filial-email">E-mail</label>
               <input
                 type="email"
+                id="filial-email"
+                name="email"
                 className="input-style"
                 placeholder="filial@empresa.com"
                 value={email}
@@ -254,9 +270,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
 
             {/* Endereço */}
             <div className="input-container field-col-3">
-              <label>CEP</label>
+              <label htmlFor="filial-cep">CEP</label>
               <input
                 type="text"
+                id="filial-cep"
+                name="cep"
                 className="input-style"
                 placeholder="00000-000"
                 value={cep}
@@ -265,9 +283,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-6">
-              <label>Endereço</label>
+              <label htmlFor="filial-endereco">Endereço</label>
               <input
                 type="text"
+                id="filial-endereco"
+                name="endereco"
                 className="input-style"
                 placeholder="Ex: Rua das Flores, 450"
                 value={endereco}
@@ -276,9 +296,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-3">
-              <label>Bairro</label>
+              <label htmlFor="filial-bairro">Bairro</label>
               <input
                 type="text"
+                id="filial-bairro"
+                name="bairro"
                 className="input-style"
                 placeholder="Ex: Centro"
                 value={bairro}
@@ -287,9 +309,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-9">
-              <label>Cidade</label>
+              <label htmlFor="filial-cidade">Cidade</label>
               <input
                 type="text"
+                id="filial-cidade"
+                name="cidade"
                 className="input-style"
                 placeholder="Ex: Campinas"
                 value={cidade}
@@ -298,9 +322,11 @@ export const FilialForm: React.FC<FilialFormProps> = ({
             </div>
 
             <div className="input-container field-col-3">
-              <label>UF</label>
+              <label htmlFor="filial-uf">UF</label>
               <input
                 type="text"
+                id="filial-uf"
+                name="uf"
                 className="input-style"
                 placeholder="SP"
                 maxLength={2}

@@ -1,7 +1,8 @@
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { documentosService, type DocumentScope, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
+import { documentosService, normalizeDocumentCategoryNames, type DocumentScope, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
 import type { DocumentCategory, MeusDocumentosData } from '../services/documentosService';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { normalizeFolderPaths } from '../utils/folderPaths';
 
 export const documentosKeys = {
   all: ['documentos'] as const,
@@ -161,11 +162,18 @@ export const useDocumentosMutations = (
   const saveCompanyMutation = useMutation({
     mutationFn: async (updatedCompany: Company) => {
       const currentCompany = companies.find((company) => company.id === updatedCompany.id);
+      const settingsChanged = JSON.stringify(normalizeFolderPaths(currentCompany?.pastasDocumentos))
+        !== JSON.stringify(normalizeFolderPaths(updatedCompany.pastasDocumentos))
+        || JSON.stringify(normalizeDocumentCategoryNames(currentCompany?.categoriasDocumentos))
+          !== JSON.stringify(normalizeDocumentCategoryNames(updatedCompany.categoriasDocumentos));
+      if (settingsChanged) {
+        await documentosService.updateCompanyDocumentSettings(updatedCompany.id, {
+          pastasDocumentos: updatedCompany.pastasDocumentos || [],
+          categoriasDocumentos: updatedCompany.categoriasDocumentos || [],
+          updatedAt: currentCompany?.updatedAt,
+        });
+      }
       const reconciliation = await reconcileDocumentChanges(currentCompany?.documentos || [], updatedCompany.documentos || []);
-      await documentosService.updateCompanyDocumentSettings(updatedCompany.id, {
-        pastasDocumentos: updatedCompany.pastasDocumentos || [],
-        categoriasDocumentos: updatedCompany.categoriasDocumentos || [],
-      });
       return {
         companies: await documentosService.listCompanies(),
         changedDocuments: reconciliation.changed,
@@ -180,6 +188,11 @@ export const useDocumentosMutations = (
           companyId: data.companyId,
         });
       }
+    },
+    onError: async () => {
+      // A configuração usa CAS e pode ter sido confirmada antes de uma falha
+      // posterior na reconciliação dos arquivos. Recarrega o updatedAt real.
+      await queryClient.invalidateQueries({ queryKey: documentosKeys.companies() });
     },
   });
 

@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
-import type { Company } from '../services/gestaoEmpresarialService';
+import type { ClientBranch, Company } from '../services/gestaoEmpresarialService';
+import { filiaisService } from '../services/filiaisService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
 import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
 import { empresaProtocolosKeys } from '../../protocolos/queries/empresaProtocolosQueries';
@@ -42,6 +43,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const companies = companiesQuery.data ?? EMPTY_COMPANIES;
   const isLoading = companiesQuery.isLoading;
+  const companiesError = companiesQuery.isError;
 
   const invalidatePartnersAndRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: clientesKeys.all });
@@ -105,6 +107,26 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const reativarMutation = useMutation({
     mutationFn: gestaoEmpresarialService.reativarCompany,
+    onSuccess: invalidatePartnersAndRoutines,
+  });
+
+  const saveBranchMutation = useMutation({
+    mutationFn: ({ matrizId, branch }: { matrizId: string; branch: ClientBranch }) => (
+      filiaisService.saveBranch(matrizId, branch)
+    ),
+    onSuccess: invalidatePartnersAndRoutines,
+  });
+
+  const branchStatusMutation = useMutation({
+    mutationFn: ({
+      matrizId,
+      branch,
+      status,
+    }: {
+      matrizId: string;
+      branch: ClientBranch;
+      status: 'Ativa' | 'Inativa';
+    }) => filiaisService.defineBranchStatus(matrizId, branch, status),
     onSuccess: invalidatePartnersAndRoutines,
   });
 
@@ -175,6 +197,18 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     await reativarMutation.mutateAsync(id);
   };
 
+  const handleSaveBranch = async (matrizId: string, branch: ClientBranch) => {
+    await saveBranchMutation.mutateAsync({ matrizId, branch });
+  };
+
+  const handleBranchStatus = async (
+    matrizId: string,
+    branch: ClientBranch,
+    status: 'Ativa' | 'Inativa',
+  ) => {
+    await branchStatusMutation.mutateAsync({ matrizId, branch, status });
+  };
+
   const handleDeleteCompany = async (id: string) => {
     await deleteMutation.mutateAsync(id);
     setSelectedCompanyId(null);
@@ -207,6 +241,9 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     saveCompany: handleSaveCompany,
     inativarCompany: handleInativarCompany,
     reativarCompany: handleReativarCompany,
+    saveBranch: handleSaveBranch,
+    defineBranchStatus: handleBranchStatus,
+    isSavingBranch: saveBranchMutation.isPending || branchStatusMutation.isPending,
     deleteCompany: handleDeleteCompany,
     getCompanyDocumentCount,
     searchCNPJ: handleSearchCNPJ,
@@ -214,5 +251,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
     activeDetailTab,
     setActiveDetailTab,
     isLoading,
+    companiesError,
+    retryCompanies: companiesQuery.refetch,
   };
 };

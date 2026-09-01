@@ -65,12 +65,17 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     saveCompany,
     inativarCompany,
     reativarCompany,
+    saveBranch,
+    defineBranchStatus,
+    isSavingBranch,
     deleteCompany,
     getCompanyDocumentCount,
     searchCNPJ,
     syncCompanyCnae,
     activeDetailTab,
     isLoading,
+    companiesError,
+    retryCompanies,
   } = useGestaoEmpresarial({ initialCompanyId, initialDetailTab });
   const {
     partnerTypes,
@@ -187,6 +192,11 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
         onUpdateCompany={updateCompany}
         onToggleStatus={toggleCompanyStatus}
         onSyncCnae={syncCompanyCnae}
+        onSaveBranch={(branch) => saveBranch(selectedCompany.id, branch)}
+        onDefineBranchStatus={(branch, status) => (
+          defineBranchStatus(selectedCompany.id, branch, status)
+        )}
+        isSavingBranch={isSavingBranch}
       />
     );
   }
@@ -214,6 +224,15 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
         <div className="error-banner" role="alert">
           <span>As classificações dos parceiros estão temporariamente indisponíveis.</span>
           <button type="button" onClick={() => { void retryClassifications(); }}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {companiesError ? (
+        <div className="error-banner" role="alert">
+          <span>Não foi possível carregar os parceiros.</span>
+          <button type="button" onClick={() => { void retryCompanies(); }}>
             Tentar novamente
           </button>
         </div>
@@ -248,7 +267,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
 
       {isLoading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}><Loader2 className="animate-spin" /></div>
-      ) : hasNoResults ? (
+      ) : companiesError ? null : hasNoResults ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '56px 24px', color: '#111827', fontWeight: 700 }}>
           <Building2 size={22} />
           <span>Nenhum parceiro cadastrado</span>

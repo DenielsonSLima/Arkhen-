@@ -9,6 +9,7 @@ const serviceMock = vi.hoisted(() => ({
   ensureInstancias: vi.fn(),
   getInstancias: vi.fn(),
   getFechamentoMeta: vi.fn(),
+  saveCliente: vi.fn(),
 }));
 
 vi.mock('../services/atividadesService', () => ({
@@ -64,5 +65,26 @@ describe('useAtividades internal-tab context', () => {
     expect(serviceMock.getModelos).toHaveBeenCalledTimes(1);
     expect(serviceMock.getClientes).toHaveBeenCalledTimes(1);
     expect(serviceMock.getFechamentoMeta).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a new company without implicit routines until the user selects them', async () => {
+    serviceMock.getClientes.mockResolvedValueOnce([
+      {
+        id: 'cliente-sem-rotinas',
+        nome: 'Empresa sem rotinas',
+        cnpj: '00000000000200',
+        regime: 'Simples Nacional',
+        tipoEstabelecimento: 'Matriz',
+        modelosAtivos: [],
+      },
+    ]);
+    serviceMock.getInstancias.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useAtividades());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(serviceMock.saveCliente).not.toHaveBeenCalled();
+    expect(result.current.companyGroups).toEqual([]);
   });
 });

@@ -119,7 +119,7 @@ export const ObrigacaoEditorSections = ({
           <div className="obrigacao-form-section__title">
             <CalendarClock size={17} />
             <div>
-              <h3>Prazo e periodicidade</h3>
+              <h3>Prazo e período</h3>
               <p>O vencimento é opcional para fluxos sem data fiscal.</p>
             </div>
           </div>
@@ -134,9 +134,11 @@ export const ObrigacaoEditorSections = ({
           </label>
         </div>
 
-        <div className="obrigacao-form-grid two-columns">
+        <div className={`obrigacao-form-grid two-columns obrigacao-period-grid ${
+          ['anual', 'quinzenal'].includes(draft.periodicidade) ? 'is-three-columns' : ''
+        }`}>
           <label className="obrigacao-form-field">
-            <span>Periodicidade</span>
+            <span>Período</span>
             <select
               value={draft.periodicidade}
               disabled={isSaving}
@@ -169,7 +171,7 @@ export const ObrigacaoEditorSections = ({
           </label>
         ) : !draft.temVencimento ? (
           <div className="obrigacao-form-note">
-            A periodicidade organiza a rotina, sem definir um vencimento fixo.
+            O período organiza a rotina, sem definir um vencimento fixo.
           </div>
         ) : null}
       </section>

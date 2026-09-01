@@ -6,13 +6,13 @@ import {
   FileCheck2,
   FileCode2,
   Landmark,
+  ListPlus,
+  Pencil,
   PlayCircle,
   ReceiptText,
-  Save,
-  Send,
   WalletCards,
 } from 'lucide-react';
-import type { Company } from '../services/gestaoEmpresarialService';
+import type { Company, ClientBranch } from '../services/gestaoEmpresarialService';
 import {
   ProtocolosError,
   type ProtocoloEmpresaConfig,
@@ -23,10 +23,18 @@ import { OBRIGACAO_PERIODICIDADE_LABELS } from '../../parametrizacao/obrigacoes/
 import { formatObrigacaoSchedule } from '../../parametrizacao/obrigacoes/obrigacoesSchedule';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
 import { SystemToast, type SystemToastData } from '../../components/SystemToast';
+import { ObrigacoesSelectionModal } from './ObrigacoesSelectionModal';
 import './TabProtocolosEntregas.css';
 
 interface TabProtocolosEntregasProps {
   company: Company;
+}
+
+interface ProtocolUnit {
+  company: Company;
+  id: string;
+  kind: 'Matriz' | 'Filial';
+  label: string;
 }
 
 const categoryIcon = {
@@ -41,13 +49,90 @@ const categoryIcon = {
 
 const EMPTY_CATALOGO: ProtocoloTipoConfig[] = [];
 
+const makeBranchCompany = (company: Company, branch: ClientBranch): Company => ({
+  ...company,
+  id: branch.id,
+  nome: branch.nome || 'Filial sem nome',
+  razaoSocial: branch.nome || company.razaoSocial,
+  cnpj: branch.cnpj || '',
+  tipoEstabelecimento: 'Filial',
+  status: branch.ativo ? 'Ativa' : 'Inativa',
+  email: branch.email || '',
+  telefone: branch.telefone || '',
+  endereco: branch.endereco || '',
+  cidade: branch.cidade || '',
+  uf: branch.uf || '',
+  cep: branch.cep || '',
+  bairro: branch.bairro || '',
+  contato: branch.contato || '',
+  polos: [],
+});
+
+const buildProtocolUnits = (company: Company): ProtocolUnit[] => {
+  const seenIds = new Set([company.id]);
+  const rootKind = company.tipoEstabelecimento === 'Filial' ? 'Filial' : 'Matriz';
+  const branches = (company.polos ?? []).flatMap((branch) => {
+    const id = branch.id?.trim();
+    if (!id || seenIds.has(id)) return [];
+    seenIds.add(id);
+    return [{
+      company: makeBranchCompany(company, { ...branch, id }),
+      id,
+      kind: 'Filial' as const,
+      label: `Filial • ${branch.nome || branch.cnpj || 'Sem nome'}${branch.ativo ? '' : ' (inativa)'}`,
+    }];
+  });
+  return [{
+    company,
+    id: company.id,
+    kind: rootKind,
+    label: `${rootKind} • ${company.nome}`,
+  }, ...branches];
+};
+
+const getEntregaDescricao = (entrega: ProtocoloTipoConfig) => {
+  const periodicidadeLabel = OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao];
+  const origem = entrega.origemPadrao === 'Ambos'
+    ? 'Cliente e Escritório'
+    : entrega.origemPadrao === 'Escritório envia'
+      ? 'Envio do escritório'
+      : 'Envio do cliente';
+  const tipo = ['xml-nfe', 'xml-nfce'].includes(entrega.id)
+    ? 'XML em lote'
+    : ['folha-pagamento', 'notas-fiscais', 'extrato-bancario', 'guias-pagas'].includes(entrega.id)
+      ? 'arquivo mensal'
+      : 'obrigação/documento';
+  return `${origem} • ${tipo} • rotina ${periodicidadeLabel}`;
+};
+
+const getPrazoDescricao = (entrega: ProtocoloTipoConfig) => formatObrigacaoSchedule({
+  periodicidade: entrega.periodicidadePadrao,
+  temVencimento: entrega.temVencimento,
+  diaVencimento: entrega.diaLimite,
+  diaPrimeiraQuinzena: entrega.diaPrimeiraQuinzena,
+  diaSegundaQuinzena: entrega.diaSegundaQuinzena,
+  diaSemana: entrega.diaSemana,
+  dataVencimento: entrega.dataVencimento,
+  mesVencimento: entrega.mesVencimento,
+});
+
+const getEtapasDescricao = (etapas: string[]) => {
+  if (etapas.length === 0) return 'Etapas: nenhuma definida';
+  const visibleEtapas = etapas.slice(0, 3).join(' • ');
+  const remaining = etapas.length - 3;
+  return `Etapas: ${visibleEtapas}${remaining > 0 ? ` • +${remaining}` : ''}`;
+};
+
 export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ company }) => {
   const { openTab } = useInternalTabs();
+  const units = useMemo(() => buildProtocolUnits(company), [company]);
+  const [selectedUnitId, setSelectedUnitId] = useState(company.id);
+  const selectedUnit = units.find((unit) => unit.id === selectedUnitId) ?? units[0];
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
   const [configVersion, setConfigVersion] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [hasConflict, setHasConflict] = useState(false);
+  const [isSelectionOpen, setIsSelectionOpen] = useState(false);
   const isDirtyRef = useRef(false);
   const [toast, setToast] = useState<SystemToastData | null>(null);
   const {
@@ -58,8 +143,16 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     refetch: retryConfiguracao,
     saveConfiguracao,
     resetSaveError,
-  } = useEmpresaProtocolosConfiguracao(company);
+  } = useEmpresaProtocolosConfiguracao(selectedUnit.company);
   const catalogo = configuracao?.catalogo ?? EMPTY_CATALOGO;
+  const catalogoAtivo = useMemo(
+    () => catalogo.filter((item) => item.status === 'Ativo'),
+    [catalogo],
+  );
+
+  useEffect(() => {
+    if (!units.some((unit) => unit.id === selectedUnitId)) setSelectedUnitId(company.id);
+  }, [company.id, selectedUnitId, units]);
 
   useEffect(() => {
     isDirtyRef.current = isDirty;
@@ -68,11 +161,11 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   useEffect(() => {
     isDirtyRef.current = false;
     setIsDirty(false);
-    setSaved(false);
     setHasConflict(false);
+    setIsSelectionOpen(false);
     setConfigs([]);
     setConfigVersion(null);
-  }, [company.id, company.status, company.tipo, company.tipoParceiroId]);
+  }, [selectedUnit.id, selectedUnit.company.status, selectedUnit.company.tipo, selectedUnit.company.tipoParceiroId]);
 
   useEffect(() => {
     if (!configuracao) return;
@@ -82,8 +175,6 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
       return;
     }
 
-    // Mantém escolhas locais, mas acompanha a composição mais recente do
-    // catálogo: adiciona cards novos e remove os que deixaram de ser aplicáveis.
     setConfigs((current) => {
       const localById = new Map(current.map((item) => [item.entregaId, item]));
       return configuracao.configs.map((serverItem) => ({
@@ -100,43 +191,70 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const configById = useMemo(() => {
-    const map = new Map<string, ProtocoloEmpresaConfig>();
-    configs.forEach((item) => map.set(item.entregaId, item));
-    return map;
-  }, [configs]);
+  const configById = useMemo(() => new Map(
+    configs.map((item) => [item.entregaId, item]),
+  ), [configs]);
+  const selectedCatalogo = useMemo(() => catalogoAtivo.filter(
+    (item) => configById.get(item.id)?.ativo === true,
+  ), [catalogoAtivo, configById]);
+  const groupedSelectedCatalogo = useMemo(() => selectedCatalogo.reduce<Record<string, ProtocoloTipoConfig[]>>(
+    (groups, item) => ({
+      ...groups,
+      [item.categoria]: [...(groups[item.categoria] ?? []), item],
+    }),
+    {},
+  ), [selectedCatalogo]);
 
-  const groupedCatalogo = useMemo(() => {
-    return catalogo.reduce<Record<string, typeof catalogo>>((acc, item) => {
-      acc[item.categoria] = [...(acc[item.categoria] || []), item];
-      return acc;
-    }, {});
-  }, [catalogo]);
-
-  const toggleEntrega = (id: string) => {
-    setSaved(false);
+  const handleOpenSelection = () => {
+    resetSaveError();
+    isDirtyRef.current = true;
     setIsDirty(true);
-    setConfigs((current) => current.map((item) => (
-      item.entregaId === id ? { ...item, ativo: !item.ativo } : item
-    )));
+    setIsSelectionOpen(true);
   };
 
-  const handleSave = async () => {
-    setSaved(false);
+  const handleCloseSelection = () => {
+    if (isSaving) return;
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setIsSelectionOpen(false);
+    resetSaveError();
+    if (configuracao) {
+      setConfigs(configuracao.configs);
+      setConfigVersion(configuracao.updatedAt);
+    }
+  };
+
+  const handleSaveSelection = async (selectedIds: Set<string>) => {
+    const editableIds = new Set(catalogoAtivo.map((item) => item.id));
+    const nextConfigs = configs.map((item) => editableIds.has(item.entregaId)
+      ? { ...item, ativo: selectedIds.has(item.entregaId) }
+      : item);
+    const configuredIds = new Set(nextConfigs.map((item) => item.entregaId));
+    catalogoAtivo.forEach((item) => {
+      if (!configuredIds.has(item.id)) {
+        nextConfigs.push({
+          entregaId: item.id,
+          ativo: selectedIds.has(item.id),
+          periodicidade: item.periodicidadePadrao,
+        });
+      }
+    });
+
+    setConfigs(nextConfigs);
     resetSaveError();
     try {
-      const configuracaoSalva = await saveConfiguracao(configs, configVersion);
-      setConfigs(configuracaoSalva.configs);
-      setConfigVersion(configuracaoSalva.updatedAt);
+      const saved = await saveConfiguracao(nextConfigs, configVersion);
+      setConfigs(saved.configs);
+      setConfigVersion(saved.updatedAt);
       setIsDirty(false);
       isDirtyRef.current = false;
-      setSaved(true);
       setHasConflict(false);
+      setIsSelectionOpen(false);
       setToast({
         id: Date.now(),
         type: 'success',
-        title: 'Entregas sincronizadas',
-        message: 'A configuração canônica da empresa foi salva com sucesso.',
+        title: 'Obrigações sincronizadas',
+        message: `A seleção de ${selectedUnit.label} foi salva com sucesso.`,
       });
     } catch (error) {
       setHasConflict(error instanceof ProtocolosError && error.code === 'conflict');
@@ -153,7 +271,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     resetSaveError();
     isDirtyRef.current = false;
     setIsDirty(false);
-    setSaved(false);
+    setIsSelectionOpen(false);
     const refreshed = await retryConfiguracao();
     if (refreshed.data) {
       setConfigs(refreshed.data.configs);
@@ -162,89 +280,45 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     }
   };
 
+  const handleUnitChange = (unitId: string) => {
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setHasConflict(false);
+    setIsSelectionOpen(false);
+    resetSaveError();
+    setSelectedUnitId(unitId);
+  };
+
   const handleOpenAtividades = () => {
-    openTab(
-      'atividades-modelos',
-      'Rotinas',
-      'Repeat',
-      {
-        data: {
-          selectedCompanyId: company.id,
-        },
-      },
-    );
-  };
-
-  const getEntregaDescricao = (entrega: typeof catalogo[number]) => {
-    const periodicidadeLabel = OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao];
-    const origem = entrega.origemPadrao === 'Ambos'
-      ? 'Cliente e Escritório'
-      : entrega.origemPadrao === 'Escritório envia'
-        ? 'Envio do escritório'
-        : 'Envio do cliente';
-    const tipo = ['xml-nfe', 'xml-nfce'].includes(entrega.id)
-      ? 'XML em lote'
-      : ['folha-pagamento', 'notas-fiscais', 'extrato-bancario', 'guias-pagas'].includes(entrega.id)
-      ? 'arquivo mensal'
-    : 'obrigação/documento';
-    return `${origem} • ${tipo} • rotina ${periodicidadeLabel}`;
-  };
-
-  const getPrazoDescricao = (entrega: typeof catalogo[number]) => {
-    return formatObrigacaoSchedule({
-      periodicidade: entrega.periodicidadePadrao,
-      temVencimento: entrega.temVencimento,
-      diaVencimento: entrega.diaLimite,
-      diaPrimeiraQuinzena: entrega.diaPrimeiraQuinzena,
-      diaSegundaQuinzena: entrega.diaSegundaQuinzena,
-      diaSemana: entrega.diaSemana,
-      dataVencimento: entrega.dataVencimento,
-      mesVencimento: entrega.mesVencimento,
+    openTab('atividades-modelos', 'Rotinas', 'Repeat', {
+      data: { selectedCompanyId: selectedUnit.id },
     });
-  };
-
-  const getEtapasDescricao = (etapas: string[]) => {
-    if (etapas.length === 0) return 'Etapas: nenhuma definida';
-    const visibleEtapas = etapas.slice(0, 3).join(' • ');
-    const remaining = etapas.length - 3;
-    return `Etapas: ${visibleEtapas}${remaining > 0 ? ` • +${remaining}` : ''}`;
   };
 
   const errorMessage = configuracaoError instanceof Error
     ? configuracaoError.message
     : configuracaoError
-      ? 'Não foi possível carregar as obrigações da empresa.'
+      ? 'Não foi possível carregar as obrigações da unidade.'
       : '';
 
   return (
-    <div className="tab-panel-content protocolos-config-panel" style={{ position: 'relative', opacity: isLoading ? 0.7 : 1 }}>
+    <div className="tab-panel-content protocolos-config-panel" aria-busy={isLoading}>
       <SystemToast toast={toast} onClose={() => setToast(null)} />
       {isLoading ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            padding: '40px 0',
-            color: '#475569',
-          }}
-        >
-          <div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: '2px' }} />
-          <span style={{ fontSize: '0.82rem' }}>Carregando obrigações da empresa...</span>
+        <div className="protocolos-config-loading">
+          <div className="loading-spinner" />
+          <span>Carregando obrigações da unidade...</span>
         </div>
       ) : null}
 
       {errorMessage ? (
         <div className="error-banner protocolos-config-error" role="alert">
           <span>{errorMessage}</span>
-          <button type="button" onClick={() => { void retryConfiguracao(); }}>
-            Tentar novamente
-          </button>
+          <button type="button" onClick={() => { void retryConfiguracao(); }}>Tentar novamente</button>
         </div>
       ) : null}
 
-      {hasConflict ? (
+      {hasConflict && !isSelectionOpen ? (
         <div className="error-banner protocolos-config-error" role="alert">
           <span>A configuração mudou em outra tela. Recarregue para continuar.</span>
           <button type="button" onClick={() => { void handleReloadAfterConflict(); }}>
@@ -255,101 +329,119 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
       <div className="protocolos-config-header">
         <div>
-          <h3>Rotinas e obrigações da empresa</h3>
-          <p>Defina o que entra por competência, com rotina e origem (cliente, escritório ou ambos).</p>
+          <h3>Rotinas e obrigações por unidade</h3>
+          <p>Escolha a matriz ou filial e defina somente as obrigações aplicáveis a ela.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button className="btn-save-protocolos" onClick={handleOpenAtividades}>
+        <div className="protocolos-config-actions">
+          <button type="button" className="btn-save-protocolos secondary" onClick={handleOpenAtividades}>
             <PlayCircle size={16} /> Abrir rotinas
           </button>
           <button
+            type="button"
             className="btn-save-protocolos"
-            onClick={() => { void handleSave(); }}
-            style={{ minWidth: 170 }}
+            onClick={handleOpenSelection}
             disabled={isLoading || isSaving || Boolean(errorMessage) || hasConflict}
           >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Salvo' : isSaving ? 'Salvando...' : 'Salvar entregas'}
+            {selectedCatalogo.length === 0 ? <ListPlus size={16} /> : <Pencil size={16} />}
+            {selectedCatalogo.length === 0 ? 'Adicionar obrigações' : 'Editar obrigações'}
           </button>
         </div>
       </div>
 
+      <label className="protocolos-unit-selector">
+        <span>Unidade configurada</span>
+        <select
+          aria-label="Unidade configurada"
+          value={selectedUnit.id}
+          onChange={(event) => handleUnitChange(event.target.value)}
+          disabled={isSaving}
+        >
+          {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}
+        </select>
+      </label>
+
       <div className="protocolos-config-summary">
         <div>
-          <span>Empresa</span>
-          <strong>{company.nome}</strong>
+          <span>Unidade</span>
+          <strong>{selectedUnit.company.nome}</strong>
         </div>
         <div>
-          <span>Itens cobrados</span>
-          <strong>{configs.filter((item) => item.ativo).length}</strong>
+          <span>Estabelecimento</span>
+          <strong>{selectedUnit.kind}</strong>
         </div>
         <div>
-          <span>Base</span>
-          <strong>Competência + rotina</strong>
+          <span>Obrigações selecionadas</span>
+          <strong>{selectedCatalogo.length}</strong>
         </div>
       </div>
 
-      <div className="protocolos-category-grid">
-        {Object.entries(groupedCatalogo).map(([categoria, entregas]) => (
-          <section key={categoria} className="protocolos-category-section">
-            <div className="protocolos-category-title">
-              {categoryIcon[categoria as keyof typeof categoryIcon]}
-              <strong>{categoria}</strong>
-            </div>
-            <div className="protocolos-entregas-list">
-              {entregas.map((entrega) => {
-                const config = configById.get(entrega.id);
-                const checked = config?.ativo ?? false;
-                const etapas = entrega.etapas ?? [];
-                const checkboxId = `obrigacao-${company.id}-${entrega.id}`;
-                const periodicidadeId = `periodicidade-${company.id}-${entrega.id}`;
-                return (
-                  <div key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
-                    <input
-                      id={checkboxId}
-                      type="checkbox"
-                      disabled={isLoading || isSaving}
-                      checked={checked}
-                      onChange={() => toggleEntrega(entrega.id)}
-                      aria-label={`${checked ? 'Desativar' : 'Ativar'} ${entrega.nome}`}
-                    />
-                    <label htmlFor={checkboxId} className="protocolo-option-marker">
-                      {checked ? <CheckCircle2 size={16} /> : <Send size={16} />}
-                    </label>
-                    <label htmlFor={checkboxId} className="protocolo-option-text">
-                      <strong>{entrega.nome}</strong>
-                      <small>{getEntregaDescricao(entrega)}</small>
-                      <span className="protocolo-option-meta">
-                        <span>{getPrazoDescricao(entrega)}</span>
-                        <span>{etapas.length} {etapas.length === 1 ? 'etapa' : 'etapas'}</span>
-                      </span>
-                      <small
-                        className="protocolo-option-etapas"
-                        title={etapas.length > 0 ? etapas.join(' • ') : undefined}
-                      >
-                        {getEtapasDescricao(etapas)}
-                      </small>
-                    </label>
-                    <div className="protocolo-option-periodicidade">
-                      <span className="protocolo-option-periodicidade-label">
-                        <CalendarClock size={13} />
-                        <strong>Rotina</strong>
-                      </span>
-                      <span
-                        id={periodicidadeId}
-                        aria-label={`Rotina de ${entrega.nome}`}
-                        className="protocolo-option-periodicidade-value"
-                      >
-                        {OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao]}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </div>
+      {selectedCatalogo.length === 0 && !isLoading && !errorMessage ? (
+        <div className="protocolos-config-empty">
+          <span><ClipboardCheck size={24} /></span>
+          <h4>Nenhuma obrigação selecionada</h4>
+          <p>Adicione as obrigações que devem gerar rotinas para {selectedUnit.label}.</p>
+          <button type="button" onClick={handleOpenSelection}>
+            <ListPlus size={16} /> Adicionar obrigações
+          </button>
+        </div>
+      ) : (
+        <div className="protocolos-category-grid">
+          {Object.entries(groupedSelectedCatalogo).map(([categoria, entregas]) => (
+            <section key={categoria} className="protocolos-category-section">
+              <div className="protocolos-category-title">
+                {categoryIcon[categoria as keyof typeof categoryIcon]}
+                <strong>{categoria}</strong>
+              </div>
+              <div className="protocolos-entregas-list">
+                {entregas.map((entrega) => {
+                  const etapas = entrega.etapas ?? [];
+                  return (
+                    <article key={entrega.id} className="protocolo-selected-item">
+                      <span className="protocolo-option-marker"><CheckCircle2 size={17} /></span>
+                      <div className="protocolo-option-text">
+                        <strong>{entrega.nome}</strong>
+                        <small>{getEntregaDescricao(entrega)}</small>
+                        <span className="protocolo-option-meta">
+                          <span>{getPrazoDescricao(entrega)}</span>
+                          <span>{etapas.length} {etapas.length === 1 ? 'etapa' : 'etapas'}</span>
+                        </span>
+                        <small className="protocolo-option-etapas" title={etapas.join(' • ') || undefined}>
+                          {getEtapasDescricao(etapas)}
+                        </small>
+                      </div>
+                      <div className="protocolo-option-periodicidade">
+                        <span className="protocolo-option-periodicidade-label">
+                          <CalendarClock size={13} /> <strong>Rotina</strong>
+                        </span>
+                        <span
+                          aria-label={`Rotina de ${entrega.nome}`}
+                          className="protocolo-option-periodicidade-value"
+                        >
+                          {OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao]}
+                        </span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {isSelectionOpen ? (
+        <ObrigacoesSelectionModal
+          key={`${selectedUnit.id}:${configVersion ?? 'sem-versao'}`}
+          catalogo={catalogoAtivo}
+          configs={configs}
+          hasConflict={hasConflict}
+          isSaving={isSaving}
+          unitLabel={selectedUnit.label}
+          onCancel={handleCloseSelection}
+          onReloadConflict={() => { void handleReloadAfterConflict(); }}
+          onSave={(selectedIds) => { void handleSaveSelection(selectedIds); }}
+        />
+      ) : null}
     </div>
   );
 };

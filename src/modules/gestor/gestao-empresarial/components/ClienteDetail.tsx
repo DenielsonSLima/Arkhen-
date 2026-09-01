@@ -13,11 +13,9 @@ import {
   Plus,
   ToggleLeft,
   ToggleRight,
-  Trash2,
   User,
 } from 'lucide-react';
 import type { ClientBranch, Company } from '../services/gestaoEmpresarialService';
-import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { cnpjLookupService } from '../services/cnpjLookupService';
 import { ClienteEditForm } from '../forms/ClienteEditForm';
 import { PartnerClassificationSummary } from './PartnerClassificationSummary';
@@ -34,6 +32,9 @@ interface ClienteDetailProps {
   onUpdateCompany: (company: Company) => Promise<void>;
   onToggleStatus: (company: Company) => void;
   onSyncCnae: (company: Company) => Promise<void>;
+  onSaveBranch: (branch: ClientBranch) => Promise<void>;
+  onDefineBranchStatus: (branch: ClientBranch, status: 'Ativa' | 'Inativa') => Promise<void>;
+  isSavingBranch?: boolean;
 }
 
 type DetailTab = 'dados' | 'filiais' | 'protocolos';
@@ -52,12 +53,15 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   onUpdateCompany,
   onToggleStatus,
   onSyncCnae,
+  onSaveBranch,
+  onDefineBranchStatus,
+  isSavingBranch = false,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('dados');
   const [isEditing, setIsEditing] = useState(false);
   const [showBranchForm, setShowBranchForm] = useState(false);
   const [editingBranch, setEditingBranch] = useState<ClientBranch | null>(null);
-  const [branchToRemove, setBranchToRemove] = useState<ClientBranch | null>(null);
+  const [branchActionError, setBranchActionError] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [cnaeSyncMsg, setCnaeSyncMsg] = useState<string | null>(null);
@@ -67,10 +71,11 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   const isAtiva = company.status === 'Ativa';
   const displayDocumentLabel = company.tipo === 'PF' ? 'CPF' : 'CNPJ';
   const polos = company.polos || [];
+  const canManageBranches = isAccountingClient && company.tipoEstabelecimento === 'Matriz' && company.tipo !== 'PF' && company.cnpj.replace(/\D/g, '').length === 14;
 
   useEffect(() => {
-    if (!isAccountingClient && activeTab !== 'dados') setActiveTab('dados');
-  }, [activeTab, isAccountingClient]);
+    if ((!isAccountingClient && activeTab !== 'dados') || (!canManageBranches && activeTab === 'filiais')) setActiveTab('dados');
+  }, [activeTab, canManageBranches, isAccountingClient]);
 
   const handleLogoUpload = async (file?: File) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -88,35 +93,29 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   };
 
   const handleSaveBranch = async (branch: ClientBranch) => {
-    const nextBranches = branch.id && polos.some((p) => p.id === branch.id)
-      ? polos.map((p) => (p.id === branch.id ? branch : p))
-      : [...polos, { ...branch, id: branch.id || `polo-${Date.now()}`, companyId: company.id }];
-    
-    await onUpdateCompany({ ...company, polos: nextBranches });
-    setShowBranchForm(false);
-    setEditingBranch(null);
+    setBranchActionError(null);
+    await onSaveBranch(branch);
   };
 
-  const handleToggleBranch = async (branchId: string) => {
-    const nextBranches = polos.map((p) =>
-      p.id === branchId ? { ...p, ativo: !p.ativo } : p
-    );
-    await onUpdateCompany({ ...company, polos: nextBranches });
-  };
-
-  const confirmRemoveBranch = async () => {
-    if (!branchToRemove) return;
-    const nextBranches = polos.filter((p) => p.id !== branchToRemove.id);
-    await onUpdateCompany({ ...company, polos: nextBranches });
-    setBranchToRemove(null);
+  const handleToggleBranch = async (branch: ClientBranch) => {
+    setBranchActionError(null);
+    try {
+      await onDefineBranchStatus(branch, branch.ativo ? 'Inativa' : 'Ativa');
+    } catch (error) {
+      setBranchActionError(
+        error instanceof Error ? error.message : 'Não foi possível alterar o status da filial.',
+      );
+    }
   };
 
   const handleOpenAddBranch = () => {
+    setBranchActionError(null);
     setEditingBranch(null);
     setShowBranchForm(true);
   };
 
   const handleOpenEditBranch = (branch: ClientBranch) => {
+    setBranchActionError(null);
     setEditingBranch(branch);
     setShowBranchForm(true);
   };
@@ -259,7 +258,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
             >
               <FileCheck size={16} /> Rotinas e Obrigações
             </button>
-            <button
+            {canManageBranches ? <button
               className={`tab-link-btn ${activeTab === 'filiais' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('filiais');
@@ -267,7 +266,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
               }}
             >
               <Building2 size={16} /> Filiais ({polos.length})
-            </button>
+            </button> : null}
           </>
         ) : null}
       </nav>
@@ -384,7 +383,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
       )}
 
       {/* Conteúdo Aba Filiais */}
-      {isAccountingClient && activeTab === 'filiais' && (
+      {canManageBranches && activeTab === 'filiais' && (
         <div className="tab-pane-content">
           <div className="filiais-header-row">
             <div>
@@ -398,6 +397,12 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
             )}
           </div>
 
+          {branchActionError ? (
+            <div className="form-alert-banner error" role="alert">
+              <span>{branchActionError}</span>
+            </div>
+          ) : null}
+
           {showBranchForm && (
             <div className="inline-form-card" style={{ marginBottom: '24px' }}>
               <FilialForm
@@ -409,6 +414,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
                   setEditingBranch(null);
                 }}
                 onSearchCNPJ={cnpjLookupService.lookup}
+                isSaving={isSavingBranch}
               />
             </div>
           )}
@@ -462,25 +468,24 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
 
                   <div className="filial-card-footer-actions">
                     <button
+                      type="button"
                       className="btn-action-small"
-                      onClick={() => handleToggleBranch(branch.id)}
+                      onClick={() => { void handleToggleBranch(branch); }}
+                      disabled={isSavingBranch}
                       title={branch.ativo ? 'Inativar Filial' : 'Ativar Filial'}
+                      aria-label={branch.ativo ? 'Inativar filial' : 'Ativar filial'}
                     >
                       {branch.ativo ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
                     </button>
                     <button
+                      type="button"
                       className="btn-action-small"
                       onClick={() => handleOpenEditBranch(branch)}
+                      disabled={isSavingBranch}
                       title="Editar Dados da Filial"
+                      aria-label="Editar dados da filial"
                     >
                       <Edit3 size={13} />
-                    </button>
-                    <button
-                      className="btn-action-small btn-delete"
-                      onClick={() => setBranchToRemove(branch)}
-                      title="Remover Filial"
-                    >
-                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
@@ -489,17 +494,6 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
           )}
         </div>
       )}
-
-      <SystemQuickModal
-        isOpen={!!branchToRemove}
-        title="Excluir Filial"
-        message={`Tem certeza de que deseja excluir a filial "${branchToRemove?.nome || ''}"?`}
-        confirmLabel="Excluir"
-        cancelLabel="Cancelar"
-        danger
-        onConfirm={confirmRemoveBranch}
-        onClose={() => setBranchToRemove(null)}
-      />
     </div>
   );
 };

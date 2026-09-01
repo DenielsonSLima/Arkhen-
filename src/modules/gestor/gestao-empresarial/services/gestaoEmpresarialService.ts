@@ -4,6 +4,16 @@ import {
   getClienteContabilPartnerTypeId,
   isPartnerClassificationSchemaError,
 } from './partnerClassificationService';
+import {
+  groupBranchesByMatrix,
+  mapFilialRowToBranch,
+  resolveVisibleBranches,
+  selectVisibleOperationalRoots,
+  supportsRelationalBranches,
+} from './filiaisService';
+import type { ClientBranch } from './filiaisService';
+
+export type { ClientBranch } from './filiaisService';
 
 export interface SalaryHistoryEntry {
   data: string;
@@ -69,22 +79,6 @@ export interface Partner {
   cargo: 'Sócio-Administrador' | 'Sócio Quotista';
 }
 
-export interface ClientBranch {
-  id: string;
-  companyId: string;
-  nome: string;
-  cnpj: string;
-  email: string;
-  telefone: string;
-  cidade: string;
-  uf: string;
-  bairro?: string;
-  contato?: string;
-  ativo: boolean;
-  endereco?: string;
-  cep?: string;
-}
-
 export interface CorporateEvent {
   id: string;
   data: string;
@@ -129,6 +123,7 @@ export interface Company {
   certificados?: CertificadoDigital[];
   polos?: ClientBranch[];
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Vacation {
@@ -147,6 +142,8 @@ type CompanyEstablishmentType = Company['tipoEstabelecimento'];
 
 interface ClienteRow {
   id: string;
+  matriz_cliente_id?: string | null;
+  filial_ref?: string | null;
   nome: string | null;
   razao_social: string | null;
   cnpj: string | null;
@@ -181,6 +178,7 @@ interface ClienteRow {
   certificados: CertificadoDigital[] | null;
   polos: ClientBranch[] | null;
   created_at: string | null;
+  updated_at?: string | null;
 }
 
 const extractLocationFromAddress = (endereco = '') => {
@@ -245,6 +243,7 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   certificados: row.certificados || [],
   polos: row.polos || [],
   createdAt: row.created_at || undefined,
+  updatedAt: row.updated_at || undefined,
 });
 
 const mapCompanyToPayload = (company: Company) => {
@@ -278,7 +277,6 @@ const mapCompanyToPayload = (company: Company) => {
   socios: company.socios || [],
   historico_corporativo: company.historicoCorporativo || [],
   certificados: company.certificados || [],
-  polos: company.polos || [],
   };
 
   if (
@@ -295,7 +293,7 @@ const mapCompanyToPayload = (company: Company) => {
 };
 
 const mapCompanyToPayloadWithoutCnae = (company: Company) => {
-  const { cnae, cnaeDescricao, ...payload } = mapCompanyToPayload(company) as Record<string, unknown>;
+  const { cnae, cnae_descricao: cnaeDescricao, ...payload } = mapCompanyToPayload(company);
   void cnae;
   void cnaeDescricao;
   return payload;
@@ -388,7 +386,15 @@ const loadCompanies = async (tipoParceiroId?: string): Promise<Company[]> => {
 
   const { data, error } = await request;
   if (error) throw new Error(`Erro ao buscar parceiros: ${error.message}`);
-  return ((data || []) as ClienteRow[]).map(mapRowToCompany);
+  const rows = (data || []) as ClienteRow[];
+  if (!supportsRelationalBranches(rows)) return rows.map(mapRowToCompany);
+
+  const branchesByMatrix = groupBranchesByMatrix(rows);
+  return selectVisibleOperationalRoots(rows)
+    .map((row) => normalizeCompany({
+      ...mapRowToCompany(row),
+      polos: resolveVisibleBranches(row, branchesByMatrix),
+    }));
 };
 
 export const gestaoEmpresarialService = {
@@ -418,7 +424,24 @@ export const gestaoEmpresarialService = {
       .maybeSingle();
 
     if (error) throw new Error(`Erro ao buscar cliente: ${error.message}`);
-    return data ? mapRowToCompany(data as ClienteRow) : null;
+    if (!data) return null;
+
+    const row = data as ClienteRow;
+    if (!Object.prototype.hasOwnProperty.call(row, 'matriz_cliente_id') || row.matriz_cliente_id) {
+      return mapRowToCompany(row);
+    }
+
+    const { data: branchRows, error: branchError } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('matriz_cliente_id', id)
+      .order('nome', { ascending: true });
+    if (branchError) throw new Error(`Erro ao buscar filiais: ${branchError.message}`);
+
+    return normalizeCompany({
+      ...mapRowToCompany(row),
+      polos: ((branchRows || []) as ClienteRow[]).map((branch) => mapFilialRowToBranch(branch, id)),
+    });
   },
 
   async saveCompany(updatedCompany: Company): Promise<Company> {

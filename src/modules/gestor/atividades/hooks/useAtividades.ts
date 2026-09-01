@@ -53,30 +53,6 @@ const getInstanceProgress = (instancia: AtividadeInstancia) => {
   return Math.round((completed / steps.length) * 100);
 };
 
-const isModeloAplicavelAoCliente = (modelo: ModeloAtividade, cliente: ClienteEmpresa) => {
-  if (!modelo.tipos || modelo.tipos.length === 0) return true;
-  if (modelo.tipos.includes(cliente.regime)) return true;
-  return (cliente.regime === 'Isenta' && modelo.tipos.includes('Isento')) ||
-    (cliente.regime === 'Isento' && modelo.tipos.includes('Isenta'));
-};
-
-const getDefaultModelosForCliente = (
-  cliente: ClienteEmpresa,
-  modelos: ModeloAtividade[]
-) => {
-  const aplicaveis = modelos
-    .filter((modelo) => isModeloAplicavelAoCliente(modelo, cliente))
-    .map((modelo) => modelo.id);
-
-  return aplicaveis.length > 0 ? aplicaveis : modelos.map((modelo) => modelo.id);
-};
-
-const clienteHasValidModelo = (cliente: ClienteEmpresa, modelos: ModeloAtividade[]) => (
-  cliente.modelosAtivos.some((modeloAtivo) => (
-    modelos.some((modelo) => modelo.id === modeloAtivo || modelo.codigo === modeloAtivo)
-  ))
-);
-
 const isClientCompetenciaComplete = (
   cliente: ClienteEmpresa,
   modelos: ModeloAtividade[],
@@ -155,21 +131,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     setIsLoading(true);
     try {
       const mod = await atividadesService.getModelos();
-      const loadedClientes = await atividadesService.getClientes();
-      const cli = await Promise.all(loadedClientes.map(async (cliente) => {
-        if (clienteHasValidModelo(cliente, mod)) return cliente;
-
-        const modelosAtivos = getDefaultModelosForCliente(cliente, mod);
-        if (modelosAtivos.length === 0) return cliente;
-
-        const updatedCliente = { ...cliente, modelosAtivos };
-        try {
-          return await atividadesService.saveCliente(updatedCliente);
-        } catch (err) {
-          console.error('Erro ao vincular modelos padrao ao cliente:', err);
-          return updatedCliente;
-        }
-      }));
+      const cli = await atividadesService.getClientes();
       const visibleById = new Map<string, AtividadeInstancia>();
       const instanciasByCompetencia = new Map<string, AtividadeInstancia[]>();
       const baseCompetencia = getPreviousMonthCompetencia();
