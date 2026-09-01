@@ -17,6 +17,7 @@ export interface EmpresaProtocolosGrupo {
   empresaTelefone: string;
   empresaLogo?: string;
   competencia: string;
+  fluxoOperacional?: ProtocoloEntrega['fluxoOperacional'];
   items: ProtocoloEntrega[];
 }
 
@@ -105,6 +106,7 @@ export const useProtocolos = () => {
           empresaTelefone: item.empresaTelefone,
           empresaLogo: item.empresaLogo,
           competencia: item.competencia,
+          fluxoOperacional: item.fluxoOperacional,
           items: [item],
         });
         return;

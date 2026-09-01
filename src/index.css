@@ -30,8 +30,9 @@
   --color-error: #ef4444;
   
   /* Fonts */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-ui);
   
   /* Layout variables */
   --radius-sm: 4px;
@@ -53,14 +54,40 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.5;
+  font-kerning: normal;
+  font-optical-sizing: auto;
   font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: auto;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* O painel autenticado e seus portais usam a mesma tipografia nítida da barra lateral. */
+body:has(#root .gestor-panel-container),
+.gestor-panel-container {
+  --font-serif: var(--font-sans);
+}
+
+.gestor-panel-container {
+  font-family: var(--font-sans);
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* Evita uma camada composta que suavizava o texto depois da transição. */
+.gestor-panel-container .animate-fade-in,
+.gestor-panel-container .animate-slide-up {
+  animation-fill-mode: none;
 }
 
 button, input, select, textarea {
   font-family: inherit;
+  font-synthesis: inherit;
+  text-rendering: inherit;
 }
 
 a {
@@ -118,7 +145,7 @@ a {
 
 /* Page Transition Animations */
 .animate-page-fade {
-  animation: pageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: pageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes pageFadeIn {
@@ -128,7 +155,17 @@ a {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-fade {
+    animation: none;
+  }
+
+  .gestor-panel-container .animate-fade-in,
+  .gestor-panel-container .animate-slide-up {
+    animation: none;
+  }
+}

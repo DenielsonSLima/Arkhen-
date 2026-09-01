@@ -8,16 +8,21 @@ import {
   type ProtocoloOrigemPadrao,
 } from '../../protocolos/services/protocolosCatalogoService';
 import { prazosEntregaService, type RegimeEmpresa, type TipoFechamentoEntrega } from '../prazos-entrega/services/prazosEntregaService';
+import {
+  OBRIGACAO_PERIODICIDADE_LABELS,
+  OBRIGACAO_PERIODICIDADES,
+} from '../obrigacoes/obrigacoes.types';
+import { formatObrigacaoSchedule } from '../obrigacoes/obrigacoesSchedule';
 import './ProtocolosTiposPage.css';
 
 type CatalogoView = 'Resumo' | 'Todos' | RegimeEmpresa;
 
-const periodos: Array<{ value: TipoFechamentoEntrega; label: string }> = [
-  { value: 'mensal', label: 'Mensal' },
-  { value: 'quinzenal', label: 'Quinzenal' },
-  { value: 'trimestral', label: 'Trimestral' },
-  { value: 'semestral', label: 'Semestral' },
-];
+const periodos: Array<{ value: TipoFechamentoEntrega; label: string }> = (
+  OBRIGACAO_PERIODICIDADES.map((value) => ({
+    value,
+    label: OBRIGACAO_PERIODICIDADE_LABELS[value],
+  }))
+);
 
 const categorias: Array<ProtocoloTipoConfig['categoria']> = ['Fiscal', 'Contábil', 'Trabalhista', 'Financeiro', 'Documentos', 'NF-e', 'NFC-e'];
 const origens: Array<ProtocoloTipoConfig['origemPadrao']> = ['Cliente envia', 'Escritório envia', 'Ambos'];
@@ -120,9 +125,16 @@ export const ProtocolosTiposPage: React.FC = () => {
 
   const activeViewLabel = activeFilter === 'Todos' ? 'Todos os regimes' : activeFilter;
 
-  const formatPeriodo = (value: TipoFechamentoEntrega) => (
-    periodos.find((periodo) => periodo.value === value)?.label ?? value
-  );
+  const formatPrazo = (item: ProtocoloTipoConfig) => formatObrigacaoSchedule({
+    periodicidade: item.periodicidadePadrao,
+    temVencimento: item.temVencimento,
+    diaVencimento: item.diaLimite,
+    diaPrimeiraQuinzena: item.diaPrimeiraQuinzena,
+    diaSegundaQuinzena: item.diaSegundaQuinzena,
+    diaSemana: item.diaSemana,
+    dataVencimento: item.dataVencimento,
+    mesVencimento: item.mesVencimento,
+  });
 
   const updateItem = (id: string, updates: Partial<ProtocoloTipoConfig>) => {
     setCatalogo((current) => current.map((item) => (
@@ -320,7 +332,7 @@ export const ProtocolosTiposPage: React.FC = () => {
                     >
                       <span className="protocolos-list-title">{item.nome}</span>
                       <span className="protocolos-list-meta">
-                        {formatPeriodo(item.periodicidadePadrao)} · vence dia {item.diaLimite}
+                        {formatPrazo(item)}
                       </span>
                       <span className="protocolos-list-footer">
                         <span>{item.regimes.length} regimes</span>
@@ -346,7 +358,7 @@ export const ProtocolosTiposPage: React.FC = () => {
                       <span>Edição selecionada</span>
                       <h3>{selectedItem.nome}</h3>
                       <p>
-                        {selectedItem.categoria} · {formatPeriodo(selectedItem.periodicidadePadrao)} · vence dia {selectedItem.diaLimite}
+                        {selectedItem.categoria} · {formatPrazo(selectedItem)}
                       </p>
                     </div>
                     <span className={`table-badge ${selectedItem.status === 'Ativo' ? 'badge-success' : 'badge-warning'}`}>

@@ -12,11 +12,12 @@ vi.mock('../../../../lib/supabase', () => ({
 import { ProtocolosError, protocolosService } from './protocolosService';
 import type { ConfiguracaoProtocolosEmpresa } from './protocolosService';
 
-const company = { id: 'cliente-1', tipo: 'Simples Nacional' } as Company;
+const CLIENTE_ID = '11111111-1111-4111-8111-111111111111';
+const company = { id: CLIENTE_ID, tipo: 'Simples Nacional' } as Company;
 
 const pendingProtocol = {
   id: 'cliente-1-2026-08-dctfweb-mensal',
-  empresaId: 'cliente-1',
+  empresaId: CLIENTE_ID,
   empresaNome: 'Empresa recém-cadastrada',
   empresaCnpj: '12345678000190',
   empresaStatus: 'Ativa',
@@ -81,6 +82,7 @@ const configEnvelope: ConfiguracaoProtocolosEmpresa = {
 describe('protocolosService RPC contract', () => {
   beforeEach(() => {
     supabaseMock.rpc.mockReset();
+    supabaseMock.rpc.mockResolvedValue({ data: [], error: null });
   });
 
   it('carrega a projeção canônica e mantém empresa nova como pendente', async () => {
@@ -98,8 +100,60 @@ describe('protocolosService RPC contract', () => {
     });
   });
 
+  it.each(['Diária', 'Única', 'Semanal', 'Anual'] as const)(
+    'aceita o período de referência operacional %s',
+    async (periodoReferencia) => {
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: [{ ...pendingProtocol, periodoReferencia }],
+        error: null,
+      });
+
+      const result = await protocolosService.getProtocolos();
+
+      expect(result[0].periodoReferencia).toBe(periodoReferencia);
+    },
+  );
+
+  it('carrega protocolos e progresso em paralelo e vincula pela competência legal', async () => {
+    supabaseMock.rpc
+      .mockResolvedValueOnce({ data: [pendingProtocol], error: null })
+      .mockResolvedValueOnce({
+        data: [{
+          clienteId: CLIENTE_ID,
+          competencia: '2026-08',
+          tarefasTotal: 1,
+          tarefasConcluidas: 0,
+          etapasTotal: 12,
+          etapasConcluidas: 9,
+          percentual: 75,
+        }, {
+          clienteId: 'cliente-1',
+          competencia: '2026-99',
+          etapasTotal: -1,
+        }],
+        error: null,
+      });
+
+    const result = await protocolosService.getProtocolos();
+
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(
+      2,
+      'obter_progresso_fluxos_acompanhamento',
+    );
+    expect(result[0].fluxoOperacional).toEqual({
+      clienteId: CLIENTE_ID,
+      competencia: '2026-08',
+      tarefasTotal: 1,
+      tarefasConcluidas: 0,
+      etapasTotal: 12,
+      etapasConcluidas: 9,
+      percentual: 75,
+    });
+  });
+
   it('não cria protocolos nem ativa obrigações para empresa sem configuração', async () => {
     supabaseMock.rpc
+      .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({
         data: {
@@ -121,8 +175,10 @@ describe('protocolosService RPC contract', () => {
   it('muda o status somente pela RPC segura e envia identidade canônica', async () => {
     supabaseMock.rpc
       .mockResolvedValueOnce({ data: [pendingProtocol], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: completedProtocol, error: null })
-      .mockResolvedValueOnce({ data: [completedProtocol], error: null });
+      .mockResolvedValueOnce({ data: [completedProtocol], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
 
     const result = await protocolosService.updateProtocolo(pendingProtocol.id, {
       status: 'Concluído',
@@ -131,7 +187,7 @@ describe('protocolosService RPC contract', () => {
       concluidoPor: 'Nome forjado',
     });
 
-    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(2, 'salvar_protocolo_operacional_seguro', {
+    expect(supabaseMock.rpc).toHaveBeenNthCalledWith(3, 'salvar_protocolo_operacional_seguro', {
       p_payload: {
         id: pendingProtocol.id,
         cliente_id: pendingProtocol.empresaId,
@@ -156,7 +212,7 @@ describe('protocolosService RPC contract', () => {
     await expect(request).rejects.toMatchObject({
       code: 'evidence_required',
     } satisfies Partial<ProtocolosError>);
-    expect(supabaseMock.rpc).toHaveBeenCalledOnce();
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(2);
   });
 
   it('bloqueia mudança de status quando a projeção canônica nega a permissão', async () => {
@@ -171,7 +227,7 @@ describe('protocolosService RPC contract', () => {
     });
 
     await expect(request).rejects.toMatchObject({ code: 'forbidden' });
-    expect(supabaseMock.rpc).toHaveBeenCalledOnce();
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(2);
   });
 
   it('bloqueia anotação quando a projeção canônica nega a permissão', async () => {
@@ -185,7 +241,7 @@ describe('protocolosService RPC contract', () => {
     });
 
     await expect(request).rejects.toMatchObject({ code: 'forbidden' });
-    expect(supabaseMock.rpc).toHaveBeenCalledOnce();
+    expect(supabaseMock.rpc).toHaveBeenCalledTimes(2);
   });
 
   it('carrega catálogo e configuração canônicos pela RPC do cliente', async () => {
@@ -228,6 +284,41 @@ describe('protocolosService RPC contract', () => {
       etapas: ['Conferir dados', 'Transmitir obrigação'],
     });
     expect(result.catalogo[0].diaLimite).toBeUndefined();
+  });
+
+  it('preserva a agenda anual canônica no catálogo e na configuração do cliente', async () => {
+    supabaseMock.rpc.mockResolvedValueOnce({
+      data: {
+        ...configEnvelope,
+        catalogo: [{
+          ...configEnvelope.catalogo[0],
+          periodicidadePadrao: 'anual',
+          diaLimite: 31,
+          mesVencimento: 12,
+        }],
+        configs: [{
+          entregaId: 'dctfweb',
+          ativo: true,
+          periodicidade: 'anual',
+          diaMes: 31,
+          mesVencimento: 12,
+        }],
+      },
+      error: null,
+    });
+
+    const result = await protocolosService.getConfiguracaoEmpresa(company);
+
+    expect(result.catalogo[0]).toMatchObject({
+      periodicidadePadrao: 'anual',
+      diaLimite: 31,
+      mesVencimento: 12,
+    });
+    expect(result.configs[0]).toMatchObject({
+      periodicidade: 'anual',
+      diaMes: 31,
+      mesVencimento: 12,
+    });
   });
 
   it('salva a configuração pela RPC e relê o envelope canônico', async () => {

@@ -18,6 +18,7 @@ export const useProtocolosRealtime = (enabled = true) => {
       ch
         .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_protocolos_empresas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'protocolos_entregas' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
     );
 

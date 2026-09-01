@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const supabaseMock = vi.hoisted(() => ({
   rpc: vi.fn(),
+  from: vi.fn(),
+  auth: { getUser: vi.fn() },
+}));
+
+const atividadesServiceMock = vi.hoisted(() => ({
+  getClientes: vi.fn(),
+  getModelos: vi.fn(),
 }));
 
 vi.mock('../../../../lib/supabase', () => ({
@@ -9,10 +16,7 @@ vi.mock('../../../../lib/supabase', () => ({
 }));
 
 vi.mock('./atividadesService', () => ({
-  atividadesService: {
-    getClientes: vi.fn(),
-    getModelos: vi.fn(),
-  },
+  atividadesService: atividadesServiceMock,
 }));
 
 import {
@@ -64,9 +68,74 @@ const makeTarefa = (overrides: Partial<TarefaGestor> = {}): TarefaGestor => ({
 beforeEach(() => {
   vi.clearAllMocks();
   supabaseMock.rpc.mockResolvedValue({ data: {}, error: null });
+  supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
+  atividadesServiceMock.getClientes.mockResolvedValue([]);
+  atividadesServiceMock.getModelos.mockResolvedValue([]);
 });
 
 describe('rotinasAtividadesService', () => {
+  it('anexa em paralelo à tarefa o progresso autoritativo retornado pela RPC', async () => {
+    const tarefaId = '77777777-7777-4777-8777-777777777777';
+    const query = (data: unknown[]) => {
+      const builder = {
+        select: vi.fn(),
+        eq: vi.fn(),
+        order: vi.fn(),
+      };
+      builder.select.mockReturnValue(builder);
+      builder.eq.mockReturnValue(builder);
+      builder.order.mockResolvedValue({ data, error: null });
+      return builder;
+    };
+    supabaseMock.from
+      .mockReturnValueOnce(query([]))
+      .mockReturnValueOnce(query([{
+        id: tarefaId,
+        rotina_id: null,
+        titulo: 'Pró-Labore',
+        categoria: 'Folha',
+        frequencia: 'Mensal',
+        responsavel_nome: 'Ana',
+        responsavel_user_id: null,
+        responsavel_config_usuario_id: null,
+        cliente_nome: 'Empresa Alfa',
+        vencimento: '2026-09-21',
+        prioridade: 'Média',
+        status: 'Em andamento',
+        origem: 'Rotina',
+        checklist: [],
+        notas: '',
+        data_hora_conclusao: null,
+        observacao_falta: null,
+      }]));
+    supabaseMock.rpc.mockImplementation((name: string) => {
+      if (name === 'current_empresa_id') {
+        return Promise.resolve({ data: '11111111-1111-4111-8111-111111111111', error: null });
+      }
+      if (name === 'obter_progresso_tarefas_operacionais') {
+        return Promise.resolve({
+          data: [{
+            tarefaId,
+            etapasTotal: 12,
+            etapasConcluidas: 9,
+            percentual: 75,
+          }],
+          error: null,
+        });
+      }
+      return Promise.resolve({ data: [], error: null });
+    });
+
+    const result = await rotinasAtividadesService.getWorkspace();
+
+    expect(result.tarefas[0]).toMatchObject({
+      id: tarefaId,
+      etapasTotal: 12,
+      etapasConcluidas: 9,
+      percentual: 75,
+    });
+  });
+
   it('reatribui uma rotina manual sem reiniciar a agenda pela data âncora', async () => {
     const rotina = makeRotina();
     const newResponsible = '55555555-5555-4555-8555-555555555555';

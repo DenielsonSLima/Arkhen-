@@ -9,14 +9,8 @@ import {
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
-import type { ObrigacaoModelo, ObrigacaoPeriodicidade } from '../obrigacoes.types';
-
-const PERIODICIDADE_LABELS: Record<ObrigacaoPeriodicidade, string> = {
-  mensal: 'Mensal',
-  quinzenal: 'Quinzenal',
-  trimestral: 'Trimestral',
-  semestral: 'Semestral',
-};
+import type { ObrigacaoModelo } from '../obrigacoes.types';
+import { formatObrigacaoSchedule, hasMonthlyCompetenceReference } from '../obrigacoesSchedule';
 
 export interface ObrigacaoCardProps {
   obrigacao: ObrigacaoModelo;
@@ -25,16 +19,6 @@ export interface ObrigacaoCardProps {
   onToggleStatus: (obrigacao: ObrigacaoModelo) => void;
   isUpdating?: boolean;
 }
-
-const getScheduleLabel = (obrigacao: ObrigacaoModelo) => {
-  if (!obrigacao.temVencimento) {
-    return `${PERIODICIDADE_LABELS[obrigacao.periodicidade]} · sem vencimento fixo`;
-  }
-  if (obrigacao.periodicidade === 'quinzenal') {
-    return `Quinzenal · dias ${obrigacao.diaPrimeiraQuinzena} e ${obrigacao.diaSegundaQuinzena}`;
-  }
-  return `${PERIODICIDADE_LABELS[obrigacao.periodicidade]} · vence dia ${obrigacao.diaVencimento}`;
-};
 
 export const ObrigacaoCard = ({
   obrigacao,
@@ -65,8 +49,8 @@ export const ObrigacaoCard = ({
     <div className="obrigacao-card__schedule">
       <CalendarClock size={16} />
       <div>
-        <strong>{getScheduleLabel(obrigacao)}</strong>
-        {obrigacao.temVencimento ? (
+        <strong>{formatObrigacaoSchedule(obrigacao)}</strong>
+        {obrigacao.temVencimento && hasMonthlyCompetenceReference(obrigacao.periodicidade) ? (
           <span>{obrigacao.referenciaMesAnterior ? 'Competência do mês anterior' : 'Competência do mês atual'}</span>
         ) : null}
       </div>

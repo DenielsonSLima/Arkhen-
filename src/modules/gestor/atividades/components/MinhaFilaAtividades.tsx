@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CheckCircle2, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
 import {
   addDaysKey,
@@ -8,8 +8,10 @@ import {
   type TarefaGestor,
 } from '../services/rotinasAtividadesService';
 import { getTarefasDoUsuarioAtual } from '../utils/minhaFila';
+import { addMonthsKey, isTarefaAtrasada } from '../utils/minhaFilaPresentation';
 import { ModalNovaTarefa } from './ModalNovaTarefa';
 import { TaskDetailsDrawer } from './TaskDetailsDrawer';
+import { MinhaFilaTaskCard } from './minha-fila/MinhaFilaTaskCard';
 
 export type MinhaFilaFiltro = 'hoje' | 'semana' | 'mes' | 'atrasadas' | 'internas';
 
@@ -28,8 +30,6 @@ const getMonday = (dateKey: string) => {
   return date.toISOString().split('T')[0];
 };
 
-const isDone = (tarefa: TarefaGestor) => tarefa.status === 'Concluída';
-const isLate = (tarefa: TarefaGestor, refDate: string = todayKey()) => !isDone(tarefa) && tarefa.vencimento < refDate;
 const isBlocked = (tarefa: TarefaGestor) => Boolean(tarefa.bloqueada || tarefa.observacaoFalta);
 
 const matchesFilter = (tarefa: TarefaGestor, filtro: MinhaFilaFiltro, refDate: string) => {
@@ -40,14 +40,8 @@ const matchesFilter = (tarefa: TarefaGestor, filtro: MinhaFilaFiltro, refDate: s
     return tarefa.vencimento >= monday && tarefa.vencimento <= sunday;
   }
   if (filtro === 'mes') return tarefa.vencimento.slice(0, 7) === refDate.slice(0, 7);
-  if (filtro === 'atrasadas') return isLate(tarefa, todayKey());
+  if (filtro === 'atrasadas') return isTarefaAtrasada(tarefa, todayKey());
   return tarefa.categoria === 'Interna';
-};
-
-const addMonthsKey = (dateKey: string, months: number) => {
-  const date = new Date(`${dateKey}T00:00:00`);
-  date.setMonth(date.getMonth() + months);
-  return date.toISOString().split('T')[0];
 };
 
 const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
@@ -70,7 +64,13 @@ const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
 };
 
 export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> = ({ initialFilter = 'hoje' }) => {
-  const { tarefas, usuarioAtual, updateTarefa, saveTarefaAsync, toggleChecklist } = useAtividadesWorkspace();
+  const {
+    tarefas,
+    usuarioAtual,
+    updateTarefaAsync,
+    saveTarefaAsync,
+    toggleChecklistAsync,
+  } = useAtividadesWorkspace();
   const [activeFilter, setActiveFilter] = useState<MinhaFilaFiltro>(initialFilter);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
@@ -126,7 +126,9 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
         return true;
       })
       .sort((a, b) => {
-        if (isLate(a, todayKey()) !== isLate(b, todayKey())) return isLate(a, todayKey()) ? -1 : 1;
+        if (isTarefaAtrasada(a, todayKey()) !== isTarefaAtrasada(b, todayKey())) {
+          return isTarefaAtrasada(a, todayKey()) ? -1 : 1;
+        }
         if (isBlocked(a) !== isBlocked(b)) return isBlocked(a) ? -1 : 1;
         return a.vencimento.localeCompare(b.vencimento);
       })
@@ -172,6 +174,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
               key={filtro.id}
               type="button"
               onClick={() => setActiveFilter(filtro.id)}
+              aria-pressed={activeFilter === filtro.id}
               style={activeFilter === filtro.id ? activeFilterBtnStyle : filterBtnStyle}
             >
               {filtro.label}
@@ -191,13 +194,19 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
           <Search size={16} color="#64748b" style={searchIconStyle} />
           <input
             type="text"
+            aria-label="Buscar tarefas"
             placeholder="Buscar por título, cliente ou responsável..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={searchInputStyle}
           />
           {searchTerm && (
-            <button type="button" onClick={() => setSearchTerm('')} style={clearSearchBtnStyle}>
+            <button
+              type="button"
+              aria-label="Limpar busca"
+              onClick={() => setSearchTerm('')}
+              style={clearSearchBtnStyle}
+            >
               <X size={14} />
             </button>
           )}
@@ -208,6 +217,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
           <div style={dateNavContainerStyle}>
             <button
               type="button"
+              aria-label="Período anterior"
               onClick={handlePrevPeriod}
               style={dateNavBtnStyle}
               title="Período Anterior"
@@ -219,6 +229,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
             </span>
             <button
               type="button"
+              aria-label="Próximo período"
               onClick={handleNextPeriod}
               style={dateNavBtnStyle}
               title="Próximo Período"
@@ -229,6 +240,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
             {/* Input Date Picker */}
             <input
               type="date"
+              aria-label="Selecionar data de referência"
               value={referenceDate}
               onChange={(e) => {
                 if (e.target.value) setReferenceDate(e.target.value);
@@ -251,7 +263,11 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
       </section>
 
       {feedback && (
-        <div style={{ color: feedback.tipo === 'sucesso' ? '#166534' : '#b91c1c', fontWeight: 700 }}>
+        <div
+          role={feedback.tipo === 'erro' ? 'alert' : 'status'}
+          aria-live={feedback.tipo === 'erro' ? 'assertive' : 'polite'}
+          style={{ color: feedback.tipo === 'sucesso' ? '#166534' : '#b91c1c', fontWeight: 700 }}
+        >
           {feedback.texto}
         </div>
       )}
@@ -262,39 +278,25 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
           <p>Nenhuma tarefa encontrada para este filtro.</p>
         </div>
       ) : (
-        <div style={listStyle}>
+        <section className="minha-fila-card-grid" aria-label="Tarefas da minha fila">
           {filteredTasks.map((tarefa) => (
-            <article key={tarefa.id} style={taskCardStyle}>
-              <span title="O status é atualizado pelas etapas do checklist" style={checkBtnStyle}>
-                {isDone(tarefa) ? <CheckCircle2 size={19} color="#10b981" /> : <Circle size={19} color="#c59235" />}
-              </span>
-
-              <button type="button" onClick={() => setSelectedTaskId(tarefa.id)} style={taskMainBtnStyle}>
-                <div style={taskTitleRowStyle}>
-                  <strong>{tarefa.titulo}</strong>
-                  {isLate(tarefa, todayKey()) && <span style={dangerChipStyle}>Atrasada</span>}
-                  {isBlocked(tarefa) && <span style={blockChipStyle}>Bloqueio</span>}
-                </div>
-                <div style={metaGridStyle}>
-                  <span>{tarefa.cliente || 'Escritório'}</span>
-                  <span>{tarefa.frequencia}</span>
-                  <span>Prazo: {formatDateBR(tarefa.vencimento)}</span>
-                  <span>{tarefa.responsavel || 'Sem responsável'}</span>
-                  <span>{tarefa.prioridade}</span>
-                  <span>{tarefa.status}</span>
-                </div>
-              </button>
-            </article>
+            <MinhaFilaTaskCard
+              key={tarefa.id}
+              task={tarefa}
+              isLate={isTarefaAtrasada(tarefa, todayKey())}
+              isBlocked={isBlocked(tarefa)}
+              onOpen={() => setSelectedTaskId(tarefa.id)}
+            />
           ))}
-        </div>
+        </section>
       )}
 
       {selectedTask && (
         <TaskDetailsDrawer
           selectedTask={selectedTask}
           onClose={() => setSelectedTaskId(null)}
-          updateTarefa={updateTarefa}
-          toggleChecklist={toggleChecklist}
+          updateTarefa={updateTarefaAsync}
+          toggleChecklist={toggleChecklistAsync}
         />
       )}
 
@@ -336,32 +338,6 @@ const primaryBtnStyle = {
   gap: '6px',
 };
 const emptyStateStyle = { padding: '40px', textAlign: 'center' as const, color: '#64748b' };
-const listStyle = { display: 'flex', flexDirection: 'column' as const, gap: '10px' };
-const taskCardStyle = {
-  display: 'grid',
-  gridTemplateColumns: '28px 1fr',
-  gap: '10px',
-  alignItems: 'start',
-  background: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '12px',
-};
-const checkBtnStyle = { border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px' };
-const taskMainBtnStyle = { border: 'none', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', padding: 0 };
-const taskTitleRowStyle = { display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const, color: '#0f172a' };
-const metaGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-  gap: '4px 12px',
-  marginTop: '7px',
-  color: '#64748b',
-  fontSize: '0.76rem',
-};
-const chipBaseStyle = { borderRadius: '999px', padding: '2px 7px', fontSize: '0.66rem', fontWeight: 800 };
-const dangerChipStyle = { ...chipBaseStyle, background: '#fee2e2', color: '#b91c1c' };
-const blockChipStyle = { ...chipBaseStyle, background: '#fff7ed', color: '#c2410c' };
-
 // Sub-toolbar and search styles
 const subToolbarStyle = {
   display: 'flex',

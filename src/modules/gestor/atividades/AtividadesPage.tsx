@@ -20,6 +20,13 @@ interface AtividadesPageProps {
 
 type AtividadesView = 'minha-fila' | 'equipe' | 'fechamentos' | 'modelos' | 'painel';
 
+interface LegacyAtividadesViewProps {
+  activeView: Extract<AtividadesView, 'equipe' | 'fechamentos'>;
+  currentInfo: (typeof VIEW_INFO)[AtividadesView];
+  initialCompanyId?: string;
+  initialCompetencia?: string;
+}
+
 const LEGACY_VIEW_MAP: Record<string, { view: AtividadesView; filter?: MinhaFilaFiltro }> = {
   diarias: { view: 'minha-fila', filter: 'hoje' },
   semanais: { view: 'minha-fila', filter: 'semana' },
@@ -39,23 +46,17 @@ const VIEW_INFO: Record<AtividadesView, { title: string; subtitle: string }> = {
   painel: { title: 'Painel Operacional', subtitle: 'Métricas de produtividade, gargalos, atrasos e clientes travados.' },
 };
 
-export const AtividadesPage: React.FC<AtividadesPageProps> = ({
-  view = 'minha-fila',
-  initialQueueFilter,
+const AtividadesRealtimeInvalidator = () => {
+  useAtividadesRealtime(true);
+  return null;
+};
+
+const LegacyAtividadesView: React.FC<LegacyAtividadesViewProps> = ({
+  activeView,
+  currentInfo,
   initialCompanyId,
   initialCompetencia,
 }) => {
-  const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
-  const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
-  const permissoesQuery = useAtividadesPodeGerenciar();
-  const activeView: AtividadesView = permissoesQuery.data !== true
-    && requestedView !== 'minha-fila'
-    ? 'minha-fila'
-    : requestedView;
-  const currentInfo = VIEW_INFO[activeView];
-  const queueFilter = initialQueueFilter || normalized.filter || 'hoje';
-
-  // Carrega os estados originais do hook de atividades por empresa
   const {
     globalFilter,
     setGlobalFilter,
@@ -70,10 +71,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     handleSaveTaxValores,
     metrics,
     refresh,
-  } = useAtividades({
-    initialCompanyId,
-    initialCompetencia,
-  });
+  } = useAtividades({ initialCompanyId, initialCompetencia });
 
   useAtividadesRealtime(true, refresh);
 
@@ -94,12 +92,18 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
     );
   }
 
-  const renderViewContent = () => {
-    switch (activeView) {
-      case 'minha-fila':
-        return <MinhaFilaAtividades initialFilter={queueFilter} />;
-      case 'fechamentos':
-        return (
+  return (
+    <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
+      {activeView === 'equipe' && (
+        <div style={headerStyle}>
+          <div>
+            <h1 style={titleStyle}>{currentInfo.title}</h1>
+            <p style={subtitleStyle}>{currentInfo.subtitle}</p>
+          </div>
+        </div>
+      )}
+      <main style={{ marginTop: activeView === 'fechamentos' ? '0px' : '20px' }}>
+        {activeView === 'fechamentos' ? (
           <AtividadesPorEmpresa
             globalFilter={globalFilter}
             setGlobalFilter={setGlobalFilter}
@@ -108,9 +112,45 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
             setSelectedGroup={setSelectedGroup}
             metrics={metrics}
           />
-        );
-      case 'equipe':
-        return <AbaGerirEquipe companyGroups={companyGroups} handleToggleStep={handleToggleStep} />;
+        ) : (
+          <AbaGerirEquipe companyGroups={companyGroups} handleToggleStep={handleToggleStep} />
+        )}
+      </main>
+    </div>
+  );
+};
+
+export const AtividadesPage: React.FC<AtividadesPageProps> = ({
+  view = 'minha-fila',
+  initialQueueFilter,
+  initialCompanyId,
+  initialCompetencia,
+}) => {
+  const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
+  const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
+  const permissoesQuery = useAtividadesPodeGerenciar();
+  const activeView: AtividadesView = permissoesQuery.data !== true
+    && requestedView !== 'minha-fila'
+    ? 'minha-fila'
+    : requestedView;
+  const currentInfo = VIEW_INFO[activeView];
+  const queueFilter = initialQueueFilter || normalized.filter || 'hoje';
+
+  if (activeView === 'fechamentos' || activeView === 'equipe') {
+    return (
+      <LegacyAtividadesView
+        activeView={activeView}
+        currentInfo={currentInfo}
+        initialCompanyId={initialCompanyId}
+        initialCompetencia={initialCompetencia}
+      />
+    );
+  }
+
+  const renderViewContent = () => {
+    switch (activeView) {
+      case 'minha-fila':
+        return <MinhaFilaAtividades initialFilter={queueFilter} />;
       case 'modelos':
         return <AbaRotinas initialCompanyId={initialCompanyId} />;
       case 'painel':
@@ -122,18 +162,17 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
 
   return (
     <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
+      <AtividadesRealtimeInvalidator />
       {/* Header Centralizado Light */}
-      {activeView !== 'fechamentos' && (
-        <div style={headerStyle}>
-          <div>
-            <h1 style={titleStyle}>{currentInfo.title}</h1>
-            <p style={subtitleStyle}>{currentInfo.subtitle}</p>
-          </div>
+      <div style={headerStyle}>
+        <div>
+          <h1 style={titleStyle}>{currentInfo.title}</h1>
+          <p style={subtitleStyle}>{currentInfo.subtitle}</p>
         </div>
-      )}
+      </div>
 
       {/* Conteúdo Principal */}
-      <main style={{ marginTop: activeView === 'fechamentos' ? '0px' : '20px' }}>
+      <main style={{ marginTop: '20px' }}>
         {renderViewContent()}
       </main>
     </div>

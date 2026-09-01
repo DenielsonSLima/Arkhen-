@@ -66,19 +66,20 @@ describe('TabProtocolosEntregas', () => {
     render(<TabProtocolosEntregas company={company} />);
 
     const checkbox = await screen.findByRole('checkbox', { name: /dctfweb/i }) as HTMLInputElement;
-    expect(screen.getByText('Sem prazo fixo')).toBeTruthy();
+    expect(screen.getByText('Mensal · sem vencimento fixo')).toBeTruthy();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByLabelText('Rotina de DCTFWeb').textContent).toBe('Mensal');
     expect(screen.getByText('2 etapas')).toBeTruthy();
     expect(screen.getByText(/Etapas: Conferir dados.*Transmitir obrigação/)).toBeTruthy();
     fireEvent.click(checkbox);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'quinzenal' } });
     fireEvent.click(screen.getByRole('button', { name: /salvar entregas/i }));
 
     await waitFor(() => {
       expect(hookMock.value.saveConfiguracao).toHaveBeenCalledWith(
-        [expect.objectContaining({ entregaId: 'dctfweb', ativo: true, periodicidade: 'quinzenal' })],
+        [expect.objectContaining({ entregaId: 'dctfweb', ativo: true, periodicidade: 'mensal' })],
         initialUpdatedAt,
       );
-      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('trimestral');
+      expect(screen.getByLabelText('Rotina de DCTFWeb').textContent).toBe('Mensal');
     });
     expect(screen.getByRole('status').textContent).toContain('Entregas sincronizadas');
   });
@@ -114,7 +115,7 @@ describe('TabProtocolosEntregas', () => {
 
     await waitFor(() => {
       expect(hookMock.value.refetch).toHaveBeenCalledOnce();
-      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('trimestral');
+      expect(screen.getByLabelText('Rotina de DCTFWeb').textContent).toBe('Mensal');
     });
   });
 

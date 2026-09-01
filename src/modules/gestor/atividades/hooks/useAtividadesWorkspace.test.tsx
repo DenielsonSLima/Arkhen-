@@ -17,17 +17,20 @@ vi.mock('../services/rotinasAtividadesService', () => ({
 }));
 
 import { useAtividadesWorkspace } from './useAtividadesWorkspace';
+import { tarefaChecklistAuditKeys } from '../queries/tarefaChecklistAuditQueries';
+import { protocolosKeys } from '../../protocolos/queries/protocolosQueries';
 
 const taskId = '77777777-7777-4777-8777-777777777777';
 
-const makeWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return ({ children }: React.PropsWithChildren) => (
+const makeQueryClient = () => new QueryClient({
+  defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+});
+
+const makeWrapper = (queryClient = makeQueryClient()) => (
+  ({ children }: React.PropsWithChildren) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
+  )
+);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -60,6 +63,29 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('useAtividadesWorkspace task mutations', () => {
+  it('expõe mutações aguardáveis para o drawer controlar pending e erros', async () => {
+    serviceMock.updateTarefaProgress.mockResolvedValueOnce({ id: taskId });
+    serviceMock.updateTarefaChecklist.mockResolvedValueOnce({ id: taskId });
+    const { result } = renderHook(() => useAtividadesWorkspace(), { wrapper: makeWrapper() });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateTarefaAsync(taskId, { observacaoFalta: 'Documento ausente' });
+      await result.current.toggleChecklistAsync(taskId, 0, true);
+    });
+
+    expect(serviceMock.updateTarefaProgress).toHaveBeenCalledWith(taskId, {
+      observacaoFalta: 'Documento ausente',
+    });
+    expect(serviceMock.updateTarefaChecklist).toHaveBeenCalledWith(
+      taskId,
+      0,
+      true,
+      undefined,
+      undefined,
+    );
+  });
+
   it('encaminha somente o patch de progresso, sem remontar a tarefa inteira', async () => {
     const { result } = renderHook(() => useAtividadesWorkspace(), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -111,5 +137,28 @@ describe('useAtividadesWorkspace task mutations', () => {
         'Protocolo conferido',
       );
     });
+  });
+
+  it('invalida workspace, auditoria da tarefa e a raiz de protocolos após o toggle', async () => {
+    const queryClient = makeQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useAtividadesWorkspace(), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => result.current.toggleChecklist(taskId, 0, true));
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: tarefaChecklistAuditKeys.byTask(taskId),
+        exact: true,
+      });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['atividades', 'workspace'],
+      exact: true,
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: protocolosKeys.all });
   });
 });

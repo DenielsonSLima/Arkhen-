@@ -4,7 +4,15 @@ import { ENTREGA_CATALOGO } from '../../../protocolos/protocolosCatalogo';
 import { getCurrentEmpresaId } from '../../services/parametrizacaoSupabase';
 
 export type RegimeEmpresa = Company['tipo'];
-export type TipoFechamentoEntrega = 'mensal' | 'quinzenal' | 'trimestral' | 'semestral';
+export type TipoFechamentoEntrega =
+  | 'diaria'
+  | 'unica'
+  | 'semanal'
+  | 'quinzenal'
+  | 'mensal'
+  | 'trimestral'
+  | 'semestral'
+  | 'anual';
 
 export interface PrazoEntregaConfig {
   id: string;
@@ -13,6 +21,9 @@ export interface PrazoEntregaConfig {
   entregaNome: string;
   categoria: string;
   diaVencimento: number;
+  diaSemana?: number;
+  mesVencimento?: number;
+  dataVencimento?: string;
   referenciaMesAnterior: boolean;
   fechamento: TipoFechamentoEntrega;
   diaVencimentoPrimeiraQuinzena: number;
@@ -27,6 +38,9 @@ interface PrazoEntregaRow {
   entrega_nome: string;
   categoria: string;
   dia_vencimento: number;
+  dia_semana_iso: number | null;
+  mes_vencimento: number | null;
+  data_vencimento: string | null;
   referencia_mes_anterior: boolean | null;
   fechamento: TipoFechamentoEntrega;
   dia_vencimento_primeira_quinzena: number | null;
@@ -97,6 +111,9 @@ const fromRow = (row: PrazoEntregaRow): PrazoEntregaConfig => ({
   entregaNome: row.entrega_nome,
   categoria: row.categoria,
   diaVencimento: clampDay(row.dia_vencimento),
+  diaSemana: row.dia_semana_iso ?? undefined,
+  mesVencimento: row.mes_vencimento ?? undefined,
+  dataVencimento: row.data_vencimento ?? undefined,
   referenciaMesAnterior: row.referencia_mes_anterior !== false,
   fechamento: row.fechamento,
   diaVencimentoPrimeiraQuinzena: clampDay(row.dia_vencimento_primeira_quinzena || 20),
@@ -111,6 +128,9 @@ const toPayload = (empresaId: string, item: PrazoEntregaConfig) => ({
   entrega_nome: item.entregaNome,
   categoria: item.categoria,
   dia_vencimento: clampDay(item.diaVencimento),
+  dia_semana_iso: item.fechamento === 'semanal' ? item.diaSemana ?? null : null,
+  mes_vencimento: item.fechamento === 'anual' ? item.mesVencimento ?? null : null,
+  data_vencimento: item.fechamento === 'unica' ? item.dataVencimento || null : null,
   referencia_mes_anterior: item.referenciaMesAnterior,
   fechamento: item.fechamento,
   dia_vencimento_primeira_quinzena: clampDay(item.diaVencimentoPrimeiraQuinzena),
@@ -172,7 +192,7 @@ export const prazosEntregaService = {
 
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id,regime,entrega_id,entrega_nome,categoria,dia_vencimento,referencia_mes_anterior,fechamento,dia_vencimento_primeira_quinzena,dia_vencimento_segunda_quinzena,ativo')
+      .select('id,regime,entrega_id,entrega_nome,categoria,dia_vencimento,dia_semana_iso,mes_vencimento,data_vencimento,referencia_mes_anterior,fechamento,dia_vencimento_primeira_quinzena,dia_vencimento_segunda_quinzena,ativo')
       .order('regime', { ascending: true })
       .order('entrega_nome', { ascending: true });
 

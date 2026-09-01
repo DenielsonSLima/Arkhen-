@@ -8,14 +8,28 @@ import {
   type ProtocoloTipoConfig,
 } from './protocolosCatalogoService';
 import { evidenceRequiredError, mapProtocolosError, ProtocolosError } from './protocolosError';
+import {
+  normalizeFluxosOperacionais,
+  type FluxoOperacionalProgresso,
+} from './protocolosProgress';
 
 export type { EntregaModelo } from '../protocolosCatalogo';
+export type { FluxoOperacionalProgresso } from './protocolosProgress';
 export { getProtocolosErrorMessage, ProtocolosError } from './protocolosError';
 
 export type ProtocoloStatus = 'Pendente' | 'Concluído';
-export type ProtocoloPeriodoReferencia = 'Mensal' | '1ª quinzena' | '2ª quinzena' | 'Trimestral' | 'Semestral';
+export type ProtocoloPeriodoReferencia =
+  | 'Diária'
+  | 'Única'
+  | 'Semanal'
+  | 'Mensal'
+  | '1ª quinzena'
+  | '2ª quinzena'
+  | 'Trimestral'
+  | 'Semestral'
+  | 'Anual';
 export type ProtocoloOrigem = ProtocoloOrigemPadrao | 'Cliente envia' | 'Escritório envia' | 'Ambos';
-export type ProtocoloPeriodicidade = TipoFechamentoEntrega | 'diaria' | 'semanal' | 'personalizada';
+export type ProtocoloPeriodicidade = TipoFechamentoEntrega | 'personalizada';
 
 export interface Anotacao {
   id: string;
@@ -33,6 +47,8 @@ export interface ProtocoloEmpresaConfig {
   proximaExecucao?: string;
   diaMes?: number;
   diaSemana?: number;
+  dataVencimento?: string;
+  mesVencimento?: number;
   intervaloDias?: number;
   incluirFinaisDeSemana?: boolean;
 }
@@ -73,6 +89,7 @@ export interface ProtocoloEntrega {
   auditoriaPendente?: boolean;
   podeAlterarStatus?: boolean;
   podeAnotar?: boolean;
+  fluxoOperacional?: FluxoOperacionalProgresso;
 }
 
 export type ProtocoloUpdate = Partial<Pick<
@@ -85,24 +102,31 @@ export type ProtocoloUpdate = Partial<Pick<
 type JsonRecord = Record<string, unknown>;
 
 const READ_PROTOCOLS_RPC = 'get_protocolos_operacionais_seguros';
+const READ_OPERATIONAL_PROGRESS_RPC = 'obter_progresso_fluxos_acompanhamento';
 const SAVE_PROTOCOL_RPC = 'salvar_protocolo_operacional_seguro';
 const READ_CONFIG_RPC = 'obter_configuracao_protocolos_cliente';
 const SAVE_CONFIG_RPC = 'salvar_configuracoes_protocolos_cliente_v2';
 
 const PERIODICIDADES = new Set<ProtocoloPeriodicidade>([
   'diaria',
+  'unica',
   'semanal',
   'quinzenal',
   'mensal',
   'trimestral',
   'semestral',
+  'anual',
   'personalizada',
 ]);
 const PERIODICIDADES_CATALOGO = new Set<TipoFechamentoEntrega>([
+  'diaria',
+  'unica',
+  'semanal',
   'quinzenal',
   'mensal',
   'trimestral',
   'semestral',
+  'anual',
 ]);
 const REGIMES = new Set<Company['tipo']>([
   'PF',
@@ -207,6 +231,8 @@ const normalizeConfig = (raw: unknown): ProtocoloEmpresaConfig | null => {
     proximaExecucao: asOptionalString(item.proximaExecucao),
     diaMes: asOptionalInteger(item.diaMes),
     diaSemana: asOptionalInteger(item.diaSemana),
+    dataVencimento: asOptionalString(item.dataVencimento),
+    mesVencimento: asOptionalInteger(item.mesVencimento),
     intervaloDias: asOptionalInteger(item.intervaloDias),
     incluirFinaisDeSemana: item.incluirFinaisDeSemana === true,
   };
@@ -254,6 +280,9 @@ const normalizeCatalogItem = (raw: unknown): ProtocoloTipoConfig | null => {
     diaSegundaQuinzena: Math.min(Math.max(
       asOptionalInteger(item.diaSegundaQuinzena) ?? rawDiaLimite ?? 30, 1,
     ), 31),
+    diaSemana: asOptionalInteger(item.diaSemana),
+    dataVencimento: asOptionalString(item.dataVencimento),
+    mesVencimento: asOptionalInteger(item.mesVencimento),
     temVencimento,
     etapas: normalizeEtapas(item.etapas),
     descricao: asString(item.descricao),
@@ -272,13 +301,29 @@ const normalizeCatalog = (value: unknown): ProtocoloTipoConfig[] => {
 };
 
 const loadProtocolos = async (): Promise<ProtocoloEntrega[]> => {
-  const { data, error } = await supabase.rpc(READ_PROTOCOLS_RPC);
+  const [protocolosResponse, progressResponse] = await Promise.all([
+    supabase.rpc(READ_PROTOCOLS_RPC),
+    supabase.rpc(READ_OPERATIONAL_PROGRESS_RPC),
+  ]);
+  const { data, error } = protocolosResponse;
   if (error) throw mapProtocolosError(error, 'Não foi possível carregar o acompanhamento.');
+  if (progressResponse.error) {
+    throw mapProtocolosError(
+      progressResponse.error,
+      'Não foi possível carregar o progresso operacional.',
+    );
+  }
   if (data === null) return [];
   if (!Array.isArray(data)) {
     throw new ProtocolosError('unexpected', 'O serviço de acompanhamento retornou dados inválidos.');
   }
-  return data.map(normalizeProtocolo);
+  const progressByGroup = normalizeFluxosOperacionais(progressResponse.data);
+  return data.map(normalizeProtocolo).map((protocolo) => ({
+    ...protocolo,
+    fluxoOperacional: progressByGroup.get(
+      `${protocolo.empresaId}::${protocolo.competencia}`,
+    ),
+  }));
 };
 
 const normalizeConfigEnvelope = (data: unknown): ConfiguracaoProtocolosEmpresa => {

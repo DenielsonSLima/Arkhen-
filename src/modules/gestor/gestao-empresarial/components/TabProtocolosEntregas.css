@@ -192,19 +192,16 @@
   font-size: 0.68rem;
 }
 
-.protocolo-option-periodicidade select {
+.protocolo-option-periodicidade-value {
   min-width: 132px;
   border: 1px solid #cbd5e1;
   border-radius: 7px;
-  background: #ffffff;
-  color: #0f172a;
+  background: #f8fafc;
+  color: #334155;
   padding: 7px 8px;
   font-size: 0.75rem;
-}
-
-.protocolo-option-periodicidade select:disabled {
-  background: #f1f5f9;
-  color: #94a3b8;
+  font-weight: 700;
+  text-align: center;
 }
 
 .protocolos-config-error {

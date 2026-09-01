@@ -1,22 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useId } from 'react';
 import { X } from 'lucide-react';
 import {
   formatDateBR,
   type TarefaGestor,
   type TarefaProgressoPatch,
 } from '../services/rotinasAtividadesService';
+import {
+  formatPersistedCompletionDateTime,
+  getTarefaChecklistProgress,
+} from '../utils/minhaFilaPresentation';
+import { useTarefaChecklistAudit } from '../hooks/useTarefaChecklistAudit';
+import { useTaskDetailsDrawer } from '../hooks/useTaskDetailsDrawer';
+import { TaskObservationEditor } from './task-details/TaskObservationEditor';
 
 interface TaskDetailsDrawerProps {
   selectedTask: TarefaGestor;
   onClose: () => void;
-  updateTarefa: (id: string, updates: TarefaProgressoPatch) => void;
+  updateTarefa: (id: string, updates: TarefaProgressoPatch) => Promise<unknown>;
   toggleChecklist: (
     id: string,
     idx: number,
     checked: boolean,
     evidencia?: string,
     justificativa?: string,
-  ) => void;
+  ) => Promise<unknown>;
 }
 
 export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
@@ -25,42 +32,42 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
   updateTarefa,
   toggleChecklist,
 }) => {
-  const [completionNote, setCompletionNote] = useState('');
-  const [completionError, setCompletionError] = useState('');
-  const totalItems = selectedTask.checklist.length;
-  const completedItems = selectedTask.checklist.filter((item) => item.concluida).length;
-  const checklistPct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const {
+    completed: completedItems,
+    total: totalItems,
+    percentage: checklistPct,
+  } = getTarefaChecklistProgress(selectedTask);
   const remainingItems = totalItems - completedItems;
-
-  useEffect(() => {
-    setCompletionNote('');
-    setCompletionError('');
-  }, [selectedTask.id]);
-
-  const handleChecklistChange = (idx: number, checked: boolean) => {
-    const isFinalStep = checked && remainingItems === 1;
-    const justification = completionNote.trim();
-    if (isFinalStep && !justification) {
-      setCompletionError('Informe a evidência ou justificativa para concluir a tarefa.');
-      return;
-    }
-    setCompletionError('');
-    toggleChecklist(
-      selectedTask.id,
-      idx,
-      checked,
-      undefined,
-      isFinalStep ? justification : undefined,
-    );
-  };
+  const titleId = useId();
+  const completionDateTime = selectedTask.status === 'Concluída'
+    ? formatPersistedCompletionDateTime(selectedTask.dataHoraConclusao)
+    : null;
+  const checklistAudit = useTarefaChecklistAudit(selectedTask.id);
+  const drawer = useTaskDetailsDrawer({
+    selectedTask,
+    remainingItems,
+    onClose,
+    updateTarefa,
+    toggleChecklist,
+  });
 
   return (
     <div style={drawerBackdropStyle} onClick={onClose}>
-      <aside style={drawerStyle} onClick={(event) => event.stopPropagation()}>
+      <aside
+        ref={drawer.dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-busy={drawer.isSavingObservation || drawer.pendingChecklistIndex !== null}
+        tabIndex={-1}
+        style={drawerStyle}
+        onClick={(event) => event.stopPropagation()}
+      >
         
         {/* Back / Close button bar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <button
+            ref={drawer.closeButtonRef}
             type="button"
             onClick={onClose}
             style={{
@@ -113,9 +120,9 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
               {(selectedTask.cliente || 'E').substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+              <h2 id={titleId} style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
                 {selectedTask.titulo}
-              </h3>
+              </h2>
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
                 <span style={{
                   fontSize: '0.68rem',
@@ -149,12 +156,47 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                 <span>PROGRESSO DO CHECKLIST</span>
                 <span style={{ color: 'var(--color-gold-dark, #aa7c28)' }}>{checklistPct}%</span>
               </div>
-              <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+              <div
+                style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}
+                role="progressbar"
+                aria-label={`Progresso de ${selectedTask.titulo}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={checklistPct}
+                aria-valuetext={`${completedItems} de ${totalItems} etapas concluídas`}
+              >
                 <div style={{ width: `${checklistPct}%`, height: '100%', background: 'linear-gradient(90deg, #c59235 0%, #aa7c28 100%)', transition: 'width 0.3s ease' }} />
               </div>
             </div>
           )}
         </div>
+
+        {selectedTask.status === 'Concluída' && (
+          <div
+            style={{
+              alignItems: 'center',
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '10px',
+              color: '#047857',
+              display: 'flex',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              gap: '8px',
+              padding: '11px 12px',
+            }}
+          >
+            <span aria-hidden="true">✓</span>
+            {completionDateTime ? (
+              <span>
+                Concluída em{' '}
+                <time dateTime={selectedTask.dataHoraConclusao}>{completionDateTime}</time>
+              </span>
+            ) : (
+              <span>Horário de conclusão não registrado</span>
+            )}
+          </div>
+        )}
 
         {/* Metadata Details Grid */}
         <div style={{
@@ -186,56 +228,48 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
           </div>
         </div>
 
-        {/* Observações / Bloqueio Textarea */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
-          Observações / bloqueio
-          <textarea
-            value={selectedTask.observacaoFalta || selectedTask.notas || ''}
-            onChange={(event) => updateTarefa(selectedTask.id, { observacaoFalta: event.target.value })}
-            rows={4}
-            style={{
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '10px',
-              fontSize: '0.84rem',
-              color: '#0f172a',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              outline: 'none',
-              transition: 'all 0.2s',
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#c59235'}
-            onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-          />
-        </label>
+        {/* Observações / Bloqueio com persistência explícita e serializada. */}
+        <TaskObservationEditor
+          status={selectedTask.status}
+          isReadOnly={drawer.isReadOnly}
+          actionError={drawer.actionError}
+          observationDraft={drawer.observationDraft}
+          observationDirty={drawer.observationDirty}
+          isSaving={drawer.isSavingObservation}
+          onChange={drawer.changeObservation}
+          onSave={drawer.saveObservation}
+        />
 
         {/* Checklist Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
           <strong style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>Checklist de Etapas</strong>
-          {remainingItems === 1 && selectedTask.status !== 'Concluída' && (
+          {drawer.pendingChecklistIndex !== null && (
+            <span role="status" style={{ color: '#64748b', fontSize: '0.76rem', fontWeight: 700 }}>
+              Salvando alteração do checklist...
+            </span>
+          )}
+          {remainingItems === 1 && !drawer.isReadOnly && (
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
               Evidência ou justificativa da conclusão
               <textarea
-                value={completionNote}
-                onChange={(event) => {
-                  setCompletionNote(event.target.value);
-                  if (event.target.value.trim()) setCompletionError('');
-                }}
+                value={drawer.completionNote}
+                onChange={(event) => drawer.changeCompletionNote(event.target.value)}
+                disabled={drawer.pendingChecklistIndex !== null}
                 rows={3}
                 maxLength={4000}
                 placeholder="Ex.: documentos conferidos e protocolo validado."
-                aria-describedby={completionError ? 'task-completion-error' : undefined}
+                aria-describedby={drawer.completionError ? 'task-completion-error' : undefined}
                 style={{
-                  border: completionError ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                  border: drawer.completionError ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '10px',
                   font: 'inherit',
                   resize: 'vertical',
                 }}
               />
-              {completionError && (
+              {drawer.completionError && (
                 <span id="task-completion-error" role="alert" style={{ color: '#b91c1c', fontWeight: 600 }}>
-                  {completionError}
+                  {drawer.completionError}
                 </span>
               )}
             </label>
@@ -246,6 +280,9 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {selectedTask.checklist.map((item, idx) => {
                 const isItemDone = item.concluida;
+                const latestAudit = checklistAudit.latestByStep.get(idx);
+                const completedAudit = latestAudit?.completed ? latestAudit : null;
+                const completedAt = formatPersistedCompletionDateTime(completedAudit?.createdAt);
                 return (
                   <div
                     key={idx}
@@ -266,29 +303,56 @@ export const TaskDetailsDrawer: React.FC<TaskDetailsDrawerProps> = ({
                         type="checkbox"
                         id={`step-${selectedTask.id}-${idx}`}
                         checked={isItemDone}
-                        disabled={selectedTask.status === 'Concluída'}
-                        onChange={(e) => handleChecklistChange(idx, e.target.checked)}
+                        disabled={drawer.isReadOnly || drawer.pendingChecklistIndex !== null}
+                        onChange={(event) => {
+                          void drawer.changeChecklist(idx, event.target.checked);
+                        }}
                         style={{
                           width: '16px',
                           height: '16px',
                           accentColor: '#c59235',
-                          cursor: selectedTask.status === 'Concluída' ? 'not-allowed' : 'pointer',
+                          cursor: drawer.isReadOnly || drawer.pendingChecklistIndex !== null
+                            ? 'not-allowed'
+                            : 'pointer',
                         }}
                       />
-                      <label
-                        htmlFor={`step-${selectedTask.id}-${idx}`}
-                        style={{
-                          fontSize: '0.82rem',
-                          fontWeight: 500,
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                          flex: 1,
-                          textDecoration: isItemDone ? 'line-through' : 'none',
-                          opacity: isItemDone ? 0.6 : 1,
-                        }}
-                      >
-                        {item.titulo}
-                      </label>
+                      <div style={{ display: 'flex', flex: 1, flexDirection: 'column', gap: '4px' }}>
+                        <label
+                          htmlFor={`step-${selectedTask.id}-${idx}`}
+                          style={{
+                            fontSize: '0.82rem',
+                            fontWeight: 500,
+                            color: '#0f172a',
+                            cursor: drawer.isReadOnly || drawer.pendingChecklistIndex !== null
+                              ? 'default'
+                              : 'pointer',
+                            textDecoration: isItemDone ? 'line-through' : 'none',
+                            opacity: isItemDone ? 0.6 : 1,
+                          }}
+                        >
+                          {item.titulo}
+                        </label>
+                        {isItemDone && (
+                          <span
+                            aria-live="polite"
+                            style={{ color: '#047857', fontSize: '0.7rem', fontWeight: 600 }}
+                          >
+                            {completedAudit && completedAt ? (
+                              <>
+                                Concluído em{' '}
+                                <time dateTime={completedAudit.createdAt}>{completedAt}</time>
+                                {' '}por {completedAudit.actorName}
+                              </>
+                            ) : checklistAudit.isLoading ? (
+                              'Carregando registro da conclusão...'
+                            ) : checklistAudit.isError ? (
+                              'Auditoria da conclusão indisponível.'
+                            ) : (
+                              'Registro autoritativo da conclusão não localizado.'
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {isItemDone && (
                       <span style={{

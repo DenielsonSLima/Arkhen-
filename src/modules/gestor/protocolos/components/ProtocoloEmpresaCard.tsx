@@ -66,8 +66,20 @@ const isRealLogo = (logo: string | undefined) => {
 
 export const ProtocoloEmpresaCard: React.FC<ProtocoloEmpresaCardProps> = ({ group, onOpen }) => {
   const stats = getStats(group.items);
+  const fluxo = group.fluxoOperacional;
+  const fluxoScale = fluxo ? fluxo.percentual / 100 : 0;
+  const fluxoResumo = fluxo
+    ? fluxo.etapasTotal > 0
+      ? `${fluxo.etapasConcluidas}/${fluxo.etapasTotal} (${fluxo.percentual}%)`
+      : `${fluxo.tarefasConcluidas}/${fluxo.tarefasTotal} tarefas (${fluxo.percentual}%)`
+    : '';
   const proximoItem = [...group.items].sort((a, b) => a.prazo.localeCompare(b.prazo))[0];
-    const regimeClass = getRegimeClass(group.empresaTipo);
+  const regimeClass = getRegimeClass(group.empresaTipo);
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onOpen();
+  };
 
   return (
     <article
@@ -75,7 +87,7 @@ export const ProtocoloEmpresaCard: React.FC<ProtocoloEmpresaCardProps> = ({ grou
       onClick={onOpen}
       role="button"
       tabIndex={0}
-      onKeyDown={(event) => event.key === 'Enter' && onOpen()}
+      onKeyDown={handleKeyDown}
     >
       <div className="protocolo-company-card-head">
         {isRealLogo(group.empresaLogo) ? (
@@ -104,17 +116,29 @@ export const ProtocoloEmpresaCard: React.FC<ProtocoloEmpresaCardProps> = ({ grou
         </div>
       )}
 
-      <div className="protocolo-company-filebar tone-success">
+      <div className={`protocolo-company-filebar ${fluxo ? 'tone-success' : 'tone-warning'}`}>
         <div>
-          <span>Progresso</span>
-          <strong>{stats.concluidos}/{group.items.length}</strong>
+          <span>{fluxo ? 'Fluxo operacional' : 'Fluxo ainda não gerado'}</span>
+          {fluxo && <strong>{fluxoResumo}</strong>}
         </div>
-        <i><b style={{ transform: `scaleX(${group.items.length ? stats.concluidos / group.items.length : 0})` }} /></i>
+        <i
+          role={fluxo ? 'progressbar' : undefined}
+          aria-label={fluxo ? 'Progresso do fluxo operacional' : undefined}
+          aria-valuemin={fluxo ? 0 : undefined}
+          aria-valuemax={fluxo ? 100 : undefined}
+          aria-valuenow={fluxo?.percentual}
+        >
+          <b style={{ transform: `scaleX(${fluxoScale})` }} />
+        </i>
       </div>
 
       <div className="protocolo-company-stat-list">
-        <div><Clock size={13} /><span>Pendentes</span><strong>{stats.pendentes}</strong></div>
-        <div><CheckCircle2 size={13} /><span>Concluídos</span><strong>{stats.concluidos}</strong></div>
+        <div>
+          <CheckCircle2 size={13} />
+          <span>Entregas legais</span>
+          <strong>{stats.concluidos}/{group.items.length}</strong>
+        </div>
+        <div><Clock size={13} /><span>Pendentes legais</span><strong>{stats.pendentes}</strong></div>
       </div>
 
       <div className="protocolo-company-card-footer">

@@ -10,6 +10,9 @@ export interface ProtocoloTipoConfig extends Omit<EntregaModelo, 'diaLimite'> {
   diaLimite?: number;
   diaPrimeiraQuinzena?: number;
   diaSegundaQuinzena?: number;
+  diaSemana?: number;
+  dataVencimento?: string;
+  mesVencimento?: number;
   temVencimento: boolean;
   etapas: string[];
   descricao: string;
@@ -25,6 +28,9 @@ interface ProtocoloTipoRow {
   categoria: ProtocoloTipoConfig['categoria'];
   orgao: string | null;
   dia_limite: number;
+  dia_semana_iso: number | null;
+  data_vencimento: string | null;
+  mes_vencimento: number | null;
   descricao: string | null;
   regimes: unknown;
   periodicidade_padrao: TipoFechamentoEntrega | null;
@@ -88,7 +94,8 @@ const normalizeStatus = (status: unknown): StatusProtocoloTipo => (
 );
 
 const normalizePeriodicidade = (value: unknown, fallback: TipoFechamentoEntrega): TipoFechamentoEntrega => (
-  value === 'quinzenal' || value === 'trimestral' || value === 'semestral' || value === 'mensal'
+  value === 'diaria' || value === 'unica' || value === 'semanal' || value === 'quinzenal'
+    || value === 'mensal' || value === 'trimestral' || value === 'semestral' || value === 'anual'
     ? value
     : fallback
 );
@@ -130,6 +137,9 @@ const fromRow = (row: ProtocoloTipoRow): ProtocoloTipoConfig => ({
   categoria: row.categoria,
   orgao: row.orgao || undefined,
   diaLimite: Math.min(Math.max(Math.round(Number(row.dia_limite || 1)), 1), 31),
+  diaSemana: row.dia_semana_iso ?? undefined,
+  dataVencimento: row.data_vencimento ?? undefined,
+  mesVencimento: row.mes_vencimento ?? undefined,
   temVencimento: true,
   etapas: [],
   descricao: row.descricao || '',
@@ -146,6 +156,9 @@ const toPayload = (empresaId: string, item: ProtocoloTipoConfig) => ({
   categoria: item.categoria,
   orgao: item.orgao || null,
   dia_limite: Math.min(Math.max(Math.round(Number(item.diaLimite || 1)), 1), 31),
+  dia_semana_iso: item.periodicidadePadrao === 'semanal' ? item.diaSemana ?? null : null,
+  data_vencimento: item.periodicidadePadrao === 'unica' ? item.dataVencimento || null : null,
+  mes_vencimento: item.periodicidadePadrao === 'anual' ? item.mesVencimento ?? null : null,
   descricao: item.descricao.trim(),
   regimes: item.regimes,
   periodicidade_padrao: item.periodicidadePadrao,
@@ -211,7 +224,7 @@ export const protocolosCatalogoService = {
 
     const { data, error } = await supabase
       .from(TABLE)
-      .select('codigo,nome,categoria,orgao,dia_limite,descricao,regimes,periodicidade_padrao,origem_padrao,ativo')
+      .select('codigo,nome,categoria,orgao,dia_limite,dia_semana_iso,data_vencimento,mes_vencimento,descricao,regimes,periodicidade_padrao,origem_padrao,ativo')
       .order('categoria', { ascending: true })
       .order('nome', { ascending: true });
 

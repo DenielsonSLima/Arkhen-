@@ -24,6 +24,23 @@ const cloneDraft = (value: ObrigacaoModeloDraft): ObrigacaoModeloDraft => ({
 });
 
 const isValidDay = (value: number) => Number.isInteger(value) && value >= 1 && value <= 31;
+const isValidWeekday = (value?: number) => (
+  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 7
+);
+const isValidMonth = (value?: number) => (
+  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 12
+);
+const isValidIsoDate = (value?: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day;
+};
 
 export const ObrigacaoEditorDrawer = ({
   initialValue,
@@ -127,18 +144,35 @@ export const ObrigacaoEditorDrawer = ({
       setEtapasError('Adicione ao menos uma etapa válida ao fluxo.');
       return null;
     }
-    if (draft.temVencimento && draft.periodicidade === 'quinzenal') {
-      if (!isValidDay(draft.diaPrimeiraQuinzena) || !isValidDay(draft.diaSegundaQuinzena)) {
-        setValidationError('Os vencimentos quinzenais devem estar entre os dias 1 e 31.');
-        return null;
-      }
-      if (draft.diaPrimeiraQuinzena >= draft.diaSegundaQuinzena) {
-        setValidationError('O vencimento da 1ª quinzena deve anteceder o da 2ª quinzena.');
-        return null;
-      }
-    } else if (draft.temVencimento && !isValidDay(draft.diaVencimento)) {
-      setValidationError('O dia do vencimento deve estar entre 1 e 31.');
+    if (draft.periodicidade === 'unica' && !isValidIsoDate(draft.dataVencimento)) {
+      setValidationError('Informe uma data de ocorrência válida para a obrigação única.');
       return null;
+    }
+    if (draft.periodicidade === 'semanal' && !isValidWeekday(draft.diaSemana)) {
+      setValidationError('Selecione um dia de execução válido para a obrigação semanal.');
+      return null;
+    }
+    if (draft.periodicidade === 'anual'
+      && (!isValidMonth(draft.mesVencimento) || !isValidDay(draft.diaVencimento))) {
+      setValidationError('Informe um mês e um dia de ocorrência válidos para a obrigação anual.');
+      return null;
+    }
+    if (draft.temVencimento) {
+      if (draft.periodicidade === 'quinzenal') {
+        if (!isValidDay(draft.diaPrimeiraQuinzena) || !isValidDay(draft.diaSegundaQuinzena)) {
+          setValidationError('Os vencimentos quinzenais devem estar entre os dias 1 e 31.');
+          return null;
+        }
+        if (draft.diaPrimeiraQuinzena >= draft.diaSegundaQuinzena) {
+          setValidationError('O vencimento da 1ª quinzena deve anteceder o da 2ª quinzena.');
+          return null;
+        }
+      }
+      if (['mensal', 'trimestral', 'semestral'].includes(draft.periodicidade)
+        && !isValidDay(draft.diaVencimento)) {
+        setValidationError('O dia do vencimento deve estar entre 1 e 31.');
+        return null;
+      }
     }
 
     setEtapasError('');

@@ -4,6 +4,7 @@ import { CalendarCheck2, ListChecks, Plus, Search, ShieldCheck, Workflow } from 
 import { SystemToast, type SystemToastData } from '../../components/SystemToast';
 import { ObrigacaoCard } from './components/ObrigacaoCard';
 import { ObrigacaoEditorDrawer } from './components/ObrigacaoEditorDrawer';
+import { ObrigacoesPagination } from './components/ObrigacoesPagination';
 import { ObrigacaoStatusDialog } from './components/ObrigacaoStatusDialog';
 import {
   OBRIGACAO_REGIMES,
@@ -14,10 +15,12 @@ import {
   type ObrigacaoRegime,
 } from './obrigacoes.types';
 import { obrigacoesKeys, obrigacoesService } from './services/obrigacoesService';
+import { paginateObrigacoes } from './obrigacoesPagination';
 import './ObrigacoesPage.css';
 
 type StatusFilter = 'todos' | 'ativos' | 'inativos';
 const EMPTY_OBRIGACOES: ObrigacaoModelo[] = [];
+const EMPTY_METRICS = { total: 0, ativos: 0, comPrazo: 0, etapas: 0 } as const;
 
 const notify = (
   type: SystemToastData['type'],
@@ -28,14 +31,20 @@ const notify = (
 export const ObrigacoesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const obrigacoesQuery = useQuery({
-    queryKey: obrigacoesKeys.all,
+    queryKey: obrigacoesKeys.list(),
     queryFn: obrigacoesService.list,
+    staleTime: 60_000,
+  });
+  const resumoQuery = useQuery({
+    queryKey: obrigacoesKeys.summary(),
+    queryFn: obrigacoesService.summary,
     staleTime: 60_000,
   });
   const [search, setSearch] = useState('');
   const [regime, setRegime] = useState<'todos' | ObrigacaoRegime>('todos');
   const [categoria, setCategoria] = useState('todas');
   const [status, setStatus] = useState<StatusFilter>('todos');
+  const [currentPage, setCurrentPage] = useState(1);
   const [editing, setEditing] = useState<ObrigacaoModeloDraft | null>(null);
   const [editorError, setEditorError] = useState('');
   const [toast, setToast] = useState<SystemToastData | null>(null);
@@ -100,13 +109,14 @@ export const ObrigacoesPage: React.FC = () => {
     ));
   }, [categoria, obrigacoes, regime, search, status]);
 
-  const metrics = useMemo(() => ({
-    total: obrigacoes.length,
-    ativos: obrigacoes.filter((item) => item.ativo).length,
-    comPrazo: obrigacoes.filter((item) => item.ativo && item.temVencimento).length,
-    etapas: obrigacoes.filter((item) => item.ativo)
-      .reduce((total, item) => total + item.etapas.length, 0),
-  }), [obrigacoes]);
+  const metrics = resumoQuery.data ?? EMPTY_METRICS;
+  const isLoading = obrigacoesQuery.isLoading || resumoQuery.isLoading;
+  const queryError = obrigacoesQuery.error ?? resumoQuery.error;
+
+  const page = useMemo(
+    () => paginateObrigacoes(filtered, currentPage),
+    [currentPage, filtered],
+  );
 
   const handleSave = async (draft: ObrigacaoModeloDraft) => {
     setEditorError('');
@@ -131,6 +141,7 @@ export const ObrigacoesPage: React.FC = () => {
     setRegime('todos');
     setCategoria('todas');
     setStatus('todos');
+    setCurrentPage(1);
   };
 
   return (
@@ -166,27 +177,48 @@ export const ObrigacoesPage: React.FC = () => {
           <span className="sr-only">Buscar obrigação</span>
           <input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar por obrigação, categoria ou etapa..."
           />
         </label>
         <label>
           <span>Regime</span>
-          <select value={regime} onChange={(event) => setRegime(event.target.value as typeof regime)}>
+          <select
+            value={regime}
+            onChange={(event) => {
+              setRegime(event.target.value as typeof regime);
+              setCurrentPage(1);
+            }}
+          >
             <option value="todos">Todos os regimes</option>
             {OBRIGACAO_REGIMES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <label>
           <span>Categoria</span>
-          <select value={categoria} onChange={(event) => setCategoria(event.target.value)}>
+          <select
+            value={categoria}
+            onChange={(event) => {
+              setCategoria(event.target.value);
+              setCurrentPage(1);
+            }}
+          >
             <option value="todas">Todas as categorias</option>
             {categorias.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <label>
           <span>Status</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value as StatusFilter);
+              setCurrentPage(1);
+            }}
+          >
             <option value="todos">Todos</option>
             <option value="ativos">Disponíveis</option>
             <option value="inativos">Desativados</option>
@@ -201,17 +233,22 @@ export const ObrigacoesPage: React.FC = () => {
         )}
       </div>
 
-      {obrigacoesQuery.isLoading && (
+      {isLoading && (
         <div className="obrigacoes-page__state">Carregando obrigações...</div>
       )}
-      {obrigacoesQuery.isError && (
+      {!!queryError && (
         <div className="obrigacoes-page__state obrigacoes-page__state--error">
           <strong>Não foi possível carregar as obrigações.</strong>
-          <span>{(obrigacoesQuery.error as Error).message}</span>
-          <button type="button" onClick={() => obrigacoesQuery.refetch()}>Tentar novamente</button>
+          <span>{queryError instanceof Error ? queryError.message : 'Tente novamente.'}</span>
+          <button
+            type="button"
+            onClick={() => { void Promise.all([obrigacoesQuery.refetch(), resumoQuery.refetch()]); }}
+          >
+            Tentar novamente
+          </button>
         </div>
       )}
-      {!obrigacoesQuery.isLoading && !obrigacoesQuery.isError && !filtered.length && (
+      {!isLoading && !queryError && !filtered.length && (
         <div className="obrigacoes-page__state">
           <Workflow size={28} />
           <strong>Nenhuma obrigação com esses filtros</strong>
@@ -219,9 +256,9 @@ export const ObrigacoesPage: React.FC = () => {
         </div>
       )}
 
-      {!!filtered.length && (
+      {!isLoading && !queryError && !!filtered.length && (
         <section className="obrigacoes-page__grid" aria-label="Catálogo de obrigações">
-          {filtered.map((item) => (
+          {page.items.map((item) => (
             <ObrigacaoCard
               key={item.id}
               obrigacao={item}
@@ -232,6 +269,17 @@ export const ObrigacoesPage: React.FC = () => {
             />
           ))}
         </section>
+      )}
+
+      {!isLoading && !queryError && !!filtered.length && (
+        <ObrigacoesPagination
+          currentPage={page.currentPage}
+          totalPages={page.totalPages}
+          totalItems={filtered.length}
+          firstItem={page.firstItem}
+          lastItem={page.lastItem}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {editing && (

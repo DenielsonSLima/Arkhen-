@@ -1,6 +1,7 @@
 import { CalendarClock, ClipboardList, Settings2 } from 'lucide-react';
 import {
   OBRIGACAO_ORIGENS,
+  OBRIGACAO_PERIODICIDADE_LABELS,
   OBRIGACAO_PERIODICIDADES,
   OBRIGACAO_REGIMES,
   type ObrigacaoModeloDraft,
@@ -8,6 +9,7 @@ import {
   type ObrigacaoRegime,
 } from '../obrigacoes.types';
 import { EtapasEditor } from './EtapasEditor';
+import { ObrigacaoPrazoFields } from './ObrigacaoPrazoFields';
 
 const CATEGORIAS = [
   'Fiscal',
@@ -18,13 +20,6 @@ const CATEGORIAS = [
   'NF-e',
   'NFC-e',
 ];
-
-const PERIODICIDADE_LABELS: Record<ObrigacaoPeriodicidade, string> = {
-  mensal: 'Mensal',
-  quinzenal: 'Quinzenal',
-  trimestral: 'Trimestral',
-  semestral: 'Semestral',
-};
 
 interface ObrigacaoEditorSectionsProps {
   draft: ObrigacaoModeloDraft;
@@ -151,53 +146,15 @@ export const ObrigacaoEditorSections = ({
             >
               {OBRIGACAO_PERIODICIDADES.map((periodicidade) => (
                 <option key={periodicidade} value={periodicidade}>
-                  {PERIODICIDADE_LABELS[periodicidade]}
+                  {OBRIGACAO_PERIODICIDADE_LABELS[periodicidade]}
                 </option>
               ))}
             </select>
           </label>
-          {draft.temVencimento ? (
-            draft.periodicidade !== 'quinzenal' ? (
-                <label className="obrigacao-form-field">
-                  <span>Dia do vencimento</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={31}
-                    value={draft.diaVencimento}
-                    disabled={isSaving}
-                    onChange={(event) => onPatch({ diaVencimento: Number(event.target.value) })}
-                  />
-                </label>
-              ) : (
-                <div className="obrigacao-form-grid two-columns nested">
-                  <label className="obrigacao-form-field">
-                    <span>1ª quinzena</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={draft.diaPrimeiraQuinzena}
-                      disabled={isSaving}
-                      onChange={(event) => onPatch({ diaPrimeiraQuinzena: Number(event.target.value) })}
-                    />
-                  </label>
-                  <label className="obrigacao-form-field">
-                    <span>2ª quinzena</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={draft.diaSegundaQuinzena}
-                      disabled={isSaving}
-                      onChange={(event) => onPatch({ diaSegundaQuinzena: Number(event.target.value) })}
-                    />
-                  </label>
-                </div>
-            )
-          ) : null}
+          <ObrigacaoPrazoFields draft={draft} isSaving={isSaving} onPatch={onPatch} />
         </div>
-        {draft.temVencimento ? (
+        {draft.temVencimento && ['quinzenal', 'mensal', 'trimestral', 'semestral']
+          .includes(draft.periodicidade) ? (
           <label className="obrigacao-check-option">
             <input
               type="checkbox"
@@ -210,11 +167,11 @@ export const ObrigacaoEditorSections = ({
               <small>Ex.: vencimento em maio acompanha a competência de abril.</small>
             </span>
           </label>
-        ) : (
+        ) : !draft.temVencimento ? (
           <div className="obrigacao-form-note">
             A periodicidade organiza a rotina, sem definir um vencimento fixo.
           </div>
-        )}
+        ) : null}
       </section>
 
       <section className="obrigacao-form-section">

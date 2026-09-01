@@ -1,11 +1,11 @@
 @media (min-width: 769px) {
   .gestor-sidebar {
     --color-text-muted: #94a3b8;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: auto;
+    -webkit-font-smoothing: auto;
     font-synthesis: none;
     padding: 18px 10px 12px;
-    text-rendering: auto;
+    text-rendering: optimizeLegibility;
     width: 256px;
   }
 

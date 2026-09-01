@@ -163,6 +163,40 @@
 .obrigacoes-page__state--error strong { color: #9a3412; }
 
 .obrigacoes-page__grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.obrigacoes-pagination {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #64748b;
+  display: flex;
+  font-size: .74rem;
+  justify-content: space-between;
+  padding: 11px 13px;
+}
+.obrigacoes-pagination__summary { font-weight: 650; }
+.obrigacoes-pagination__controls { align-items: center; display: flex; gap: 10px; }
+.obrigacoes-pagination__position { color: #475569; min-width: 104px; text-align: center; }
+.obrigacoes-pagination__position strong { color: #0f172a; }
+.obrigacoes-pagination button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 750;
+  gap: 4px;
+  min-height: 32px;
+  padding: 5px 9px;
+}
+.obrigacoes-pagination button:hover:not(:disabled) {
+  border-color: rgba(197, 146, 53, .65);
+  color: #94661c;
+}
+.obrigacoes-pagination button:disabled { cursor: not-allowed; opacity: .45; }
 .obrigacao-card {
   background: #fff;
   border: 1px solid #dbe3ee;
@@ -335,10 +369,14 @@
   .obrigacoes-page__filters { grid-template-columns: 1fr; }
   .obrigacoes-page__search { grid-column: auto; }
   .obrigacoes-page__new-button { align-self: stretch; }
+  .obrigacoes-pagination { align-items: stretch; flex-direction: column; gap: 10px; }
+  .obrigacoes-pagination__summary { text-align: center; }
+  .obrigacoes-pagination__controls { justify-content: space-between; }
   .obrigacao-card__actions { justify-content: flex-end; }
 }
 
 @media (max-width: 480px) {
   .obrigacoes-page__metrics { grid-template-columns: 1fr; }
   .obrigacao-confirm footer { align-items: stretch; flex-direction: column; }
+  .obrigacoes-pagination button span { display: none; }
 }

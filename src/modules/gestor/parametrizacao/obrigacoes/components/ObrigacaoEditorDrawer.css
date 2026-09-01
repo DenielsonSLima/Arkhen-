@@ -140,6 +140,7 @@
 .obrigacao-form-grid.nested { gap: 8px; }
 .obrigacao-form-field { display: flex; flex-direction: column; gap: 6px; }
 .obrigacao-form-field > span { color: #475569; font-size: .7rem; font-weight: 750; }
+.obrigacao-form-field__help { color: #64748b; font-size: .64rem; line-height: 1.35; }
 .obrigacao-form-field input,
 .obrigacao-form-field select,
 .obrigacao-form-field textarea { font-size: .8rem; min-height: 40px; padding: 9px 11px; width: 100%; }

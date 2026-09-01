@@ -19,7 +19,8 @@ import {
 } from '../../protocolos/services/protocolosService';
 import type { ProtocoloTipoConfig } from '../../protocolos/services/protocolosCatalogoService';
 import { useEmpresaProtocolosConfiguracao } from '../../protocolos/hooks/useEmpresaProtocolosConfiguracao';
-import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
+import { OBRIGACAO_PERIODICIDADE_LABELS } from '../../parametrizacao/obrigacoes/obrigacoes.types';
+import { formatObrigacaoSchedule } from '../../parametrizacao/obrigacoes/obrigacoesSchedule';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
 import { SystemToast, type SystemToastData } from '../../components/SystemToast';
 import './TabProtocolosEntregas.css';
@@ -37,13 +38,6 @@ const categoryIcon = {
   'NF-e': <FileCode2 size={16} />,
   'NFC-e': <FileCode2 size={16} />,
 };
-
-const periodicidadeOptions: Array<{ value: TipoFechamentoEntrega; label: string }> = [
-  { value: 'mensal', label: 'Mensal' },
-  { value: 'quinzenal', label: 'Quinzenal' },
-  { value: 'trimestral', label: 'Trimestral' },
-  { value: 'semestral', label: 'Semestral' },
-];
 
 const EMPTY_CATALOGO: ProtocoloTipoConfig[] = [];
 
@@ -127,14 +121,6 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     )));
   };
 
-  const handleChangePeriodicidade = (id: string, periodicidade: TipoFechamentoEntrega) => {
-    setSaved(false);
-    setIsDirty(true);
-    setConfigs((current) => current.map((item) => (
-      item.entregaId === id ? { ...item, periodicidade } : item
-    )));
-  };
-
   const handleSave = async () => {
     setSaved(false);
     resetSaveError();
@@ -189,9 +175,8 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     );
   };
 
-  const getEntregaDescricao = (entrega: typeof catalogo[number], config: ProtocoloEmpresaConfig | undefined) => {
-    const periodicidade = config?.periodicidade || entrega.periodicidadePadrao;
-    const periodicidadeLabel = periodicidadeOptions.find((item) => item.value === periodicidade)?.label || periodicidade;
+  const getEntregaDescricao = (entrega: typeof catalogo[number]) => {
+    const periodicidadeLabel = OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao];
     const origem = entrega.origemPadrao === 'Ambos'
       ? 'Cliente e Escritório'
       : entrega.origemPadrao === 'Escritório envia'
@@ -206,11 +191,16 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
   };
 
   const getPrazoDescricao = (entrega: typeof catalogo[number]) => {
-    if (!entrega.temVencimento) return 'Sem prazo fixo';
-    if (entrega.periodicidadePadrao === 'quinzenal') {
-      return `Prazos: dias ${entrega.diaPrimeiraQuinzena ?? 15} e ${entrega.diaSegundaQuinzena ?? entrega.diaLimite ?? 30}`;
-    }
-    return entrega.diaLimite ? `Prazo: dia ${entrega.diaLimite}` : 'Prazo a definir';
+    return formatObrigacaoSchedule({
+      periodicidade: entrega.periodicidadePadrao,
+      temVencimento: entrega.temVencimento,
+      diaVencimento: entrega.diaLimite,
+      diaPrimeiraQuinzena: entrega.diaPrimeiraQuinzena,
+      diaSegundaQuinzena: entrega.diaSegundaQuinzena,
+      diaSemana: entrega.diaSemana,
+      dataVencimento: entrega.dataVencimento,
+      mesVencimento: entrega.mesVencimento,
+    });
   };
 
   const getEtapasDescricao = (etapas: string[]) => {
@@ -328,7 +318,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                     </label>
                     <label htmlFor={checkboxId} className="protocolo-option-text">
                       <strong>{entrega.nome}</strong>
-                      <small>{getEntregaDescricao(entrega, config)}</small>
+                      <small>{getEntregaDescricao(entrega)}</small>
                       <span className="protocolo-option-meta">
                         <span>{getPrazoDescricao(entrega)}</span>
                         <span>{etapas.length} {etapas.length === 1 ? 'etapa' : 'etapas'}</span>
@@ -341,23 +331,17 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                       </small>
                     </label>
                     <div className="protocolo-option-periodicidade">
-                      <label htmlFor={periodicidadeId} className="protocolo-option-periodicidade-label">
+                      <span className="protocolo-option-periodicidade-label">
                         <CalendarClock size={13} />
                         <strong>Rotina</strong>
-                      </label>
-                      <select
+                      </span>
+                      <span
                         id={periodicidadeId}
                         aria-label={`Rotina de ${entrega.nome}`}
-                        value={config?.periodicidade ?? entrega.periodicidadePadrao}
-                        disabled={isLoading || isSaving || !checked}
-                        onChange={(event) => handleChangePeriodicidade(entrega.id, event.target.value as TipoFechamentoEntrega)}
+                        className="protocolo-option-periodicidade-value"
                       >
-                        {periodicidadeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        {OBRIGACAO_PERIODICIDADE_LABELS[entrega.periodicidadePadrao]}
+                      </span>
                     </div>
                   </div>
                 );

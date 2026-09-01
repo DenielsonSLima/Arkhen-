@@ -15,6 +15,8 @@ import { GestorSidebar } from './GestorSidebar';
 import { GestorShellLoading } from './GestorShellLoading';
 import { useGestorGlobalSearch, type GlobalSearchResult } from './hooks/useGestorGlobalSearch';
 import './GestorLayout.css';
+import './GestorDashboard.css';
+import './GestorWidgets.css';
 import './GestorLayoutFixes.css';
 import './GestorModuleTabs.css';
 import './GestorSidebarCompact.css';

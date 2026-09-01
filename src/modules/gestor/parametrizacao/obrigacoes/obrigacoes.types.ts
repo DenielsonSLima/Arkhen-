@@ -8,10 +8,14 @@ export const OBRIGACAO_REGIMES = [
 ] as const;
 
 export const OBRIGACAO_PERIODICIDADES = [
-  'mensal',
+  'diaria',
+  'unica',
+  'semanal',
   'quinzenal',
+  'mensal',
   'trimestral',
   'semestral',
+  'anual',
 ] as const;
 
 export const OBRIGACAO_ORIGENS = [
@@ -23,6 +27,42 @@ export const OBRIGACAO_ORIGENS = [
 export type ObrigacaoRegime = typeof OBRIGACAO_REGIMES[number];
 export type ObrigacaoPeriodicidade = typeof OBRIGACAO_PERIODICIDADES[number];
 export type ObrigacaoOrigem = typeof OBRIGACAO_ORIGENS[number];
+
+export const OBRIGACAO_PERIODICIDADE_LABELS: Record<ObrigacaoPeriodicidade, string> = {
+  diaria: 'Diário',
+  unica: 'Único',
+  semanal: 'Semanal',
+  quinzenal: 'Quinzenal',
+  mensal: 'Mensal',
+  trimestral: 'Trimestral',
+  semestral: 'Semestral',
+  anual: 'Anual',
+};
+
+export const OBRIGACAO_DIAS_SEMANA = [
+  { value: 1, label: 'Segunda-feira' },
+  { value: 2, label: 'Terça-feira' },
+  { value: 3, label: 'Quarta-feira' },
+  { value: 4, label: 'Quinta-feira' },
+  { value: 5, label: 'Sexta-feira' },
+  { value: 6, label: 'Sábado' },
+  { value: 7, label: 'Domingo' },
+] as const;
+
+export const OBRIGACAO_MESES = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+] as const;
 
 export interface ObrigacaoModelo {
   id: string;
@@ -36,6 +76,9 @@ export interface ObrigacaoModelo {
   origemPadrao: ObrigacaoOrigem;
   temVencimento: boolean;
   diaVencimento: number;
+  diaSemana?: number;
+  dataVencimento?: string;
+  mesVencimento?: number;
   referenciaMesAnterior: boolean;
   diaPrimeiraQuinzena: number;
   diaSegundaQuinzena: number;
@@ -62,6 +105,9 @@ export const createEmptyObrigacao = (): ObrigacaoModeloDraft => ({
   origemPadrao: 'Escritório envia',
   temVencimento: true,
   diaVencimento: 20,
+  diaSemana: 1,
+  dataVencimento: '',
+  mesVencimento: 1,
   referenciaMesAnterior: true,
   diaPrimeiraQuinzena: 15,
   diaSegundaQuinzena: 30,

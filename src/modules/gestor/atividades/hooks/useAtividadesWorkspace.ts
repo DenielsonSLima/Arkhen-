@@ -6,6 +6,8 @@ import {
   type TarefaGestor,
   type TarefaProgressoPatch,
 } from '../services/rotinasAtividadesService';
+import { tarefaChecklistAuditKeys } from '../queries/tarefaChecklistAuditQueries';
+import { protocolosKeys } from '../../protocolos/queries/protocolosQueries';
 
 export const atividadesKeys = {
   all: ['atividades'] as const,
@@ -97,7 +99,13 @@ export const useAtividadesWorkspace = () => {
       evidencia,
       justificativa,
     ),
-    onSuccess: invalidateWorkspace,
+    onSuccess: async (_result, { id }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace(), exact: true }),
+        queryClient.invalidateQueries({ queryKey: tarefaChecklistAuditKeys.byTask(id), exact: true }),
+        queryClient.invalidateQueries({ queryKey: protocolosKeys.all }),
+      ]);
+    },
   });
 
   const workspace = workspaceQuery.data || {
@@ -126,6 +134,9 @@ export const useAtividadesWorkspace = () => {
     updateTarefa: (id: string, patch: TarefaProgressoPatch) => (
       updateTarefaProgressMutation.mutate({ id, patch })
     ),
+    updateTarefaAsync: (id: string, patch: TarefaProgressoPatch) => (
+      updateTarefaProgressMutation.mutateAsync({ id, patch })
+    ),
     toggleChecklist: (
       taskId: string,
       index: number,
@@ -141,6 +152,19 @@ export const useAtividadesWorkspace = () => {
         justificativa,
       });
     },
+    toggleChecklistAsync: (
+      taskId: string,
+      index: number,
+      concluida: boolean,
+      evidencia?: string,
+      justificativa?: string,
+    ) => updateTarefaChecklistMutation.mutateAsync({
+      id: taskId,
+      index,
+      concluida,
+      evidencia,
+      justificativa,
+    }),
   }), [
     assignResponsibleBatchMutation,
     assignResponsibleMutation,
