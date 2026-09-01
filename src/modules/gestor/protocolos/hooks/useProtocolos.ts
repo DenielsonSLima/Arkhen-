@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProtocoloEntrega, ProtocoloStatus, ProtocoloUpdate } from '../services/protocolosService';
+import type { ProtocoloEntrega, ProtocoloUpdate } from '../services/protocolosService';
 import { protocolosKeys, protocolosQueries } from '../queries/protocolosQueries';
 
 export type ProtocoloTab = 'pendentes' | 'concluidos' | 'todos';
@@ -20,6 +20,8 @@ export interface EmpresaProtocolosGrupo {
   items: ProtocoloEntrega[];
 }
 
+const EMPTY_PROTOCOLOS: ProtocoloEntrega[] = [];
+
 export const useProtocolos = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProtocoloTab>('pendentes');
@@ -29,20 +31,27 @@ export const useProtocolos = () => {
   const [dataFinal, setDataFinal] = useState('');
 
   const protocolosQuery = useQuery(protocolosQueries.list());
-  const protocolos = protocolosQuery.data || [];
+  const protocolos = protocolosQuery.data || EMPTY_PROTOCOLOS;
 
-  const invalidateProtocolos = () => {
-    queryClient.invalidateQueries({ queryKey: protocolosKeys.all });
-  };
+  const invalidateProtocolos = () => queryClient.invalidateQueries({
+    queryKey: protocolosKeys.list(),
+    exact: true,
+  });
 
   const updateProtocoloMutation = useMutation({
     mutationFn: protocolosQueries.update,
-    onSuccess: invalidateProtocolos,
+    onSuccess: async (savedList) => {
+      queryClient.setQueryData(protocolosKeys.list(), savedList);
+      await invalidateProtocolos();
+    },
   });
 
   const updateEntregasEmpresaMutation = useMutation({
     mutationFn: protocolosQueries.saveEntregasEmpresa,
-    onSuccess: invalidateProtocolos,
+    onSuccess: async (savedList) => {
+      queryClient.setQueryData(protocolosKeys.list(), savedList);
+      await invalidateProtocolos();
+    },
   });
 
   const protocolosBaseFiltrados = useMemo(() => {
@@ -138,10 +147,9 @@ export const useProtocolos = () => {
   }, [activeEmpresaTab, dataFinal, dataInicial, protocolos, searchTerm]);
 
   const updateProtocolo = async (id: string, updates: ProtocoloUpdate) => {
-    await updateProtocoloMutation.mutateAsync({ id, updates });
+    const savedList = await updateProtocoloMutation.mutateAsync({ id, updates });
+    return savedList.find((item) => item.id === id);
   };
-
-  const updateStatus = (id: string, status: ProtocoloStatus) => updateProtocolo(id, { status });
 
   const updateEntregasEmpresa = async (empresaId: string, entregaIds: string[]) => {
     await updateEntregasEmpresaMutation.mutateAsync({ empresaId, entregaIds });
@@ -155,6 +163,12 @@ export const useProtocolos = () => {
     activeEmpresaTab,
     setActiveEmpresaTab,
     isLoading: protocolosQuery.isLoading,
+    errorMessage: protocolosQuery.error instanceof Error
+      ? protocolosQuery.error.message
+      : protocolosQuery.isError
+        ? 'Não foi possível carregar o acompanhamento.'
+        : '',
+    retry: protocolosQuery.refetch,
     activeTab,
     setActiveTab,
     searchTerm,
@@ -164,7 +178,6 @@ export const useProtocolos = () => {
     dataFinal,
     setDataFinal,
     updateProtocolo,
-    updateStatus,
     updateEntregasEmpresa,
     reload: invalidateProtocolos,
   };

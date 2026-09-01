@@ -1,640 +1,369 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, Repeat, Trash2, Edit, X, ClipboardCheck } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Building2, Loader2, RefreshCw, Search } from 'lucide-react';
+import { SystemQuickModal } from '../../components/SystemQuickModal';
+import { SystemToast, type SystemToastData } from '../../components/SystemToast';
+import { RotinaFormDrawer } from '../forms/RotinaFormDrawer';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
+import type { ClienteEmpresa } from '../services/atividadesService';
 import {
-  todayKey,
-  type CategoriaAtividade,
-  type FrequenciaAtividade,
-  type PrioridadeAtividade,
+  ROTINAS_BATCH_LIMIT,
   type RotinaAtividade,
 } from '../services/rotinasAtividadesService';
+import {
+  filterRotinas,
+  getRotinaFrequenciaLabel,
+  groupRotinasByCompany,
+  type RotinasFilterState,
+  type RotinaWorkspaceItem,
+} from '../utils/rotinasWorkspace';
+import { RotinasCompanyDetail } from './rotinas/RotinasCompanyDetail';
+import { RotinasCompanyGrid } from './rotinas/RotinasCompanyGrid';
+import { RotinasConsulta } from './rotinas/RotinasConsulta';
+import './rotinas/RotinasWorkspace.css';
 
-const blankRotina = (): RotinaAtividade => ({
-  id: '',
-  nome: '',
-  categoria: 'Interna',
-  frequencia: 'Diária',
-  intervaloDias: 1,
-  responsavel: '',
-  cliente: 'Escritório',
-  proximaExecucao: todayKey(),
-  prioridade: 'Média',
-  ativa: true,
-  checklist: [''],
-  observacoes: '',
-});
+interface AbaRotinasProps {
+  initialCompanyId?: string;
+}
 
-type FiltroRotinaTab = 'todas' | 'diarias' | 'semanais' | 'mensais' | 'empresa';
+type RotinasView = 'empresas' | 'consulta';
 
-export const AbaRotinas: React.FC = () => {
-  const { rotinas, usuarios, saveRotina, deleteRotina } = useAtividadesWorkspace();
-  const [form, setForm] = useState<RotinaAtividade>(blankRotina());
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<FiltroRotinaTab>('todas');
+interface DrawerState {
+  company: ClienteEmpresa;
+  rotina?: RotinaWorkspaceItem;
+}
 
-  const clientes = useMemo(() => ['Escritório'], []);
+const normalizeSearch = (value: string) => value
+  .trim()
+  .toLocaleLowerCase('pt-BR')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '');
 
-  const handleEditClick = (rotina: RotinaAtividade) => {
-    setForm(rotina);
-    setIsDrawerOpen(true);
-  };
-
-  const handleCreateClick = () => {
-    setForm(blankRotina());
-    setIsDrawerOpen(true);
-  };
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!form.nome.trim()) return;
-    const checklist = form.checklist.map((item) => item.trim()).filter(Boolean);
-    saveRotina({
-      ...form,
-      responsavelUserId: usuarios.find((usuario) => usuario.configUsuarioId === form.responsavelConfigUsuarioId)?.userId,
-      id: form.id || `rotina-${Date.now()}`,
-      checklist: checklist.length > 0 ? checklist : ['Executar atividade'],
-      intervaloDias: form.frequencia === 'Personalizada' ? Math.max(1, form.intervaloDias) : form.intervaloDias,
-    });
-    setForm(blankRotina());
-    setIsDrawerOpen(false);
-  };
-
-  const setChecklistText = (value: string) => {
-    setForm({ ...form, checklist: value.split('\n') });
-  };
-
-  // Filtragem com base nas abas
-  const filteredRotinas = useMemo(() => {
-    return rotinas.filter((r) => {
-      if (activeTab === 'todas') return true;
-      if (activeTab === 'diarias') return r.frequencia === 'Diária';
-      if (activeTab === 'semanais') return r.frequencia === 'Semanal';
-      if (activeTab === 'mensais') return r.frequencia === 'Mensal';
-      if (activeTab === 'empresa') return r.cliente !== 'Escritório';
-      return true;
-    });
-  }, [rotinas, activeTab]);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Topo com ação principal */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-        <button onClick={handleCreateClick} style={primaryBtnStyle} type="button">
-          <Plus size={16} /> Cadastrar Checklist
-        </button>
-      </div>
-
-      {/* Abas de Categorias */}
-      <div style={tabsWrapperStyle}>
-        <div style={tabsContainerStyle}>
-          {(['todas', 'diarias', 'semanais', 'mensais', 'empresa'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                ...tabBtnStyle,
-                borderBottomColor: activeTab === tab ? 'var(--color-gold-primary)' : 'transparent',
-                color: activeTab === tab ? 'var(--color-gold-dark)' : '#64748b',
-                fontWeight: activeTab === tab ? 700 : 500,
-              }}
-            >
-              {tab === 'todas' && 'Todos os Modelos'}
-              {tab === 'diarias' && 'Diárias'}
-              {tab === 'semanais' && 'Semanais'}
-              {tab === 'mensais' && 'Mensais'}
-              {tab === 'empresa' && 'Por Empresa'}
-            </button>
-          ))}
-        </div>
-        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
-          {filteredRotinas.length} modelos encontrados
-        </div>
-      </div>
-
-      {/* Grid de Cards dos Modelos Cadastrados */}
-      {filteredRotinas.length === 0 ? (
-        <div className="empty-state-card" style={emptyCardStyle}>
-          <Repeat size={40} color="var(--color-gold-primary)" />
-          <p style={{ marginTop: '12px', fontSize: '0.9rem', color: '#64748b', fontWeight: 500 }}>
-            Nenhum modelo de checklist cadastrado nesta categoria.
-          </p>
-        </div>
-      ) : (
-        <div style={gridContainerStyle}>
-          {filteredRotinas.map((rotina) => (
-            <article key={rotina.id} style={rotinaCardStyle}>
-              {/* Header do Card */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                <div>
-                  <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a', lineHeight: '1.3' }}>
-                    {rotina.nome}
-                  </h4>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                    Frequência: <strong>{rotina.frequencia}</strong>
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                  <button onClick={() => handleEditClick(rotina)} style={iconBtnStyle} title="Editar checklist" type="button">
-                    <Edit size={13} />
-                  </button>
-                  <button onClick={() => deleteRotina(rotina.id)} style={{ ...iconBtnStyle, color: '#ef4444' }} title="Excluir checklist" type="button">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Informações Centrais do Modelo */}
-              <div style={cardMetaStyle}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={metaLabelStyle}>Responsável Padrão</span>
-                  <span style={metaValStyle}>{rotina.responsavel}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={metaLabelStyle}>Cliente / Vínculo</span>
-                  <span style={metaValStyle}>{rotina.cliente}</span>
-                </div>
-              </div>
-
-              {/* Etapas do Checklist */}
-              {rotina.checklist && rotina.checklist.length > 0 && (
-                <div style={checklistBlockStyle}>
-                  <strong style={{ fontSize: '0.72rem', color: 'var(--color-gold-dark)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                    <ClipboardCheck size={12} /> Etapas do Checklist:
-                  </strong>
-                  <ul style={checklistListStyle}>
-                    {rotina.checklist.slice(0, 3).map((item, i) => (
-                      <li key={i} style={checklistItemStyle}>• {item}</li>
-                    ))}
-                    {rotina.checklist.length > 3 && (
-                      <li style={{ ...checklistItemStyle, color: '#64748b', fontStyle: 'italic' }}>
-                        + {rotina.checklist.length - 3} mais etapas...
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-
-              {/* Footer do Card */}
-              <div style={cardFooterStyle}>
-                <span style={{
-                  ...badgeStyle,
-                  backgroundColor: 'rgba(197, 146, 53, 0.1)',
-                  color: 'var(--color-gold-dark)',
-                }}>
-                  {rotina.categoria}
-                </span>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 500 }}>
-                  Prioridade: <strong>{rotina.prioridade}</strong>
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {/* Gaveta Lateral Flutuante (Quick Drawer) do Formulário */}
-      {isDrawerOpen && (
-        <div style={drawerOverlayStyle} onClick={() => setIsDrawerOpen(false)}>
-          <div style={drawerContentStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={drawerHeaderStyle}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Repeat size={18} color="var(--color-gold-primary)" />
-                {form.id ? 'Editar Checklist Recorrente' : 'Cadastrar Checklist Recorrente'}
-              </h3>
-              <button onClick={() => setIsDrawerOpen(false)} style={closeBtnStyle} type="button">
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} style={formStyle}>
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Nome do Checklist</label>
-                <input
-                  value={form.nome}
-                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  placeholder="Ex: Fechamento Fiscal Mensal"
-                  required
-                  style={inputStyle}
-                />
-              </div>
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Categoria</label>
-                  <select
-                    value={form.categoria}
-                    onChange={(e) => setForm({ ...form, categoria: e.target.value as CategoriaAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Interna">Interna</option>
-                    <option value="Cliente">Cliente</option>
-                    <option value="Fiscal">Fiscal</option>
-                    <option value="Folha">Folha</option>
-                    <option value="Contábil">Contábil</option>
-                    <option value="Controle">Controle</option>
-                  </select>
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Recorrência</label>
-                  <select
-                    value={form.frequencia}
-                    onChange={(e) => setForm({ ...form, frequencia: e.target.value as FrequenciaAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Diária">Diária</option>
-                    <option value="Semanal">Semanal</option>
-                    <option value="Quinzenal">Quinzenal</option>
-                    <option value="Mensal">Mensal</option>
-                    <option value="Personalizada">A cada X dias</option>
-                  </select>
-                </div>
-              </div>
-
-              {form.frequencia === 'Personalizada' && (
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Intervalo em dias</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={form.intervaloDias}
-                    onChange={(e) => setForm({ ...form, intervaloDias: Number(e.target.value) })}
-                    style={inputStyle}
-                  />
-                </div>
-              )}
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Responsável Padrão</label>
-                  <select
-                    value={form.responsavelConfigUsuarioId || ''}
-                    onChange={(e) => {
-                      const usuario = usuarios.find((item) => item.configUsuarioId === e.target.value);
-                      setForm({
-                        ...form,
-                        responsavel: usuario?.nome || '',
-                        responsavelUserId: usuario?.userId,
-                        responsavelConfigUsuarioId: usuario?.configUsuarioId,
-                      });
-                    }}
-                    style={selectStyle}
-                  >
-                    <option value="">Selecione</option>
-                    {usuarios.map((usuario) => (
-                      <option key={usuario.configUsuarioId} value={usuario.configUsuarioId}>{usuario.nome}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Cliente / Vínculo</label>
-                  <select
-                    value={form.cliente}
-                    onChange={(e) => setForm({ ...form, cliente: e.target.value })}
-                    style={selectStyle}
-                  >
-                    {clientes.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={rowStyle}>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Próxima Execução</label>
-                  <input
-                    type="date"
-                    value={form.proximaExecucao}
-                    onChange={(e) => setForm({ ...form, proximaExecucao: e.target.value })}
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={{ ...fieldStyle, flex: 1 }}>
-                  <label style={labelStyle}>Prioridade</label>
-                  <select
-                    value={form.prioridade}
-                    onChange={(e) => setForm({ ...form, prioridade: e.target.value as PrioridadeAtividade })}
-                    style={selectStyle}
-                  >
-                    <option value="Baixa">Baixa</option>
-                    <option value="Média">Média</option>
-                    <option value="Alta">Alta</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Etapas do Checklist (Uma por linha)</label>
-                <textarea
-                  value={form.checklist.join('\n')}
-                  onChange={(e) => setChecklistText(e.target.value)}
-                  placeholder="Ex: Conciliar caixa&#10;Gerar guias&#10;Enviar e-mail para cliente"
-                  rows={4}
-                  style={textareaStyle}
-                />
-              </div>
-
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Observações / Instruções</label>
-                <textarea
-                  value={form.observacoes}
-                  onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                  placeholder="Instruções e links de apoio..."
-                  rows={2}
-                  style={textareaStyle}
-                />
-              </div>
-
-              <div style={drawerActionsStyle}>
-                <button onClick={() => setIsDrawerOpen(false)} style={cancelBtnStyle} type="button">
-                  Cancelar
-                </button>
-                <button type="submit" style={submitBtnStyle}>
-                  {form.id ? 'Salvar Alterações' : 'Salvar Modelo'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
+const getActiveModelIds = (company: ClienteEmpresa, modelos: Array<{ id: string; codigo?: string }>) => {
+  const active = new Set(company.modelosAtivos || []);
+  return new Set(
+    modelos
+      .filter((modelo) => active.has(modelo.id) || active.has(modelo.codigo || ''))
+      .map((modelo) => modelo.id),
   );
 };
 
-// Estilos Tema Claro
-const primaryBtnStyle = {
-  background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)',
-  border: 'none',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#ffffff',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  boxShadow: '0 4px 10px rgba(197, 146, 53, 0.15)',
-};
+export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
+  const {
+    rotinas,
+    usuarios,
+    clientes,
+    modelos,
+    isLoading,
+    isSaving,
+    workspaceError,
+    refetchWorkspace,
+    saveRotinaAsync,
+    deleteRotinaAsync,
+    assignResponsibleAsync,
+    assignResponsibleBatchAsync,
+  } = useAtividadesWorkspace();
+  const [activeView, setActiveView] = useState<RotinasView>('empresas');
+  const [selectedCompanyId, setSelectedCompanyId] = useState(initialCompanyId || '');
+  const [filters, setFilters] = useState<RotinasFilterState>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchResponsibleId, setBatchResponsibleId] = useState('');
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+  const [drawer, setDrawer] = useState<DrawerState | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<RotinaWorkspaceItem | null>(null);
+  const [toast, setToast] = useState<SystemToastData | null>(null);
 
-const tabsWrapperStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #e2e8f0',
-  flexWrap: 'wrap' as const,
-  gap: '12px',
-};
+  useEffect(() => {
+    if (initialCompanyId) {
+      setSelectedCompanyId(initialCompanyId);
+      setActiveView('empresas');
+    }
+  }, [initialCompanyId]);
 
-const tabsContainerStyle = {
-  display: 'flex',
-  gap: '16px',
-};
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 4800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
-const tabBtnStyle = {
-  background: 'none',
-  border: 'none',
-  borderBottom: '2px solid transparent',
-  padding: '8px 4px',
-  fontSize: '0.82rem',
-  cursor: 'pointer',
-  color: '#64748b',
-  outline: 'none',
-  transition: 'all 0.18s ease',
-};
+  const groups = useMemo(
+    () => groupRotinasByCompany(clientes, rotinas),
+    [clientes, rotinas],
+  );
 
-const gridContainerStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-  gap: '16px',
-};
+  useEffect(() => {
+    const currentRoutineIds = new Set(rotinas.map((rotina) => rotina.id));
+    setSelectedIds((current) => {
+      const next = new Set([...current].filter((id) => currentRoutineIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [rotinas]);
 
-const rotinaCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '12px',
-  padding: '16px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '12px',
-  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.02)',
-  justifyContent: 'space-between',
-};
+  const activeCompanyIds = useMemo(
+    () => new Set(clientes.map((cliente) => cliente.id)),
+    [clientes],
+  );
+  const unlinkedRoutineCount = useMemo(
+    () => rotinas.filter((rotina) => !rotina.clienteId || !activeCompanyIds.has(rotina.clienteId)).length,
+    [activeCompanyIds, rotinas],
+  );
+  const selectedGroup = groups.find((group) => group.cliente.id === selectedCompanyId);
 
-const iconBtnStyle = {
-  backgroundColor: '#f1f5f9',
-  border: 'none',
-  borderRadius: '4px',
-  padding: '5px',
-  color: 'var(--color-gold-dark)',
-  cursor: 'pointer',
-  display: 'flex',
-};
+  const filteredRotinas = useMemo(() => {
+    const base = filterRotinas(rotinas, { ...filters, search: '' });
+    const search = normalizeSearch(filters.search || '');
+    if (!search) return base;
+    const clientsById = new Map(clientes.map((cliente) => [cliente.id, cliente]));
 
-const cardMetaStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '8px',
-  borderTop: '1px solid #f1f5f9',
-  borderBottom: '1px solid #f1f5f9',
-  padding: '10px 0',
-};
+    return base.filter((rotina) => {
+      const cliente = rotina.clienteId ? clientsById.get(rotina.clienteId) : undefined;
+      return [
+        rotina.nome,
+        rotina.categoria,
+        rotina.responsavel,
+        rotina.cliente,
+        rotina.protocoloCodigo,
+        getRotinaFrequenciaLabel(rotina),
+        cliente?.nome,
+        cliente?.cnpj,
+      ].some((value) => normalizeSearch(String(value || '')).includes(search));
+    });
+  }, [clientes, filters, rotinas]);
+  const selectedRotinas = filteredRotinas.filter((rotina) => selectedIds.has(rotina.id));
+  const visibleSelectedIds = new Set(selectedRotinas.map((rotina) => rotina.id));
+  const selectedCompanyModelIds = selectedGroup
+    ? getActiveModelIds(selectedGroup.cliente, modelos)
+    : new Set<string>();
 
-const metaLabelStyle = {
-  fontSize: '0.66rem',
-  color: '#64748b',
-  fontWeight: 600,
-  textTransform: 'uppercase' as const,
-};
+  const showToast = (type: SystemToastData['type'], title: string, message: string) => {
+    setToast({ id: Date.now(), type, title, message });
+  };
 
-const metaValStyle = {
-  fontSize: '0.78rem',
-  color: '#0f172a',
-  fontWeight: 700,
-};
+  const handleSave = async (rotina: RotinaAtividade) => {
+    try {
+      await saveRotinaAsync(rotina);
+      setDrawer(null);
+      showToast('success', 'Rotina salva', 'A rotina recorrente foi atualizada para esta empresa.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar a rotina.';
+      showToast('error', 'Falha ao salvar', message);
+      throw error;
+    }
+  };
 
-const checklistBlockStyle = {
-  backgroundColor: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '8px 10px',
-};
+  const handleAssign = async (rotina: RotinaWorkspaceItem, responsibleId: string) => {
+    try {
+      await assignResponsibleAsync({ rotina: rotina as RotinaAtividade, responsibleId });
+      showToast('success', 'Responsável atualizado', `O responsável de “${rotina.nome}” foi alterado.`);
+    } catch (error) {
+      showToast(
+        'error',
+        'Falha na atribuição',
+        error instanceof Error ? error.message : 'Não foi possível alterar o responsável.',
+      );
+    }
+  };
 
-const checklistListStyle = {
-  listStyle: 'none',
-  padding: 0,
-  margin: '4px 0 0 0',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '4px',
-};
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const deletedName = pendingDelete.nome;
+    try {
+      await deleteRotinaAsync(pendingDelete.id);
+      showToast('success', 'Rotina desativada', `“${deletedName}” não gerará novas tarefas.`);
+    } catch (error) {
+      showToast(
+        'error',
+        'Falha ao desativar',
+        error instanceof Error ? error.message : 'Não foi possível desativar a rotina.',
+      );
+    } finally {
+      setPendingDelete(null);
+    }
+  };
 
-const checklistItemStyle = {
-  fontSize: '0.75rem',
-  color: '#334155',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap' as const,
-};
+  const handleToggleSelected = (id: string) => {
+    if (!selectedIds.has(id) && selectedIds.size >= ROTINAS_BATCH_LIMIT) {
+      showToast('info', 'Limite do lote', `Selecione no máximo ${ROTINAS_BATCH_LIMIT} rotinas por lote.`);
+      return;
+    }
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
-const cardFooterStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: '4px',
-};
+  const handleSelectVisible = (ids: string[]) => {
+    const remaining = Math.max(0, ROTINAS_BATCH_LIMIT - selectedIds.size);
+    const newIds = ids.filter((id) => !selectedIds.has(id));
+    if (newIds.length > remaining) {
+      showToast('info', 'Limite do lote', `Foram selecionadas as primeiras ${ROTINAS_BATCH_LIMIT} rotinas.`);
+    }
+    setSelectedIds((current) => new Set([...current, ...newIds.slice(0, remaining)]));
+  };
 
-const badgeStyle = {
-  fontSize: '0.65rem',
-  fontWeight: 700,
-  padding: '2px 6px',
-  borderRadius: '4px',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
+  const handleFiltersChange = (nextFilters: RotinasFilterState) => {
+    setFilters(nextFilters);
+    setSelectedIds(new Set());
+    setBatchResponsibleId('');
+  };
 
-const emptyCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px dashed #cbd5e1',
-  borderRadius: '8px',
-  padding: '40px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  alignItems: 'center',
-  justifyContent: 'center',
-};
+  const handleBatchAssign = async () => {
+    if (!batchResponsibleId || selectedRotinas.length === 0) return;
+    try {
+      const result = await assignResponsibleBatchAsync({
+        rotinas: selectedRotinas,
+        responsibleId: batchResponsibleId,
+      });
+      const successfulIds = new Set(result.successIds);
+      setSelectedIds((current) => new Set([...current].filter((id) => !successfulIds.has(id))));
 
-/* Estilos da Gaveta Lateral (Drawer) */
-const drawerOverlayStyle = {
-  position: 'fixed' as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  backdropFilter: 'blur(3px)',
-  zIndex: 1000,
-  display: 'flex',
-  justifyContent: 'flex-end',
-};
+      if (result.failed.length === 0) {
+        showToast('success', 'Alteração concluída', `${result.successIds.length} rotinas foram reatribuídas.`);
+        setBatchResponsibleId('');
+      } else {
+        showToast(
+          'info',
+          'Alteração parcialmente concluída',
+          `${result.successIds.length} alteradas e ${result.failed.length} não alteradas. Revise os itens ainda selecionados.`,
+        );
+      }
+    } catch (error) {
+      showToast(
+        'error',
+        'Falha na alteração em lote',
+        error instanceof Error ? error.message : 'Nenhuma rotina foi alterada.',
+      );
+    }
+  };
 
-const drawerContentStyle = {
-  width: '100%',
-  maxWidth: '460px',
-  backgroundColor: '#ffffff',
-  height: '100%',
-  boxShadow: '-4px 0 20px rgba(0,0,0,0.1)',
-  padding: '24px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '16px',
-  overflowY: 'auto' as const,
-};
+  if (isLoading) {
+    return (
+      <div className="rotinas-loading">
+        <Loader2 size={32} className="animate-spin" />
+        <span>Carregando empresas e rotinas...</span>
+      </div>
+    );
+  }
 
-const drawerHeaderStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  borderBottom: '1px solid #e2e8f0',
-  paddingBottom: '14px',
-};
+  if (workspaceError) {
+    return (
+      <div className="rotinas-error-state" role="alert">
+        <Search size={34} />
+        <h3>Não foi possível carregar as rotinas</h3>
+        <p>{workspaceError instanceof Error ? workspaceError.message : 'Tente novamente em alguns instantes.'}</p>
+        <button type="button" className="rotinas-button rotinas-button--secondary" onClick={() => { void refetchWorkspace(); }}>
+          <RefreshCw size={15} /> Tentar novamente
+        </button>
+      </div>
+    );
+  }
 
-const closeBtnStyle = {
-  background: 'none',
-  border: 'none',
-  color: '#64748b',
-  cursor: 'pointer',
-  padding: '4px',
-  display: 'flex',
-};
+  const batchUser = usuarios.find((usuario) => usuario.configUsuarioId === batchResponsibleId);
 
-const formStyle = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '14px',
-};
+  return (
+    <div className="rotinas-workspace">
+      <SystemToast toast={toast} onClose={() => setToast(null)} />
 
-const fieldStyle = {
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '5px',
-};
+      <nav className="rotinas-tabs" role="tablist" aria-label="Visões de rotinas">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'empresas'}
+          className={`rotinas-tab ${activeView === 'empresas' ? 'is-active' : ''}`}
+          onClick={() => setActiveView('empresas')}
+        >
+          <Building2 size={14} /> Empresas
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeView === 'consulta'}
+          className={`rotinas-tab ${activeView === 'consulta' ? 'is-active' : ''}`}
+          onClick={() => setActiveView('consulta')}
+        >
+          <Search size={14} /> Consulta
+        </button>
+      </nav>
 
-const rowStyle = {
-  display: 'flex',
-  gap: '12px',
-};
+      {activeView === 'empresas' ? (
+        selectedGroup ? (
+          <RotinasCompanyDetail
+            group={selectedGroup}
+            usuarios={usuarios}
+            activeModelIds={selectedCompanyModelIds}
+            isSaving={isSaving}
+            onBack={() => setSelectedCompanyId('')}
+            onCreate={() => setDrawer({ company: selectedGroup.cliente })}
+            onEdit={(rotina) => setDrawer({ company: selectedGroup.cliente, rotina })}
+            onDelete={setPendingDelete}
+            onAssign={handleAssign}
+          />
+        ) : (
+          <>
+            {unlinkedRoutineCount > 0 ? (
+              <div className="rotinas-unlinked-warning" role="status">
+                <AlertTriangle size={17} />
+                <span>
+                  {unlinkedRoutineCount} {unlinkedRoutineCount === 1 ? 'rotina não está' : 'rotinas não estão'} vinculada{unlinkedRoutineCount === 1 ? '' : 's'} a uma empresa ativa.
+                </span>
+                <button type="button" onClick={() => setActiveView('consulta')}>Ver na Consulta</button>
+              </div>
+            ) : null}
+            <RotinasCompanyGrid groups={groups} onOpenCompany={setSelectedCompanyId} />
+          </>
+        )
+      ) : (
+        <RotinasConsulta
+          rotinas={filteredRotinas}
+          allRotinas={rotinas}
+          clientes={clientes}
+          usuarios={usuarios}
+          filters={filters}
+          selectedIds={visibleSelectedIds}
+          batchResponsibleId={batchResponsibleId}
+          isSaving={isSaving}
+          onFiltersChange={handleFiltersChange}
+          onToggleSelected={handleToggleSelected}
+          onSelectVisible={handleSelectVisible}
+          onClearSelected={() => setSelectedIds(new Set())}
+          onBatchResponsibleChange={setBatchResponsibleId}
+          onApplyBatch={() => setIsBatchConfirmOpen(true)}
+        />
+      )}
 
-const labelStyle = {
-  fontSize: '0.75rem',
-  color: 'var(--color-gold-dark)',
-  fontWeight: 600,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
+      {drawer ? (
+        <RotinaFormDrawer
+          key={`${drawer.company.id}:${drawer.rotina?.id || 'new'}`}
+          company={drawer.company}
+          modelos={modelos}
+          usuarios={usuarios}
+          rotina={drawer.rotina as RotinaAtividade | undefined}
+          isSaving={isSaving}
+          onClose={() => setDrawer(null)}
+          onSave={handleSave}
+        />
+      ) : null}
 
-const inputStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  width: '100%',
-};
+      <SystemQuickModal
+        isOpen={Boolean(pendingDelete)}
+        title="Desativar rotina?"
+        message={`A rotina “${pendingDelete?.nome || ''}” deixará de gerar novas tarefas. O histórico já concluído será preservado.`}
+        confirmLabel="Desativar"
+        onConfirm={() => { void handleDelete(); }}
+        onClose={() => setPendingDelete(null)}
+        danger
+      />
 
-const selectStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  width: '100%',
-  cursor: 'pointer',
-};
-
-const textareaStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '8px 10px',
-  color: '#0f172a',
-  fontSize: '0.82rem',
-  outline: 'none',
-  resize: 'vertical' as const,
-  width: '100%',
-};
-
-const drawerActionsStyle = {
-  display: 'flex',
-  gap: '12px',
-  marginTop: '12px',
-};
-
-const submitBtnStyle = {
-  background: 'linear-gradient(135deg, #c59235 0%, #aa7c28 100%)',
-  border: 'none',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#ffffff',
-  fontSize: '0.82rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  flex: 1,
-  boxShadow: '0 2px 6px rgba(197, 146, 53, 0.2)',
-};
-
-const cancelBtnStyle = {
-  backgroundColor: 'transparent',
-  border: '1px solid #cbd5e1',
-  borderRadius: '6px',
-  padding: '10px 16px',
-  color: '#64748b',
-  fontSize: '0.82rem',
-  fontWeight: 500,
-  cursor: 'pointer',
+      <SystemQuickModal
+        isOpen={isBatchConfirmOpen}
+        title="Alterar responsável em lote?"
+        message={`O responsável padrão de ${selectedRotinas.length} rotinas será alterado para ${batchUser?.nome || 'o usuário selecionado'}. O histórico concluído não será modificado.`}
+        confirmLabel="Aplicar alteração"
+        onConfirm={() => { void handleBatchAssign(); }}
+        onClose={() => setIsBatchConfirmOpen(false)}
+      />
+    </div>
+  );
 };

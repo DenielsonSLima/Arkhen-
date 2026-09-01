@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
@@ -79,6 +80,8 @@ export const ProtocolosPage: React.FC = () => {
     companyGroups,
     counters,
     isLoading,
+    errorMessage,
+    retry,
     activeTab,
     setActiveTab,
     activeEmpresaTab,
@@ -139,12 +142,12 @@ export const ProtocolosPage: React.FC = () => {
     <div className="protocolos-page animate-fade-in">
       <div className="protocolos-page-header">
         <div>
-          <h1>Protocolos e Documentos</h1>
-          <p>Controle por empresa e competência do que foi recebido, enviado, protocolado e comprovado.</p>
+          <h1>Acompanhamento</h1>
+          <p>Acompanhe por empresa e competência o que foi recebido, enviado, concluído e comprovado.</p>
         </div>
         <div className="protocolos-header-metric">
           <FileCheck size={18} />
-          <span>{counters.todos} entregas monitoradas</span>
+          <span>{counters.todos} entregas acompanhadas</span>
         </div>
       </div>
 
@@ -215,7 +218,16 @@ export const ProtocolosPage: React.FC = () => {
       {isLoading ? (
         <div className="protocolos-loading">
           <Loader2 size={34} className="animate-spin" />
-          <span>Carregando protocolos...</span>
+          <span>Carregando acompanhamento...</span>
+        </div>
+      ) : errorMessage ? (
+        <div className="protocolos-empty" role="alert">
+          <AlertCircle size={38} />
+          <h3>Não foi possível carregar o acompanhamento</h3>
+          <p>{errorMessage}</p>
+          <button type="button" className="protocolos-open-atividades" onClick={() => { void retry(); }}>
+            Tentar novamente
+          </button>
         </div>
       ) : selectedGroupId && selectedCompany ? (
         <EmpresaProtocolosDetail
@@ -228,8 +240,12 @@ export const ProtocolosPage: React.FC = () => {
       ) : companyGroups.length === 0 ? (
         <div className="protocolos-empty">
           <FileSearch size={38} />
-          <h3>Nenhuma empresa encontrada</h3>
-          <p>Ajuste os filtros ou selecione a aba Ativas.</p>
+          <h3>{protocolos.length === 0 ? 'Nenhuma entrega em acompanhamento' : 'Nenhuma empresa encontrada'}</h3>
+          <p>
+            {protocolos.length === 0
+              ? 'Ative as entregas em Rotinas e Obrigações no cadastro de cada cliente.'
+              : 'Ajuste os filtros ou selecione a aba Ativas.'}
+          </p>
         </div>
       ) : (
         <div className="protocolos-regime-groups animate-fade-in">
@@ -260,7 +276,7 @@ interface DetailProps {
   items: ProtocoloEntrega[];
   allCompanyItems: ProtocoloEntrega[];
   onBack: () => void;
-  updateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<void>;
+  updateProtocolo: (id: string, updates: ProtocoloUpdate) => Promise<ProtocoloEntrega | undefined>;
 }
 
 const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
@@ -358,8 +374,8 @@ const EmpresaProtocolosDetail: React.FC<DetailProps> = ({
         <div className="protocolo-section-title">
           <FolderOpen size={17} />
           <div>
-            <h3>Evidências da competência {formatCompetencia(company.competencia)}</h3>
-            <p>Arquivos, recibos, envios, recebimentos e provas vinculadas à operação.</p>
+            <h3>Acompanhamento da competência {formatCompetencia(company.competencia)}</h3>
+            <p>Histórico de arquivos, recibos, envios, recebimentos e evidências da operação.</p>
           </div>
           <div className="protocolo-section-actions">
             <button type="button" className="protocolos-open-atividades" onClick={handleOpenAtividades}>

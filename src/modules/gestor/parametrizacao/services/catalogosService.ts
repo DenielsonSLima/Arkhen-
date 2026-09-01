@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import { getCurrentEmpresaId } from './parametrizacaoSupabase';
 
 export type CatalogoTipo =
@@ -84,23 +85,28 @@ const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[
     .eq('tipo', tipo);
 
   if (error) throw error;
-  if ((data || []).length > 0) return;
+  const existingCodes = new Set((data || []).map((item) => String(item.codigo)));
+  const missingDefaults = defaults.filter((item) => !existingCodes.has(item.codigo));
+  if (missingDefaults.length === 0) return;
 
   const { error: insertError } = await supabase.from(TABLE).upsert(
-    defaults.map((item, index) => ({
+    missingDefaults.map((item, index) => ({
       empresa_id: empresaId,
       tipo,
       codigo: item.codigo,
       nome: item.nome,
       descricao: item.descricao,
-      sistema: item.sistema ?? true,
+      sistema: item.sistema ?? false,
       ativo: item.ativo ?? true,
       ordem: item.ordem ?? (index + 1) * 10,
     })),
-    { onConflict: 'empresa_id,tipo,codigo' }
+    {
+      onConflict: 'empresa_id,tipo,codigo',
+      ignoreDuplicates: true,
+    },
   );
 
-  if (insertError) throw insertError;
+  if (insertError && insertError.code !== '42501') throw insertError;
 };
 
 export const catalogosService = {
@@ -117,8 +123,8 @@ export const catalogosService = {
     return sortByName(((data || []) as CatalogoRow[]).map(fromRow));
   },
 
-  async save(input: SaveCatalogoInput): Promise<void> {
-    const nome = input.nome.trim();
+  async save(input: SaveCatalogoInput): Promise<string> {
+    const nome = normalizeCatalogLabel(input.nome);
     if (!nome) throw new Error('Informe o nome do parametro.');
 
     if (input.id) {
@@ -133,7 +139,7 @@ export const catalogosService = {
         .eq('id', input.id);
 
       if (error) throw error;
-      return;
+      return nome;
     }
 
     const empresaId = await getCurrentEmpresaId();
@@ -150,6 +156,7 @@ export const catalogosService = {
     });
 
     if (error) throw error;
+    return nome;
   },
 
   async setAtivo(id: string, ativo: boolean): Promise<void> {

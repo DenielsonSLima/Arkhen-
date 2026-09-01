@@ -58,8 +58,8 @@ export const categoriaClienteService = {
     return rows.map(fromCatalogo);
   },
 
-  async save(nome: string, descricao: string): Promise<void> {
-    await catalogosService.save({
+  async save(nome: string, descricao: string): Promise<string> {
+    return catalogosService.save({
       tipo: 'categorias_clientes',
       nome,
       descricao,
@@ -68,8 +68,8 @@ export const categoriaClienteService = {
     });
   },
 
-  async update(id: string, nome: string, descricao: string): Promise<void> {
-    await catalogosService.save({
+  async update(id: string, nome: string, descricao: string): Promise<string> {
+    return catalogosService.save({
       id,
       tipo: 'categorias_clientes',
       nome,

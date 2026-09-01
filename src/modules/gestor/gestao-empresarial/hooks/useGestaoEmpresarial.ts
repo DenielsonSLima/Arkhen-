@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../lib/supabase';
 import { subscribeRealtimeChannel } from '../../../../lib/realtimeChannel';
 import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
 import type { Company } from '../services/gestaoEmpresarialService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
+import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
 
 export type EmpresaDetailTab = 'dados' | 'filiais' | 'protocolos';
 
@@ -40,10 +41,15 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
   const companies = companiesQuery.data || [];
   const isLoading = companiesQuery.isLoading;
 
+  const invalidatePartnersAndRoutines = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: clientesKeys.all });
+    void queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+  }, [queryClient]);
+
   useEffect(() => {
     const channel = subscribeRealtimeChannel('clientes-realtime', (ch) =>
       ch.on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
-        queryClient.invalidateQueries({ queryKey: clientesKeys.all });
+        invalidatePartnersAndRoutines();
       })
     );
 
@@ -52,7 +58,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
         void supabase.removeChannel(channel);
       }
     };
-  }, [queryClient]);
+  }, [invalidatePartnersAndRoutines]);
 
   const selectedCompany = useMemo(() => {
     if (!selectedCompanyId) return null;
@@ -81,30 +87,22 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const saveMutation = useMutation({
     mutationFn: gestaoEmpresarialService.saveCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: invalidatePartnersAndRoutines,
   });
 
   const deleteMutation = useMutation({
     mutationFn: gestaoEmpresarialService.deleteCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: invalidatePartnersAndRoutines,
   });
 
   const inativarMutation = useMutation({
     mutationFn: gestaoEmpresarialService.inativarCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: invalidatePartnersAndRoutines,
   });
 
   const reativarMutation = useMutation({
     mutationFn: gestaoEmpresarialService.reativarCompany,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: clientesKeys.all });
-    },
+    onSuccess: invalidatePartnersAndRoutines,
   });
 
   const handleUpdateCompany = async (updatedCompany: Company) => {

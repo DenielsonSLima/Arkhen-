@@ -19,7 +19,6 @@ const MIGRATION_LEGACY_KEYS = new Set([
   'contabil_atividade_period_notes_v1',
   'contabil_atividades_instancias',
   'contabil_financeiro_cobrancas',
-  'contabil_parametrizacao_parametros_calculo',
   'contabil_calculator_prefs_',
   'analise-tributaria-',
   'arkhen_param_tipos-empresa',

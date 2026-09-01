@@ -252,49 +252,32 @@ export const LandingFeatures: React.FC = () => {
     },
     calculos: {
       icon: <Calculator size={18} />,
-      tabLabel: 'Simulação Tributária',
-      title: 'Planejador e Simulador de Carga Tributária',
-      subtitle: 'Compare regimes tributários de forma simples para apoiar decisões estratégicas.',
-      description: 'Ofereça consultoria de alto valor. Estime impostos de forma comparativa entre Simples Nacional, Lucro Presumido e Lucro Real em segundos, e apresente relatórios claros com gráficos estruturados aos seus clientes.',
+      tabLabel: 'Rescisão',
+      title: 'Calculadora de Rescisão',
+      subtitle: 'Projete verbas rescisórias e organize a conferência do desligamento.',
+      description: 'Informe os dados do vínculo, o motivo do desligamento e a modalidade do aviso prévio para obter um demonstrativo estimado e gerar o relatório em PDF.',
       benefits: [
-        'Geração rápida de simulação anual ou trimestral de impostos.',
-        'Visualização fácil das alíquotas efetivas de cada cenário fiscal.',
-        'Gráficos comparativos limpos para simplificar explicações.',
-        'Destaque no perfil consultivo do seu escritório.'
+        'Saldo de salário, 13º e férias proporcionais.',
+        'Aviso prévio, descontos e multa do FGTS.',
+        'Parâmetros trabalhistas processados no servidor.',
+        'Relatório em PDF para apoio à conferência.'
       ],
       visualContent: (
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Comparativo Anual Estimado</div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: '2px' }}>
-                <span>Simples Nacional</span>
-                <span style={{ color: '#059669', fontWeight: 700 }}>R$ 48.000,00</span>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Demonstrativo estimado</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff' }}>
+            {[
+              ['Saldo de salário', 'R$ 2.100,00'],
+              ['13º proporcional', 'R$ 1.750,00'],
+              ['Férias + 1/3', 'R$ 2.333,33'],
+              ['Aviso prévio', 'R$ 3.500,00'],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', color: '#475569', fontSize: '0.72rem' }}>
+                <span>{label}</span><strong style={{ color: '#0f172a' }}>{value}</strong>
               </div>
-              <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '55%', height: '100%', background: '#10b981' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: '2px' }}>
-                <span>Lucro Presumido</span>
-                <span style={{ color: '#d97706', fontWeight: 700 }}>R$ 68.200,00</span>
-              </div>
-              <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '80%', height: '100%', background: '#dfb35e' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#475569', marginBottom: '2px' }}>
-                <span>Lucro Real</span>
-                <span style={{ color: '#dc2626', fontWeight: 700 }}>R$ 82.000,00</span>
-              </div>
-              <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: '95%', height: '100%', background: '#ef4444' }}></div>
-              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px', color: '#0f172a', fontSize: '0.78rem', fontWeight: 800 }}>
+              <span>Líquido estimado</span><span style={{ color: '#059669' }}>R$ 8.947,20</span>
             </div>
           </div>
         </div>

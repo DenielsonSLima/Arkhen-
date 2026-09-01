@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import type { MarcaDaguaDados } from '../services/marcaDaguaService';
 import { useMarcaDaguaQuery, useUpdateMarcaDaguaMutation } from '../queries/useMarcaDaguaQueries';
-import { uploadImageAsset } from '../../../shared/uploadImageAsset';
+import {
+  PDF_COMPATIBLE_IMAGE_MIME_TYPES,
+  uploadImageAsset,
+} from '../../../shared/uploadImageAsset';
+
+const WATERMARK_UPLOAD_OPTIONS = {
+  allowedMimeTypes: PDF_COMPATIBLE_IMAGE_MIME_TYPES,
+  invalidTypeMessage: 'Use uma imagem PNG, JPG ou WebP.',
+} as const;
 
 export const useMarcaDagua = () => {
   const marcaDaguaQuery = useMarcaDaguaQuery();
@@ -52,7 +60,12 @@ export const useMarcaDagua = () => {
     setIsUploadingLand(true);
     setErrorMsg(null);
     try {
-      const publicUrl = await uploadImageAsset(file, 'watermarks-landscape', `empresa-${Date.now()}`);
+      const publicUrl = await uploadImageAsset(
+        file,
+        'watermarks-landscape',
+        `empresa-${Date.now()}`,
+        WATERMARK_UPLOAD_OPTIONS,
+      );
       setConfig({ ...config, fileUrlPaisagem: publicUrl });
       setSuccessMsg('Marca d\'Água Paisagem carregada com sucesso! Lembre-se de salvar.');
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -68,7 +81,12 @@ export const useMarcaDagua = () => {
     setIsUploadingPort(true);
     setErrorMsg(null);
     try {
-      const publicUrl = await uploadImageAsset(file, 'watermarks-portrait', `empresa-${Date.now()}`);
+      const publicUrl = await uploadImageAsset(
+        file,
+        'watermarks-portrait',
+        `empresa-${Date.now()}`,
+        WATERMARK_UPLOAD_OPTIONS,
+      );
       setConfig({ ...config, fileUrlRetrato: publicUrl });
       setSuccessMsg('Marca d\'Água Retrato carregada com sucesso! Lembre-se de salvar.');
       setTimeout(() => setSuccessMsg(null), 3000);

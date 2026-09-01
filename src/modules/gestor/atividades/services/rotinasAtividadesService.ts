@@ -1,22 +1,41 @@
 import { supabase } from '../../../../lib/supabase';
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
-
-export type FrequenciaAtividade = 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Personalizada';
-export type CategoriaAtividade = 'Interna' | 'Cliente' | 'Fiscal' | 'Folha' | 'Contábil' | 'Controle';
+import { atividadesService, type ClienteEmpresa, type ModeloAtividade } from './atividadesService';
+export type FrequenciaPersistidaAtividade =
+  | 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Trimestral' | 'Semestral'
+  | 'Personalizada';
+export type FrequenciaAliasAtividade = 'Bimestral' | 'Anual';
+export const ROTINAS_BATCH_LIMIT = 200;
+export type FrequenciaAtividade = FrequenciaPersistidaAtividade | FrequenciaAliasAtividade;
+export type CategoriaAtividadeConhecida =
+  | 'Interna' | 'Cliente' | 'Fiscal' | 'Folha' | 'Contábil' | 'Controle'
+  | 'Documentos' | 'Tributos' | 'Obrigações Acessórias' | 'Financeiro';
+export type CategoriaAtividade = CategoriaAtividadeConhecida | (string & Record<never, never>);
 export type PrioridadeAtividade = 'Baixa' | 'Média' | 'Alta';
 export type StatusAtividadeGestor = 'Pendente' | 'Em andamento' | 'Concluída';
 
 export interface RotinaAtividade {
   id: string;
+  clienteId?: string;
+  modeloId?: string;
+  protocoloCodigo?: string;
   nome: string;
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade;
+  frequenciaPersistida?: FrequenciaPersistidaAtividade;
+  frequenciaAlias?: FrequenciaAliasAtividade;
   intervaloDias: number;
+  intervaloMeses?: 2 | 12;
   responsavel: string;
   responsavelUserId?: string;
   responsavelConfigUsuarioId?: string;
   cliente: string;
+  dataAncora?: string;
+  diaMes?: number;
+  diaSemanaIso?: number;
+  proximaExecucaoBase?: string;
   proximaExecucao: string;
+  reancorarAgenda?: boolean;
   prioridade: PrioridadeAtividade;
   ativa: boolean;
   checklist: string[];
@@ -55,17 +74,41 @@ export interface UsuarioAtividade {
   userId?: string;
   nome: string;
 }
-
+export interface AtividadesWorkspace {
+  rotinas: RotinaAtividade[];
+  tarefas: TarefaGestor[];
+  usuarios: UsuarioAtividade[];
+  usuarioAtual: UsuarioAtividade | null;
+  clientes: ClienteEmpresa[];
+  modelos: ModeloAtividade[];
+}
+export interface FalhaAtribuicaoRotina {
+  rotinaId: string;
+  mensagem: string;
+}
+export interface ResultadoAtribuicaoRotinasLote {
+  total: number;
+  atualizadas: string[];
+  falhas: FalhaAtribuicaoRotina[];
+}
 interface RotinaAtividadeRow {
   id: string;
+  modelo_id: string | null;
+  cliente_id: string | null;
+  protocolo_codigo: string | null;
   nome: string;
   categoria: CategoriaAtividade | null;
   frequencia: FrequenciaAtividade | null;
   intervalo_dias: number | null;
+  intervalo_meses: number | null;
   responsavel_nome: string | null;
   responsavel_user_id: string | null;
   responsavel_config_usuario_id: string | null;
   cliente_nome: string | null;
+  data_ancora: string | null;
+  dia_mes: number | null;
+  dia_semana_iso: number | null;
+  proxima_execucao_base: string | null;
   proxima_execucao: string | null;
   prioridade: PrioridadeAtividade | null;
   checklist: string[] | null;
@@ -73,7 +116,6 @@ interface RotinaAtividadeRow {
   incluir_finais_de_semana: boolean | null;
   ativa: boolean | null;
 }
-
 interface TarefaGestorRow {
   id: string;
   rotina_id: string | null;
@@ -93,10 +135,18 @@ interface TarefaGestorRow {
   data_hora_conclusao: string | null;
   observacao_falta: string | null;
 }
-
+interface UsuarioAtividadeRpcRow {
+  configUsuarioId: string;
+  userId: string;
+  nome: string;
+}
 export const RESPONSAVEIS_ATIVIDADES: string[] = [];
 
-export const todayKey = () => new Date().toISOString().split('T')[0];
+export const todayKey = () => {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().split('T')[0];
+};
 
 export const addDaysKey = (dateKey: string, days: number) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -106,7 +156,7 @@ export const addDaysKey = (dateKey: string, days: number) => {
 
 export const formatDateBR = (dateKey: string) => new Date(`${dateKey}T00:00:00`).toLocaleDateString('pt-BR');
 
-const isUuid = (value?: string) => (
+const isUuid = (value?: string): value is string => (
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 );
 
@@ -116,24 +166,141 @@ const getCurrentEmpresaId = async () => {
   if (!data) throw new Error('Empresa atual nao encontrada para salvar atividades.');
   return data as string;
 };
+interface FrequenciaNormalizada {
+  frequencia: FrequenciaPersistidaAtividade;
+  intervaloDias?: number;
+  intervaloMeses?: 2 | 12;
+  alias?: FrequenciaAliasAtividade;
+}
 
-const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => ({
-  id: row.id,
-  nome: row.nome,
-  categoria: row.categoria || 'Cliente',
-  frequencia: row.frequencia || 'Personalizada',
-  intervaloDias: Number(row.intervalo_dias || 1),
-  responsavel: row.responsavel_nome || '',
-  responsavelUserId: row.responsavel_user_id || undefined,
-  responsavelConfigUsuarioId: row.responsavel_config_usuario_id || undefined,
-  cliente: row.cliente_nome || 'Escritório',
-  proximaExecucao: row.proxima_execucao || todayKey(),
-  prioridade: row.prioridade || 'Média',
-  ativa: row.ativa !== false,
-  checklist: Array.isArray(row.checklist) ? row.checklist : [],
-  observacoes: row.observacoes || '',
-  incluirFinaisDeSemana: row.incluir_finais_de_semana || false,
-});
+interface RotinaProgramadaPayload {
+  id?: string;
+  modeloId: string | null;
+  nome: string;
+  categoria: CategoriaAtividade;
+  frequencia: FrequenciaPersistidaAtividade;
+  intervaloDias?: number;
+  responsavelConfigUsuarioId: string | null;
+  clienteId: string | null;
+  primeiraExecucao: string;
+  reancorarAgenda: boolean;
+  prioridade: PrioridadeAtividade;
+  checklist: string[];
+  observacoes: string;
+  incluirFinaisDeSemana: boolean;
+  ativa: boolean;
+}
+
+const normalizarFrequencia = (
+  frequencia: FrequenciaAtividade,
+  intervaloDias: number,
+): FrequenciaNormalizada => {
+  if (frequencia === 'Bimestral') {
+    return { frequencia: 'Personalizada', intervaloDias: 60, intervaloMeses: 2, alias: 'Bimestral' };
+  }
+  if (frequencia === 'Anual') {
+    return { frequencia: 'Personalizada', intervaloDias: 365, intervaloMeses: 12, alias: 'Anual' };
+  }
+  if (frequencia === 'Personalizada') {
+    return { frequencia: 'Personalizada', intervaloDias: Math.max(1, Math.round(intervaloDias || 1)) };
+  }
+  return { frequencia };
+};
+
+const frequenciaDaLinha = (
+  frequencia: FrequenciaAtividade | null,
+  intervaloDias: number | null,
+  intervaloMeses: number | null,
+): FrequenciaNormalizada => {
+  const intervalo = Number(intervaloDias || 1);
+  if (frequencia === 'Bimestral' || intervaloMeses === 2) {
+    return { frequencia: 'Personalizada', intervaloDias: 60, intervaloMeses: 2, alias: 'Bimestral' };
+  }
+  if (frequencia === 'Anual' || intervaloMeses === 12) {
+    return { frequencia: 'Personalizada', intervaloDias: 365, intervaloMeses: 12, alias: 'Anual' };
+  }
+  return normalizarFrequencia(frequencia || 'Personalizada', intervalo);
+};
+
+const payloadRotinaProgramada = (rotina: RotinaAtividade): RotinaProgramadaPayload => {
+  const agenda = normalizarFrequencia(rotina.frequencia, rotina.intervaloDias);
+  return {
+    ...(isUuid(rotina.id) ? { id: rotina.id } : {}),
+    modeloId: isUuid(rotina.modeloId) ? rotina.modeloId : null,
+    nome: rotina.nome.trim(),
+    categoria: rotina.categoria,
+    frequencia: agenda.frequencia,
+    ...(agenda.frequencia === 'Personalizada' ? { intervaloDias: agenda.intervaloDias || 1 } : {}),
+    responsavelConfigUsuarioId: isUuid(rotina.responsavelConfigUsuarioId)
+      ? rotina.responsavelConfigUsuarioId
+      : null,
+    clienteId: isUuid(rotina.clienteId) ? rotina.clienteId : null,
+    primeiraExecucao: rotina.proximaExecucao || rotina.dataAncora || todayKey(),
+    reancorarAgenda: !isUuid(rotina.id) || Boolean(rotina.reancorarAgenda),
+    prioridade: rotina.prioridade,
+    checklist: rotina.checklist || [],
+    observacoes: rotina.observacoes || '',
+    incluirFinaisDeSemana: Boolean(rotina.incluirFinaisDeSemana),
+    ativa: rotina.ativa !== false,
+  };
+};
+
+const salvarRotinaProgramada = async (rotina: RotinaAtividade) => {
+  const { data, error } = await supabase.rpc('salvar_rotina_programada', {
+    p_payload: payloadRotinaProgramada(rotina),
+  });
+  if (error) throw error;
+  return data;
+};
+
+const atribuirResponsavel = async (
+  rotina: RotinaAtividade,
+  responsavelConfigUsuarioId: string,
+) => {
+  if (!isUuid(responsavelConfigUsuarioId)) {
+    throw new Error('Selecione um usuario ativo para atribuir a rotina.');
+  }
+
+  if (!isUuid(rotina.id)) throw new Error('Rotina inválida para atribuição.');
+  const { error } = await supabase.rpc('atribuir_responsavel_rotina', {
+    p_rotina_id: rotina.id,
+    p_responsavel_config_usuario_id: responsavelConfigUsuarioId,
+  });
+  if (error) throw error;
+};
+
+const ROTINAS_SELECT = 'id,modelo_id,cliente_id,protocolo_codigo,nome,categoria,frequencia,intervalo_dias,intervalo_meses,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,data_ancora,dia_mes,dia_semana_iso,proxima_execucao_base,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa';
+
+const toRotina = (row: RotinaAtividadeRow): RotinaAtividade => {
+  const agenda = frequenciaDaLinha(row.frequencia, row.intervalo_dias, row.intervalo_meses);
+  return {
+    id: row.id,
+    clienteId: row.cliente_id || undefined,
+    modeloId: row.modelo_id || undefined,
+    protocoloCodigo: row.protocolo_codigo || undefined,
+    nome: row.nome,
+    categoria: row.categoria || 'Cliente',
+    frequencia: agenda.alias || agenda.frequencia,
+    frequenciaPersistida: agenda.frequencia,
+    frequenciaAlias: agenda.alias,
+    intervaloDias: Number(agenda.intervaloDias || row.intervalo_dias || 1),
+    intervaloMeses: agenda.intervaloMeses,
+    responsavel: row.responsavel_nome || '',
+    responsavelUserId: row.responsavel_user_id || undefined,
+    responsavelConfigUsuarioId: row.responsavel_config_usuario_id || undefined,
+    cliente: row.cliente_nome || 'Escritório',
+    dataAncora: row.data_ancora || undefined,
+    diaMes: row.dia_mes ?? undefined,
+    diaSemanaIso: row.dia_semana_iso ?? undefined,
+    proximaExecucaoBase: row.proxima_execucao_base || undefined,
+    proximaExecucao: row.proxima_execucao || todayKey(),
+    prioridade: row.prioridade || 'Média',
+    ativa: row.ativa !== false,
+    checklist: Array.isArray(row.checklist) ? row.checklist : [],
+    observacoes: row.observacoes || '',
+    incluirFinaisDeSemana: row.incluir_finais_de_semana || false,
+  };
+};
 
 const toTarefa = (row: TarefaGestorRow): TarefaGestor => ({
   id: row.id,
@@ -166,16 +333,18 @@ export const rotinasAtividadesService = {
     return Boolean(data);
   },
 
-  async getWorkspace() {
+  async getWorkspace(): Promise<AtividadesWorkspace> {
     const empresaId = await getCurrentEmpresaId();
     const [
       { data: rotinasData, error: rotinasError },
       { data: tarefasData, error: tarefasError },
       { data: usuariosData, error: usuariosError },
+      clientes,
+      modelos,
     ] = await Promise.all([
       supabase
         .from('atividades_rotinas')
-        .select('id,nome,categoria,frequencia,intervalo_dias,responsavel_nome,responsavel_user_id,responsavel_config_usuario_id,cliente_nome,proxima_execucao,prioridade,checklist,observacoes,incluir_finais_de_semana,ativa')
+        .select(ROTINAS_SELECT)
         .eq('empresa_id', empresaId)
         .eq('ativa', true)
         .order('proxima_execucao', { ascending: true }),
@@ -185,12 +354,9 @@ export const rotinasAtividadesService = {
         .eq('empresa_id', empresaId)
         .eq('ativo', true)
         .order('vencimento', { ascending: true }),
-      supabase
-        .from('configuracoes_usuarios')
-        .select('id,auth_user_id,nome,perfil_id')
-        .eq('empresa_id', empresaId)
-        .eq('status', 'Ativo')
-        .order('nome', { ascending: true }),
+      supabase.rpc('listar_responsaveis_atividades'),
+      atividadesService.getClientes(),
+      atividadesService.getModelos(),
     ]);
 
     if (rotinasError) throw rotinasError;
@@ -199,72 +365,64 @@ export const rotinasAtividadesService = {
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
-    const usuariosMap = new Map<string, UsuarioAtividade & { perfilVinculado: boolean }>();
-    (usuariosData || []).forEach((usuario) => {
-      const userId = usuario.auth_user_id as string | null;
-      const key = userId ? `auth:${userId}` : `config:${usuario.id}`;
-      const atual = usuariosMap.get(key);
-      const perfilVinculado = Boolean(usuario.perfil_id);
-      if (!atual || (!atual.perfilVinculado && perfilVinculado)) {
-        usuariosMap.set(key, {
-          configUsuarioId: usuario.id,
-          userId: userId || undefined,
-          nome: usuario.nome,
-          perfilVinculado,
-        });
-      }
-    });
-    const usuarios: UsuarioAtividade[] = Array.from(usuariosMap.values()).map(({ configUsuarioId, userId, nome }) => ({
-      configUsuarioId,
-      userId,
-      nome,
-    }));
+    const usuarios: UsuarioAtividade[] = ((usuariosData || []) as UsuarioAtividadeRpcRow[])
+      .map((usuario) => ({
+        configUsuarioId: usuario.configUsuarioId,
+        userId: usuario.userId,
+        nome: usuario.nome,
+      }));
 
     return {
       rotinas: ((rotinasData || []) as RotinaAtividadeRow[]).map(toRotina),
       tarefas: ((tarefasData || []) as TarefaGestorRow[]).map(toTarefa),
       usuarios,
       usuarioAtual: usuarios.find((usuario) => usuario.userId === authData.user?.id) || null,
+      clientes,
+      modelos,
     };
   },
 
   async saveRotina(rotina: RotinaAtividade) {
-    const empresaId = await getCurrentEmpresaId();
-    const payload = {
-      empresa_id: empresaId,
-      nome: rotina.nome,
-      categoria: rotina.categoria,
-      frequencia: rotina.frequencia,
-      intervalo_dias: rotina.intervaloDias,
-      responsavel_nome: rotina.responsavel || null,
-      responsavel_user_id: isUuid(rotina.responsavelUserId) ? rotina.responsavelUserId : null,
-      responsavel_config_usuario_id: isUuid(rotina.responsavelConfigUsuarioId)
-        ? rotina.responsavelConfigUsuarioId
-        : null,
-      cliente_nome: rotina.cliente || 'Escritório',
-      proxima_execucao: rotina.proximaExecucao || todayKey(),
-      prioridade: rotina.prioridade,
-      checklist: rotina.checklist || [],
-      observacoes: rotina.observacoes || null,
-      incluir_finais_de_semana: rotina.incluirFinaisDeSemana || false,
-      ativa: rotina.ativa !== false,
-    };
-
-    const request = isUuid(rotina.id)
-      ? supabase.from('atividades_rotinas').update(payload).eq('id', rotina.id).eq('empresa_id', empresaId)
-      : supabase.from('atividades_rotinas').insert(payload);
-
-    const { error } = await request;
-    if (error) throw error;
-    return this.getWorkspace();
+    return salvarRotinaProgramada(rotina);
   },
 
   async deleteRotina(id: string) {
-    if (!isUuid(id)) return this.getWorkspace();
-    const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase.from('atividades_rotinas').update({ ativa: false }).eq('id', id).eq('empresa_id', empresaId);
+    if (!isUuid(id)) throw new Error('Rotina inválida.');
+    const { data, error } = await supabase.rpc('desativar_rotina_programada', {
+      p_rotina_id: id,
+    });
     if (error) throw error;
-    return this.getWorkspace();
+    return data;
+  },
+
+  async atribuirResponsavelRotina(
+    rotina: RotinaAtividade,
+    responsavelConfigUsuarioId: string,
+  ) {
+    return atribuirResponsavel(rotina, responsavelConfigUsuarioId);
+  },
+
+  async atribuirResponsavelRotinasEmLote(
+    rotinas: RotinaAtividade[],
+    responsavelConfigUsuarioId: string,
+  ): Promise<ResultadoAtribuicaoRotinasLote> {
+    if (!isUuid(responsavelConfigUsuarioId)) {
+      throw new Error('Selecione um usuário ativo para atribuir as rotinas.');
+    }
+    const ids = rotinas.map((rotina) => rotina.id);
+    if (ids.length > ROTINAS_BATCH_LIMIT) {
+      throw new Error(`Selecione no máximo ${ROTINAS_BATCH_LIMIT} rotinas por lote.`);
+    }
+    if (ids.some((id) => !isUuid(id))) throw new Error('O lote contém uma rotina inválida.');
+    const { data, error } = await supabase.rpc('atribuir_responsavel_rotinas_lote', {
+      p_rotina_ids: ids,
+      p_responsavel_config_usuario_id: responsavelConfigUsuarioId,
+    });
+    if (error) throw error;
+    const atualizadas = Array.isArray(data?.atualizadas)
+      ? data.atualizadas.map(String)
+      : ids;
+    return { total: ids.length, atualizadas, falhas: [] };
   },
 
   async saveTarefa(tarefa: TarefaGestor) {

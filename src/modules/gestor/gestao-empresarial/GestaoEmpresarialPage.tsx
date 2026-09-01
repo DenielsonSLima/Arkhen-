@@ -9,6 +9,8 @@ import { ClienteDetail } from './components/ClienteDetail';
 import { ClienteCard } from './components/ClienteCard';
 import { ClienteAddForm } from './forms/ClienteAddForm';
 import { usePartnerClassifications } from './hooks/usePartnerClassifications';
+import { normalizeCatalogLabel } from '../shared/catalogLabel';
+import { isClienteContabilPartnerType } from './services/partnerClassificationService';
 import './GestaoEmpresarial.css';
 import './GestaoEmpresarialLayoutFixes.css';
 import '../shared/RegimeBadges.css';
@@ -70,7 +72,12 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     activeDetailTab,
     isLoading,
   } = useGestaoEmpresarial({ initialCompanyId, initialDetailTab });
-  const { partnerTypes } = usePartnerClassifications();
+  const {
+    partnerTypes,
+    isLoading: isLoadingClassifications,
+    isError: classificationsError,
+    retry: retryClassifications,
+  } = usePartnerClassifications();
 
   useLayoutEffect(() => {
     window.dispatchEvent(new CustomEvent('gestor:reset-scroll'));
@@ -145,10 +152,34 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
 
   const hasNoResults = filteredCompanies.length === 0;
 
+  if (selectedCompany && isLoadingClassifications) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+        <Loader2 className="animate-spin" aria-label="Carregando classificações do parceiro" />
+      </div>
+    );
+  }
+
+  if (selectedCompany && classificationsError) {
+    return (
+      <div className="gestao-empresarial-container animate-fade-in">
+        <div className="error-banner" role="alert">
+          <span>Não foi possível carregar as classificações deste parceiro.</span>
+          <button type="button" onClick={() => { void retryClassifications(); }}>
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedCompany) {
     return (
       <ClienteDetail
         company={selectedCompany}
+        isAccountingClient={isClienteContabilPartnerType(
+          partnerTypes.find((item) => item.id === selectedCompany.tipoParceiroId),
+        )}
         onBack={() => {
           setSelectedCompanyId(null);
           requestGestorScrollReset();
@@ -162,7 +193,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
 
   const regimes = ['Todos', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
   const getPartnerTypeName = (company: Company) => (
-    partnerTypes.find((item) => item.id === company.tipoParceiroId)?.nome || '-'
+    normalizeCatalogLabel(partnerTypes.find((item) => item.id === company.tipoParceiroId)?.nome) || '-'
   );
 
   return (
@@ -178,6 +209,15 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
       </div>
 
       {successMsg && <div className="success-banner"><CheckCircle2 size={16} style={{ marginRight: 8 }} />{successMsg}</div>}
+
+      {classificationsError ? (
+        <div className="error-banner" role="alert">
+          <span>As classificações dos parceiros estão temporariamente indisponíveis.</span>
+          <button type="button" onClick={() => { void retryClassifications(); }}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button className={`btn-filter-tab ${activeStatusTab === 'Ativos' ? 'active' : ''}`} onClick={() => setActiveStatusTab('Ativos')}>

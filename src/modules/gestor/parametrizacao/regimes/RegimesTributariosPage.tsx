@@ -285,7 +285,7 @@ export const RegimesTributariosPage: React.FC = () => {
       <div className="alert-banner" style={{ marginTop: '24px', display: 'flex', gap: '12px', backgroundColor: 'rgba(197, 146, 53, 0.05)', border: '1px solid var(--color-gold-primary)', color: 'var(--color-gold-dark)' }}>
         <Award size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
         <div style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
-          <strong>Aviso de Planejamento Tributário:</strong> A escolha do melhor enquadramento depende de projeções de faturamento, despesas operacionais e folha de pagamento. Sempre simule os cenários detalhados no módulo de <strong>Planejamento Tributário</strong> antes de realizar a opção definitiva junto à Receita Federal.
+          <strong>Aviso sobre enquadramento:</strong> A escolha do regime depende de projeções de faturamento, despesas operacionais, folha e legislação vigente. Faça uma análise técnica individual antes de realizar a opção definitiva junto à Receita Federal.
         </div>
       </div>
 

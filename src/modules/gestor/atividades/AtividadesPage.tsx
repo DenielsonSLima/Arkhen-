@@ -7,7 +7,7 @@ import { AtividadeDetailView } from './components/AtividadeDetailView';
 import { AtividadesControle } from './components/AtividadesControle';
 import { useAtividades } from './hooks/useAtividades';
 import { useAtividadesRealtime } from './hooks/useAtividadesRealtime';
-import { useAtividadesWorkspace } from './hooks/useAtividadesWorkspace';
+import { useAtividadesPodeGerenciar } from './hooks/useAtividadesWorkspace';
 import './Atividades.css';
 import './AtividadesRedesign.css';
 
@@ -35,7 +35,7 @@ const VIEW_INFO: Record<AtividadesView, { title: string; subtitle: string }> = {
   'minha-fila': { title: 'Minha Fila', subtitle: 'Tarefas operacionais por prazo, prioridade, status e bloqueios.' },
   equipe: { title: 'Equipe', subtitle: 'Acompanhe carga, atrasos, tarefas concluídas e pendências por colaborador.' },
   fechamentos: { title: 'Fechamentos de Clientes', subtitle: 'Visualize rotinas, competências e pendências de cada empresa.' },
-  modelos: { title: 'Rotinas e Modelos', subtitle: 'Cadastre modelos de fechamento, rotinas internas e tarefas recorrentes.' },
+  modelos: { title: 'Rotinas', subtitle: 'Organize as rotinas recorrentes por empresa, responsável e frequência.' },
   painel: { title: 'Painel Operacional', subtitle: 'Métricas de produtividade, gargalos, atrasos e clientes travados.' },
 };
 
@@ -47,8 +47,9 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
 }) => {
   const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
   const requestedView: AtividadesView = VIEW_INFO[normalized.view] ? normalized.view : 'minha-fila';
-  const { podeGerenciar, isLoadingPermissoes } = useAtividadesWorkspace();
-  const activeView: AtividadesView = !isLoadingPermissoes && !podeGerenciar && requestedView !== 'minha-fila'
+  const permissoesQuery = useAtividadesPodeGerenciar();
+  const activeView: AtividadesView = permissoesQuery.data !== true
+    && requestedView !== 'minha-fila'
     ? 'minha-fila'
     : requestedView;
   const currentInfo = VIEW_INFO[activeView];
@@ -111,7 +112,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
       case 'equipe':
         return <AbaGerirEquipe companyGroups={companyGroups} handleToggleStep={handleToggleStep} />;
       case 'modelos':
-        return <AbaRotinas />;
+        return <AbaRotinas initialCompanyId={initialCompanyId} />;
       case 'painel':
         return <AtividadesControle />;
       default:

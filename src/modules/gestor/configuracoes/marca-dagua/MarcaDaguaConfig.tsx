@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useMarcaDagua } from './hooks/useMarcaDagua';
 import { UploadCloud, Settings, CheckCircle2 } from 'lucide-react';
+import {
+  resolveMarcaDaguaMode,
+  resolveMarcaDaguaPlacement,
+} from './services/marcaDaguaPresentation';
+import { PDF_COMPATIBLE_IMAGE_ACCEPT } from '../../shared/uploadImageAsset';
 
 export const MarcaDaguaConfig: React.FC = () => {
   const {
@@ -28,43 +33,20 @@ export const MarcaDaguaConfig: React.FC = () => {
 
   const renderPreviewMockup = () => {
     const isLandscape = activeModeTab === 'landscape';
-    const watermarkUrl = isLandscape ? config.fileUrlPaisagem : config.fileUrlRetrato;
-    const sizeVal = isLandscape ? (config.tamanhoPaisagem ?? 35) : (config.tamanhoRetrato ?? 35);
-    const activePos = isLandscape ? (config.posicaoPaisagem ?? 'centro') : (config.posicaoRetrato ?? 'centro');
-    const activeOpacity = isLandscape ? (config.opacidadePaisagem ?? 15) : (config.opacidadeRetrato ?? 15);
+    const resolved = resolveMarcaDaguaMode(config, activeModeTab);
+    const watermarkUrl = resolved.sourceUrl;
+    const sizeVal = resolved.size;
+    const activePos = resolved.position;
+    const activeOpacity = resolved.opacity;
     
-    // Position style mapping
-    let positionStyle: React.CSSProperties = {};
-    if (activePos === 'centro') {
-      positionStyle = {
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        maxWidth: `${sizeVal}%`,
-        maxHeight: `${sizeVal}%`,
-      };
-    } else if (activePos === 'topo-esquerda') {
-      positionStyle = {
-        top: '12px',
-        left: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
-      };
-    } else if (activePos === 'topo-direita') {
-      positionStyle = {
-        top: '12px',
-        right: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
-      };
-    } else if (activePos === 'rodape-direita') {
-      positionStyle = {
-        bottom: '12px',
-        right: '12px',
-        maxWidth: `${sizeVal * 0.6}%`,
-        maxHeight: `${sizeVal * 0.6}%`,
-      };
-    }
+    const placement = resolveMarcaDaguaPlacement(activePos, sizeVal, activeModeTab);
+    const positionStyle: React.CSSProperties = {
+      left: `${placement.leftPercent}%`,
+      top: `${placement.topPercent}%`,
+      width: `${placement.widthPercent}%`,
+      height: `${placement.heightPercent}%`,
+      objectPosition: placement.objectPosition,
+    };
 
     return (
       <div 
@@ -87,7 +69,7 @@ export const MarcaDaguaConfig: React.FC = () => {
         }}
       >
         {/* Mockup Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', fontSize: '0.62rem', color: '#64748b' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', fontSize: '0.62rem', color: '#64748b' }}>
           <div>
             <strong style={{ color: '#1e293b' }}>SUPORTE AGRICOLA LTDA</strong>
             <div style={{ fontSize: '0.52rem' }}>CNPJ: 26.312.733/0001-55</div>
@@ -99,7 +81,7 @@ export const MarcaDaguaConfig: React.FC = () => {
         </div>
 
         {/* Mockup Body Content */}
-        <div style={{ flex: 1, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ position: 'relative', zIndex: 1, flex: 1, padding: '12px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ width: '45%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px' }}></div>
           <div style={{ border: '1px solid #f1f5f9', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
             {/* Table Header */}
@@ -120,7 +102,7 @@ export const MarcaDaguaConfig: React.FC = () => {
         </div>
 
         {/* Mockup Footer */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '6px', fontSize: '0.52rem', color: '#94a3b8' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '6px', fontSize: '0.52rem', color: '#94a3b8' }}>
           <span>Gerado em: 11/07/2026</span>
           <span>Arkhen Gestão Contábil</span>
         </div>
@@ -133,9 +115,9 @@ export const MarcaDaguaConfig: React.FC = () => {
             style={{
               position: 'absolute',
               opacity: activeOpacity / 100,
+              zIndex: 0,
               pointerEvents: 'none',
               objectFit: 'contain',
-              mixBlendMode: 'multiply',
               transition: 'opacity 0.15s ease, all 0.2s ease',
               ...positionStyle
             }}
@@ -267,7 +249,7 @@ export const MarcaDaguaConfig: React.FC = () => {
                     <label style={{ fontWeight: 600 }}>Logotipo Paisagem (Horizontal)</label>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept={PDF_COMPATIBLE_IMAGE_ACCEPT}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) handleUploadLandscape(file);
@@ -296,7 +278,7 @@ export const MarcaDaguaConfig: React.FC = () => {
                     <label style={{ fontWeight: 600 }}>Logotipo Retrato (Vertical)</label>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept={PDF_COMPATIBLE_IMAGE_ACCEPT}
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) handleUploadPortrait(file);

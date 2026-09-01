@@ -185,6 +185,25 @@
   color: #94a3b8;
 }
 
+.protocolos-config-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.protocolos-config-error button {
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  background: #ffffff;
+  color: inherit;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .protocolos-config-summary,
   .protocolos-category-grid {

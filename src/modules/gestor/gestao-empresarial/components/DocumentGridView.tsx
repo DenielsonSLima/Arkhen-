@@ -79,54 +79,56 @@ export const DocumentGridView: React.FC<DocumentGridViewProps> = ({
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
 
-      const pdf = await pdfjsLib.getDocument({ url }).promise;
-      const page = await pdf.getPage(1);
+      const loadingTask = pdfjsLib.getDocument({ url });
+      try {
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
 
-      if (isCancelled()) {
-        page.cleanup();
-        await pdf.destroy();
-        return;
-      }
-
-      const baseViewport = page.getViewport({ scale: 1 });
-      const targetWidth = 180;
-      const targetHeight = 98;
-      const targetScale = Math.max(
-        0.7,
-        Math.min(1.8, Math.min(targetWidth / baseViewport.width, targetHeight / baseViewport.height)),
-      );
-      const viewport = page.getViewport({ scale: targetScale });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-
-      if (!context) {
-        if (!isCancelled()) {
-          setPdfPreviewStatus((current) => ({ ...current, [docId]: 'error' }));
+        if (isCancelled()) {
+          page.cleanup();
+          return;
         }
+
+        const baseViewport = page.getViewport({ scale: 1 });
+        const targetWidth = 180;
+        const targetHeight = 98;
+        const targetScale = Math.max(
+          0.7,
+          Math.min(1.8, Math.min(targetWidth / baseViewport.width, targetHeight / baseViewport.height)),
+        );
+        const viewport = page.getViewport({ scale: targetScale });
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        if (!context) {
+          if (!isCancelled()) {
+            setPdfPreviewStatus((current) => ({ ...current, [docId]: 'error' }));
+          }
+          page.cleanup();
+          return;
+        }
+
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+        await page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+        }).promise;
+
+        if (!isCancelled()) {
+          const imageSrc = canvas.toDataURL('image/png');
+          setPdfPreviewUrls((previous) => (
+            previous[docId] ? previous : { ...previous, [docId]: imageSrc }
+          ));
+          setPdfPreviewStatus((current) => ({ ...current, [docId]: 'ready' }));
+        }
+
         page.cleanup();
-        await pdf.destroy();
-        return;
+      } finally {
+        await loadingTask.destroy();
       }
-
-      canvas.width = Math.max(1, Math.floor(viewport.width));
-      canvas.height = Math.max(1, Math.floor(viewport.height));
-      await page.render({
-        canvas,
-        canvasContext: context,
-        viewport,
-      }).promise;
-
-      if (!isCancelled()) {
-        const imageSrc = canvas.toDataURL('image/png');
-        setPdfPreviewUrls((previous) => (
-          previous[docId] ? previous : { ...previous, [docId]: imageSrc }
-        ));
-        setPdfPreviewStatus((current) => ({ ...current, [docId]: 'ready' }));
-      }
-
-      page.cleanup();
-      await pdf.destroy();
     } catch {
       if (!isCancelled()) {
         setPdfPreviewStatus((current) => ({ ...current, [docId]: 'error' }));

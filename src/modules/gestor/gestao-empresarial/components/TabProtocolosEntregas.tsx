@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   CheckCircle2,
@@ -13,10 +13,15 @@ import {
   WalletCards,
 } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
-import { protocolosService } from '../../protocolos/services/protocolosService';
-import type { ProtocoloEmpresaConfig } from '../../protocolos/services/protocolosService';
+import {
+  ProtocolosError,
+  type ProtocoloEmpresaConfig,
+} from '../../protocolos/services/protocolosService';
+import type { ProtocoloTipoConfig } from '../../protocolos/services/protocolosCatalogoService';
+import { useEmpresaProtocolosConfiguracao } from '../../protocolos/hooks/useEmpresaProtocolosConfiguracao';
 import { type TipoFechamentoEntrega } from '../../parametrizacao/prazos-entrega/services/prazosEntregaService';
 import { useInternalTabs } from '../../../../hooks/useInternalTabs';
+import { SystemToast, type SystemToastData } from '../../components/SystemToast';
 import './TabProtocolosEntregas.css';
 
 interface TabProtocolosEntregasProps {
@@ -40,31 +45,53 @@ const periodicidadeOptions: Array<{ value: TipoFechamentoEntrega; label: string 
   { value: 'semestral', label: 'Semestral' },
 ];
 
+const EMPTY_CATALOGO: ProtocoloTipoConfig[] = [];
+
 export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ company }) => {
   const { openTab } = useInternalTabs();
-  const catalogo = useMemo(() => protocolosService.getCatalogoPorRegime(company), [company.id, company.tipo]);
   const [configs, setConfigs] = useState<ProtocoloEmpresaConfig[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [configVersion, setConfigVersion] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [hasConflict, setHasConflict] = useState(false);
+  const isDirtyRef = useRef(false);
+  const [toast, setToast] = useState<SystemToastData | null>(null);
+  const {
+    data: configuracao,
+    error: configuracaoError,
+    isLoading,
+    isSaving,
+    refetch: retryConfiguracao,
+    saveConfiguracao,
+    resetSaveError,
+  } = useEmpresaProtocolosConfiguracao(company);
+  const catalogo = configuracao?.catalogo ?? EMPTY_CATALOGO;
 
   useEffect(() => {
-    let mounted = true;
-    setIsLoading(true);
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
 
-    protocolosService.getEntregasEmpresaConfig(company)
-      .then((nextConfigs) => {
-        if (!mounted) return;
-        setConfigs(nextConfigs);
-      })
-      .finally(() => {
-        if (!mounted) return;
-        setIsLoading(false);
-      });
+  useEffect(() => {
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setSaved(false);
+    setHasConflict(false);
+    setConfigs([]);
+    setConfigVersion(null);
+  }, [company.id]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [company.id, company.tipo]);
+  useEffect(() => {
+    if (configuracao && !isDirtyRef.current) {
+      setConfigs(configuracao.configs);
+      setConfigVersion(configuracao.updatedAt);
+    }
+  }, [configuracao]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 4800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const configById = useMemo(() => {
     const map = new Map<string, ProtocoloEmpresaConfig>();
@@ -81,6 +108,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
   const toggleEntrega = (id: string) => {
     setSaved(false);
+    setIsDirty(true);
     setConfigs((current) => current.map((item) => (
       item.entregaId === id ? { ...item, ativo: !item.ativo } : item
     )));
@@ -88,21 +116,58 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
 
   const handleChangePeriodicidade = (id: string, periodicidade: TipoFechamentoEntrega) => {
     setSaved(false);
+    setIsDirty(true);
     setConfigs((current) => current.map((item) => (
       item.entregaId === id ? { ...item, periodicidade } : item
     )));
   };
 
   const handleSave = async () => {
-    await protocolosService.saveEntregasEmpresaConfig(company, configs);
-    setSaved(true);
+    setSaved(false);
+    resetSaveError();
+    try {
+      const configuracaoSalva = await saveConfiguracao(configs, configVersion);
+      setConfigs(configuracaoSalva.configs);
+      setConfigVersion(configuracaoSalva.updatedAt);
+      setIsDirty(false);
+      isDirtyRef.current = false;
+      setSaved(true);
+      setHasConflict(false);
+      setToast({
+        id: Date.now(),
+        type: 'success',
+        title: 'Entregas sincronizadas',
+        message: 'A configuração canônica da empresa foi salva com sucesso.',
+      });
+    } catch (error) {
+      setHasConflict(error instanceof ProtocolosError && error.code === 'conflict');
+      setToast({
+        id: Date.now(),
+        type: 'error',
+        title: 'Não foi possível salvar',
+        message: error instanceof Error ? error.message : 'Não foi possível sincronizar as obrigações.',
+      });
+    }
+  };
+
+  const handleReloadAfterConflict = async () => {
+    resetSaveError();
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setSaved(false);
+    const refreshed = await retryConfiguracao();
+    if (refreshed.data) {
+      setConfigs(refreshed.data.configs);
+      setConfigVersion(refreshed.data.updatedAt);
+      setHasConflict(false);
+    }
   };
 
   const handleOpenAtividades = () => {
     openTab(
-      'atividades-empresa',
-      'Atividades por empresa',
-      'Building2',
+      'atividades-modelos',
+      'Rotinas',
+      'Repeat',
       {
         data: {
           selectedCompanyId: company.id,
@@ -127,8 +192,15 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
     return `${origem} • ${tipo} • rotina ${periodicidadeLabel} • prazo dia ${entrega.diaLimite}`;
   };
 
+  const errorMessage = configuracaoError instanceof Error
+    ? configuracaoError.message
+    : configuracaoError
+      ? 'Não foi possível carregar as obrigações da empresa.'
+      : '';
+
   return (
     <div className="tab-panel-content protocolos-config-panel" style={{ position: 'relative', opacity: isLoading ? 0.7 : 1 }}>
+      <SystemToast toast={toast} onClose={() => setToast(null)} />
       {isLoading ? (
         <div
           style={{
@@ -145,6 +217,24 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
         </div>
       ) : null}
 
+      {errorMessage ? (
+        <div className="error-banner protocolos-config-error" role="alert">
+          <span>{errorMessage}</span>
+          <button type="button" onClick={() => { void retryConfiguracao(); }}>
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {hasConflict ? (
+        <div className="error-banner protocolos-config-error" role="alert">
+          <span>A configuração mudou em outra tela. Recarregue para continuar.</span>
+          <button type="button" onClick={() => { void handleReloadAfterConflict(); }}>
+            Recarregar configuração
+          </button>
+        </div>
+      ) : null}
+
       <div className="protocolos-config-header">
         <div>
           <h3>Rotinas e obrigações da empresa</h3>
@@ -152,16 +242,16 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button className="btn-save-protocolos" onClick={handleOpenAtividades}>
-            <PlayCircle size={16} /> Abrir atividades
+            <PlayCircle size={16} /> Abrir rotinas
           </button>
           <button
             className="btn-save-protocolos"
-            onClick={handleSave}
+            onClick={() => { void handleSave(); }}
             style={{ minWidth: 170 }}
-            disabled={isLoading}
+            disabled={isLoading || isSaving || Boolean(errorMessage) || hasConflict}
           >
             {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Salvo' : 'Salvar entregas'}
+            {saved ? 'Salvo' : isSaving ? 'Salvando...' : 'Salvar entregas'}
           </button>
         </div>
       </div>
@@ -196,7 +286,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                   <label key={entrega.id} className={`protocolo-entrega-option ${checked ? 'active' : ''}`}>
                     <input
                       type="checkbox"
-                      disabled={isLoading}
+                      disabled={isLoading || isSaving}
                       checked={checked}
                       onChange={() => toggleEntrega(entrega.id)}
                     />
@@ -214,7 +304,7 @@ export const TabProtocolosEntregas: React.FC<TabProtocolosEntregasProps> = ({ co
                       </span>
                       <select
                         value={config?.periodicidade ?? entrega.periodicidadePadrao}
-                        disabled={isLoading || !checked}
+                        disabled={isLoading || isSaving || !checked}
                         onChange={(event) => handleChangePeriodicidade(entrega.id, event.target.value as TipoFechamentoEntrega)}
                       >
                         {periodicidadeOptions.map((option) => (

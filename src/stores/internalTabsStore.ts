@@ -31,6 +31,23 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Clientes')) {
     return `Categorias de Parceiros${title.slice('Categorias de Clientes'.length)}`;
   }
+  if (moduleId === 'protocolos') {
+    const legacyPrefix = title.startsWith('Protocolos e Documentos')
+      ? 'Protocolos e Documentos'
+      : title.startsWith('Protocolos')
+        ? 'Protocolos'
+        : '';
+    if (legacyPrefix) return `Acompanhamento${title.slice(legacyPrefix.length)}`;
+  }
+  if (
+    (moduleId === 'atividades-modelos' || moduleId === 'atividades-rotinas')
+    && title.startsWith('Rotinas e Modelos')
+  ) {
+    return `Rotinas${title.slice('Rotinas e Modelos'.length)}`;
+  }
+  if (moduleId === 'simulacoes-calculos') {
+    return 'Calculadora de Rescisão';
+  }
   return title;
 };
 
@@ -93,6 +110,8 @@ const hydrateFromStorage = (raw: string | null) => {
             && typeof tab.title === 'string'
             && typeof tab.iconName === 'string'
             && tab.id !== 'inicio'
+            && tab.moduleId !== 'planejamento-tributario'
+            && tab.id !== 'planejamento-tributario'
           )).map((tab: InternalTab, index: number) => {
             const isLegacyTab = typeof tab.moduleId !== 'string';
             const moduleId = isLegacyTab ? tab.id : tab.moduleId;
@@ -114,6 +133,14 @@ const hydrateFromStorage = (raw: string | null) => {
         : [];
       nextState.activeTabId = typeof parsed.activeTabId === 'string' ? parsed.activeTabId : 'inicio';
       nextState.activeTabId = legacyIdMap.get(nextState.activeTabId) || nextState.activeTabId;
+      if (
+        nextState.activeTabId === 'planejamento-tributario'
+        || nextState.tabs.some((tab) => (
+          tab.id === nextState.activeTabId && tab.moduleId === 'planejamento-tributario'
+        ))
+      ) {
+        nextState.activeTabId = 'inicio';
+      }
 
       // Validação de segurança: se a aba ativa não estiver aberta (e não for especial), reseta para o início
       if (nextState.activeTabId !== 'inicio' && nextState.activeTabId.includes('__')) {

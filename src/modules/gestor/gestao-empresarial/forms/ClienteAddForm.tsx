@@ -17,6 +17,7 @@ import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
 import {
   getDefaultCompanyTypeId,
+  getActiveCategoryName,
   type DocumentType,
   type RegimeCliente,
 } from './clienteFormModel';
@@ -48,7 +49,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnae, setCnae] = useState('');
   const [tipo, setTipo] = useState<RegimeCliente>('Simples Nacional');
-  const [categoria, setCategoria] = useState('Cliente Contábil');
+  const [categoria, setCategoria] = useState('');
   const [tipoParceiroId, setTipoParceiroId] = useState('');
   const [tipoEmpresaId, setTipoEmpresaId] = useState('');
   const [naturezaJuridicaId, setNaturezaJuridicaId] = useState('');
@@ -83,6 +84,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     legalNatures,
     defaults: classificationDefaults,
     isLoading: isLoadingClassifications,
+    isError: classificationsError,
+    retry: retryClassifications,
   } = usePartnerClassifications();
   const pastasPadraoQuery = useActivePastasPadraoQuery();
 
@@ -102,8 +105,11 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (!tipoParceiroId && classificationDefaults.partnerType?.id) {
       setTipoParceiroId(classificationDefaults.partnerType.id);
     }
-    if (!categoria && classificationDefaults.clientCategory?.nome) {
-      setCategoria(classificationDefaults.clientCategory.nome);
+    if (!categoria && availableCategories.length) {
+      setCategoria(getActiveCategoryName(
+        availableCategories,
+        classificationDefaults.clientCategory?.nome,
+      ));
     }
     if (docType === 'CPF') {
       const pessoaFisicaId = getDefaultCompanyTypeId(companyTypes, 'PF');
@@ -111,7 +117,15 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         setTipoEmpresaId(pessoaFisicaId);
       }
     }
-  }, [classificationDefaults, companyTypes, docType, tipoEmpresaId, tipoParceiroId, categoria]);
+  }, [
+    availableCategories,
+    categoria,
+    classificationDefaults,
+    companyTypes,
+    docType,
+    tipoEmpresaId,
+    tipoParceiroId,
+  ]);
 
 
   const handleDocTypeChange = (type: DocumentType) => {
@@ -119,13 +133,16 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     setErrorMsg(null);
     if (type === 'CPF') {
       setTipo('PF');
-      setCategoria('Pessoa Física');
+      setCategoria(getActiveCategoryName(availableCategories, 'Pessoa Física'));
       setCnae('');
       setNaturezaJuridicaId('');
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
       setTipo('Simples Nacional');
-      setCategoria('Cliente Contábil');
+      setCategoria(getActiveCategoryName(
+        availableCategories,
+        classificationDefaults.clientCategory?.nome,
+      ));
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
       setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
     }
@@ -201,6 +218,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     if (docType === 'CPF' && cleanDoc.length !== 11) return 'CPF incompleto.';
     if (!razaoSocial.trim()) return docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.';
     if (!nomeFantasia.trim()) return docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.';
+    if (!availableCategories.includes(categoria)) return 'Selecione uma categoria ativa do parceiro.';
     if (!tipoParceiroId) return 'Selecione o tipo de parceiro.';
     if (docType === 'CNPJ' && !tipoEmpresaId) return 'Selecione o tipo de empresa.';
     if (docType === 'CNPJ' && !naturezaJuridicaId) return 'Selecione a natureza jurídica.';
@@ -276,8 +294,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     }
 
     try {
-      await addCategory({ nome: createdName, descricao: newCatDesc });
-      setCategoria(createdName);
+      const normalizedName = await addCategory({ nome: createdName, descricao: newCatDesc });
+      setCategoria(normalizedName);
       closeCategoryModal();
     } catch (err) {
       setNewCatError(err instanceof Error ? err.message : 'Erro ao salvar categoria no Supabase.');
@@ -306,6 +324,16 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         <div className="form-alert-banner error">
           <AlertCircle size={18} />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {classificationsError && (
+        <div className="form-alert-banner error" role="alert">
+          <AlertCircle size={18} />
+          <span>Não foi possível carregar as classificações obrigatórias.</span>
+          <button type="button" onClick={() => { void retryClassifications(); }}>
+            Tentar novamente
+          </button>
         </div>
       )}
 
@@ -343,9 +371,9 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               companyTypes={companyTypes}
               legalNatures={legalNatures}
               availableCategories={availableCategories}
-              isClassificationsLoading={isLoadingClassifications}
+              isClassificationsLoading={isLoadingClassifications || classificationsError}
               isSearching={isSearching}
-              isDisabled={isSaving}
+              isDisabled={isSaving || classificationsError}
               showDetailedPlaceholders
               onCnpjChange={setCnpj}
               onCpfChange={setCpf}
@@ -438,7 +466,11 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
             >
               {currentStepIndex > 0 ? <><ArrowLeft size={14} /> Voltar</> : 'Cancelar'}
             </button>
-            <button type="submit" className="btn-submit" disabled={isSaving}>
+            <button
+              type="submit"
+              className="btn-submit"
+              disabled={isSaving || isLoadingClassifications || classificationsError}
+            >
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
               {isLastStep ? 'Salvar Parceiro' : 'Avançar'}
             </button>

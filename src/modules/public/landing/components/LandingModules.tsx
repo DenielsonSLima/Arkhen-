@@ -31,8 +31,8 @@ const modules: ModuleCard[] = [
   },
   {
     icon: <Calculator size={26} />,
-    title: 'Simulações e Cálculos',
-    desc: 'Calculadora de rescisão, férias, pró-labore e simulação comparativa de regimes tributários.',
+    title: 'Calculadora de Rescisão',
+    desc: 'Projeção das verbas rescisórias com demonstrativo e relatório em PDF.',
   },
   {
     icon: <CreditCard size={26} />,

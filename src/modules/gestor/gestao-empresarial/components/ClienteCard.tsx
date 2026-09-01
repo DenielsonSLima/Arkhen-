@@ -1,5 +1,6 @@
 import React from 'react';
 import { Building2, Edit3, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import type { Company } from '../services/gestaoEmpresarialService';
 
 interface ClienteCardProps {
@@ -62,7 +63,7 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
         <span><strong>IE/IM:</strong> {company.inscricaoEstadual || '-'}</span>
         <span><strong>Email:</strong> {company.email || '-'}</span>
         <span><strong>Telefone:</strong> {company.telefone || '-'}</span>
-        <span><strong>Categoria:</strong> {company.categoriaCliente || 'Cliente Contábil'}</span>
+        <span><strong>Categoria:</strong> {normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</span>
       </div>
       
       <div className="company-card-footer" onClick={(event) => event.stopPropagation()}>

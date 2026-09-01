@@ -177,7 +177,7 @@ export const ProtocolosTiposPage: React.FC = () => {
     <div className="submodule-content-card protocolos-tipos-page animate-fade-in">
       <div className="submodule-card-header flex-header">
         <div>
-          <h2 className="parametrizacao-page-title">Catálogo de Obrigações e Protocolos</h2>
+          <h2 className="parametrizacao-page-title">Catálogo de Obrigações e Entregas</h2>
           <p>Cadastre e ajuste quais obrigações/documentos existem no escritório e a rotina padrão por regime.</p>
         </div>
         <div className="tab-buttons-header">
@@ -358,7 +358,7 @@ export const ProtocolosTiposPage: React.FC = () => {
                     <h4>Identificação</h4>
                     <div className="protocolos-editor-grid two-columns">
                       <label>
-                        <span>Nome do protocolo</span>
+                        <span>Nome da entrega</span>
                         <input
                           type="text"
                           value={selectedItem.nome}

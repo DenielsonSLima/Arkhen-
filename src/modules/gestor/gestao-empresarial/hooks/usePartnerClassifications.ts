@@ -34,8 +34,16 @@ const getActiveCatalogItems = async (
   return items.filter((item) => item.ativo);
 };
 
-const getCatalogDefault = (items: CatalogoItem[]) => (
-  items.find((item) => item.sistema) || items[0] || null
+const getCatalogDefault = (
+  items: CatalogoItem[],
+  preferredCodes: string[],
+  preferredName: string,
+) => (
+  preferredCodes.map((code) => items.find((item) => item.codigo === code)).find(Boolean)
+  || items.find((item) => item.nome === preferredName)
+  || items.find((item) => item.sistema)
+  || items[0]
+  || null
 );
 
 const getCategoryDefault = (items: CategoriaCliente[]) => (
@@ -74,9 +82,21 @@ export const usePartnerClassifications = () => {
   const clientCategories = clientCategoriesQuery.data ?? EMPTY_CLIENT_CATEGORIES;
 
   const defaults = useMemo(() => ({
-    partnerType: getCatalogDefault(partnerTypes),
-    companyType: getCatalogDefault(companyTypes),
-    legalNature: getCatalogDefault(legalNatures),
+    partnerType: getCatalogDefault(
+      partnerTypes,
+      ['cliente_contabil', 'tp-1'],
+      'Cliente Contábil',
+    ),
+    companyType: getCatalogDefault(
+      companyTypes,
+      ['microempresa', 'te-3'],
+      'Microempresa',
+    ),
+    legalNature: getCatalogDefault(
+      legalNatures,
+      ['sociedade_limitada', 'nj-2'],
+      'Sociedade Limitada',
+    ),
     clientCategory: getCategoryDefault(clientCategories),
   }), [clientCategories, companyTypes, legalNatures, partnerTypes]);
 
@@ -103,6 +123,14 @@ export const usePartnerClassifications = () => {
       companyTypes: companyTypesQuery.error,
       legalNatures: legalNaturesQuery.error,
       clientCategories: clientCategoriesQuery.error,
+    },
+    retry: async () => {
+      await Promise.all([
+        partnerTypesQuery.refetch(),
+        companyTypesQuery.refetch(),
+        legalNaturesQuery.refetch(),
+        clientCategoriesQuery.refetch(),
+      ]);
     },
   };
 };

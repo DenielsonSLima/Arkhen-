@@ -12,6 +12,7 @@ import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
 import {
   getDefaultCompanyTypeId,
+  getActiveCategoryName,
   getDocumentType,
   type DocumentType,
   type RegimeCliente,
@@ -68,6 +69,8 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     legalNatures,
     defaults: classificationDefaults,
     isLoading: isLoadingClassifications,
+    isError: classificationsError,
+    retry: retryClassifications,
   } = usePartnerClassifications();
 
   useEffect(() => {
@@ -121,13 +124,16 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     setErrorMsg(null);
     if (type === 'CPF') {
       setTipo('PF');
-      setCategoria('Pessoa Física');
+      setCategoria(getActiveCategoryName(availableCategories, 'Pessoa Física'));
       setCnae('');
       setNaturezaJuridicaId('');
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
       setTipo('Simples Nacional');
-      setCategoria('Cliente Contábil');
+      setCategoria(getActiveCategoryName(
+        availableCategories,
+        classificationDefaults.clientCategory?.nome,
+      ));
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
       setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
     }
@@ -182,6 +188,10 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     }
     if (!nomeFantasia.trim()) {
       setErrorMsg(docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.');
+      return;
+    }
+    if (!availableCategories.includes(categoria)) {
+      setErrorMsg('Selecione uma categoria ativa do parceiro.');
       return;
     }
     if (!tipoParceiroId) {
@@ -251,8 +261,8 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
     }
 
     try {
-      await addCategory({ nome: createdName, descricao: newCatDesc });
-      setCategoria(createdName);
+      const normalizedName = await addCategory({ nome: createdName, descricao: newCatDesc });
+      setCategoria(normalizedName);
       closeCategoryModal();
     } catch (err) {
       setNewCatError(err instanceof Error ? err.message : 'Erro ao salvar categoria no Supabase.');
@@ -265,6 +275,16 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
         <div className="form-alert-banner error" style={{ marginBottom: 16 }}>
           <AlertCircle size={18} />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {classificationsError && (
+        <div className="form-alert-banner error" role="alert" style={{ marginBottom: 16 }}>
+          <AlertCircle size={18} />
+          <span>Não foi possível carregar as classificações obrigatórias.</span>
+          <button type="button" onClick={() => { void retryClassifications(); }}>
+            Tentar novamente
+          </button>
         </div>
       )}
 
@@ -299,9 +319,9 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             companyTypes={companyTypes}
             legalNatures={legalNatures}
             availableCategories={availableCategories}
-            isClassificationsLoading={isLoadingClassifications}
+            isClassificationsLoading={isLoadingClassifications || classificationsError}
             isSearching={isSearching}
-            isDisabled={isSavingFinal}
+            isDisabled={isSavingFinal || classificationsError}
             onCnpjChange={setCnpj}
             onCpfChange={setCpf}
             onRazaoSocialChange={setRazaoSocial}
@@ -342,7 +362,11 @@ export const ClienteEditForm: React.FC<ClienteEditFormProps> = ({ company, onSav
             <button type="button" className="btn-cancel" onClick={onCancel} disabled={isSavingFinal}>
               Cancelar
             </button>
-            <button type="submit" className="btn-submit" disabled={isSavingFinal}>
+            <button
+              type="submit"
+              className="btn-submit"
+              disabled={isSavingFinal || isLoadingClassifications || classificationsError}
+            >
               {isSavingFinal ? <Loader2 size={16} className="animate-spin" /> : null}
               Salvar Alterações
             </button>

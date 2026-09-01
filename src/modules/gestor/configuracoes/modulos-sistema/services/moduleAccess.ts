@@ -8,7 +8,6 @@ const ROUTE_PARENT: Record<string, SystemModuleId> = {
   conformidade: 'conformidade',
   protocolos: 'protocolos',
   'simulacoes-calculos': 'simulacoes-calculos',
-  'planejamento-tributario': 'simulacoes-calculos',
   'reforma-tributaria': 'reforma-tributaria',
   faturamento: 'faturamento',
   financeiro: 'financeiro',

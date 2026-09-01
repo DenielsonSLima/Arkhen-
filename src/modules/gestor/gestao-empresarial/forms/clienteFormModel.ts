@@ -68,3 +68,12 @@ export const getDefaultCompanyTypeId = (items: CatalogoItem[], regime: RegimeCli
 export const getDocumentType = (company: Pick<Company, 'tipo'>): DocumentType => (
   company.tipo === 'PF' ? 'CPF' : 'CNPJ'
 );
+
+export const getActiveCategoryName = (
+  availableCategories: string[],
+  preferred?: string,
+) => (
+  (preferred && availableCategories.includes(preferred) ? preferred : '')
+  || availableCategories[0]
+  || ''
+);

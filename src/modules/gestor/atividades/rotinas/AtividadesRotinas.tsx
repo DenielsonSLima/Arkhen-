@@ -80,7 +80,7 @@ export const AtividadesRotinas: React.FC<AtividadesRotinasProps> = ({ companyGro
             <div className="calc-field"><label>Cliente / origem</label><select value={form.cliente} onChange={(event) => setForm({ ...form, cliente: event.target.value })}>{clientes.map((cliente) => <option key={cliente} value={cliente}>{cliente}</option>)}</select></div>
           </div>
           <div className="atividades-form-grid">
-            <div className="calc-field"><label>Próxima execução</label><input type="date" value={form.proximaExecucao} onChange={(event) => setForm({ ...form, proximaExecucao: event.target.value })} /></div>
+            <div className="calc-field"><label>Próxima execução</label><input type="date" value={form.proximaExecucao} onChange={(event) => setForm({ ...form, proximaExecucao: event.target.value, reancorarAgenda: true })} /></div>
             <div className="calc-field"><label>Prioridade</label><select value={form.prioridade} onChange={(event) => setForm({ ...form, prioridade: event.target.value as PrioridadeAtividade })}><option value="Baixa">Baixa</option><option value="Média">Média</option><option value="Alta">Alta</option></select></div>
           </div>
           <div className="calc-field"><label>Checklist padrão</label><textarea value={form.checklist.join('\n')} onChange={(event) => setChecklistText(event.target.value)} placeholder="Uma etapa por linha" /></div>

@@ -24,12 +24,14 @@ import {
   TIPOS_EMPRESA_DEFAULTS,
   TIPOS_PARCEIROS_DEFAULTS,
 } from '../services/partnerClassificationCatalogDefaults';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import './ParametrizacaoPlaceholder.css';
 
 type ParametrizacaoKind = 'tipos-empresa' | 'natureza-juridica' | 'tipos-parceiros' | 'tipos-documentos';
 
 interface ParametrizacaoItem {
   id: string;
+  codigo?: string;
   nome: string;
   descricao: string;
   status: 'Ativo' | 'Inativo' | 'Padrão';
@@ -65,7 +67,7 @@ const PARAMETRIZACAO_CONFIGS: Record<ParametrizacaoKind, ParametrizacaoKindConfi
     title: 'Natureza Jurídica',
     description: 'Organize as naturezas jurídicas usadas no cadastro e nas rotinas fiscais dos parceiros.',
     icon: <Landmark size={22} />,
-    integrationNote: 'Alimenta o cadastro societário de Parceiros e impacta as simulações tributárias de constituição de novas empresas.',
+    integrationNote: 'Alimenta o cadastro societário de Parceiros e permite organizar rotinas e acompanhamentos conforme a natureza da empresa.',
     defaultItems: toParametrizacaoItems(NATUREZAS_JURIDICAS_DEFAULTS),
   },
   'tipos-parceiros': {
@@ -77,9 +79,9 @@ const PARAMETRIZACAO_CONFIGS: Record<ParametrizacaoKind, ParametrizacaoKindConfi
   },
   'tipos-documentos': {
     title: 'Tipos de Documentos',
-    description: 'Padronize categorias documentais usadas em empresas, contratos, procurações, certidões e protocolos.',
+    description: 'Padronize categorias documentais usadas em empresas, contratos, procurações, certidões e acompanhamentos.',
     icon: <FileText size={22} />,
-    integrationNote: 'Fornece a tipologia de anexos para o módulo de Protocolos e para a pasta de Documentos Digitais por empresa.',
+    integrationNote: 'Fornece a tipologia de anexos para o módulo de Acompanhamento e para a pasta de Documentos Digitais por empresa.',
     defaultItems: [
       { id: 'td-1', nome: 'Contrato', descricao: 'Instrumentos contratuais do escritório e dos clientes.', status: 'Padrão' },
       { id: 'td-2', nome: 'Procuração', descricao: 'Procurações eletrônicas, físicas e autorizações de representação.', status: 'Ativo' },
@@ -109,6 +111,7 @@ const toDefaultItems = (items: ParametrizacaoItem[]): CatalogoDefaultItem[] => (
 
 const fromCatalogo = (item: CatalogoItem): ParametrizacaoItem => ({
   id: item.id,
+  codigo: item.codigo,
   nome: item.nome,
   descricao: item.descricao,
   status: item.ativo ? (item.sistema ? 'Padrão' : 'Ativo') : 'Inativo',
@@ -143,6 +146,8 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
   const [descricao, setDescricao] = useState('');
   const [status, setStatus] = useState<'Ativo' | 'Inativo' | 'Padrão'>('Ativo');
   const [error, setError] = useState('');
+  const editingProtectedItem = kind === 'tipos-parceiros'
+    && editingItem?.codigo === 'cliente_contabil';
   const items = catalogosQuery.data || [];
   const saveMutation = useMutation({
     mutationFn: () => catalogosService.save({
@@ -302,9 +307,11 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
               ) : (
                 filteredItems.map((item) => {
                   const isAtivo = item.status === 'Ativo' || item.status === 'Padrão';
+                  const isProtected = kind === 'tipos-parceiros'
+                    && item.codigo === 'cliente_contabil';
                   return (
                     <tr key={item.id}>
-                      <td><strong>{item.nome}</strong></td>
+                      <td><strong>{normalizeCatalogLabel(item.nome)}</strong></td>
                       <td style={{ color: '#475569' }}>{item.descricao}</td>
                       <td>
                         <span className={`status-badge-clear ${isAtivo ? 'active' : 'inactive'}`}>
@@ -318,7 +325,10 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
                             type="button"
                             className="btn-action-small"
                             onClick={() => handleToggleStatus(item)}
-                            title={isAtivo ? 'Desativar parâmetro' : 'Ativar parâmetro'}
+                            title={isProtected
+                              ? 'Tipo obrigatório do sistema'
+                              : isAtivo ? 'Desativar parâmetro' : 'Ativar parâmetro'}
+                            disabled={isProtected}
                           >
                             {isAtivo ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
                           </button>
@@ -334,7 +344,8 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
                             type="button"
                             className="btn-action-small btn-delete"
                             onClick={() => handleDelete(item.id)}
-                            title="Inativar registro"
+                            title={isProtected ? 'Tipo obrigatório do sistema' : 'Inativar registro'}
+                            disabled={isProtected}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -422,6 +433,7 @@ export const ParametrizacaoPlaceholderPage: React.FC<ParametrizacaoPlaceholderPa
                   }}
                   value={status}
                   onChange={(e) => setStatus(e.target.value as 'Ativo' | 'Inativo' | 'Padrão')}
+                  disabled={editingProtectedItem}
                 >
                   <option value="Ativo">Ativo</option>
                   <option value="Inativo">Inativo</option>

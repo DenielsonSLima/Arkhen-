@@ -40,7 +40,7 @@ export const ClienteAddressFields: React.FC<ClienteAddressFieldsProps> = ({
         />
       </div>
       <div className="input-container field-col-6">
-        <label>Endereço (Rua, Número, Comp.)</label>
+        <label>Endereço (rua, número, comp.)</label>
         <input
           type="text"
           className="input-style"

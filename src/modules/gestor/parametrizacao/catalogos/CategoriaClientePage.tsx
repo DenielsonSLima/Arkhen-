@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Database, Plus, Search, Edit3, ToggleLeft, ToggleRight } from 'lucide-react';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import {
   categoriaClienteKeys,
   categoriaClienteService,
@@ -148,7 +149,7 @@ export const CategoriaClientePage: React.FC = () => {
                   const isAtiva = item.status === 'Ativa';
                   return (
                     <tr key={item.id}>
-                      <td><strong>{item.nome}</strong></td>
+                      <td><strong>{normalizeCatalogLabel(item.nome)}</strong></td>
                       <td style={{ color: '#475569' }}>{item.descricao || '-'}</td>
                       <td>
                         <span className={`status-badge-clear ${isAtiva ? 'active' : 'inactive'}`}>
@@ -162,7 +163,7 @@ export const CategoriaClientePage: React.FC = () => {
                             type="button"
                             className="btn-action-small"
                             onClick={() => handleToggleStatus(item)}
-                            title={isAtiva ? 'Inativar Categoria' : 'Ativar Categoria'}
+                            title={isAtiva ? 'Inativar categoria' : 'Ativar categoria'}
                           >
                             {isAtiva ? <ToggleLeft size={16} /> : <ToggleRight size={16} />}
                           </button>
@@ -170,7 +171,7 @@ export const CategoriaClientePage: React.FC = () => {
                             type="button"
                             className="btn-action-small"
                             onClick={() => handleOpenEdit(item)}
-                            title="Editar Categoria"
+                            title="Editar categoria"
                           >
                             <Edit3 size={13} />
                           </button>

@@ -24,7 +24,7 @@ export const GuiaAjudaPage: React.FC = () => {
             <li>Comece no <strong>Início</strong> para mapear pendências do dia.</li>
             <li>Abra <strong>Parceiros</strong> para validar empresa e situação fiscal.</li>
             <li>Depois use <strong>Atividades</strong> e <strong>Agenda</strong> para distribuir e acompanhar execução.</li>
-            <li>Confirme progresso em <strong>Protocolos</strong>, <strong>Documentos</strong> e <strong>Faturamento/Financeiro</strong>.</li>
+            <li>Confirme progresso em <strong>Acompanhamento</strong>, <strong>Documentos</strong> e <strong>Faturamento/Financeiro</strong>.</li>
           </ol>
         </section>
 

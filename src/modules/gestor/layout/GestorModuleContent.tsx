@@ -18,7 +18,6 @@ import { GestaoEmpresarialPage } from '../gestao-empresarial/GestaoEmpresarialPa
 import type { EmpresaDetailTab } from '../gestao-empresarial/hooks/useGestaoEmpresarial';
 import { AtividadesPage } from '../atividades/AtividadesPage';
 import { ConfigFluxosPage } from '../atividades/config/ConfigFluxosPage';
-import { PlanejamentoTributarioPage } from '../planejamento-tributario/PlanejamentoTributarioPage';
 import { SimulacoesCalculosPage } from '../simulacoes-calculos/SimulacoesCalculosPage';
 import type { DocumentosTab } from '../documentos/hooks/useDocumentos';
 import { ConformidadePage } from '../conformidade/ConformidadePage';
@@ -112,12 +111,17 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
     case 'atividades-equipe':
     case 'atividades-funcionario': return <AtividadesPage view="equipe" />;
     case 'atividades-modelos':
-    case 'atividades-rotinas': return <AtividadesPage view="modelos" />;
+    case 'atividades-rotinas':
+      return (
+        <AtividadesPage
+          view="modelos"
+          initialCompanyId={initialContext?.data?.selectedCompanyId as string | undefined}
+        />
+      );
     case 'atividades-painel-operacional':
     case 'atividades-controle':
     case 'atividades-controle-andamento': return <AtividadesPage view="painel" />;
     case 'gestao-empresarial': return <GestaoEmpresarialPage />;
-    case 'planejamento-tributario': return <PlanejamentoTributarioPage />;
     case 'simulacoes-calculos': return <SimulacoesCalculosPage />;
     case 'reforma-tributaria': return <ReformaTributariaPage />;
     case 'agenda': return <AgendaPage />;

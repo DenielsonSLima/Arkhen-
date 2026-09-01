@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Search } from 'lucide-react';
+import { normalizeCatalogLabel } from '../../../shared/catalogLabel';
 import type { CatalogoItem } from '../../../parametrizacao/services/catalogosService';
 import type { DocumentType, RegimeCliente } from '../clienteFormModel';
 import { CLIENTE_REGIMES, formatCNPJ, formatCPF } from '../clienteFormModel';
@@ -61,7 +62,7 @@ const ClassificationSelect = ({
   >
     <option value="">{placeholder}</option>
     {options.map((item) => (
-      <option key={item.id} value={item.id}>{item.nome}</option>
+      <option key={item.id} value={item.id}>{normalizeCatalogLabel(item.nome)}</option>
     ))}
   </select>
 );
@@ -150,13 +151,13 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
             disabled={docType === 'CPF' || isDisabled}
           >
             {CLIENTE_REGIMES.map((regime) => (
-              <option key={regime} value={regime}>{regime}</option>
+              <option key={regime} value={regime}>{normalizeCatalogLabel(regime)}</option>
             ))}
           </select>
         </div>
 
         <div className="input-container field-col-6">
-          <label>{docType === 'CNPJ' ? 'Razão Social *' : 'Nome Completo *'}</label>
+          <label>{docType === 'CNPJ' ? 'Razão social *' : 'Nome completo *'}</label>
           <input
             type="text"
             className="input-style"
@@ -169,7 +170,7 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
         </div>
 
         <div className="input-container field-col-6">
-          <label>{docType === 'CNPJ' ? 'Nome Fantasia *' : 'Apelido *'}</label>
+          <label>{docType === 'CNPJ' ? 'Nome fantasia *' : 'Apelido *'}</label>
           <input
             type="text"
             className="input-style"
@@ -235,14 +236,16 @@ export const ClienteIdentificationFields: React.FC<ClienteIdentificationFieldsPr
           <label>Categoria do parceiro</label>
           <div style={{ display: 'flex', gap: '6px' }}>
             <select
+              aria-label="Categoria do parceiro"
               className="input-style"
-              value={categoria}
+              value={availableCategories.includes(categoria) ? categoria : ''}
               onChange={(event) => onCategoriaChange(event.target.value)}
               disabled={isDisabled}
               style={{ flex: 1 }}
             >
+              <option value="">Selecione uma categoria ativa</option>
               {availableCategories.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>{normalizeCatalogLabel(item)}</option>
               ))}
             </select>
             <button

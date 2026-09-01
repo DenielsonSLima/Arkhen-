@@ -41,7 +41,24 @@ const normalizeResponse = (value: unknown): SystemModulesResponse => {
   return {
     canManage: response.canManage === true,
     available: true,
-    modulos: Array.isArray(response.modulos) ? response.modulos : [],
+    modulos: Array.isArray(response.modulos)
+      ? response.modulos.map((modulo) => (
+        modulo.id === 'protocolos'
+          ? {
+            ...modulo,
+            nome: 'Acompanhamento',
+            descricao: 'Histórico mensal, evidências e entregas por empresa.',
+          }
+          : modulo.id === 'simulacoes-calculos'
+            ? {
+              ...modulo,
+              nome: 'Simulações',
+              descricao: 'Calculadora de Rescisão.',
+              categoria: 'Trabalhista',
+            }
+          : modulo
+      ))
+      : [],
   };
 };
 
@@ -50,8 +67,8 @@ const fallbackModules: SystemModuleConfig[] = [
   ['clientes', 'Parceiros', 'Carteira, empresas e dados cadastrais.', 'Essenciais', true],
   ['atividades', 'Atividades', 'Filas, rotinas e acompanhamento operacional.', 'Operação', false],
   ['conformidade', 'Conformidade', 'Obrigações e situação fiscal dos clientes.', 'Operação', false],
-  ['protocolos', 'Protocolos', 'Solicitações, protocolos e entregas.', 'Operação', false],
-  ['simulacoes-calculos', 'Simulações e Cálculos', 'Ferramentas tributárias e cenários.', 'Tributário', false],
+  ['protocolos', 'Acompanhamento', 'Histórico mensal, evidências e entregas por empresa.', 'Operação', false],
+  ['simulacoes-calculos', 'Simulações', 'Calculadora de Rescisão.', 'Trabalhista', false],
   ['reforma-tributaria', 'Reforma Tributária', 'Adequação IBS/CBS e split payment.', 'Tributário', false],
   ['faturamento', 'Faturamento', 'Contratos, cobranças e notas de serviço.', 'Financeiro', false],
   ['financeiro', 'Financeiro', 'Contas, fluxo de caixa e conciliação.', 'Financeiro', false],

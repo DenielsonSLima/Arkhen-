@@ -467,7 +467,7 @@ export const conformidadeService = {
       fiscal: 'Fiscal',
       folha: 'Folha',
       documentos: 'Documentos',
-      protocolo: 'Protocolo',
+      protocolo: 'Acompanhamento',
       atendimento: 'Atendimento',
     } as const;
     return labels[tipo];

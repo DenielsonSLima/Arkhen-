@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import type { Company } from '../services/gestaoEmpresarialService';
 import { usePartnerClassifications } from '../hooks/usePartnerClassifications';
 
@@ -7,7 +8,7 @@ interface PartnerClassificationSummaryProps {
 }
 
 const getItemName = (items: Array<{ id: string; nome: string }>, id?: string) => (
-  items.find((item) => item.id === id)?.nome || '-'
+  normalizeCatalogLabel(items.find((item) => item.id === id)?.nome) || '-'
 );
 
 export const PartnerClassificationSummary: React.FC<PartnerClassificationSummaryProps> = ({ company }) => {
@@ -30,7 +31,7 @@ export const PartnerClassificationSummary: React.FC<PartnerClassificationSummary
       </div>
       <div className="detail-field-box">
         <label>Categoria do parceiro</label>
-        <p>{company.categoriaCliente || 'Cliente Contábil'}</p>
+        <p>{normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</p>
       </div>
     </>
   );

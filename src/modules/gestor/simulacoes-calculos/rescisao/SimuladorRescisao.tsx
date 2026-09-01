@@ -3,26 +3,16 @@ import { FileX2, Calculator } from 'lucide-react';
 import { type ResultadoRescisao, formatCurrency } from '../services/calculos.service';
 import { CurrencyInput } from '../../shared/CurrencyInput';
 import type { TipoRescisaoParametro } from '../../parametrizacao/parametros-calculo/services/parametrosCalculoService';
-import type { AdicionalTempoServicoTipo, AvisoPrevioModo } from '../hooks/useSimulacoesCalculos';
-
-interface Params {
-  tipo: string;
-  avisoPrevioModo: AvisoPrevioModo;
-  salario: string;
-  dataAdmissao: string;
-  dataDemissao: string;
-  saldoFGTS: string;
-  feriasVencidasPeriodos: string;
-  feriasVencidasEmDobro: boolean;
-  adicionalTempoServicoAtivo: boolean;
-  adicionalTempoServicoTipo: AdicionalTempoServicoTipo;
-  adicionalTempoServicoPercentual: string;
-  adicionalTempoServicoValor: string;
-}
+import type {
+  AdicionalTempoServicoTipo,
+  AvisoPrevioModo,
+  RescisaoParams,
+} from './rescisaoTypes';
+import { getAvisosPermitidos, normalizeAvisoPrevio } from './rescisaoRules';
 
 interface Props {
-  params: Params;
-  setParams: (p: Params) => void;
+  params: RescisaoParams;
+  setParams: (p: RescisaoParams) => void;
   resultado: ResultadoRescisao;
   tiposRescisao: TipoRescisaoParametro[];
 }
@@ -40,7 +30,7 @@ const ADICIONAL_TEMPO_SERVICO_OPCOES: { id: AdicionalTempoServicoTipo; label: st
 ];
 
 export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultado, tiposRescisao }) => {
-  const set = (key: keyof Params) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (key: keyof RescisaoParams) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setParams({ ...params, [key]: e.target.value });
 
   return (
@@ -55,8 +45,14 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
             {tiposRescisao.map((tipo) => (
               <button
                 key={tipo.id}
+                type="button"
+                aria-pressed={params.tipo === tipo.id}
                 className={`tipo-rescisao-btn${params.tipo === tipo.id ? ' active' : ''}`}
-                onClick={() => setParams({ ...params, tipo: tipo.id })}
+                onClick={() => setParams({
+                  ...params,
+                  tipo: tipo.id,
+                  avisoPrevioModo: normalizeAvisoPrevio(tipo.id, params.avisoPrevioModo),
+                })}
                 title={tipo.descricao}
               >
                 {tipo.label}
@@ -69,10 +65,13 @@ export const SimuladorRescisao: React.FC<Props> = ({ params, setParams, resultad
             Aviso Prévio
           </label>
           <div className="aviso-previo-grid">
-            {AVISO_PREVIO_OPCOES.map((opcao) => (
+            {AVISO_PREVIO_OPCOES
+              .filter((opcao) => getAvisosPermitidos(params.tipo).includes(opcao.id))
+              .map((opcao) => (
               <button
                 key={opcao.id}
                 type="button"
+                aria-pressed={params.avisoPrevioModo === opcao.id}
                 className={`aviso-previo-btn${params.avisoPrevioModo === opcao.id ? ' active' : ''}`}
                 onClick={() => setParams({ ...params, avisoPrevioModo: opcao.id })}
                 title={opcao.desc}

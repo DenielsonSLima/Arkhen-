@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface SimulationPdfPreviewProps {
   bytes: Uint8Array | null;
@@ -7,30 +7,39 @@ interface SimulationPdfPreviewProps {
 }
 
 export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ bytes, loading, error }) => {
-  const blobUrl = useMemo(() => {
-    if (!bytes) return null;
-    try {
-      const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' });
-      return URL.createObjectURL(blob);
-    } catch {
-      return null;
-    }
-  }, [bytes]);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
+    setPreviewError(false);
+    if (!bytes) {
+      setBlobUrl(null);
+      return undefined;
+    }
+
+    let nextUrl: string | null = null;
+    try {
+      const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' });
+      nextUrl = URL.createObjectURL(blob);
+      setBlobUrl(nextUrl);
+    } catch {
+      setBlobUrl(null);
+      setPreviewError(true);
+    }
+
     return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
+      if (nextUrl) {
+        URL.revokeObjectURL(nextUrl);
       }
     };
-  }, [blobUrl]);
+  }, [bytes]);
 
   if (loading) {
-    return <div className="simulation-pdf-status">Gerando documento A4…</div>;
+    return <div className="simulation-pdf-status" role="status" aria-live="polite">Gerando documento A4…</div>;
   }
 
   if (error) {
-    return <div className="simulation-pdf-status simulation-pdf-status--error">{error}</div>;
+    return <div className="simulation-pdf-status simulation-pdf-status--error" role="alert" aria-live="assertive">{error}</div>;
   }
 
   if (blobUrl) {
@@ -45,5 +54,13 @@ export const SimulationPdfPreview: React.FC<SimulationPdfPreviewProps> = ({ byte
     );
   }
 
-  return <div className="simulation-pdf-status">Pré-visualização indisponível. O download do PDF continua ativo.</div>;
+  if (bytes && !previewError) {
+    return <div className="simulation-pdf-status" role="status" aria-live="polite">Preparando pré-visualização…</div>;
+  }
+
+  return (
+    <div className="simulation-pdf-status" role="status" aria-live="polite">
+      Pré-visualização indisponível. O download do PDF continua ativo.
+    </div>
+  );
 };

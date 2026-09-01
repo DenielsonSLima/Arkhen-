@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -24,10 +24,12 @@ import { PartnerClassificationSummary } from './PartnerClassificationSummary';
 import { FilialForm } from '../forms/FilialForm';
 import { TabProtocolosEntregas } from './TabProtocolosEntregas';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import './ClienteDetail.css';
 
 interface ClienteDetailProps {
   company: Company;
+  isAccountingClient: boolean;
   onBack: () => void;
   onUpdateCompany: (company: Company) => Promise<void>;
   onToggleStatus: (company: Company) => void;
@@ -45,6 +47,7 @@ const getInitials = (name: string) => {
 
 export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   company,
+  isAccountingClient,
   onBack,
   onUpdateCompany,
   onToggleStatus,
@@ -64,6 +67,10 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   const isAtiva = company.status === 'Ativa';
   const displayDocumentLabel = company.tipo === 'PF' ? 'CPF' : 'CNPJ';
   const polos = company.polos || [];
+
+  useEffect(() => {
+    if (!isAccountingClient && activeTab !== 'dados') setActiveTab('dados');
+  }, [activeTab, isAccountingClient]);
 
   const handleLogoUpload = async (file?: File) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -131,7 +138,6 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
 
   return (
     <div className="cliente-detail-container">
-      {/* Barra superior com Breadcrumb e Ações Rápidas */}
       <div className="cliente-detail-topbar">
         <div className="breadcrumb-wrapper">
           <button className="btn-back-style" onClick={onBack}>
@@ -163,10 +169,8 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
         </div>
       </div>
 
-      {/* Header do Cliente (Layout Claro Luxuoso) */}
       <header className="cliente-header-card">
         <div className="header-card-layout">
-          {/* Avatar com upload de logo */}
           <div className="avatar-container" onClick={() => !isUploadingLogo && fileInputRef.current?.click()} title="Alterar Logotipo">
             {company.logo ? (
               <img src={company.logo} alt={company.nome} className="avatar-img" />
@@ -190,7 +194,7 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
             <div className="company-title-row">
               <h2>{company.nome}</h2>
               <span className="regime-badge-clear">{company.tipo}</span>
-              <span className="category-badge-clear">{company.categoriaCliente || 'Cliente Contábil'}</span>
+              <span className="category-badge-clear">{normalizeCatalogLabel(company.categoriaCliente || 'Cliente Contábil')}</span>
               <span className={`status-badge-clear ${isAtiva ? 'active' : 'inactive'}`}>
                 <span className="status-dot"></span>
                 {company.status}
@@ -240,24 +244,28 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
         >
           <FileText size={16} /> Dados Cadastrais
         </button>
-        <button
-          className={`tab-link-btn ${activeTab === 'protocolos' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('protocolos');
-            setShowBranchForm(false);
-          }}
-        >
-          <FileCheck size={16} /> Rotinas e Obrigações
-        </button>
-        <button
-          className={`tab-link-btn ${activeTab === 'filiais' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveTab('filiais');
-            setIsEditing(false);
-          }}
-        >
-          <Building2 size={16} /> Filiais ({polos.length})
-        </button>
+        {isAccountingClient ? (
+          <>
+            <button
+              className={`tab-link-btn ${activeTab === 'protocolos' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('protocolos');
+                setShowBranchForm(false);
+              }}
+            >
+              <FileCheck size={16} /> Rotinas e Obrigações
+            </button>
+            <button
+              className={`tab-link-btn ${activeTab === 'filiais' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('filiais');
+                setIsEditing(false);
+              }}
+            >
+              <Building2 size={16} /> Filiais ({polos.length})
+            </button>
+          </>
+        ) : null}
       </nav>
 
       {/* Conteúdo Aba Dados Cadastrais */}
@@ -362,14 +370,14 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
         </div>
       )}
 
-      {activeTab === 'protocolos' && (
+      {isAccountingClient && activeTab === 'protocolos' && (
         <div className="tab-pane-content">
           <TabProtocolosEntregas company={company} />
         </div>
       )}
 
       {/* Conteúdo Aba Filiais */}
-      {activeTab === 'filiais' && (
+      {isAccountingClient && activeTab === 'filiais' && (
         <div className="tab-pane-content">
           <div className="filiais-header-row">
             <div>

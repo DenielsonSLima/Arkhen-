@@ -3,6 +3,19 @@ import { supabase } from '../../../lib/supabase';
 const ASSETS_BUCKET = 'app-assets';
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
+export const PDF_COMPATIBLE_IMAGE_MIME_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+] as const;
+
+export const PDF_COMPATIBLE_IMAGE_ACCEPT = PDF_COMPATIBLE_IMAGE_MIME_TYPES.join(',');
+
+interface UploadImageAssetOptions {
+  allowedMimeTypes?: readonly string[];
+  invalidTypeMessage?: string;
+}
+
 const sanitizeSegment = (value: string) => (
   value
     .trim()
@@ -15,17 +28,29 @@ const sanitizeSegment = (value: string) => (
 
 const getImageExtension = (file: File) => {
   const fromName = file.name.split('.').pop()?.toLowerCase();
-  if (fromName && ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(fromName)) {
+  if (fromName && ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(fromName)) {
     return fromName === 'jpg' ? 'jpeg' : fromName;
   }
 
   const fromMime = file.type.split('/')[1]?.toLowerCase();
-  return fromMime && ['png', 'jpeg', 'webp', 'gif'].includes(fromMime) ? fromMime : 'png';
+  return fromMime && ['png', 'jpeg', 'webp', 'gif', 'svg+xml'].includes(fromMime)
+    ? fromMime.replace('+xml', '')
+    : 'png';
 };
 
-export const uploadImageAsset = async (file: File, folder: string, entityId: string) => {
+export const uploadImageAsset = async (
+  file: File,
+  folder: string,
+  entityId: string,
+  options: UploadImageAssetOptions = {},
+) => {
   if (!file.type.startsWith('image/')) {
     throw new Error('Selecione um arquivo de imagem.');
+  }
+
+  const normalizedMime = file.type.toLowerCase();
+  if (options.allowedMimeTypes && !options.allowedMimeTypes.includes(normalizedMime)) {
+    throw new Error(options.invalidTypeMessage ?? 'O formato da imagem não é permitido.');
   }
 
   if (file.size > MAX_IMAGE_SIZE_BYTES) {

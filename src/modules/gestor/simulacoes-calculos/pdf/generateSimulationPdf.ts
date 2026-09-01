@@ -4,6 +4,7 @@ import type {
   SimulationPdfInput,
   SimulationPdfRow,
 } from './simulationPdfTypes';
+import { resolveWatermarkGeometry } from './watermarkConfig';
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -31,10 +32,14 @@ const formatCnpj = (value = '') => {
 };
 
 const imageFormat = (dataUrl: string) => {
-  if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG';
-  if (dataUrl.startsWith('data:image/webp')) return 'WEBP';
-  return 'PNG';
+  const normalized = dataUrl.toLowerCase();
+  if (normalized.startsWith('data:image/jpeg') || normalized.startsWith('data:image/jpg')) return 'JPEG';
+  if (normalized.startsWith('data:image/webp')) return 'WEBP';
+  if (normalized.startsWith('data:image/png')) return 'PNG';
+  throw new Error('Formato de imagem incompatível com o PDF.');
 };
+
+const isSvgDataUrl = (dataUrl: string) => /^data:image\/svg\+xml(?:;|,)/i.test(dataUrl);
 
 const safeAddImage = (
   doc: JsPdfDocument,
@@ -56,47 +61,36 @@ const safeAddImage = (
 
 const drawWatermark = (doc: JsPdfDocument, input: SimulationPdfInput) => {
   const watermark = input.watermark;
-  if (!watermark?.enabled || !watermark.dataUrl) return;
-
-  const sizePercent = Math.max(12, Math.min(70, watermark.size ?? 35));
-  const maxW = CONTENT_WIDTH * (sizePercent / 100);
-  const maxH = (PAGE_HEIGHT - 40) * (sizePercent / 100);
-  const aspect = watermark.aspectRatio && watermark.aspectRatio > 0 ? watermark.aspectRatio : 1;
-
-  let width = maxW;
-  let height = width / aspect;
-
-  if (height > maxH) {
-    height = maxH;
-    width = height * aspect;
+  if (!watermark?.enabled) return;
+  if (!watermark.dataUrl) {
+    throw new Error('A marca d’água Retrato está habilitada, mas a imagem não está disponível.');
   }
+  const geometry = resolveWatermarkGeometry({
+    watermark,
+    pageWidth: PAGE_WIDTH,
+    pageHeight: PAGE_HEIGHT,
+  });
 
-  const position = watermark.position ?? 'centro';
-  let x = (PAGE_WIDTH - width) / 2;
-  let y = (PAGE_HEIGHT - height) / 2;
-
-  if (position === 'topo-esquerda') {
-    x = MARGIN_X;
-    y = 22;
-  } else if (position === 'topo-direita') {
-    x = PAGE_WIDTH - MARGIN_X - width;
-    y = 22;
-  } else if (position === 'rodape-direita') {
-    x = PAGE_WIDTH - MARGIN_X - width;
-    y = PAGE_HEIGHT - 24 - height;
-  }
-
+  const pdfWithState = doc as JsPdfDocument & {
+    GState: new (options: { opacity: number }) => unknown;
+    setGState: (state: unknown) => void;
+  };
   try {
-    const opacity = Math.max(0.03, Math.min(0.25, (watermark.opacity ?? 10) / 100));
-    const pdfWithState = doc as JsPdfDocument & {
-      GState: new (options: { opacity: number }) => unknown;
-      setGState: (state: unknown) => void;
-    };
-    pdfWithState.setGState(new pdfWithState.GState({ opacity }));
-    safeAddImage(doc, watermark.dataUrl, x, y, width, height);
+    pdfWithState.setGState(new pdfWithState.GState({ opacity: geometry.opacity }));
+    doc.addImage(
+      watermark.dataUrl,
+      imageFormat(watermark.dataUrl),
+      geometry.x,
+      geometry.y,
+      geometry.width,
+      geometry.height,
+      undefined,
+      'FAST',
+    );
+  } catch (cause) {
+    throw new Error('Não foi possível aplicar a marca d’água Retrato configurada no PDF.', { cause });
+  } finally {
     pdfWithState.setGState(new pdfWithState.GState({ opacity: 1 }));
-  } catch {
-    // A marca d'água é opcional; texto e paginação nunca dependem dela.
   }
 };
 
@@ -198,17 +192,35 @@ const measureRow = (doc: JsPdfDocument, row: SimulationPdfRow) => {
 
 export const generateSimulationPdf = async (input: SimulationPdfInput): Promise<GeneratedSimulationPdf> => {
   const { jsPDF } = await import('jspdf');
+  const logoPromise = normalizeSvgForPdf(input.company.logoDataUrl).catch((error) => {
+    console.warn('Logotipo ignorado durante a geração do PDF.', error);
+    return null;
+  });
+  const watermarkPromise = input.watermark?.enabled
+    ? normalizeSvgForPdf(input.watermark.dataUrl)
+    : Promise.resolve(input.watermark?.dataUrl ?? null);
+  const [logoDataUrl, watermarkDataUrl] = await Promise.all([
+    logoPromise,
+    watermarkPromise,
+  ]);
+  const preparedInput: SimulationPdfInput = {
+    ...input,
+    company: { ...input.company, logoDataUrl },
+    watermark: input.watermark
+      ? { ...input.watermark, dataUrl: watermarkDataUrl }
+      : undefined,
+  };
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
   let pageNumber = 1;
-  let y = drawPageHeader(doc, input, true);
+  let y = drawPageHeader(doc, preparedInput, true);
 
   const addPage = () => {
     doc.addPage('a4', 'portrait');
     pageNumber += 1;
-    y = drawPageHeader(doc, input, false);
+    y = drawPageHeader(doc, preparedInput, false);
   };
 
-  input.sections.forEach((section) => {
+  preparedInput.sections.forEach((section) => {
     const firstRowHeight = section.rows[0] ? measureRow(doc, section.rows[0]).height : 0;
     if (y + 12 + firstRowHeight > CONTENT_BOTTOM) addPage();
 
@@ -262,7 +274,7 @@ export const generateSimulationPdf = async (input: SimulationPdfInput): Promise<
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page += 1) {
     doc.setPage(page);
-    drawFooter(doc, input, page, totalPages);
+    drawFooter(doc, preparedInput, page, totalPages);
   }
 
   return {
@@ -289,6 +301,47 @@ export const imageUrlToDataUrl = async (url: string | null | undefined): Promise
   }
 };
 
+const loadImage = (dataUrl: string): Promise<HTMLImageElement> => new Promise((resolve, reject) => {
+  if (typeof Image === 'undefined') {
+    reject(new Error('O ambiente atual não oferece suporte ao processamento de imagens.'));
+    return;
+  }
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('Não foi possível decodificar a imagem configurada.'));
+  image.src = dataUrl;
+});
+
+const rasterizeSvgDataUrl = async (dataUrl: string): Promise<{ dataUrl: string; aspectRatio: number }> => {
+  if (typeof document === 'undefined') {
+    throw new Error('O ambiente atual não oferece suporte à conversão da imagem SVG.');
+  }
+  const image = await loadImage(dataUrl);
+  const naturalWidth = image.naturalWidth || image.width || 1600;
+  const naturalHeight = image.naturalHeight || image.height || 1600;
+  const aspectRatio = naturalWidth / naturalHeight;
+  const width = Math.max(1, Math.min(2400, naturalWidth));
+  const height = Math.max(1, Math.round(width / aspectRatio));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Não foi possível preparar a imagem SVG para o PDF.');
+  }
+  context.drawImage(image, 0, 0, width, height);
+  return { dataUrl: canvas.toDataURL('image/png'), aspectRatio };
+};
+
+const normalizeSvgForPdf = async (
+  dataUrl: string | null | undefined,
+): Promise<string | null> => {
+  if (!dataUrl) return null;
+  if (!isSvgDataUrl(dataUrl)) return dataUrl;
+  const rasterized = await rasterizeSvgDataUrl(dataUrl);
+  return rasterized.dataUrl;
+};
+
 export const getImageDetails = async (
   url: string | null | undefined
 ): Promise<{ dataUrl: string | null; aspectRatio: number }> => {
@@ -296,29 +349,20 @@ export const getImageDetails = async (
   const dataUrl = await imageUrlToDataUrl(url);
   if (!dataUrl) return { dataUrl: null, aspectRatio: 1 };
 
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined') {
-      resolve({ dataUrl, aspectRatio: 1 });
-      return;
+  if (isSvgDataUrl(dataUrl)) {
+    try {
+      return await rasterizeSvgDataUrl(dataUrl);
+    } catch {
+      return { dataUrl: null, aspectRatio: 1 };
     }
-    const img = new Image();
-    img.onload = () => {
-      const naturalWidth = img.naturalWidth || 100;
-      const naturalHeight = img.naturalHeight || 100;
-      resolve({ dataUrl, aspectRatio: naturalWidth / naturalHeight });
-    };
-    img.onerror = () => {
-      resolve({ dataUrl, aspectRatio: 1 });
-    };
-    img.src = dataUrl;
-  });
-};
-
-export const pdfBytesToDataUrl = (bytes: Uint8Array) => {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
   }
-  return `data:application/pdf;base64,${btoa(binary)}`;
+
+  try {
+    const image = await loadImage(dataUrl);
+    const naturalWidth = image.naturalWidth || image.width || 100;
+    const naturalHeight = image.naturalHeight || image.height || 100;
+    return { dataUrl, aspectRatio: naturalWidth / naturalHeight };
+  } catch {
+    return { dataUrl, aspectRatio: 1 };
+  }
 };

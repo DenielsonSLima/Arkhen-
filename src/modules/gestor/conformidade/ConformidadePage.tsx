@@ -32,7 +32,7 @@ const TYPE_OPTIONS: Array<{ id: ConformidadeTipo; label: string }> = [
   { id: 'fiscal', label: 'Fiscal' },
   { id: 'folha', label: 'Folha' },
   { id: 'documentos', label: 'Documentos' },
-  { id: 'protocolo', label: 'Protocolo' },
+  { id: 'protocolo', label: 'Acompanhamento' },
   { id: 'atendimento', label: 'Atendimento' },
 ];
 
@@ -117,7 +117,7 @@ export const ConformidadePage: React.FC<ConformidadePageProps> = ({ initialCompa
       <header className="conformidade-page-header">
         <div>
           <h1>Conformidade</h1>
-          <p>Painel derivado de riscos, atrasos, SLA e gargalos calculados sobre atividades, protocolos e prazos.</p>
+          <p>Painel derivado de riscos, atrasos, SLA e gargalos calculados sobre atividades, acompanhamentos e prazos.</p>
         </div>
         <div className="conformidade-page-kpi">
           <ShieldCheck size={18} />

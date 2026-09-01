@@ -6,10 +6,9 @@ import { useTabelasTributarias } from './queries/useTabelasTributarias';
 import './TabelasTributariasPage.css';
 
 const CATEGORIAS = [
-  { id: '', label: 'Todas', tipos: [] },
-  { id: 'pessoa_fisica', label: 'Pessoa Física', tipos: ['irrf_mensal', 'irpf_anual', 'carne_leao', 'dividendos', 'ganho_capital'] },
+  { id: '', label: 'Rescisão', tipos: [] },
+  { id: 'irrf', label: 'IRRF mensal', tipos: ['irrf_mensal'] },
   { id: 'inss', label: 'INSS', tipos: ['inss'] },
-  { id: 'mei', label: 'MEI', tipos: ['mei'] },
 ];
 
 const formatDate = (value: string | null) => value
@@ -36,7 +35,7 @@ export const TabelasTributariasPage: React.FC = () => {
       <header className="tributarias-header">
         <div>
           <h2 className="parametrizacao-page-title"><BookOpenCheck size={21} /> Tabelas Tributárias</h2>
-          <p>Regras oficiais versionadas por vigência, utilizadas pelas simulações no Supabase.</p>
+          <p>Regras oficiais versionadas por vigência, utilizadas pela Calculadora de Rescisão.</p>
         </div>
         <button className="btn-cancel" onClick={() => query.refetch()} disabled={query.isFetching}>
           <RefreshCw size={15} /> {query.isFetching ? 'Atualizando...' : 'Atualizar'}
@@ -51,7 +50,12 @@ export const TabelasTributariasPage: React.FC = () => {
       <div className="tributarias-controls">
         <nav className="tributarias-tabs" aria-label="Categorias tributárias">
           {CATEGORIAS.map((item) => (
-            <button key={item.id || 'todas'} className={categoria === item.id ? 'active' : ''} onClick={() => setCategoria(item.id)}>
+            <button
+              key={item.id || 'rescisao'}
+              type="button"
+              className={categoria === item.id ? 'active' : ''}
+              onClick={() => setCategoria(item.id)}
+            >
               {item.label}
             </button>
           ))}

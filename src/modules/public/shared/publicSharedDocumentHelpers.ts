@@ -206,40 +206,43 @@ export const loadPdfFirstPagePreview = async (signedUrl: string): Promise<string
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker.default;
 
-    const pdf = await pdfjsLib.getDocument({ url: signedUrl }).promise;
-    const page = await pdf.getPage(1);
+    const loadingTask = pdfjsLib.getDocument({ url: signedUrl });
+    try {
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
 
-    const targetWidth = 160;
-    const targetHeight = 92;
-    const baseViewport = page.getViewport({ scale: 1 });
-    const scaleX = targetWidth / baseViewport.width;
-    const scaleY = targetHeight / baseViewport.height;
-    const scale = Math.max(0.7, Math.min(scaleX, scaleY, 2.2));
-    const viewport = page.getViewport({ scale });
+      const targetWidth = 160;
+      const targetHeight = 92;
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scaleX = targetWidth / baseViewport.width;
+      const scaleY = targetHeight / baseViewport.height;
+      const scale = Math.max(0.7, Math.min(scaleX, scaleY, 2.2));
+      const viewport = page.getViewport({ scale });
 
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
 
-    if (!context) {
+      if (!context) {
+        page.cleanup();
+        return null;
+      }
+
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+
+      await page.render({
+        canvas,
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      const preview = canvas.toDataURL('image/png');
       page.cleanup();
-      await pdf.destroy();
-      return null;
+
+      return preview;
+    } finally {
+      await loadingTask.destroy();
     }
-
-    canvas.width = Math.max(1, Math.floor(viewport.width));
-    canvas.height = Math.max(1, Math.floor(viewport.height));
-
-    await page.render({
-      canvas,
-      canvasContext: context,
-      viewport,
-    }).promise;
-
-    const preview = canvas.toDataURL('image/png');
-    page.cleanup();
-    await pdf.destroy();
-
-    return preview;
   } catch {
     return null;
   }

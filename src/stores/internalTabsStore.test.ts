@@ -56,4 +56,41 @@ describe('internalTabsStore', () => {
     expect(storedState).toBeTruthy();
     expect(JSON.parse(storedState!).activeTabId).toContain('documentos');
   });
+
+  it('migrates legacy Rotinas and Acompanhamento titles while preserving suffixes', async () => {
+    sessionStorage.setItem('contabil_internal_tabs_state', JSON.stringify({
+      persistEnabled: true,
+      activeTabId: 'protocolos__legacy',
+      tabs: [
+        {
+          id: 'protocolos__legacy',
+          moduleId: 'protocolos',
+          baseTitle: 'Protocolos e Documentos',
+          title: 'Protocolos e Documentos / Empresa Alfa',
+          iconName: 'FileCheck',
+        },
+        {
+          id: 'atividades-modelos__legacy',
+          moduleId: 'atividades-modelos',
+          baseTitle: 'Rotinas e Modelos',
+          title: 'Rotinas e Modelos / Empresa Alfa',
+          iconName: 'Repeat',
+        },
+      ],
+    }));
+    vi.resetModules();
+
+    const { internalTabsStore: hydratedStore } = await import('./internalTabsStore');
+
+    expect(hydratedStore.getState().tabs).toEqual([
+      expect.objectContaining({
+        baseTitle: 'Acompanhamento',
+        title: 'Acompanhamento / Empresa Alfa',
+      }),
+      expect.objectContaining({
+        baseTitle: 'Rotinas',
+        title: 'Rotinas / Empresa Alfa',
+      }),
+    ]);
+  });
 });

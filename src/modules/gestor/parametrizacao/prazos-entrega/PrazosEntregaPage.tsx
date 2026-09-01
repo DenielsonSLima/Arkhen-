@@ -161,7 +161,7 @@ export const PrazosEntregaPage: React.FC = () => {
 
       <div className="prazos-note">
         <strong>Referência do mês anterior</strong>
-        <span>Quando uma entrega vence em 05/05, o protocolo exibe a competência de abril. No modo quinzenal, a empresa pode antecipar a 1ª quinzena e fechar o restante no vencimento final.</span>
+        <span>Quando uma entrega vence em 05/05, o acompanhamento exibe a competência de abril. No modo quinzenal, a empresa pode antecipar a 1ª quinzena e fechar o restante no vencimento final.</span>
       </div>
 
       <div className="table-responsive">

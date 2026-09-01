@@ -112,7 +112,7 @@ export const AtividadesInternas: React.FC = () => {
             <select value={setor} onChange={(event) => setSetor(event.target.value)}>
               <option value="Operacional">Operacional</option>
               <option value="Documentos">Documentos</option>
-              <option value="Protocolos">Protocolos</option>
+              <option value="Protocolos">Acompanhamento</option>
               <option value="Financeiro">Financeiro</option>
             </select>
           </div>

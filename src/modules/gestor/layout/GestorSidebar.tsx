@@ -42,7 +42,7 @@ const ATIVIDADES_ITEMS = [
   { id: 'atividades', label: 'Minha Fila' },
   { id: 'atividades-equipe', label: 'Equipe' },
   { id: 'atividades-fechamentos', label: 'Fechamentos de Clientes' },
-  { id: 'atividades-modelos', label: 'Rotinas e Modelos' },
+  { id: 'atividades-modelos', label: 'Rotinas' },
   { id: 'atividades-painel-operacional', label: 'Painel Operacional' },
 ];
 
@@ -55,7 +55,7 @@ const MENU_ITEMS = {
   'simulacoes-calculos': { id: 'simulacoes-calculos', label: 'Simulações', icon: Calculator },
   'reforma-tributaria': { id: 'reforma-tributaria', label: 'Reforma Tributária', icon: Scale },
   documentos: { id: 'documentos', label: 'Documentos', icon: FolderOpen },
-  protocolos: { id: 'protocolos', label: 'Protocolos', icon: FileCheck },
+  protocolos: { id: 'protocolos', label: 'Acompanhamento', icon: FileCheck },
   faturamento: { id: 'faturamento', label: 'Faturamento', icon: Receipt },
   financeiro: { id: 'financeiro', label: 'Financeiro', icon: Landmark },
   agenda: { id: 'agenda', label: 'Agenda', icon: CalendarDays },
