@@ -48,7 +48,7 @@ BEGIN
            'dia_vencimento_segunda_quinzena', 'sistema', 'ativo', 'atualizado_em'
          ])
      ) <> 13
-     ) THEN
+  THEN
     RAISE EXCEPTION 'Schema de parametrização divergente; reconcilie as migrations remotas antes de unificar obrigações.';
   END IF;
 END;
