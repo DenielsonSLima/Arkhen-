@@ -46,6 +46,77 @@
 
 .company-card-footer {
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.company-card-branches {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.company-card-branches svg {
+  flex: 0 0 auto;
+}
+
+.company-card-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.company-card-action-button {
+  -webkit-appearance: none;
+  align-items: center;
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 34px;
+  height: 34px;
+  justify-content: center;
+  line-height: 0;
+  padding: 0;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  width: 34px;
+}
+
+.company-card-action-button svg {
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.company-card-action-button:hover {
+  background: rgba(197, 146, 53, 0.08);
+  border-color: rgba(197, 146, 53, 0.52);
+  box-shadow: 0 3px 8px rgba(197, 146, 53, 0.12);
+  color: var(--color-gold-dark, #8f641e);
+}
+
+.company-card-action-button:focus-visible {
+  border-color: var(--color-gold-primary, #c59235);
+  outline: 3px solid rgba(197, 146, 53, 0.2);
+  outline-offset: 2px;
+}
+
+.company-card-action-button:active {
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.company-card-action-button--delete:hover,
+.company-card-action-button--delete:focus-visible {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .company-card-details {
@@ -63,7 +134,7 @@
 
 .company-card-details strong {
   color: #334155;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 @media (max-width: 1024px) {

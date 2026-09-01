@@ -71,15 +71,35 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
       </div>
       
       <div className="company-card-footer" onClick={(event) => event.stopPropagation()}>
-        <span><Building2 size={14} /> {company.polos?.length || 0} filiais</span>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <button className="btn-icon-table" onClick={(event) => onEdit(event, company)} title="Editar parceiro">
+        <span className="company-card-branches">
+          <Building2 size={14} /> {company.polos?.length || 0} filiais
+        </span>
+        <div className="company-card-actions" role="group" aria-label={`Ações de ${company.nome}`}>
+          <button
+            type="button"
+            className="company-card-action-button"
+            onClick={(event) => onEdit(event, company)}
+            title="Editar parceiro"
+            aria-label={`Editar ${company.nome}`}
+          >
             <Edit3 size={14} />
           </button>
-          <button className="btn-icon-table" onClick={() => onToggleStatus(company)} title={isAtiva ? 'Inativar parceiro' : 'Ativar parceiro'}>
+          <button
+            type="button"
+            className="company-card-action-button"
+            onClick={() => onToggleStatus(company)}
+            title={isAtiva ? 'Inativar parceiro' : 'Ativar parceiro'}
+            aria-label={`${isAtiva ? 'Inativar' : 'Ativar'} ${company.nome}`}
+          >
             {company.status === 'Inativa' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
           </button>
-          <button className="btn-icon-table delete" onClick={() => onDelete(company.id)} title="Excluir parceiro">
+          <button
+            type="button"
+            className="company-card-action-button company-card-action-button--delete"
+            onClick={() => onDelete(company.id)}
+            title="Excluir parceiro"
+            aria-label={`Excluir ${company.nome}`}
+          >
             <Trash2 size={14} />
           </button>
         </div>
