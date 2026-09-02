@@ -57,10 +57,10 @@ const toParametrizacaoItems = (items: CatalogoDefaultItem[]): ParametrizacaoItem
 
 const PARAMETRIZACAO_CONFIGS: Record<ParametrizacaoKind, ParametrizacaoKindConfig> = {
   'tipos-empresa': {
-    title: 'Tipos de Empresa',
-    description: 'Classifique parceiros por porte, enquadramento operacional e modelo de relacionamento com o escritório.',
+    title: 'Enquadramento',
+    description: 'Mantenha os portes e enquadramentos oficiais usados no cadastro: MEI, ME, EPP e Demais.',
     icon: <Building2 size={22} />,
-    integrationNote: 'Vinculado diretamente ao cadastro de Parceiros na aba de dados fiscais e societários para segmentar as rotinas do escritório.',
+    integrationNote: 'Vinculado ao porte oficial retornado pela consulta de CNPJ. Natureza jurídica, regime tributário e categoria permanecem classificações separadas.',
     defaultItems: toParametrizacaoItems(TIPOS_EMPRESA_DEFAULTS),
   },
   'natureza-juridica': {

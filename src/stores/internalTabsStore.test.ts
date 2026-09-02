@@ -57,7 +57,7 @@ describe('internalTabsStore', () => {
     expect(JSON.parse(storedState!).activeTabId).toContain('documentos');
   });
 
-  it('migrates legacy Rotinas, Acompanhamento and Obrigações tabs', async () => {
+  it('migrates legacy Rotinas, Acompanhamento, Obrigações and Enquadramento tabs', async () => {
     sessionStorage.setItem('contabil_internal_tabs_state', JSON.stringify({
       persistEnabled: true,
       activeTabId: 'protocolos__legacy',
@@ -83,6 +83,13 @@ describe('internalTabsStore', () => {
           title: 'Modelos de Checklists',
           iconName: 'ClipboardList',
         },
+        {
+          id: 'parametrizacao-tipos-empresa__legacy',
+          moduleId: 'parametrizacao-tipos-empresa',
+          baseTitle: 'Tipos de Empresa',
+          title: 'Tipos de Empresa',
+          iconName: 'Database',
+        },
       ],
     }));
     vi.resetModules();
@@ -102,6 +109,11 @@ describe('internalTabsStore', () => {
         moduleId: 'parametrizacao-prazos-entrega',
         baseTitle: 'Obrigações',
         title: 'Obrigações',
+      }),
+      expect.objectContaining({
+        moduleId: 'parametrizacao-tipos-empresa',
+        baseTitle: 'Enquadramento',
+        title: 'Enquadramento',
       }),
     ]);
   });

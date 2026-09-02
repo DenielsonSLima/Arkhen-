@@ -1,5 +1,6 @@
 import type { InterEnvironment, InterPreparedConfig } from "./types.ts";
 import { asRecord, asString, parsePreparedConfig } from "./validation.ts";
+import { parseFiscalDocument } from "../fiscal-document.ts";
 
 export interface InterChargeCustomer {
   id: string;
@@ -72,10 +73,10 @@ export const parsePreparedInterCharge = (
   const ambienteDb = asString(prepared.ambiente).toLowerCase() === "producao"
     ? "producao"
     : "homologacao";
-  const cpfCnpj = onlyDigits(customer.cpfCnpj);
-  if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
-    throw new Error("CPF/CNPJ do pagador invalido para o Banco Inter.");
-  }
+  const cpfCnpj = parseFiscalDocument(
+    customer.cpfCnpj,
+    "CPF/CNPJ do pagador para o Banco Inter",
+  ).value;
 
   const valor = Number(charge.valor);
   if (!Number.isFinite(valor) || valor <= 0) {

@@ -69,7 +69,7 @@ export const HELP_DATA: HelpModule[] = [
     submodulos: [
       { nome: 'Regimes Tributários', descricao: 'Catalogação de regimes e regras principais.', comoUsar: 'Selecione o regime correto em parametrizacao e relatórios.' },
       { nome: 'Obrigações', descricao: 'Cards com prazo opcional, regimes aplicáveis e etapas do fluxo.', comoUsar: 'Crie cada variante de obrigação e depois ative o fluxo nas empresas compatíveis.' },
-      { nome: 'Tipos de Empresa / Natureza Jurídica / Parceiros', descricao: 'Classificações da base administrativa.', comoUsar: 'Utilize para filtros e segmentações rápidas.' },
+      { nome: 'Enquadramento / Natureza Jurídica / Parceiros', descricao: 'Classificações da base administrativa.', comoUsar: 'Use o enquadramento para o porte oficial (MEI, ME, EPP ou Demais) e mantenha a natureza jurídica separada.' },
       { nome: 'Categorias de Clientes', descricao: 'Segmentação da carteira contábil.', comoUsar: 'Crie grupos para relatórios e prioridade operacional dos clientes.' },
       { nome: 'Impostos', descricao: 'Regras e tabelas de cálculo.', comoUsar: 'Defina parâmetros para simulações e consistência.' },
       { nome: 'Tipos de Documentos', descricao: 'Classificação documental.', comoUsar: 'Usado para organização no módulo Documentos.' },

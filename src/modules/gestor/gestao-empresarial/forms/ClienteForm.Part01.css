@@ -270,15 +270,24 @@
 
 .field-col-12 { grid-column: span 12; }
 .field-col-8 { grid-column: span 8; }
+.field-col-9 { grid-column: span 9; }
 .field-col-6 { grid-column: span 6; }
 .field-col-4 { grid-column: span 4; }
 .field-col-3 { grid-column: span 3; }
 .field-col-2 { grid-column: span 2; }
+.field-city { grid-column: span 10; }
+.field-state { grid-column: span 2; }
 
 @media (max-width: 600px) {
-  .field-col-8, .field-col-6, .field-col-4, .field-col-3, .field-col-2 {
+  .field-col-9, .field-col-8, .field-col-6, .field-col-4, .field-col-3, .field-col-2,
+  .field-city, .field-state {
     grid-column: span 12;
   }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .field-city { grid-column: span 9; }
+  .field-state { grid-column: span 3; }
 }
 
 .input-container {
@@ -319,6 +328,42 @@
   cursor: not-allowed;
   background-color: #f1f5f9;
   border-color: #e2e8f0;
+}
+
+.catalog-select-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.catalog-select-row .input-style {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.catalog-quick-create-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  min-height: 36px;
+  border: 1px solid var(--color-gold-primary);
+  border-radius: var(--radius-sm);
+  background: rgba(197, 146, 53, 0.08);
+  color: var(--color-gold-dark);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.catalog-quick-create-btn:hover:not(:disabled),
+.catalog-quick-create-btn:focus-visible {
+  background: var(--color-gold-primary);
+  color: #ffffff;
+}
+
+.catalog-quick-create-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Grupo de Busca de CNPJ */
@@ -441,4 +486,3 @@
 .cliente-folder-option span {
   overflow-wrap: anywhere;
 }
-

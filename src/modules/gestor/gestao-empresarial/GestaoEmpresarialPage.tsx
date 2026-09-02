@@ -11,6 +11,7 @@ import { ClienteAddForm } from './forms/ClienteAddForm';
 import { usePartnerClassifications } from './hooks/usePartnerClassifications';
 import { normalizeCatalogLabel } from '../shared/catalogLabel';
 import { isClienteContabilPartnerType } from './services/partnerClassificationService';
+import { getEffectiveTaxRegime } from './services/taxRegime';
 import './GestaoEmpresarial.css';
 import './GestaoEmpresarialLayoutFixes.css';
 import '../shared/RegimeBadges.css';
@@ -22,7 +23,6 @@ interface GestaoEmpresarialPageProps {
 }
 
 const getRegimeClass = (regime: string) => {
-  if (regime === 'MEI') return 'mei';
   if (regime === 'Simples Nacional') return 'simples';
   if (regime === 'Lucro Presumido') return 'presumido';
   if (regime === 'Lucro Real') return 'real';
@@ -107,11 +107,12 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     });
   }, [activeDetailTab, onViewContextChange, selectedCompany, isLoading]);
 
-  const orderedRegimes = ['Lucro Real', 'Lucro Presumido', 'Simples Nacional', 'MEI', 'PF', 'Isenta'] as const;
+  const orderedRegimes = ['Lucro Real', 'Lucro Presumido', 'Simples Nacional', 'PF', 'Isenta'] as const;
 
   const groupedCompanies = useMemo(() => {
     return filteredCompanies.reduce<Record<string, Company[]>>((acc, company) => {
-      acc[company.tipo] = [...(acc[company.tipo] || []), company];
+      const regime = getEffectiveTaxRegime(company.tipo);
+      acc[regime] = [...(acc[regime] || []), company];
       return acc;
     }, {});
   }, [filteredCompanies]);
@@ -201,7 +202,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
     );
   }
 
-  const regimes = ['Todos', 'PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+  const regimes = ['Todos', 'PF', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
   const getPartnerTypeName = (company: Company) => (
     normalizeCatalogLabel(partnerTypes.find((item) => item.id === company.tipoParceiroId)?.nome) || '-'
   );
@@ -255,7 +256,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
         <div className="category-filter-tabs">
           {regimes.map((regime) => (
             <button key={regime} className={`btn-filter-tab ${selectedRegime === regime ? 'active' : ''}`} onClick={() => setSelectedRegime(regime)}>
-              {regime}
+              {regime === 'Todos' ? regime : normalizeCatalogLabel(regime)}
             </button>
           ))}
         </div>
@@ -283,7 +284,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
               }} style={{ cursor: 'pointer' }}>
                 <td><strong>{company.nome}</strong><br /><small>{company.razaoSocial}</small></td>
                 <td>{company.cnpj}</td>
-                <td><span className={`regime-badge ${getRegimeClass(company.tipo)}`}>{company.tipo}</span></td>
+                <td><span className={`regime-badge ${getRegimeClass(getEffectiveTaxRegime(company.tipo))}`}>{normalizeCatalogLabel(getEffectiveTaxRegime(company.tipo))}</span></td>
                 <td>{getPartnerTypeName(company)}</td>
                 <td>{company.cidade || '-'}{company.uf ? `/${company.uf}` : ''}</td>
                 <td>{company.email || company.telefone || '-'}</td>
@@ -302,7 +303,7 @@ export const GestaoEmpresarialPage: React.FC<GestaoEmpresarialPageProps> = ({
             return (
               <section key={regime} className="companies-regime-section">
                 <h2 className="companies-regime-title">
-                  {regime}
+                  {normalizeCatalogLabel(regime)}
                   <span>
                     {companiesInRegime.length} {companiesInRegime.length === 1 ? 'parceiro' : 'parceiros'}
                   </span>

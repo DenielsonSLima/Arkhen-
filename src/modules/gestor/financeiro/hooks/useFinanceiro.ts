@@ -10,6 +10,7 @@ import type {
 } from '../services/financeiroService';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { matchesCnpjSearch } from '../../../../lib/cnpj';
 import {
   useCancelBoletoFinanceiroMutation,
   useCancelCobrancaFinanceiraMutation,
@@ -149,10 +150,8 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
     return contratos.filter((contrato) => {
       const details = companyMap.get(contrato.clienteEmpresaId);
       const cName = details?.nome.toLowerCase() || '';
-      const cCnpj = details?.cnpj.replace(/\D/g, '') || '';
       const q = searchQuery.toLowerCase();
-      const qClean = q.replace(/\D/g, '');
-      return cName.includes(q) || cCnpj.includes(qClean);
+      return cName.includes(q) || matchesCnpjSearch(details?.cnpj || '', q);
     });
   }, [contratos, searchQuery, companyMap]);
 
@@ -160,10 +159,8 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
     return cobranças.filter((cobranca) => {
       const details = companyMap.get(cobranca.clienteEmpresaId);
       const cName = details?.nome.toLowerCase() || '';
-      const cCnpj = details?.cnpj.replace(/\D/g, '') || '';
       const q = searchQuery.toLowerCase();
-      const qClean = q.replace(/\D/g, '');
-      const matchesSearch = cName.includes(q) || cCnpj.includes(qClean);
+      const matchesSearch = cName.includes(q) || matchesCnpjSearch(details?.cnpj || '', q);
       const matchesStatus = statusFilter === 'Todos' || cobranca.status === statusFilter;
       const matchesStart = !startDate || cobranca.dataVencimento >= startDate;
       const matchesEnd = !endDate || cobranca.dataVencimento <= endDate;

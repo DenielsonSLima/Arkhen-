@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { loginService, type LoginResponse } from '../services/loginService';
 import { cnpjLookupService } from '../../../gestor/gestao-empresarial/services/cnpjLookupService';
 import { validatePassword } from '../services/passwordPolicy';
+import { isValidCnpj } from '../../../../lib/cnpj';
 
 export type LoginMode = 'login' | 'signup' | 'recovery';
 
@@ -164,15 +165,14 @@ export const useLogin = () => {
   };
 
   const handleLookupCnpj = async () => {
-    const cleanCnpj = signupCnpj.replace(/\D/g, '');
-    if (!cleanCnpj || cleanCnpj.length !== 14) {
-      setError('Informe um CNPJ válido com 14 dígitos para busca.');
+    if (!isValidCnpj(signupCnpj)) {
+      setError('Informe um CNPJ válido com 14 caracteres para busca.');
       return;
     }
     setError(null);
     setIsSearchingCnpj(true);
     try {
-      const data = await cnpjLookupService.lookup(cleanCnpj);
+      const data = await cnpjLookupService.lookup(signupCnpj);
       setSignupEmpresa(data.razaoSocial || data.nome || '');
       if (data.telefone) setSignupTelefone(data.telefone);
       if (data.cep) setSignupCep(data.cep);

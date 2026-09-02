@@ -2,6 +2,7 @@ import React from 'react';
 import { Building2, Edit3, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { normalizeCatalogLabel } from '../../shared/catalogLabel';
 import type { Company } from '../services/gestaoEmpresarialService';
+import { getEffectiveTaxRegime } from '../services/taxRegime';
 
 interface ClienteCardProps {
   company: Company;
@@ -19,8 +20,27 @@ const getInitials = (name: string) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+const logoFrameStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  minWidth: 44,
+  maxWidth: 44,
+  minHeight: 44,
+  maxHeight: 44,
+  flex: '0 0 44px',
+  overflow: 'hidden',
+};
+
+const logoImageStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  height: '100%',
+  maxWidth: 44,
+  maxHeight: 44,
+  objectFit: 'contain',
+};
+
 const getRegimeClass = (regime: string) => {
-  if (regime === 'MEI') return 'mei';
   if (regime === 'Simples Nacional') return 'simples';
   if (regime === 'Lucro Presumido') return 'presumido';
   if (regime === 'Lucro Real') return 'real';
@@ -38,18 +58,28 @@ export const ClienteCard: React.FC<ClienteCardProps> = ({
   onDelete,
 }) => {
   const isAtiva = company.status === 'Ativa';
+  const effectiveTaxRegime = getEffectiveTaxRegime(company.tipo);
 
   return (
     <div className="company-card" onClick={() => onSelect(company.id)}>
       <div className="company-card-header">
-        <div className="company-logo-avatar">
+        <div className="company-logo-avatar" style={logoFrameStyle}>
           {company.logo ? (
-            <img src={company.logo} alt={company.nome} className="company-logo-img" />
+            <img
+              src={company.logo}
+              alt={company.nome}
+              className="company-logo-img"
+              width={44}
+              height={44}
+              style={logoImageStyle}
+            />
           ) : (
             <span>{getInitials(company.nome)}</span>
           )}
         </div>
-        <span className={`regime-badge ${getRegimeClass(company.tipo)}`}>{company.tipo}</span>
+        <span className={`regime-badge ${getRegimeClass(effectiveTaxRegime)}`}>
+          {normalizeCatalogLabel(effectiveTaxRegime)}
+        </span>
       </div>
       
       <div className="company-card-info">

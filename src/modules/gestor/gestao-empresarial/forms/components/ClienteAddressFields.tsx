@@ -59,7 +59,7 @@ export const ClienteAddressFields: React.FC<ClienteAddressFieldsProps> = ({
           onChange={(event) => onBairroChange(event.target.value)}
         />
       </div>
-      <div className="input-container field-col-9">
+      <div className="input-container field-city">
         <label>Cidade</label>
         <input
           type="text"
@@ -69,7 +69,7 @@ export const ClienteAddressFields: React.FC<ClienteAddressFieldsProps> = ({
           onChange={(event) => onCidadeChange(event.target.value)}
         />
       </div>
-      <div className="input-container field-col-3">
+      <div className="input-container field-state">
         <label>UF</label>
         <input
           type="text"

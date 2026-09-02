@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
 
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const financeiroHookMock = vi.hoisted(() => vi.fn());
 
@@ -14,6 +15,8 @@ vi.mock('./hooks/useFinanceiro', () => ({
 }));
 
 import { FinanceiroPage } from './FinanceiroPage';
+
+afterEach(cleanup);
 
 describe('FinanceiroPage internal tabs', () => {
   beforeEach(() => {
@@ -44,6 +47,7 @@ describe('FinanceiroPage internal tabs', () => {
   it.each([
     ['receber', 'receber'],
     ['pagar', 'pagar'],
+    ['lancamentos', 'lancamentos'],
     ['transferencias', 'lancamentos'],
     ['creditos', 'lancamentos'],
     [undefined, 'caixa'],
@@ -52,6 +56,29 @@ describe('FinanceiroPage internal tabs', () => {
 
     expect(financeiroHookMock.mock.calls[0]?.[0]).toBe(expectedView);
     expect(financeiroHookMock.mock.calls.some(([view]) => view !== expectedView)).toBe(false);
+  });
+
+  it('keeps Lançamentos / Extrato open after the parent echoes its view context', async () => {
+    const ContextHarness = () => {
+      const [initialTab, setInitialTab] = useState<string>();
+      return (
+        <FinanceiroPage
+          initialTab={initialTab}
+          onViewContextChange={(context) => {
+            setInitialTab(context.data?.activeTab as string | undefined);
+          }}
+        />
+      );
+    };
+
+    render(<ContextHarness />);
+    const button = screen.getByRole('button', { name: 'Lançamentos / Extrato' });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button.classList.contains('active')).toBe(true);
+      expect(financeiroHookMock.mock.calls.at(-1)?.[0]).toBe('lancamentos');
+    });
   });
 
   it('renders mutation feedback with accessible live roles', () => {

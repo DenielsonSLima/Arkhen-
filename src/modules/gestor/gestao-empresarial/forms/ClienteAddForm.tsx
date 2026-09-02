@@ -17,26 +17,27 @@ import { ClienteIdentificationFields } from './components/ClienteIdentificationF
 import { ClienteFormSteps } from './components/ClienteFormSteps';
 import { DocumentoTipoSelector } from './components/DocumentoTipoSelector';
 import { FormLoadErrorBanner } from './components/FormLoadErrorBanner';
-import { NovaCategoriaClienteModal } from './components/NovaCategoriaClienteModal';
+import { usePartnerQuickCreate } from './hooks/usePartnerQuickCreate';
+import { useCnpjLookupFill } from './hooks/useCnpjLookupFill';
+import { isValidCnpj, normalizeCnpj } from '../services/cnpjDocument';
 import {
   getDefaultCompanyTypeId,
-  getActiveCategoryName,
+  isMeiCompanyType,
+  isPessoaFisicaCompanyType,
   type DocumentType,
   type RegimeCliente,
+  type RegimeClienteForm,
 } from './clienteFormModel';
 import { hasSelectedPartnerCategory } from './partnerClassificationOptions';
 import { CLIENTE_FORM_STEPS, type ClienteFormStep } from './clienteFormStepsModel';
 import './ClienteForm.css';
-
 interface ClienteAddFormProps {
   onSave: (company: Company) => Promise<void>;
   onCancel: () => void;
   onSearchCNPJ: (cnpj: string) => Promise<CompanyLookupDraft>;
   isSaving: boolean;
 }
-
 const fallbackPastas = expandFolderPaths(DEFAULT_PASTAS_DOCUMENTOS.map((item) => item.caminho));
-
 export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel, onSearchCNPJ, isSaving }) => {
   const [step, setStep] = useState<ClienteFormStep>('identificacao');
   const [docType, setDocType] = useState<DocumentType>('CNPJ');
@@ -45,16 +46,14 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [razaoSocial, setRazaoSocial] = useState('');
   const [nomeFantasia, setNomeFantasia] = useState('');
   const [cnae, setCnae] = useState('');
-  const [tipo, setTipo] = useState<RegimeCliente>('Simples Nacional');
+  const [cnaeDescricao, setCnaeDescricao] = useState('');
+  const [capitalSocial, setCapitalSocial] = useState('');
+  const [tipo, setTipo] = useState<RegimeClienteForm>('');
   const [categoria, setCategoria] = useState('');
   const [tipoParceiroId, setTipoParceiroId] = useState('');
   const [tipoEmpresaId, setTipoEmpresaId] = useState('');
   const [naturezaJuridicaId, setNaturezaJuridicaId] = useState('');
   const [logo, setLogo] = useState('');
-  const [showAddCatModal, setShowAddCatModal] = useState(false);
-  const [newCatNome, setNewCatNome] = useState('');
-  const [newCatDesc, setNewCatDesc] = useState('');
-  const [newCatError, setNewCatError] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [contato, setContato] = useState('');
@@ -64,14 +63,12 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const [cidade, setCidade] = useState('');
   const [uf, setUf] = useState('');
   const [ieIm, setIeIm] = useState('');
-
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [cnpjLookupSnapshot, setCnpjLookupSnapshot] = useState<CompanyLookupDraft>();
   const [selectedPastas, setSelectedPastas] = useState<string[]>(fallbackPastas);
   const [pastasTouched, setPastasTouched] = useState(false);
   const {
-    availableCategories,
     availableCategoryOptions,
     addCategory,
     isAddingCategory,
@@ -84,6 +81,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     companyTypes,
     legalNatures,
     defaults: classificationDefaults,
+    createClassification,
+    isCreatingClassification,
     isLoading: isLoadingClassifications,
     isError: classificationsError,
     retry: retryClassifications,
@@ -92,30 +91,64 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
   const isClienteContabilPartner = isClienteContabilPartnerType(
     partnerTypes.find((item) => item.id === tipoParceiroId),
   );
+  const isMeiCompany = docType === 'CNPJ' && isMeiCompanyType(
+    companyTypes.find((item) => item.id === tipoEmpresaId),
+  );
   const requiredCategoryError = isClienteContabilPartner && categoriesError;
   const isLoadingRequiredCategories = isClienteContabilPartner && isLoadingCategories;
-
+  const { openQuickCreate, quickCreateModal } = usePartnerQuickCreate({
+    addCategory,
+    createClassification,
+    isAddingCategory,
+    isCreatingClassification,
+    onCreated: ({ target, id, name }) => {
+      if (target === 'category') setCategoria(name);
+      if (target === 'partnerType' && id) setTipoParceiroId(id);
+      if (target === 'companyType' && id) setTipoEmpresaId(id);
+      if (target === 'legalNature' && id) setNaturezaJuridicaId(id);
+    },
+  });
+  const { isSearching, handleLookup } = useCnpjLookupFill({
+    cnpj,
+    knownCnpj: cnpjLookupSnapshot?.cnpj,
+    companyTypes,
+    legalNatures,
+    onSearchCNPJ,
+    successText: 'Dados cadastrais do CNPJ preenchidos',
+    setters: {
+      razaoSocial: setRazaoSocial,
+      nomeFantasia: setNomeFantasia,
+      cnae: setCnae,
+      cnaeDescricao: setCnaeDescricao,
+      email: setEmail,
+      telefone: setTelefone,
+      endereco: setEndereco,
+      bairro: setBairro,
+      cep: setCep,
+      cidade: setCidade,
+      uf: setUf,
+      capitalSocial: setCapitalSocial,
+      tipo: setTipo,
+      tipoEmpresaId: setTipoEmpresaId,
+      naturezaJuridicaId: setNaturezaJuridicaId,
+      snapshot: setCnpjLookupSnapshot,
+      error: setErrorMsg,
+      success: setSuccessMsg,
+    },
+  });
   const availablePastas = useMemo(() => {
     const paths = pastasPadraoQuery.data && pastasPadraoQuery.data.length > 0
       ? pastasPadraoQuery.data
       : fallbackPastas;
     return Array.from(new Set(paths));
   }, [pastasPadraoQuery.data]);
-
   useEffect(() => {
     if (pastasTouched || !availablePastas.length) return;
     setSelectedPastas(availablePastas);
   }, [availablePastas, pastasTouched]);
-
   useEffect(() => {
     if (!tipoParceiroId && classificationDefaults.partnerType?.id) {
       setTipoParceiroId(classificationDefaults.partnerType.id);
-    }
-    if (isClienteContabilPartner && !categoria && availableCategories.length) {
-      setCategoria(getActiveCategoryName(
-        availableCategories,
-        'Cliente Contábil',
-      ));
     }
     if (docType === 'CPF') {
       const pessoaFisicaId = getDefaultCompanyTypeId(companyTypes, 'PF');
@@ -124,67 +157,41 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       }
     }
   }, [
-    availableCategories,
-    categoria,
     classificationDefaults,
     companyTypes,
     docType,
     tipoEmpresaId,
     tipoParceiroId,
-    isClienteContabilPartner,
   ]);
-
   const handleDocTypeChange = (type: DocumentType) => {
     setDocType(type);
     setErrorMsg(null);
     if (type === 'CPF') {
+      setCnpjLookupSnapshot(undefined);
       setTipo('PF');
       setCnae('');
+      setCnaeDescricao('');
+      setCapitalSocial('');
       setNaturezaJuridicaId('');
       setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'PF'));
     } else {
-      setTipo('Simples Nacional');
-      setTipoEmpresaId(getDefaultCompanyTypeId(companyTypes, 'Simples Nacional'));
-      setNaturezaJuridicaId(classificationDefaults.legalNature?.id || '');
+      setTipo('');
+      setTipoEmpresaId('');
+      setNaturezaJuridicaId('');
     }
   };
-
-  const handleLookup = async () => {
-    if (docType !== 'CNPJ' || !cnpj) return;
-    setIsSearching(true);
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    try {
-      const data = await onSearchCNPJ(cnpj);
-      setRazaoSocial(data.razaoSocial);
-      setNomeFantasia(data.nome);
-      setCnae(data.cnae);
-      setEmail(data.email);
-      setTelefone(data.telefone);
-      setEndereco(data.endereco);
-      setBairro(data.bairro);
-      setCep(data.cep);
-      setCidade(data.cidade);
-      setUf(data.uf);
-      setSuccessMsg('Dados do CNPJ obtidos com sucesso!');
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Falha ao buscar dados do CNPJ.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const buildCompanyDraft = (): Company => {
     const activeDoc = docType === 'CNPJ' ? cnpj : cpf;
-
     return {
       id: '',
       nome: nomeFantasia,
       razaoSocial,
       cnpj: activeDoc,
       cnae,
-      tipo,
+      cnaeDescricao: cnaeDescricao || undefined,
+      // `tipo=MEI` ainda alimenta obrigações legadas. A interface apresenta o
+      // regime correto (Simples) e o porte fica no catálogo de enquadramento.
+      tipo: (isMeiCompany ? 'MEI' : tipo) as RegimeCliente,
       categoriaCliente: isClienteContabilPartner ? categoria : undefined,
       tipoParceiroId,
       tipoEmpresaId: tipoEmpresaId || undefined,
@@ -202,6 +209,12 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
       uf,
       cep,
       inscricaoEstadual: ieIm,
+      capitalSocial: capitalSocial === '' ? undefined : Number(capitalSocial),
+      cnpjLookupSnapshot: docType === 'CNPJ'
+        && cnpjLookupSnapshot
+        && normalizeCnpj(cnpjLookupSnapshot.cnpj) === normalizeCnpj(cnpj)
+        ? cnpjLookupSnapshot
+        : undefined,
       funcionarios: [],
       ferias: [],
       documentos: [],
@@ -215,13 +228,18 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     const cleanDoc = activeDoc.replace(/\D/g, '');
 
     if (!cleanDoc) return `Por favor, informe o ${docType}.`;
-    if (docType === 'CNPJ' && cleanDoc.length !== 14) return 'CNPJ incompleto.';
+    if (docType === 'CNPJ' && !isValidCnpj(activeDoc)) return 'CNPJ inválido. Confira os 14 caracteres.';
     if (docType === 'CPF' && cleanDoc.length !== 11) return 'CPF incompleto.';
     if (!razaoSocial.trim()) return docType === 'CNPJ' ? 'A Razão Social é obrigatória.' : 'O Nome Completo é obrigatório.';
     if (!nomeFantasia.trim()) return docType === 'CNPJ' ? 'O Nome Fantasia é obrigatório.' : 'O Apelido/Nome Fantasia é obrigatório.';
+    if (!tipo) return 'Selecione o regime tributário.';
+    if (isMeiCompany && tipo !== 'Simples Nacional') return 'MEI deve usar o regime Simples Nacional.';
     if (isClienteContabilPartner && !hasSelectedPartnerCategory(availableCategoryOptions, categoria)) return 'Selecione uma categoria ativa do cliente.';
     if (!tipoParceiroId) return 'Selecione o tipo de parceiro.';
-    if (docType === 'CNPJ' && !tipoEmpresaId) return 'Selecione o tipo de empresa.';
+    if (docType === 'CNPJ' && !tipoEmpresaId) return 'Selecione o porte / enquadramento.';
+    if (docType === 'CNPJ' && isPessoaFisicaCompanyType(
+      companyTypes.find((item) => item.id === tipoEmpresaId),
+    )) return 'Pessoa Física não é um porte válido para CNPJ.';
     if (docType === 'CNPJ' && !naturezaJuridicaId) return 'Selecione a natureza jurídica.';
 
     return null;
@@ -280,29 +298,6 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
     setSelectedPastas([]);
   };
 
-  const closeCategoryModal = () => {
-    setShowAddCatModal(false);
-    setNewCatNome('');
-    setNewCatDesc('');
-    setNewCatError('');
-  };
-
-  const handleAddCategory = async () => {
-    const createdName = newCatNome.trim();
-    if (!createdName) {
-      setNewCatError('Nome da categoria é obrigatório.');
-      return;
-    }
-
-    try {
-      const normalizedName = await addCategory({ nome: createdName, descricao: newCatDesc });
-      setCategoria(normalizedName);
-      closeCategoryModal();
-    } catch (err) {
-      setNewCatError(err instanceof Error ? err.message : 'Erro ao salvar categoria no Supabase.');
-    }
-  };
-
   return (
     <div className="cliente-form-container">
       <div className="cliente-form-header">
@@ -355,6 +350,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               razaoSocial={razaoSocial}
               nomeFantasia={nomeFantasia}
               cnae={cnae}
+              cnaeDescricao={cnaeDescricao}
+              capitalSocial={capitalSocial}
               tipo={tipo}
               tipoParceiroId={tipoParceiroId}
               tipoEmpresaId={tipoEmpresaId}
@@ -380,6 +377,8 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               onRazaoSocialChange={setRazaoSocial}
               onNomeFantasiaChange={setNomeFantasia}
               onCnaeChange={setCnae}
+              onCnaeDescricaoChange={setCnaeDescricao}
+              onCapitalSocialChange={setCapitalSocial}
               onTipoChange={setTipo}
               onTipoParceiroChange={setTipoParceiroId}
               onTipoEmpresaChange={setTipoEmpresaId}
@@ -387,7 +386,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
               onCategoriaChange={setCategoria}
               onIeImChange={setIeIm}
               onLookup={handleLookup}
-              onOpenCategoryModal={() => setShowAddCatModal(true)}
+              onOpenQuickCreate={openQuickCreate}
             />
           )}
 
@@ -484,18 +483,7 @@ export const ClienteAddForm: React.FC<ClienteAddFormProps> = ({ onSave, onCancel
         </div>
       </form>
 
-      {showAddCatModal && (
-        <NovaCategoriaClienteModal
-          nome={newCatNome}
-          descricao={newCatDesc}
-          error={newCatError}
-          isSaving={isAddingCategory}
-          onNomeChange={setNewCatNome}
-          onDescricaoChange={setNewCatDesc}
-          onCancel={closeCategoryModal}
-          onSubmit={handleAddCategory}
-        />
-      )}
+      {quickCreateModal}
     </div>
   );
 };

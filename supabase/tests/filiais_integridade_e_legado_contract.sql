@@ -1,6 +1,6 @@
 -- Execute após 20260901190150_migrar_filiais_legadas_operacionais.
 -- Contrato somente leitura para integridade de CNPJ e conversão do JSON legado.
-BEGIN;
+BEGIN READ ONLY;
 
 DO $test$
 DECLARE
@@ -18,9 +18,9 @@ BEGIN
     AND indice.indisvalid;
 
   IF v_index_definition IS NULL
-     OR position('regexp_replace' IN lower(v_index_definition)) = 0
+     OR position('normalizar_cnpj_alfanumerico' IN lower(v_index_definition)) = 0
      OR position('empresa_id' IN lower(v_index_definition)) = 0
-     OR position('= 14' IN lower(v_index_definition)) = 0 THEN
+     OR position('[0-9a-z]{12}[0-9]{2}' IN lower(v_index_definition)) = 0 THEN
     RAISE EXCEPTION 'Unicidade física do CNPJ normalizado está ausente.';
   END IF;
 
@@ -37,7 +37,8 @@ BEGIN
      OR position('tipo' IN lower(v_trigger_definition)) = 0
      OR position('new.tipo = ''pf''' IN lower(v_function_definition)) = 0
      OR position('v_matriz.tipo = ''pf''' IN lower(v_function_definition)) = 0
-     OR position('left(v_cnpj_numeros, 8)' IN lower(v_function_definition)) = 0
+     OR position('left(v_cnpj_normalizado, 8)' IN lower(v_function_definition)) = 0
+     OR position('cnpj_alfanumerico_valido' IN lower(v_function_definition)) = 0
      OR position('matriz_cliente_id = new.id' IN lower(v_function_definition)) = 0 THEN
     RAISE EXCEPTION 'Trigger não protege pessoa jurídica e raiz de CNPJ da hierarquia.';
   END IF;
@@ -56,14 +57,10 @@ BEGIN
        OR matriz.tipo_estabelecimento <> 'Matriz'
        OR filial.tipo = 'PF'
        OR matriz.tipo = 'PF'
-       OR char_length(pg_catalog.regexp_replace(
-         COALESCE(filial.cnpj, ''), '[^0-9]', '', 'g'
-       )) <> 14
-       OR left(pg_catalog.regexp_replace(
-         COALESCE(filial.cnpj, ''), '[^0-9]', '', 'g'
-       ), 8) <> left(pg_catalog.regexp_replace(
-         COALESCE(matriz.cnpj, ''), '[^0-9]', '', 'g'
-       ), 8)
+       OR NOT app_private.cnpj_alfanumerico_valido(filial.cnpj)
+       OR NOT app_private.cnpj_alfanumerico_valido(matriz.cnpj)
+       OR left(app_private.normalizar_cnpj_alfanumerico(filial.cnpj), 8)
+         <> left(app_private.normalizar_cnpj_alfanumerico(matriz.cnpj), 8)
   ) THEN
     RAISE EXCEPTION 'Há filial relacional fora da hierarquia jurídica esperada.';
   END IF;

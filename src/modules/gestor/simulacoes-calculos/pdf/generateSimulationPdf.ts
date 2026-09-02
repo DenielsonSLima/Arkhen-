@@ -1,4 +1,5 @@
 import type { jsPDF as JsPdfDocument } from 'jspdf';
+import { formatCpfOrCnpj } from '../../../../lib/cnpj';
 import type {
   GeneratedSimulationPdf,
   SimulationPdfInput,
@@ -25,10 +26,7 @@ const formatGeneratedAt = (date: Date) => date.toLocaleString('pt-BR', {
 });
 
 const formatCnpj = (value = '') => {
-  const clean = value.replace(/\D/g, '');
-  return clean.length === 14
-    ? clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-    : value || 'Não informado';
+  return formatCpfOrCnpj(value) || 'Não informado';
 };
 
 const imageFormat = (dataUrl: string) => {

@@ -18,11 +18,13 @@ import {
 import type { ClientBranch, Company } from '../services/gestaoEmpresarialService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
 import { ClienteEditForm } from '../forms/ClienteEditForm';
-import { PartnerClassificationSummary } from './PartnerClassificationSummary';
+import { ClienteDetailData } from './ClienteDetailData';
 import { FilialForm } from '../forms/FilialForm';
 import { TabProtocolosEntregas } from './TabProtocolosEntregas';
 import { uploadImageAsset } from '../../shared/uploadImageAsset';
 import { normalizeCatalogLabel } from '../../shared/catalogLabel';
+import { getEffectiveTaxRegime } from '../services/taxRegime';
+import { isValidCnpj } from '../services/cnpjDocument';
 import './ClienteDetail.css';
 
 interface ClienteDetailProps {
@@ -71,7 +73,10 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
   const isAtiva = company.status === 'Ativa';
   const displayDocumentLabel = company.tipo === 'PF' ? 'CPF' : 'CNPJ';
   const polos = company.polos || [];
-  const canManageBranches = isAccountingClient && company.tipoEstabelecimento === 'Matriz' && company.tipo !== 'PF' && company.cnpj.replace(/\D/g, '').length === 14;
+  const canManageBranches = isAccountingClient
+    && company.tipoEstabelecimento === 'Matriz'
+    && company.tipo !== 'PF'
+    && isValidCnpj(company.cnpj);
 
   useEffect(() => {
     if ((!isAccountingClient && activeTab !== 'dados') || (!canManageBranches && activeTab === 'filiais')) setActiveTab('dados');
@@ -192,7 +197,9 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
           <div className="header-card-info">
             <div className="company-title-row">
               <h2>{company.nome}</h2>
-              <span className="regime-badge-clear">{company.tipo}</span>
+              <span className="regime-badge-clear">
+                {normalizeCatalogLabel(getEffectiveTaxRegime(company.tipo))}
+              </span>
               {isAccountingClient && (
                 <span className="category-badge-clear">
                   {normalizeCatalogLabel(company.categoriaCliente || 'Sem categoria')}
@@ -284,94 +291,11 @@ export const ClienteDetail: React.FC<ClienteDetailProps> = ({
               />
             </div>
           ) : (
-            <div className="details-blocks-layout">
-              {/* Seção 1: Dados Fiscais */}
-              <section className="detail-card-section">
-                <div className="section-title-row">
-                  <h4>Dados Fiscais & Contábeis</h4>
-                </div>
-                <div className="details-grid-layout">
-                  <div className="detail-field-box">
-                    <label>{displayDocumentLabel}</label>
-                    <p>{company.cnpj || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Razão Social</label>
-                    <p>{company.razaoSocial || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Nome Fantasia / Apelido</label>
-                    <p>{company.nome || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>CNAE</label>
-                    <p>{company.cnae || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Regime de Tributação</label>
-                    <p>{company.tipo || '-'}</p>
-                  </div>
-                  <PartnerClassificationSummary
-                    company={company}
-                    showClientCategory={isAccountingClient}
-                  />
-                  <div className="detail-field-box">
-                    <label>Inscrição Estadual / IM</label>
-                    <p>{company.inscricaoEstadual || '-'}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Seção 2: Contatos */}
-              <section className="detail-card-section">
-                <div className="section-title-row">
-                  <h4>Informações de Contato</h4>
-                </div>
-                <div className="details-grid-layout">
-                  <div className="detail-field-box">
-                    <label>Contato Responsável</label>
-                    <p>{company.contato || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Telefone</label>
-                    <p>{company.telefone || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>E-mail Corporativo</label>
-                    <p>{company.email || '-'}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Seção 3: Endereço */}
-              <section className="detail-card-section">
-                <div className="section-title-row">
-                  <h4>Localização & Endereço</h4>
-                </div>
-                <div className="details-grid-layout">
-                  <div className="detail-field-box">
-                    <label>CEP</label>
-                    <p>{company.cep || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Endereço</label>
-                    <p>{company.endereco || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Bairro</label>
-                    <p>{company.bairro || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>Cidade</label>
-                    <p>{company.cidade || '-'}</p>
-                  </div>
-                  <div className="detail-field-box">
-                    <label>UF</label>
-                    <p>{company.uf || '-'}</p>
-                  </div>
-                </div>
-              </section>
-            </div>
+            <ClienteDetailData
+              company={company}
+              displayDocumentLabel={displayDocumentLabel}
+              isAccountingClient={isAccountingClient}
+            />
           )}
         </div>
       )}

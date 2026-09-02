@@ -6,6 +6,8 @@ import { gestaoEmpresarialService } from '../services/gestaoEmpresarialService';
 import type { ClientBranch, Company } from '../services/gestaoEmpresarialService';
 import { filiaisService } from '../services/filiaisService';
 import { cnpjLookupService } from '../services/cnpjLookupService';
+import { isValidCnpj, normalizeCnpj } from '../services/cnpjDocument';
+import { getEffectiveTaxRegime } from '../services/taxRegime';
 import { atividadesKeys } from '../../atividades/hooks/useAtividadesWorkspace';
 import { empresaProtocolosKeys } from '../../protocolos/queries/empresaProtocolosQueries';
 
@@ -72,13 +74,15 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
 
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
+      const normalizedDocumentSearch = normalizeCnpj(searchQuery);
       const matchesSearch =
         company.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
         company.razaoSocial.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        company.cnpj.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''));
+        (Boolean(normalizedDocumentSearch)
+          && normalizeCnpj(company.cnpj).includes(normalizedDocumentSearch));
 
       const matchesRegime =
-        selectedRegime === 'Todos' || company.tipo === selectedRegime;
+        selectedRegime === 'Todos' || getEffectiveTaxRegime(company.tipo) === selectedRegime;
       const matchesStatus = activeStatusTab === 'Ativos' ? company.status !== 'Inativa' : company.status === 'Inativa';
 
       return matchesSearch && matchesRegime && matchesStatus;
@@ -137,7 +141,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
   const handleSaveCompany = async (company: Company) => {
     setIsSaving(true);
     try {
-      const hasCnpj = company.tipo !== 'PF' && company.cnpj.replace(/\D/g, '').length === 14;
+      const hasCnpj = company.tipo !== 'PF' && isValidCnpj(company.cnpj);
       const shouldFillCnae = hasCnpj && !company.cnae;
       let payload = company;
 
@@ -148,6 +152,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
             ...company,
             cnae: company.cnae || lookup.cnae,
             cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
+            cnpjLookupSnapshot: lookup,
           };
         } catch {
           // Mantém o fluxo de salvamento sem bloquear caso a consulta CNPJ esteja indisponível.
@@ -170,8 +175,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
       throw new Error('Parceiro pessoa física não possui CNAE.');
     }
 
-    const cnpj = company.cnpj.replace(/\D/g, '');
-    if (cnpj.length !== 14) {
+    if (!isValidCnpj(company.cnpj)) {
       throw new Error('CNPJ inválido para sincronização de CNAE.');
     }
 
@@ -184,6 +188,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
       ...company,
       cnae: company.cnae || lookup.cnae,
       cnaeDescricao: company.cnaeDescricao || lookup.cnaeDescricao,
+      cnpjLookupSnapshot: lookup,
     };
 
     await handleUpdateCompany(updatedCompany);

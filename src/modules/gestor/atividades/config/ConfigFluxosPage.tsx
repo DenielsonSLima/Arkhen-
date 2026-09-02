@@ -119,7 +119,7 @@ export const ConfigFluxosPage: React.FC = () => {
       await atividadesService.saveCliente(c);
     }
     setClientes(updatedClientes);
-    setSuccessMsg('Padrão aplicado! Todos os clientes foram atualizados de acordo com seu Tipo/Regime.');
+    setSuccessMsg('Padrão aplicado! Todos os clientes foram atualizados de acordo com seu regime tributário.');
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
@@ -260,8 +260,8 @@ export const ConfigFluxosPage: React.FC = () => {
               
               {/* Tipos Aplicáveis */}
               <div style={{ marginTop: '16px', marginBottom: '16px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Tipos / Regimes Aplicáveis</strong>
-                <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '12px' }}>Vincule os tipos de empresas que utilizarão este padrão.</p>
+                <strong style={{ fontSize: '0.85rem', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Regimes tributários aplicáveis</strong>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '12px' }}>Vincule os regimes tributários que utilizarão este padrão.</p>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   {REGIMES_APLICAVEIS.map(tipo => {
                     const isChecked = selectedModelo.tipos?.includes(tipo) || false;
@@ -334,7 +334,7 @@ export const ConfigFluxosPage: React.FC = () => {
             
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
               <button className="btn-save-settings" onClick={handleApplyPattern} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle2 size={16} /> Aplicar Padrões por Tipo (Regime)
+                <CheckCircle2 size={16} /> Aplicar padrões por regime tributário
               </button>
             </div>
             <table className="config-table">
@@ -461,7 +461,7 @@ export const ConfigFluxosPage: React.FC = () => {
           </div>
 
           <div style={{ marginTop: '14px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
-            <strong style={{ fontSize: '0.8rem', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Tipos / Regimes Aplicáveis</strong>
+            <strong style={{ fontSize: '0.8rem', color: '#0f172a', display: 'block', marginBottom: '10px' }}>Regimes tributários aplicáveis</strong>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               {REGIMES_APLICAVEIS.map((tipo) => (
                 <label key={tipo} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer', color: '#475569' }}>

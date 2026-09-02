@@ -1,6 +1,6 @@
 -- Execute após 20260901190000_filiais_operacionais_clientes e 20260901190100_filiais_operacionais_rpc_e_ciclo.
 -- Teste somente leitura: falha se estrutura, RLS, ACL ou ausência de provisionamento implícito divergirem.
-BEGIN;
+BEGIN READ ONLY;
 DO $test$
 DECLARE
   v_empresa_attnum smallint;
@@ -428,7 +428,7 @@ BEGIN
   SELECT pg_catalog.pg_get_functiondef(v_salvar) INTO v_definition;
   IF position('current_empresa_id()' IN v_definition) = 0
      OR position('p_expected_updated_at' IN v_definition) = 0
-     OR position('v_matriz.tipo = ''PF''' IN v_definition) = 0 OR position('char_length(v_matriz_cnpj_numeros) <> 14' IN v_definition) = 0
+     OR position('v_matriz.tipo = ''PF''' IN v_definition) = 0 OR position('cnpj_alfanumerico_valido' IN v_definition) = 0 OR position('normalizar_cnpj_alfanumerico' IN v_definition) = 0
      OR position('FOR SHARE' IN v_definition) = 0
      OR position('FOR UPDATE' IN v_definition) = 0
      OR position('''{}''::text[]' IN v_definition) = 0

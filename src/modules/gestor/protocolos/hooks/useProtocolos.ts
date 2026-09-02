@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { matchesCnpjSearch } from '../../../../lib/cnpj';
 import type { ProtocoloEntrega, ProtocoloUpdate } from '../services/protocolosService';
 import { protocolosKeys, protocolosQueries } from '../queries/protocolosQueries';
 
@@ -60,7 +61,7 @@ export const useProtocolos = () => {
       const term = searchTerm.trim().toLowerCase();
       const matchesSearch = !term ||
         item.empresaNome.toLowerCase().includes(term) ||
-        item.empresaCnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')) ||
+        matchesCnpjSearch(item.empresaCnpj, term) ||
         item.entregaNome.toLowerCase().includes(term) ||
         item.categoria.toLowerCase().includes(term);
 
@@ -133,7 +134,7 @@ export const useProtocolos = () => {
         const term = searchTerm.trim().toLowerCase();
         return !term ||
           item.empresaNome.toLowerCase().includes(term) ||
-          item.empresaCnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')) ||
+          matchesCnpjSearch(item.empresaCnpj, term) ||
           item.entregaNome.toLowerCase().includes(term) ||
           item.categoria.toLowerCase().includes(term);
       })()

@@ -105,7 +105,7 @@ export const RegimesTributariosPage: React.FC = () => {
       {/* Header */}
       <div className="table-actions-row">
         <div>
-          <h2 className="parametrizacao-page-title">Regimes Tributários (Enquadramentos)</h2>
+          <h2 className="parametrizacao-page-title">Regimes Tributários</h2>
           <p style={{ fontSize: '0.82rem', color: '#666', marginTop: '2px' }}>
             Consulte, organize e gerencie as regras, limites e características operacionais de cada regime tributário brasileiro.
           </p>

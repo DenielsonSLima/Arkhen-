@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, Loader2, Search } from 'lucide-react';
 import type { ClientBranch } from '../services/gestaoEmpresarialService';
 import type { CompanyLookupDraft } from '../services/cnpjLookupService';
+import { formatCnpj, normalizeCnpj } from '../services/cnpjDocument';
 import { parseFilialForm } from './filialFormModel';
 import './ClienteForm.css';
 
@@ -13,16 +14,6 @@ interface FilialFormProps {
   onSearchCNPJ: (cnpj: string) => Promise<CompanyLookupDraft>;
   isSaving?: boolean;
 }
-
-// Funções utilitárias de formatação
-const formatCNPJ = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 14);
-  return digits
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4')
-    .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
-};
 
 const formatPhone = (val: string) => {
   const digits = val.replace(/\D/g, '').slice(0, 11);
@@ -51,6 +42,7 @@ export const FilialForm: React.FC<FilialFormProps> = ({
 }) => {
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
+  const [cnpjLookupSnapshot, setCnpjLookupSnapshot] = useState<CompanyLookupDraft>();
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [contato, setContato] = useState('');
@@ -77,6 +69,7 @@ export const FilialForm: React.FC<FilialFormProps> = ({
       setCep(branch.cep || '');
       setCidade(branch.cidade || '');
       setUf(branch.uf || '');
+      setCnpjLookupSnapshot(branch.cnpjLookupSnapshot);
     } else {
       setNome('');
       setCnpj('');
@@ -88,8 +81,20 @@ export const FilialForm: React.FC<FilialFormProps> = ({
       setCep('');
       setCidade('');
       setUf('');
+      setCnpjLookupSnapshot(undefined);
     }
   }, [branch]);
+
+  const handleCnpjChange = (value: string) => {
+    const nextCnpj = formatCnpj(value);
+    setCnpj(nextCnpj);
+    if (
+      cnpjLookupSnapshot
+      && normalizeCnpj(cnpjLookupSnapshot.cnpj) !== normalizeCnpj(nextCnpj)
+    ) {
+      setCnpjLookupSnapshot(undefined);
+    }
+  };
 
   const handleLookup = async () => {
     if (!cnpj) return;
@@ -98,6 +103,8 @@ export const FilialForm: React.FC<FilialFormProps> = ({
     setSuccessMsg(null);
     try {
       const data = await onSearchCNPJ(cnpj);
+      setCnpj(formatCnpj(data.cnpj));
+      setCnpjLookupSnapshot(data);
       setNome(data.nome);
       setEmail(data.email);
       setTelefone(data.telefone);
@@ -144,6 +151,10 @@ export const FilialForm: React.FC<FilialFormProps> = ({
         companyId,
         filialRef: branch?.filialRef,
         ...values,
+        cnpjLookupSnapshot: cnpjLookupSnapshot
+          && normalizeCnpj(cnpjLookupSnapshot.cnpj) === normalizeCnpj(values.cnpj)
+          ? cnpjLookupSnapshot
+          : undefined,
         ativo: branch ? branch.ativo : true,
         updatedAt: branch?.updatedAt,
       });
@@ -201,7 +212,8 @@ export const FilialForm: React.FC<FilialFormProps> = ({
                   placeholder="00.000.000/0000-00"
                   value={cnpj}
                   required
-                  onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
+                  disabled={isSearching || isSavingFinal}
+                  onChange={(e) => handleCnpjChange(e.target.value)}
                 />
                 <button
                   type="button"

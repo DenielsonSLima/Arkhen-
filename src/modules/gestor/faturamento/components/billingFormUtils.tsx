@@ -1,7 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useMemo, useState, useRef, type ChangeEvent, type FocusEvent, type ReactNode } from 'react';
 import { Building2, Check, Landmark, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { formatCpfOrCnpj } from '../../../../lib/cnpj';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { getEffectiveTaxRegime } from '../../gestao-empresarial/services/taxRegime';
 
 export const onlyDigits = (value: string) => value.replace(/\D/g, '');
 
@@ -25,10 +27,7 @@ export const parseCurrencyInput = (value: string) => Number(onlyDigits(value)) /
 export const parsePercentInput = (value: string) => Number(onlyDigits(value)) / 100 || 0;
 
 export const formatBillingDocument = (value: string) => {
-  const digits = onlyDigits(value);
-  if (digits.length === 14) return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
-  if (digits.length === 11) return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
-  return value || 'Documento nao informado';
+  return formatCpfOrCnpj(value) || 'Documento nao informado';
 };
 
 export const getBillingInitials = (name: string) => {
@@ -44,7 +43,7 @@ export const getBillingClientMeta = (cliente: Company) => {
   const tags = [
     cliente.cnpj ? `CNPJ ${formatBillingDocument(cliente.cnpj)}` : 'CNPJ nao informado',
     cliente.tipoEstabelecimento || 'Unidade nao informada',
-    cliente.tipo || 'Regime nao informado',
+    getEffectiveTaxRegime(cliente.tipo) || 'Regime nao informado',
     cliente.categoriaCliente || '',
   ].filter(Boolean);
   return tags.join(' • ');
@@ -82,6 +81,7 @@ export const BillingClientContext = ({ cliente }: BillingClientContextProps) => 
   if (!cliente) return null;
 
   const unidade = cliente.tipoEstabelecimento === 'Matriz' ? 'Matriz' : 'Polo';
+  const taxRegime = getEffectiveTaxRegime(cliente.tipo);
 
   return (
     <div className="faturamento-client-context">
@@ -103,7 +103,7 @@ export const BillingClientContext = ({ cliente }: BillingClientContextProps) => 
         <span>
           <Landmark size={15} />
           <small>Regime</small>
-          <strong>{cliente.tipo}</strong>
+          <strong>{taxRegime}</strong>
         </span>
       </div>
     </div>

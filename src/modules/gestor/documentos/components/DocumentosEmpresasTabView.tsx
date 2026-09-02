@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertCircle, ArrowLeft, ChevronRight, Download, FolderOpen, Trash2 } from 'lucide-react';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { getEffectiveTaxRegime } from '../../gestao-empresarial/services/taxRegime';
 import type { DocumentGroupBy, DocumentSortBy } from '../utils/documentOrganization';
 import { DocumentMoveDrawer, type DocumentMoveTarget } from './DocumentMoveDrawer';
 import { OrganizedDocumentList } from './OrganizedDocumentList';
@@ -144,7 +145,7 @@ export const DocumentosEmpresasTabView: React.FC<DocumentosEmpresasTabViewProps>
                           <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: company.tipoEstabelecimento === 'Matriz' ? '#eff6ff' : '#f5f5f4', color: company.tipoEstabelecimento === 'Matriz' ? '#1e40af' : '#44403c', border: company.tipoEstabelecimento === 'Matriz' ? '1px solid #bfdbfe' : '1px solid #e7e5e4' }}>
                             {company.tipoEstabelecimento}
                           </span>
-                          <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>{company.tipo}</span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>{getEffectiveTaxRegime(company.tipo)}</span>
                           <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', marginLeft: 'auto' }}>
                             {filesCount} {filesCount === 1 ? 'arquivo' : 'arquivos'}
                           </span>

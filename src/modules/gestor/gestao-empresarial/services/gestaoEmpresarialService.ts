@@ -12,6 +12,7 @@ import {
   supportsRelationalBranches,
 } from './filiaisService';
 import type { ClientBranch } from './filiaisService';
+import type { CompanyLookupDraft } from './cnpjLookupService';
 
 export type { ClientBranch } from './filiaisService';
 
@@ -20,12 +21,10 @@ export interface SalaryHistoryEntry {
   motivo: string;
   valor: number;
 }
-
 export interface AdmissionDocumentCheck {
   nome: string;
   status: 'Entregue' | 'Pendente';
 }
-
 export interface Employee {
   id: string;
   nome: string;
@@ -42,7 +41,6 @@ export interface Employee {
   historicoSalario: SalaryHistoryEntry[];
   documentosAdmissao: AdmissionDocumentCheck[];
 }
-
 export interface CompanyDocument {
   id: string;
   nome: string;
@@ -59,7 +57,6 @@ export interface CompanyDocument {
   scope?: 'pessoal' | 'empresa';
   companyId?: string;
 }
-
 export interface CertificadoDigital {
   id: string;
   tipo: 'e-CNPJ Empresa' | 'e-CNPJ Filial' | 'e-CPF Sócio' | 'NF-e/NFC-e' | 'Outros';
@@ -70,7 +67,6 @@ export interface CertificadoDigital {
   senha: string;
   arquivoNome: string;
 }
-
 export interface Partner {
   id: string;
   nome: string;
@@ -94,6 +90,7 @@ export interface Company {
   cnpj: string;
   cnae?: string;
   cnaeDescricao?: string;
+  cnpjLookupSnapshot?: CompanyLookupDraft;
   tipo: 'PF' | 'MEI' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | 'Isenta';
   categoriaCliente?: string;
   tipoParceiroId?: string;
@@ -159,6 +156,7 @@ interface ClienteRow {
   email: string | null;
   cnae: string | null;
   cnae_descricao: string | null;
+  cnpj_lookup_snapshot?: CompanyLookupDraft | null;
   telefone: string | null;
   endereco: string | null;
   cidade: string | null;
@@ -214,6 +212,7 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   cnpj: row.cnpj || '',
   cnae: row.cnae || undefined,
   cnaeDescricao: row.cnae_descricao || undefined,
+  cnpjLookupSnapshot: row.cnpj_lookup_snapshot || undefined,
   tipo: row.tipo || 'Simples Nacional',
   categoriaCliente: row.categoria_cliente || undefined,
   tipoParceiroId: row.tipo_parceiro_id || undefined,
@@ -237,7 +236,7 @@ const mapRowToCompany = (row: ClienteRow): Company => normalizeCompany({
   documentos: row.documentos || [],
   pastasDocumentos: row.pastas_documentos || [],
   categoriasDocumentos: row.categorias_documentos || [],
-  capitalSocial: row.capital_social || undefined,
+  capitalSocial: row.capital_social ?? undefined,
   socios: row.socios || [],
   historicoCorporativo: row.historico_corporativo || [],
   certificados: row.certificados || [],
@@ -252,6 +251,7 @@ const mapCompanyToPayload = (company: Company) => {
   razao_social: company.razaoSocial || company.nome || '',
   cnae: company.cnae || null,
   cnae_descricao: company.cnaeDescricao || null,
+  cnpj_lookup_snapshot: company.cnpjLookupSnapshot || {},
   cnpj: company.cnpj || '',
   tipo: company.tipo || 'Simples Nacional',
   categoria_cliente: company.categoriaCliente || null,
@@ -273,7 +273,7 @@ const mapCompanyToPayload = (company: Company) => {
   documentos: company.documentos || [],
   pastas_documentos: company.pastasDocumentos || [],
   categorias_documentos: company.categoriasDocumentos || [],
-  capital_social: company.capitalSocial || null,
+  capital_social: company.capitalSocial ?? null,
   socios: company.socios || [],
   historico_corporativo: company.historicoCorporativo || [],
   certificados: company.certificados || [],

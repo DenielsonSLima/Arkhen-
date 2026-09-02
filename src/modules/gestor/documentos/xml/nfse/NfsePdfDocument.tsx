@@ -1,22 +1,12 @@
 import React from 'react';
+import { formatCpfOrCnpj } from '../../../../../lib/cnpj';
 import type { NfseFiscalData, XmlFiscalParty, XmlFiscalSummary } from '../shared/xmlFiscalTypes';
 import { resolveNfseVisualIdentity, type NfseVisualIdentityOptions } from './nfseVisualIdentity';
 import './NfseXmlViewer.css';
 
 const safeValue = (value?: string) => value || '-';
 
-const onlyDigits = (value: string) => value.replace(/\D/g, '');
-
-const formatDocument = (value: string) => {
-  const digits = onlyDigits(value);
-  if (digits.length === 14) {
-    return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
-  }
-  if (digits.length === 11) {
-    return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
-  }
-  return value || '-';
-};
+const formatDocument = (value: string) => formatCpfOrCnpj(value) || '-';
 
 const normalizeBooleanLabel = (value: string) => {
   if (value === '1' || value.toLowerCase() === 'true') return 'Sim';

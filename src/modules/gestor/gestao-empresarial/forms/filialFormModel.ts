@@ -1,12 +1,13 @@
 import { z } from 'zod';
+import { isValidCnpj } from '../services/cnpjDocument';
 
 const optionalText = (maxLength: number) => z.string().trim().max(maxLength);
 
 export const filialFormSchema = z.object({
   nome: z.string().trim().min(2, 'O nome da filial deve ter pelo menos 2 caracteres.').max(180),
   cnpj: z.string().trim().refine(
-    (value) => value.replace(/\D/g, '').length === 14,
-    'CNPJ da filial deve conter 14 dígitos.',
+    isValidCnpj,
+    'CNPJ da filial deve conter 14 caracteres e dígitos verificadores válidos.',
   ),
   email: optionalText(254).refine(
     (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),

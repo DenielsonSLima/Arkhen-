@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Search, Upload } from 'lucide-react';
 import type { EmpresaDados } from '../services/empresaService';
+import { formatCnpj } from '../../../../../lib/cnpj';
 
 interface EmpresaFormProps {
   dados: EmpresaDados;
@@ -130,7 +131,7 @@ export const EmpresaForm: React.FC<EmpresaFormProps> = ({
             <input
               type="text"
               value={dados.cnpj}
-              onChange={(e) => onInputChange('cnpj', e.target.value)}
+              onChange={(e) => onInputChange('cnpj', formatCnpj(e.target.value))}
               placeholder="00.000.000/0000-00"
               disabled={isSaving || isSearchingCnpj}
               className="input-cnpj-search"

@@ -38,6 +38,14 @@ export interface SaveCatalogoInput {
   sistema?: boolean;
 }
 
+export interface CreateCatalogoInput {
+  tipo: CatalogoTipo;
+  nome: string;
+  descricao?: string;
+  ativo?: boolean;
+  sistema?: boolean;
+}
+
 interface CatalogoRow {
   id: string;
   codigo: string;
@@ -67,11 +75,14 @@ const fromRow = (row: CatalogoRow): CatalogoItem => ({
   descricao: row.descricao || '',
   sistema: Boolean(row.sistema),
   ativo: row.ativo !== false,
-  ordem: Number(row.ordem || 100),
+  ordem: Number(row.ordem ?? 100),
 });
 
-const sortByName = (items: CatalogoItem[]) => (
-  [...items].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }))
+const sortByOrder = (items: CatalogoItem[]) => (
+  [...items].sort((a, b) => (
+    a.ordem - b.ordem
+    || a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' })
+  ))
 );
 
 const normalizedNameKey = (value: string) => (
@@ -82,13 +93,44 @@ const throwCatalogError = (error: { code?: string; message?: string }) => {
   if (error.code === '23505') {
     throw new Error('Já existe um registro com esse nome neste catálogo.');
   }
+  if (error.code === '42501') {
+    throw new Error('Seu perfil não tem permissão para criar itens neste catálogo.');
+  }
   throw error;
 };
 
-const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[]) => {
-  if (!defaults.length) return;
+const createCatalogo = async (input: CreateCatalogoInput): Promise<CatalogoItem> => {
+  const nome = normalizeCatalogLabel(input.nome);
+  if (!nome) throw new Error('Informe o nome do parâmetro.');
 
   const empresaId = await getCurrentEmpresaId();
+  const codigo = slugify(nome) || `catalogo-${Date.now()}`;
+  const { data, error } = await supabase
+    .from(TABLE)
+    .insert({
+      empresa_id: empresaId,
+      tipo: input.tipo,
+      codigo,
+      nome,
+      descricao: input.descricao?.trim() || '',
+      sistema: input.sistema ?? false,
+      ativo: input.ativo ?? true,
+      ordem: 100,
+    })
+    .select('id,codigo,nome,descricao,sistema,ativo,ordem')
+    .single();
+
+  if (error) throwCatalogError(error);
+  return fromRow(data as CatalogoRow);
+};
+
+const ensureDefaults = async (
+  empresaId: string,
+  tipo: CatalogoTipo,
+  defaults: CatalogoDefaultItem[],
+) => {
+  if (!defaults.length) return;
+
   const { data, error } = await supabase
     .from(TABLE)
     .select('codigo,nome')
@@ -128,16 +170,19 @@ const ensureDefaults = async (tipo: CatalogoTipo, defaults: CatalogoDefaultItem[
 
 export const catalogosService = {
   async list(tipo: CatalogoTipo, defaults: CatalogoDefaultItem[] = []): Promise<CatalogoItem[]> {
-    await ensureDefaults(tipo, defaults);
+    const empresaId = await getCurrentEmpresaId();
+    await ensureDefaults(empresaId, tipo, defaults);
 
     const { data, error } = await supabase
       .from(TABLE)
       .select('id,codigo,nome,descricao,sistema,ativo,ordem')
+      .eq('empresa_id', empresaId)
       .eq('tipo', tipo)
+      .order('ordem', { ascending: true })
       .order('nome', { ascending: true });
 
     if (error) throw error;
-    return sortByName(((data || []) as CatalogoRow[]).map(fromRow));
+    return sortByOrder(((data || []) as CatalogoRow[]).map(fromRow));
   },
 
   async save(input: SaveCatalogoInput): Promise<string> {
@@ -145,6 +190,7 @@ export const catalogosService = {
     if (!nome) throw new Error('Informe o nome do parametro.');
 
     if (input.id) {
+      const empresaId = await getCurrentEmpresaId();
       const { error } = await supabase
         .from(TABLE)
         .update({
@@ -153,31 +199,27 @@ export const catalogosService = {
           ativo: input.ativo,
           sistema: input.sistema ?? false,
         })
-        .eq('id', input.id);
+        .eq('id', input.id)
+        .eq('empresa_id', empresaId)
+        .eq('tipo', input.tipo);
 
       if (error) throwCatalogError(error);
       return nome;
     }
 
-    const empresaId = await getCurrentEmpresaId();
-    const codigo = slugify(nome) || `catalogo-${Date.now()}`;
-    const { error } = await supabase.from(TABLE).insert({
-      empresa_id: empresaId,
-      tipo: input.tipo,
-      codigo,
-      nome,
-      descricao: input.descricao.trim(),
-      sistema: input.sistema ?? false,
-      ativo: input.ativo,
-      ordem: 100,
-    });
-
-    if (error) throwCatalogError(error);
-    return nome;
+    const created = await createCatalogo(input);
+    return created.nome;
   },
 
+  create: createCatalogo,
+
   async setAtivo(id: string, ativo: boolean): Promise<void> {
-    const { error } = await supabase.from(TABLE).update({ ativo }).eq('id', id);
+    const empresaId = await getCurrentEmpresaId();
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ ativo })
+      .eq('id', id)
+      .eq('empresa_id', empresaId);
     if (error) throw error;
   },
 };

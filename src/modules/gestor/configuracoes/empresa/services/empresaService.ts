@@ -1,4 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
+import { cnpjLookupService } from '../../../gestao-empresarial/services/cnpjLookupService';
 
 export interface EmpresaDados {
   razaoSocial: string;
@@ -108,29 +109,18 @@ export const empresaService = {
    * Consulta a API pública do BrasilAPI para buscar dados cadastrais do CNPJ
    */
   async buscarCnpj(cnpj: string): Promise<Partial<EmpresaDados>> {
-    const cleanCnpj = cnpj.replace(/\D/g, '');
-    if (cleanCnpj.length !== 14) {
-      throw new Error('O CNPJ deve conter 14 dígitos.');
-    }
-
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
-    if (!response.ok) {
-      throw new Error('Não foi possível encontrar dados para este CNPJ.');
-    }
-
-    const data = await response.json();
+    const data = await cnpjLookupService.lookup(cnpj);
 
     return {
-      razaoSocial: data.razao_social || '',
-      nomeFantasia: data.nome_fantasia || '',
+      cnpj: data.cnpj,
+      razaoSocial: data.razaoSocial,
+      nomeFantasia: data.nome,
       email: data.email || '',
-      telefone: data.ddd_telefone1 
-        ? `(${data.ddd_telefone1.substring(0, 2)}) ${data.ddd_telefone1.substring(2)}` 
-        : '',
+      telefone: data.telefone || '',
       cep: data.cep || '',
-      endereco: data.logradouro || '',
+      endereco: data.logradouro || data.endereco || '',
       numero: data.numero || '',
-      cidade: data.municipio || '',
+      cidade: data.cidade || '',
       estado: data.uf || '',
     };
   },

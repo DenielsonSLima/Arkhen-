@@ -20,6 +20,7 @@ import { ProtocoloEmpresaCard } from './components/ProtocoloEmpresaCard';
 import type { EmpresaProtocolosGrupo } from './hooks/useProtocolos';
 import type { ProtocoloEntrega, ProtocoloUpdate } from './services/protocolosService';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
+import { matchesCnpjSearch } from '../../../lib/cnpj';
 import type { NavigationContext } from '../shared/operationalTypes';
 import './Protocolos.css';
 
@@ -114,7 +115,7 @@ export const ProtocolosPage: React.FC = () => {
     return selectedGroupItems.filter((item) => {
       const matchesSearch = !term ||
         item.empresaNome.toLowerCase().includes(term) ||
-        item.empresaCnpj.replace(/\D/g, '').includes(term.replace(/\D/g, '')) ||
+        matchesCnpjSearch(item.empresaCnpj, term) ||
         item.entregaNome.toLowerCase().includes(term) ||
         item.categoria.toLowerCase().includes(term);
       const matchesInitial = !dataInicial || item.prazo >= dataInicial;

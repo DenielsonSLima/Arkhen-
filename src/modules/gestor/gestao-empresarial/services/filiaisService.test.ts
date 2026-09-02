@@ -112,6 +112,7 @@ describe('filiaisService', () => {
         cep: '49000-000',
         cidade: 'Aracaju',
         uf: 'SE',
+        cnpj_lookup_snapshot: {},
       },
       p_expected_updated_at: UPDATED_AT,
     });

@@ -36,7 +36,8 @@ type FinanceiroPageProps = {
 };
 
 const resolveFinanceiroTab = (initialTab?: string): FinanceiroTab => {
-  if (initialTab?.startsWith('lancamentos-')
+  if (initialTab === 'lancamentos'
+    || initialTab?.startsWith('lancamentos-')
     || initialTab === 'transferencia'
     || initialTab === 'transferencias'
     || initialTab === 'creditos'
@@ -181,6 +182,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
       <div className="tab-buttons-header">
         {FINANCEIRO_TABS.map((tab) => (
           <button
+            type="button"
             key={tab.id}
             className={`btn-tab ${activeTab === tab.id ? 'active' : ''}`}
             onClick={() => setActiveTab(tab.id)}

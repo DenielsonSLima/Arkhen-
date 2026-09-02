@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
+import { matchesCnpjSearch } from '../../../../lib/cnpj';
 import { useCobrancasFinanceirasQuery } from '../../financeiro/queries/useFinanceiroQueries';
 import type { CobrancaFinanceira } from '../../financeiro/services/financeiroService';
 import {
@@ -123,11 +124,13 @@ export const HistoricoFinanceiroTab = () => {
     return dados.filter((item) => {
       const cliente = companyMap.get(item.clienteEmpresaId);
       const clienteName = (cliente?.nome || '').toLowerCase();
-      const cnpj = (cliente?.cnpj || '').replace(/\D/g, '');
-      const termClean = term.replace(/\D/g, '');
       const desc = item.descricao.toLowerCase();
 
-      const matchesSearch = !term || clienteName.includes(term) || cnpj.includes(termClean) || desc.includes(term) || item.id.toLowerCase().includes(term);
+      const matchesSearch = !term
+        || clienteName.includes(term)
+        || matchesCnpjSearch(cliente?.cnpj || '', term)
+        || desc.includes(term)
+        || item.id.toLowerCase().includes(term);
       const isAfterStart = !startDate || item.dataVencimento >= startDate;
       const isBeforeEnd = !endDate || item.dataVencimento <= endDate;
       const matchesType = selectedType === 'Todos' || item.meioPagamento === selectedType;

@@ -3,6 +3,7 @@ import { Search, Calendar, CheckCircle2, Clipboard, ShieldAlert, CheckCircle, Cl
 import type { CobrancaFinanceira } from '../services/financeiroService';
 import './ContasAReceberTab.css';
 import '../../faturamento/Faturamento.css';
+import { matchesCnpjSearch } from '../../../../lib/cnpj';
 
 type FiltroStatus = 'todos' | 'aberto' | 'hoje' | 'atrasado' | 'recebido' | 'cancelado';
 type ContasAReceberTabProps = {
@@ -115,13 +116,11 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
   // Filter core dataset
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const termClean = term.replace(/\D/g, '');
 
     return dados.filter((item) => {
       // 1. Search filter
       const client = getCompanyName(item.clienteEmpresaId).toLowerCase();
       const details = getCompanyDetails(item.clienteEmpresaId);
-      const cnpj = details.cnpj.replace(/\D/g, '');
       const desc = item.descricao.toLowerCase();
       const cat = getCategory(item).toLowerCase();
       const valStr = String(item.valor);
@@ -129,7 +128,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
       const matchesSearch =
         !term ||
         client.includes(term) ||
-        cnpj.includes(termClean) ||
+        matchesCnpjSearch(details.cnpj, term) ||
         desc.includes(term) ||
         cat.includes(term) ||
         valStr.includes(term) ||

@@ -1,4 +1,5 @@
 import { supabase } from '../../../../lib/supabase';
+import type { CompanyLookupDraft } from './cnpjLookupService';
 
 export interface ClientBranch {
   id: string;
@@ -16,6 +17,7 @@ export interface ClientBranch {
   endereco?: string;
   cep?: string;
   updatedAt?: string;
+  cnpjLookupSnapshot?: CompanyLookupDraft;
 }
 
 export interface FilialClienteRow {
@@ -35,6 +37,7 @@ export interface FilialClienteRow {
   endereco?: string | null;
   cep?: string | null;
   updated_at?: string | null;
+  cnpj_lookup_snapshot?: CompanyLookupDraft | null;
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> => (
@@ -67,6 +70,7 @@ export const mapFilialRowToBranch = (
   endereco: row.endereco || '',
   cep: row.cep || '',
   updatedAt: row.updated_at || undefined,
+  cnpjLookupSnapshot: row.cnpj_lookup_snapshot || undefined,
 });
 
 export const supportsRelationalBranches = (rows: readonly FilialClienteRow[]) => (
@@ -112,6 +116,7 @@ const buildFilialPayload = (branch: ClientBranch) => ({
   cep: branch.cep || '',
   cidade: branch.cidade,
   uf: branch.uf,
+  cnpj_lookup_snapshot: branch.cnpjLookupSnapshot || {},
 });
 
 export const filiaisService = {

@@ -78,4 +78,26 @@ describe('ClienteCard', () => {
     fireEvent.click(screen.getByText(company.nome));
     expect(onSelect).toHaveBeenCalledWith(company.id);
   });
+
+  it('limita a imagem do parceiro ao avatar do card', () => {
+    render(
+      <ClienteCard
+        company={{ ...company, logo: 'https://example.com/logo-grande.png' }}
+        isAccountingClient
+        onSelect={vi.fn()}
+        onEdit={vi.fn()}
+        onToggleStatus={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const logo = screen.getByRole('img', { name: company.nome });
+    expect(logo.classList.contains('company-logo-img')).toBe(true);
+    expect(logo.getAttribute('width')).toBe('44');
+    expect(logo.getAttribute('height')).toBe('44');
+    expect(logo.style.maxWidth).toBe('44px');
+    expect(logo.style.maxHeight).toBe('44px');
+    expect(logo.style.objectFit).toBe('contain');
+    expect(logo.parentElement?.style.overflow).toBe('hidden');
+  });
 });

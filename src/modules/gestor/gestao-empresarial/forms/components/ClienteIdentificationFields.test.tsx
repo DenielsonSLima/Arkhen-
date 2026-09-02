@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClienteIdentificationFields } from './ClienteIdentificationFields';
 
@@ -15,6 +15,8 @@ const baseProps = {
   razaoSocial: '',
   nomeFantasia: '',
   cnae: '',
+  cnaeDescricao: '',
+  capitalSocial: '',
   tipo: 'Simples Nacional' as const,
   tipoParceiroId: 'partner-type',
   tipoEmpresaId: 'company-type',
@@ -57,6 +59,8 @@ const baseProps = {
   onRazaoSocialChange: handler(),
   onNomeFantasiaChange: handler(),
   onCnaeChange: handler(),
+  onCnaeDescricaoChange: handler(),
+  onCapitalSocialChange: handler(),
   onTipoChange: handler(),
   onTipoParceiroChange: handler(),
   onTipoEmpresaChange: handler(),
@@ -64,7 +68,7 @@ const baseProps = {
   onCategoriaChange: handler(),
   onIeImChange: handler(),
   onLookup: handler(),
-  onOpenCategoryModal: handler(),
+  onOpenQuickCreate: handler(),
 };
 
 describe('ClienteIdentificationFields', () => {
@@ -130,5 +134,88 @@ describe('ClienteIdentificationFields', () => {
     render(<ClienteIdentificationFields {...baseProps} isClienteContabilPartner={false} />);
 
     expect(screen.queryByRole('combobox', { name: 'Categoria do cliente' })).toBeNull();
+  });
+
+  it('oferece criação rápida para todos os catálogos editáveis', () => {
+    render(<ClienteIdentificationFields {...baseProps} />);
+
+    expect(screen.getByRole('button', { name: 'Criar novo tipo de parceiro' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Criar novo enquadramento' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Criar nova natureza jurídica' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Criar nova categoria de cliente' })).not.toBeNull();
+  });
+
+  it('não oferece Pessoa Física como porte de CNPJ', () => {
+    render(
+      <ClienteIdentificationFields
+        {...baseProps}
+        companyTypes={[
+          ...baseProps.companyTypes,
+          { ...baseProps.companyTypes[0], id: 'pf', codigo: 'pessoa_fisica', nome: 'Pessoa Física' },
+        ]}
+      />,
+    );
+
+    const companySelect = screen.getByRole('combobox', { name: 'Porte / enquadramento' });
+    expect(within(companySelect).queryByRole('option', { name: 'Pessoa física' })).toBeNull();
+  });
+
+  it('aguarda os catálogos antes de consultar o CNPJ', () => {
+    render(
+      <ClienteIdentificationFields
+        {...baseProps}
+        cnpj="12.345.678/0001-90"
+        isClassificationsLoading
+      />,
+    );
+
+    expect((screen.getByRole('button', { name: 'Buscar' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('formata CNPJ alfanumérico e bloqueia sua edição durante a consulta', () => {
+    const onCnpjChange = vi.fn();
+    const { rerender } = render(
+      <ClienteIdentificationFields {...baseProps} onCnpjChange={onCnpjChange} />,
+    );
+
+    fireEvent.change(screen.getByLabelText('CNPJ *'), {
+      target: { value: '00000000e08g12' },
+    });
+    expect(onCnpjChange).toHaveBeenCalledWith('00.000.000/E08G-12');
+
+    rerender(
+      <ClienteIdentificationFields
+        {...baseProps}
+        cnpj="00.000.000/E08G-12"
+        isSearching
+        onCnpjChange={onCnpjChange}
+      />,
+    );
+
+    expect((screen.getByLabelText('CNPJ *') as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Buscar' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('associa todos os rótulos visíveis aos respectivos campos', () => {
+    render(<ClienteIdentificationFields {...baseProps} />);
+
+    const labelsAndIds = [
+      ['CNPJ *', 'cliente-cnpj'],
+      ['Regime tributário', 'cliente-regime-tributario'],
+      ['Razão social *', 'cliente-razao-social'],
+      ['Nome fantasia *', 'cliente-nome-fantasia'],
+      ['CNAE', 'cliente-cnae'],
+      ['Descrição do CNAE principal', 'cliente-cnae-descricao'],
+      ['Tipo de parceiro *', 'cliente-tipo-parceiro'],
+      ['Porte / enquadramento *', 'cliente-porte-enquadramento'],
+      ['Natureza jurídica *', 'cliente-natureza-juridica'],
+      ['Categoria do cliente *', 'cliente-categoria'],
+      ['IE / IM', 'cliente-ie-im'],
+      ['Capital social', 'cliente-capital-social'],
+    ];
+
+    labelsAndIds.forEach(([label, id]) => {
+      expect((screen.getByLabelText(label) as HTMLElement).id).toBe(id);
+    });
   });
 });

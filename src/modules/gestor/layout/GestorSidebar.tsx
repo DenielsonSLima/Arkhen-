@@ -22,7 +22,7 @@ const ALL_MENU_IDS = [...DEFAULT_MENU_ORDER];
 
 const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-regimes', label: 'Regimes Tributários' },
-  { id: 'parametrizacao-tipos-empresa', label: 'Tipos de Empresa' },
+  { id: 'parametrizacao-tipos-empresa', label: 'Enquadramento' },
   { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
   { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
   { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },

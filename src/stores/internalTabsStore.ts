@@ -37,6 +37,14 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Parceiros')) {
     return `Categorias de Clientes${title.slice('Categorias de Parceiros'.length)}`;
   }
+  if (moduleId === 'parametrizacao-tipos-empresa') {
+    const legacyPrefix = title.startsWith('Tipos de Empresa')
+      ? 'Tipos de Empresa'
+      : title.startsWith('Tipo de Empresa')
+        ? 'Tipo de Empresa'
+        : '';
+    if (legacyPrefix) return `Enquadramento${title.slice(legacyPrefix.length)}`;
+  }
   if (moduleId === 'protocolos') {
     const legacyPrefix = title.startsWith('Protocolos e Documentos')
       ? 'Protocolos e Documentos'

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   catalogosService,
   type CatalogoDefaultItem,
@@ -16,6 +16,17 @@ export const partnerClassificationKeys = {
   companyTypes: ['parametrizacao', 'catalogos', 'tipos_empresa'] as const,
   legalNatures: ['parametrizacao', 'catalogos', 'naturezas_juridicas'] as const,
 };
+
+export type PartnerClassificationKind =
+  | 'tipos_parceiros'
+  | 'tipos_empresa'
+  | 'naturezas_juridicas';
+
+const CLASSIFICATION_QUERY_KEYS = {
+  tipos_parceiros: partnerClassificationKeys.partnerTypes,
+  tipos_empresa: partnerClassificationKeys.companyTypes,
+  naturezas_juridicas: partnerClassificationKeys.legalNatures,
+} as const;
 
 const EMPTY_CATALOG_ITEMS: CatalogoItem[] = [];
 
@@ -40,6 +51,7 @@ const getCatalogDefault = (
 );
 
 export const usePartnerClassifications = () => {
+  const queryClient = useQueryClient();
   const partnerTypesQuery = useQuery({
     queryKey: partnerClassificationKeys.partnerTypes,
     queryFn: () => getActiveCatalogItems('tipos_parceiros', TIPOS_PARCEIROS_DEFAULTS),
@@ -58,6 +70,22 @@ export const usePartnerClassifications = () => {
   const partnerTypes = partnerTypesQuery.data ?? EMPTY_CATALOG_ITEMS;
   const companyTypes = companyTypesQuery.data ?? EMPTY_CATALOG_ITEMS;
   const legalNatures = legalNaturesQuery.data ?? EMPTY_CATALOG_ITEMS;
+  const createClassificationMutation = useMutation({
+    mutationFn: ({
+      tipo,
+      nome,
+      descricao,
+    }: {
+      tipo: PartnerClassificationKind;
+      nome: string;
+      descricao: string;
+    }) => catalogosService.create({ tipo, nome, descricao }),
+    onSuccess: async (_created, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: CLASSIFICATION_QUERY_KEYS[variables.tipo],
+      });
+    },
+  });
 
   const defaults = useMemo(() => ({
     partnerType: getCatalogDefault(
@@ -65,23 +93,19 @@ export const usePartnerClassifications = () => {
       ['cliente_contabil', 'tp-1'],
       'Cliente Contábil',
     ),
-    companyType: getCatalogDefault(
-      companyTypes,
-      ['microempresa', 'te-3'],
-      'Microempresa',
-    ),
-    legalNature: getCatalogDefault(
-      legalNatures,
-      ['sociedade_limitada', 'nj-2'],
-      'Sociedade Limitada',
-    ),
-  }), [companyTypes, legalNatures, partnerTypes]);
+    // Porte e natureza não devem ser inferidos. Eles vêm do CNPJ ou da escolha
+    // explícita do usuário; usar o primeiro catálogo criava dados incorretos.
+    companyType: null,
+    legalNature: null,
+  }), [partnerTypes]);
 
   return {
     partnerTypes,
     companyTypes,
     legalNatures,
     defaults,
+    createClassification: createClassificationMutation.mutateAsync,
+    isCreatingClassification: createClassificationMutation.isPending,
     isLoading: (
       partnerTypesQuery.isLoading
       || companyTypesQuery.isLoading

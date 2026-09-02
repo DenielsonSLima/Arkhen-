@@ -101,7 +101,7 @@ export const PrazosEntregaPage: React.FC = () => {
       <div className="submodule-card-header flex-header">
         <div>
           <h2 className="parametrizacao-page-title">Obrigações</h2>
-          <p>Configure obrigações, vencimentos, competência de referência e fechamento por tipo de empresa.</p>
+          <p>Configure obrigações, vencimentos, competência de referência e fechamento por regime tributário.</p>
         </div>
         <div className="tab-buttons-header">
           <button className="btn-cancel" onClick={handleReset} disabled={isSaving}>
@@ -120,7 +120,7 @@ export const PrazosEntregaPage: React.FC = () => {
         </div>
       )}
 
-      <div className="prazos-regime-tabs" aria-label="Tipo de empresa">
+      <div className="prazos-regime-tabs" aria-label="Regime tributário">
         {regimeStats.map((item) => (
           <button
             key={item.regime}

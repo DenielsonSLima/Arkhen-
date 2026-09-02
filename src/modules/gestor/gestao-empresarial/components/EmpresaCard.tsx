@@ -1,11 +1,34 @@
 import React, { useMemo } from 'react';
 import { Users, Mail, Phone, MapPin, ShieldCheck } from 'lucide-react';
 import type { Company } from '../services/gestaoEmpresarialService';
+import { normalizeCatalogLabel } from '../../shared/catalogLabel';
+import { getEffectiveTaxRegime } from '../services/taxRegime';
 
 interface EmpresaCardProps {
   company: Company;
   onSelect: (id: string) => void;
 }
+
+const logoFrameStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  minWidth: 44,
+  maxWidth: 44,
+  minHeight: 44,
+  maxHeight: 44,
+  flex: '0 0 44px',
+  overflow: 'hidden',
+};
+
+const logoImageStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  height: '100%',
+  maxWidth: 44,
+  maxHeight: 44,
+  borderRadius: 'inherit',
+  objectFit: 'contain',
+};
 
 export const EmpresaCard: React.FC<EmpresaCardProps> = ({ company, onSelect }) => {
   const getInitials = (name: string) => {
@@ -18,7 +41,6 @@ export const EmpresaCard: React.FC<EmpresaCardProps> = ({ company, onSelect }) =
   const getRegimeClass = (regime: string) => {
     switch (regime) {
       case 'PF': return 'pf';
-      case 'MEI': return 'mei';
       case 'Simples Nacional': return 'simples';
       case 'Lucro Presumido': return 'presumido';
       case 'Lucro Real': return 'real';
@@ -28,6 +50,7 @@ export const EmpresaCard: React.FC<EmpresaCardProps> = ({ company, onSelect }) =
   };
 
   const isAtiva = company.status === 'Ativa';
+  const effectiveTaxRegime = getEffectiveTaxRegime(company.tipo);
 
   // Certificate status
   const certStatus = useMemo(() => {
@@ -57,16 +80,23 @@ export const EmpresaCard: React.FC<EmpresaCardProps> = ({ company, onSelect }) =
   return (
     <div className="company-card animate-fade-in" onClick={() => onSelect(company.id)}>
       <div className="company-card-header">
-        <div className="company-logo-avatar">
+        <div className="company-logo-avatar" style={logoFrameStyle}>
           {company.logo ? (
-            <img src={company.logo} alt={company.nome} className="company-logo-img" style={{ width: '100%', height: '100%', borderRadius: 'inherit', objectFit: 'cover' }} />
+            <img
+              src={company.logo}
+              alt={company.nome}
+              className="company-logo-img"
+              width={44}
+              height={44}
+              style={logoImageStyle}
+            />
           ) : (
             <span>{getInitials(company.nome)}</span>
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-          <span className={`regime-badge ${getRegimeClass(company.tipo)}`}>
-            {company.tipo}
+          <span className={`regime-badge ${getRegimeClass(effectiveTaxRegime)}`}>
+            {normalizeCatalogLabel(effectiveTaxRegime)}
           </span>
           <span className={`estab-badge ${company.tipoEstabelecimento.toLowerCase()}`}>
             {company.tipoEstabelecimento}

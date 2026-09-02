@@ -26,7 +26,7 @@ export const PartnerClassificationSummary: React.FC<PartnerClassificationSummary
         <p>{company.tipoParceiroId ? getItemName(partnerTypes, company.tipoParceiroId) : pendingValue}</p>
       </div>
       <div className="detail-field-box">
-        <label>Tipo de empresa</label>
+        <label>Porte / enquadramento</label>
         <p>{company.tipoEmpresaId ? getItemName(companyTypes, company.tipoEmpresaId) : pendingValue}</p>
       </div>
       <div className="detail-field-box">
