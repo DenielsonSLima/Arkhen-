@@ -1,255 +1,260 @@
-import React, { useMemo, useState } from 'react';
-import { BarChart3, CheckCircle2, Clock, AlertTriangle, Users } from 'lucide-react';
-import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
-import { todayKey, addDaysKey } from '../services/rotinasAtividadesService';
+import React, { useState } from 'react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  FileCheck2,
+  ListChecks,
+  RefreshCw,
+  ShieldAlert,
+  Users,
+} from 'lucide-react';
+import { usePainelOperacional } from '../queries/painelOperacionalQueries';
+import {
+  type NivelRiscoOperacional,
+  type PainelPeriodo,
+} from '../services/painelOperacionalService';
+import { formatDateBR, todayKey } from '../services/rotinasAtividadesService';
+import './AtividadesControle.css';
 
-const getMonday = (dateKey: string) => {
-  const date = new Date(`${dateKey}T00:00:00`);
-  const day = date.getDay();
-  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1));
-  return date.toISOString().split('T')[0];
+interface AtividadesControleProps {
+  initialCompanyId?: string;
+  initialCompanyName?: string;
+  initialCompetencia?: string;
+}
+
+const PERIOD_LABELS: Record<PainelPeriodo, string> = {
+  dia: 'Hoje',
+  semana: 'Semana',
+  mes: 'Mês',
+  todos: 'Todos',
 };
 
-export const AtividadesControle: React.FC = () => {
-  const { tarefas } = useAtividadesWorkspace();
-  const [activePeriod, setActivePeriod] = useState<'dia' | 'semana' | 'mes' | 'todos'>('mes');
+const RISK_LABELS: Record<NivelRiscoOperacional, string> = {
+  critico: 'Crítico',
+  alto: 'Alto',
+  medio: 'Atenção',
+  baixo: 'Baixo',
+  concluido: 'Concluído',
+};
 
-  // Filtragem das tarefas baseada no período
-  const filteredTasks = useMemo(() => {
-    const hoje = todayKey();
-    return tarefas.filter((t) => {
-      if (activePeriod === 'dia') {
-        return t.vencimento === hoje;
-      }
-      if (activePeriod === 'semana') {
-        const monday = getMonday(hoje);
-        const sunday = addDaysKey(monday, 6);
-        return t.vencimento >= monday && t.vencimento <= sunday;
-      }
-      if (activePeriod === 'mes') {
-        return t.vencimento.slice(0, 7) === hoje.slice(0, 7);
-      }
-      return true; // todos
-    });
-  }, [tarefas, activePeriod]);
+const dueLabel = (days: number) => {
+  if (days < 0) return `${Math.abs(days)} dia(s) em atraso`;
+  if (days === 0) return 'Vence hoje';
+  return `Vence em ${days} dia(s)`;
+};
 
-  // Métricas gerais
-  const metrics = useMemo(() => {
-    const total = filteredTasks.length;
-    const concluidas = filteredTasks.filter((t) => t.status === 'Concluída').length;
-    const emAndamento = filteredTasks.filter((t) => t.status === 'Em andamento').length;
-    const pendentes = filteredTasks.filter((t) => t.status === 'Pendente').length;
-    const atrasadas = filteredTasks.filter((t) => t.status !== 'Concluída' && t.vencimento < todayKey()).length;
-    const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
+const competenciaReferenceDate = (competencia?: string) => {
+  if (!competencia) return todayKey();
+  if (/^\d{4}-\d{2}$/.test(competencia)) return `${competencia}-01`;
+  if (/^\d{2}\/\d{4}$/.test(competencia)) {
+    const [month, year] = competencia.split('/');
+    return `${year}-${month}-01`;
+  }
+  return todayKey();
+};
 
-    return { total, concluidas, emAndamento, pendentes, atrasadas, pct };
-  }, [filteredTasks]);
-
-  // Estatísticas por colaborador
-  const workerStats = useMemo(() => {
-    const responsaveis = Array.from(new Set(filteredTasks.map((tarefa) => tarefa.responsavel).filter(Boolean)));
-    return responsaveis.map((nome) => {
-      const userTasks = filteredTasks.filter((t) => t.responsavel === nome);
-      const concluidas = userTasks.filter((t) => t.status === 'Concluída').length;
-      const total = userTasks.length;
-      const pct = total > 0 ? Math.round((concluidas / total) * 100) : 0;
-
-      return { nome, total, concluidas, pct };
-    }).sort((a, b) => b.pct - a.pct);
-  }, [filteredTasks]);
+export const AtividadesControle: React.FC<AtividadesControleProps> = ({
+  initialCompanyId,
+  initialCompanyName,
+  initialCompetencia,
+}) => {
+  const [activePeriod, setActivePeriod] = useState<PainelPeriodo>('mes');
+  const [scope, setScope] = useState<{
+    companyId?: string;
+    companyName?: string;
+    competencia?: string;
+  }>({
+    companyId: initialCompanyId,
+    companyName: initialCompanyName,
+    competencia: initialCompetencia,
+  });
+  const dataReferencia = competenciaReferenceDate(scope.competencia);
+  const painelQuery = usePainelOperacional(
+    activePeriod,
+    dataReferencia,
+    scope.companyId,
+  );
+  const painel = painelQuery.data;
+  const metricas = painel?.metricas;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
-      {/* Filtros de Período */}
-      <div style={toolbarStyle}>
-        <div style={filterGroupStyle}>
-          {(['dia', 'semana', 'mes', 'todos'] as const).map((periodo) => {
-            const labelMap = { dia: 'Hoje', semana: 'Semana', mes: 'Mês', todos: 'Todos' };
-            const isActive = activePeriod === periodo;
-            return (
-              <button
-                key={periodo}
-                type="button"
-                onClick={() => setActivePeriod(periodo)}
-                style={isActive ? activeFilterBtnStyle : filterBtnStyle}
-              >
-                {labelMap[periodo]}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-
-      {/* Grid de Métricas */}
-      <div style={metricsGridStyle}>
-        <div style={metricCardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={metricLabelStyle}>Progresso Geral</span>
-            <CheckCircle2 size={20} color="#10b981" />
-          </div>
-          <strong style={{ ...metricValueStyle, color: '#10b981' }}>{metrics.pct}%</strong>
-          <span style={metricSubStyle}>{metrics.concluidas} de {metrics.total} tarefas feitas</span>
-        </div>
-
-        <div style={metricCardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={metricLabelStyle}>Atrasadas</span>
-            <Clock size={20} color="#ef4444" />
-          </div>
-          <strong style={{ ...metricValueStyle, color: '#ef4444' }}>{metrics.atrasadas}</strong>
-          <span style={metricSubStyle}>Requer atenção imediata</span>
-        </div>
-
-        <div style={metricCardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={metricLabelStyle}>Em Andamento</span>
-            <BarChart3 size={20} color="var(--color-gold-dark)" />
-          </div>
-          <strong style={{ ...metricValueStyle, color: 'var(--color-gold-dark)' }}>{metrics.emAndamento}</strong>
-          <span style={metricSubStyle}>Sendo executadas agora</span>
-        </div>
-
-        <div style={metricCardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={metricLabelStyle}>Pendentes</span>
-            <AlertTriangle size={20} color="#f97316" />
-          </div>
-          <strong style={{ ...metricValueStyle, color: '#f97316' }}>{metrics.pendentes}</strong>
-          <span style={metricSubStyle}>Aguardando início</span>
-        </div>
-      </div>
-
-      {/* Produtividade da Equipe */}
-      <div style={panelCardStyle}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <Users size={18} color="var(--color-gold-primary)" />
-          Conclusão por Colaborador
-        </h3>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {workerStats.length === 0 ? (
-            <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
-              Nenhuma atividade cadastrada no Supabase.
-            </p>
-          ) : workerStats.map((w) => (
-            <div key={w.nome} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                <span style={{ fontWeight: 600, color: '#0f172a' }}>{w.nome}</span>
-                <span style={{ color: '#64748b', fontWeight: 500 }}>
-                  {w.pct}% ({w.concluidas} / {w.total})
-                </span>
-              </div>
-              <div style={progressContainerStyle}>
-                <div style={{
-                  ...progressFillStyle,
-                  width: `${w.pct}%`,
-                  backgroundColor: w.pct === 100 ? '#10b981' : 'var(--color-gold-primary)',
-                }} />
-              </div>
-            </div>
+    <div className="painel-operacional">
+      <div className="painel-operacional__toolbar">
+        <div className="painel-operacional__periods" aria-label="Período do painel">
+          {(Object.keys(PERIOD_LABELS) as PainelPeriodo[]).map((periodo) => (
+            <button
+              key={periodo}
+              type="button"
+              className={activePeriod === periodo ? 'is-active' : ''}
+              onClick={() => setActivePeriod(periodo)}
+            >
+              {PERIOD_LABELS[periodo]}
+            </button>
           ))}
         </div>
+        <button
+          className="painel-operacional__refresh"
+          type="button"
+          onClick={() => { void painelQuery.refetch(); }}
+          disabled={painelQuery.isFetching}
+        >
+          <RefreshCw size={15} />
+          Atualizar
+        </button>
       </div>
+
+      {(scope.companyId || scope.competencia) && (
+        <div className="painel-operacional__scope" role="status">
+          <span>
+            Recorte ativo: {scope.companyName || 'empresa selecionada'}
+            {scope.competencia ? ` · competência ${scope.competencia}` : ''}
+          </span>
+          <button type="button" onClick={() => setScope({})}>
+            Limpar recorte
+          </button>
+        </div>
+      )}
+
+      {painelQuery.isLoading ? (
+        <div className="painel-operacional__state">Carregando indicadores operacionais…</div>
+      ) : painelQuery.isError || !painel || !metricas ? (
+        <div className="painel-operacional__state is-error">
+          <AlertCircle size={18} />
+          Não foi possível carregar o painel. Tente atualizar.
+        </div>
+      ) : (
+        <>
+          <section className="painel-operacional__metrics" aria-label="Indicadores">
+            <article>
+              <CheckCircle2 />
+              <span>Entrega no prazo</span>
+              <strong>{metricas.taxaNoPrazo}%</strong>
+              <small>{metricas.concluidas} concluída(s)</small>
+            </article>
+            <article className={metricas.emRisco > 0 ? 'is-danger' : ''}>
+              <ShieldAlert />
+              <span>Em risco</span>
+              <strong>{metricas.emRisco}</strong>
+              <small>prioridade alta ou crítica</small>
+            </article>
+            <article className={metricas.atrasadas > 0 ? 'is-danger' : ''}>
+              <Clock3 />
+              <span>Atrasadas</span>
+              <strong>{metricas.atrasadas}</strong>
+              <small>exigem intervenção</small>
+            </article>
+            <article>
+              <ListChecks />
+              <span>Pendentes</span>
+              <strong>{metricas.pendentes}</strong>
+              <small>{metricas.emAndamento} em andamento</small>
+            </article>
+            <article>
+              <CalendarClock />
+              <span>Vencem hoje</span>
+              <strong>{metricas.vencendoHoje}</strong>
+              <small>{metricas.vencendoSeteDias} nos próximos 7 dias</small>
+            </article>
+            <article>
+              <AlertTriangle />
+              <span>Com pendência</span>
+              <strong>{metricas.comPendencia}</strong>
+              <small>motivo registrado</small>
+            </article>
+          </section>
+
+          <section className="painel-operacional__body">
+            <div className="painel-operacional__priority">
+              <div className="painel-operacional__section-title">
+                <div>
+                  <h3>Prioridades de intervenção</h3>
+                  <p>Exceções ordenadas pelo risco e pelo prazo operacional.</p>
+                </div>
+                <span>{painel.riscos.length} item(ns)</span>
+              </div>
+              <div className="painel-operacional__risk-list">
+                {painel.riscos.length === 0 ? (
+                  <div className="painel-operacional__empty">
+                    Nenhum risco no recorte atual.
+                  </div>
+                ) : painel.riscos.map((risco) => (
+                  <article key={risco.tarefaId} className="painel-operacional__risk-card">
+                    <div className="painel-operacional__risk-main">
+                      <span className={`risk-badge risk-badge--${risco.nivelRisco}`}>
+                        {RISK_LABELS[risco.nivelRisco]}
+                      </span>
+                      <div>
+                        <strong>{risco.titulo}</strong>
+                        <p>{risco.cliente} · {risco.responsavel}</p>
+                      </div>
+                    </div>
+                    <div className="painel-operacional__risk-meta">
+                      <span>{risco.categoria}</span>
+                      <span>{formatDateBR(risco.prazoInterno)}</span>
+                      <strong>{dueLabel(risco.diasParaVencimento)}</strong>
+                    </div>
+                    <div className="painel-operacional__signals">
+                      {risco.motivoPendencia && <span>Pendência registrada</span>}
+                      {risco.evidenciaRegistrada && <span><FileCheck2 size={13} /> Evidência</span>}
+                      {risco.revisaoPendente && <span>Aguardando revisão</span>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="painel-operacional__rankings">
+              <RankingCard
+                icon={<Users size={17} />}
+                title="Por responsável"
+                rows={painel.colaboradores.map((item) => ({
+                  id: item.responsavelConfigUsuarioId,
+                  nome: item.responsavel,
+                  total: item.total,
+                  atrasadas: item.atrasadas,
+                  emRisco: item.emRisco,
+                  detail: `${item.taxaNoPrazo}% no prazo`,
+                }))}
+              />
+              <RankingCard title="Por cliente" rows={painel.rankings.clientes} />
+              <RankingCard title="Por rotina" rows={painel.rankings.rotinas} />
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 };
 
-// Estilos Tema Claro
-const metricsGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-  gap: '16px',
-};
+interface RankingRow {
+  id?: string;
+  nome: string;
+  total: number;
+  atrasadas: number;
+  emRisco: number;
+  detail?: string;
+}
 
-const metricCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '16px',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  gap: '4px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-};
-
-const metricLabelStyle = {
-  fontSize: '0.78rem',
-  fontWeight: 600,
-  color: '#64748b',
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.5px',
-};
-
-const metricValueStyle = {
-  fontSize: '1.8rem',
-  fontWeight: 700,
-  marginTop: '4px',
-};
-
-const metricSubStyle = {
-  fontSize: '0.72rem',
-  color: '#64748b',
-  fontWeight: 500,
-};
-
-const panelCardStyle = {
-  backgroundColor: '#ffffff',
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '20px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-};
-
-const progressContainerStyle = {
-  width: '100%',
-  height: '8px',
-  backgroundColor: '#f1f5f9',
-  borderRadius: '4px',
-  overflow: 'hidden',
-};
-
-const progressFillStyle = {
-  height: '100%',
-  borderRadius: '4px',
-  transition: 'width 0.3s ease',
-};
-
-const toolbarStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: '12px',
-  flexWrap: 'wrap' as const,
-  borderBottom: '1px solid #e2e8f0',
-  paddingBottom: '16px',
-};
-
-const filterGroupStyle = {
-  display: 'flex',
-  gap: '8px',
-  flexWrap: 'wrap' as const,
-};
-
-const filterBtnBaseStyle = {
-  border: '1px solid #e2e8f0',
-  borderRadius: '8px',
-  padding: '8px 16px',
-  fontSize: '0.82rem',
-  fontWeight: 700,
-  cursor: 'pointer',
-  transition: 'all 0.2s',
-};
-
-const filterBtnStyle = {
-  ...filterBtnBaseStyle,
-  background: '#ffffff',
-  color: '#64748b',
-};
-
-const activeFilterBtnStyle = {
-  ...filterBtnBaseStyle,
-  background: '#1f2937',
-  color: '#ffffff',
-  borderColor: '#c59235',
-};
+const RankingCard: React.FC<{
+  icon?: React.ReactNode;
+  title: string;
+  rows: RankingRow[];
+}> = ({ icon, title, rows }) => (
+  <article className="painel-operacional__ranking-card">
+    <h3>{icon}{title}</h3>
+    {rows.length === 0 ? (
+      <p className="painel-operacional__ranking-empty">Sem dados neste período.</p>
+    ) : rows.slice(0, 6).map((row) => (
+      <div key={row.id || row.nome} className="painel-operacional__ranking-row">
+        <div>
+          <strong>{row.nome}</strong>
+          <small>{row.detail || `${row.total} atividade(s)`}</small>
+        </div>
+        <span>{row.emRisco} risco · {row.atrasadas} atraso</span>
+      </div>
+    ))}
+  </article>
+);

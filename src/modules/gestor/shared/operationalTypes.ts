@@ -1,4 +1,4 @@
-export type SourceModule = 'agenda' | 'atividades' | 'protocolos' | 'conformidade';
+export type SourceModule = 'agenda' | 'atividades' | 'protocolos';
 
 export interface NavigationContext {
   sourceModule: SourceModule;
@@ -7,7 +7,6 @@ export interface NavigationContext {
   competencia?: string;
   atividadeId?: string;
   protocoloId?: string;
-  riskId?: string;
   returnTo?: string;
 }
 

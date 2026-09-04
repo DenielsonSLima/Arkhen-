@@ -5,7 +5,7 @@ const ROUTE_PARENT: Record<string, SystemModuleId> = {
   clientes: 'clientes',
   'gestao-empresarial': 'clientes',
   atividades: 'atividades',
-  conformidade: 'conformidade',
+  conformidade: 'atividades',
   protocolos: 'protocolos',
   'simulacoes-calculos': 'simulacoes-calculos',
   'reforma-tributaria': 'reforma-tributaria',

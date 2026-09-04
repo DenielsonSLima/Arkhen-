@@ -20,7 +20,6 @@ export const permissoesCatalog: PermissaoCatalogItem[] = [
   { chave: 'protocolos:view', nome: 'Ver acompanhamento', grupo: 'Acompanhamento' },
   { chave: 'protocolos:create', nome: 'Registrar acompanhamento', grupo: 'Acompanhamento' },
   { chave: 'protocolos:manage', nome: 'Gerenciar acompanhamento', grupo: 'Acompanhamento' },
-  { chave: 'conformidade:view', nome: 'Ver conformidade', grupo: 'Conformidade' },
   { chave: 'simulacoes:view', nome: 'Usar Calculadora de Rescisão', grupo: 'Simulações' },
   { chave: 'reforma-tributaria:view', nome: 'Ver Reforma Tributária', grupo: 'Reforma Tributária' },
   { chave: 'reforma-tributaria:manage', nome: 'Gerenciar Reforma Tributária', grupo: 'Reforma Tributária' },

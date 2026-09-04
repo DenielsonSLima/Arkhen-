@@ -18,7 +18,6 @@ import type { EmpresaDetailTab } from '../gestao-empresarial/hooks/useGestaoEmpr
 import { AtividadesPage } from '../atividades/AtividadesPage';
 import { SimulacoesCalculosPage } from '../simulacoes-calculos/SimulacoesCalculosPage';
 import type { DocumentosTab } from '../documentos/hooks/useDocumentos';
-import { ConformidadePage } from '../conformidade/ConformidadePage';
 import { ProtocolosPage } from '../protocolos/ProtocolosPage';
 import { FinanceiroPage } from '../financeiro/FinanceiroPage';
 import { FaturamentoPage, type FaturamentoTab, type FaturamentoViewMode } from '../faturamento/FaturamentoPage';
@@ -118,14 +117,21 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
       );
     case 'atividades-painel-operacional':
     case 'atividades-controle':
-    case 'atividades-controle-andamento': return <AtividadesPage view="painel" />;
+    case 'atividades-controle-andamento':
+    case 'conformidade':
+      return (
+        <AtividadesPage
+          view="painel"
+          initialCompanyId={initialContext?.data?.selectedCompanyId as string | undefined}
+          initialCompanyName={initialContext?.data?.selectedCompanyName as string | undefined}
+          initialCompetencia={initialContext?.data?.selectedCompetencia as string | undefined}
+        />
+      );
     case 'gestao-empresarial': return <GestaoEmpresarialPage />;
     case 'simulacoes-calculos': return <SimulacoesCalculosPage />;
     case 'reforma-tributaria': return <ReformaTributariaPage />;
     case 'agenda': return <AgendaPage />;
     case 'protocolos': return <ProtocolosPage />;
-    case 'conformidade':
-      return <ConformidadePage initialCompanyId={initialContext?.data?.selectedCompanyId as string | undefined} />;
     case 'documentos':
       return (
         <React.Suspense fallback={<div className="submodule-content-card">Carregando documentos...</div>}>

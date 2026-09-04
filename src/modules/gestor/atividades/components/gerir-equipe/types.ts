@@ -20,6 +20,10 @@ export interface UserStats {
   progresso: number;
   pendentes: number;
   atrasadas: number;
+  emRisco: number;
+  comPendencia: number;
+  vencendoHoje: number;
+  taxaNoPrazo: number;
 }
 
 export interface UsuarioEquipe {
@@ -32,16 +36,21 @@ export interface UsuarioEquipe {
 export interface TaskSummary {
   done: number;
   progress: number;
+  pending: number;
   late: number;
+  atRisk: number;
+  withIssue: number;
+  dueToday: number;
+  dueSoon: number;
+  onTimeRate: number;
   total: number;
 }
 
 export interface TaskInspectorProps {
-  deleteTarefa: (id: string) => void;
   filteredTasks: TarefaGestor[];
+  requestArchive: (task: TarefaGestor) => void;
   selectedTask: TarefaGestor | null;
   setSelectedTaskId: (id: string | null) => void;
-  taskSummary: TaskSummary;
   toggleChecklist: (taskId: string, index: number, concluida: boolean) => void;
   updateTarefa: (id: string, patch: TarefaProgressoPatch) => void;
 }

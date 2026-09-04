@@ -15,6 +15,7 @@ interface AtividadesPageProps {
   view?: string;
   initialQueueFilter?: MinhaFilaFiltro;
   initialCompanyId?: string;
+  initialCompanyName?: string;
   initialCompetencia?: string;
 }
 
@@ -124,6 +125,7 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
   view = 'minha-fila',
   initialQueueFilter,
   initialCompanyId,
+  initialCompanyName,
   initialCompetencia,
 }) => {
   const normalized = LEGACY_VIEW_MAP[view] || { view: view as AtividadesView };
@@ -154,7 +156,13 @@ export const AtividadesPage: React.FC<AtividadesPageProps> = ({
       case 'modelos':
         return <AbaRotinas initialCompanyId={initialCompanyId} />;
       case 'painel':
-        return <AtividadesControle />;
+        return (
+          <AtividadesControle
+            initialCompanyId={initialCompanyId}
+            initialCompanyName={initialCompanyName}
+            initialCompetencia={initialCompetencia}
+          />
+        );
       default:
         return <MinhaFilaAtividades initialFilter={queueFilter} />;
     }

@@ -24,11 +24,13 @@ export interface InternalTabsState {
 const STORAGE_KEY = 'contabil_internal_tabs_state';
 let tabSequence = 0;
 
-const normalizeModuleId = (moduleId: string) => (
-  moduleId === 'parametrizacao-protocolos' || moduleId === 'parametrizacao-checklists'
-    ? 'parametrizacao-prazos-entrega'
-    : moduleId
-);
+const normalizeModuleId = (moduleId: string) => {
+  if (moduleId === 'conformidade') return 'atividades-painel-operacional';
+  if (moduleId === 'parametrizacao-protocolos' || moduleId === 'parametrizacao-checklists') {
+    return 'parametrizacao-prazos-entrega';
+  }
+  return moduleId;
+};
 
 const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'clientes' && title.startsWith('Clientes')) {
@@ -37,14 +39,6 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
   if (moduleId === 'parametrizacao-categorias-clientes' && title.startsWith('Categorias de Parceiros')) {
     return `Categorias de Clientes${title.slice('Categorias de Parceiros'.length)}`;
   }
-  if (moduleId === 'parametrizacao-tipos-empresa') {
-    const legacyPrefix = title.startsWith('Tipos de Empresa')
-      ? 'Tipos de Empresa'
-      : title.startsWith('Tipo de Empresa')
-        ? 'Tipo de Empresa'
-        : '';
-    if (legacyPrefix) return `Enquadramento${title.slice(legacyPrefix.length)}`;
-  }
   if (moduleId === 'protocolos') {
     const legacyPrefix = title.startsWith('Protocolos e Documentos')
       ? 'Protocolos e Documentos'
@@ -52,6 +46,12 @@ const normalizePersistedTitle = (moduleId: string, title: string) => {
         ? 'Protocolos'
         : '';
     if (legacyPrefix) return `Acompanhamento${title.slice(legacyPrefix.length)}`;
+  }
+  if (
+    moduleId === 'atividades-painel-operacional'
+    && title.startsWith('Conformidade')
+  ) {
+    return `Painel Operacional${title.slice('Conformidade'.length)}`;
   }
   if (
     (moduleId === 'atividades-modelos' || moduleId === 'atividades-rotinas')

@@ -1,5 +1,6 @@
 import type { MotivoBloqueioAtividade } from '../../shared/operationalTypes';
 import type { ClienteEmpresa, ModeloAtividade } from './atividadesService';
+import type { NivelRiscoOperacional } from './painelOperacionalService';
 
 export type FrequenciaPersistidaAtividade =
   | 'Diária' | 'Semanal' | 'Quinzenal' | 'Mensal' | 'Trimestral' | 'Semestral'
@@ -49,7 +50,9 @@ export interface RotinaAtividade {
 
 export interface TarefaGestor {
   id: string;
+  clienteId?: string;
   rotinaId?: string;
+  competencia?: string;
   titulo: string;
   categoria: CategoriaAtividade;
   frequencia: FrequenciaAtividade | 'Única';
@@ -74,6 +77,13 @@ export interface TarefaGestor {
   motivoBloqueio?: MotivoBloqueioAtividade;
   bloqueadaDesde?: string;
   observacaoBloqueio?: string;
+  diasEmAtraso?: number;
+  diasParaVencimento?: number;
+  nivelRisco?: NivelRiscoOperacional;
+  pendenciaRegistrada?: boolean;
+  evidenciaRegistrada?: boolean;
+  revisaoPendente?: boolean;
+  ultimaMovimentacao?: string;
 }
 
 export interface UsuarioAtividade {

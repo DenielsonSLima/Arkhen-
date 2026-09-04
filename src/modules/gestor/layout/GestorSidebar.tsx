@@ -3,7 +3,6 @@ import {
   Building2, Calculator, CalendarDays, ChevronDown, ChevronRight,
   ClipboardList, Database, FileCheck, FolderOpen, GripVertical,
   Landmark, LayoutDashboard, LogOut, Plus, Receipt, Scale, Settings,
-  ShieldCheck,
 } from 'lucide-react';
 import { persistedStorage } from '../../../lib/persistedStorage';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
@@ -13,7 +12,7 @@ import { sidebarPreferencesService } from './services/sidebarPreferencesService'
 import systemLogoImg from '../../../assets/camada-o.png';
 
 const DEFAULT_MENU_ORDER = [
-  'inicio', 'clientes', 'atividades', 'conformidade', 'protocolos',
+  'inicio', 'clientes', 'atividades', 'protocolos',
   'simulacoes-calculos', 'reforma-tributaria', 'faturamento', 'financeiro',
   'documentos', 'agenda', 'parametrizacao', 'configuracoes',
 ];
@@ -22,7 +21,7 @@ const ALL_MENU_IDS = [...DEFAULT_MENU_ORDER];
 
 const PARAMETRIZACAO_ITEMS = [
   { id: 'parametrizacao-regimes', label: 'Regimes Tributários' },
-  { id: 'parametrizacao-tipos-empresa', label: 'Enquadramento' },
+  { id: 'parametrizacao-tipos-empresa', label: 'Tipos de Empresa' },
   { id: 'parametrizacao-natureza-juridica', label: 'Natureza Jurídica' },
   { id: 'parametrizacao-tipos-parceiros', label: 'Tipos de Parceiros' },
   { id: 'parametrizacao-categorias-clientes', label: 'Categorias de Clientes' },
@@ -49,7 +48,6 @@ const MENU_ITEMS = {
   clientes: { id: 'clientes', label: 'Parceiros', icon: Building2 },
   parametrizacao: { id: 'parametrizacao', label: 'Parametrização', icon: Database },
   atividades: { id: 'atividades', label: 'Atividades', icon: ClipboardList },
-  conformidade: { id: 'conformidade', label: 'Conformidade', icon: ShieldCheck },
   'simulacoes-calculos': { id: 'simulacoes-calculos', label: 'Simulações', icon: Calculator },
   'reforma-tributaria': { id: 'reforma-tributaria', label: 'Reforma Tributária', icon: Scale },
   documentos: { id: 'documentos', label: 'Documentos', icon: FolderOpen },

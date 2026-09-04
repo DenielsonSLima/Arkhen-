@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
+import { usePainelOperacional } from '../queries/painelOperacionalQueries';
 import {
   todayKey,
   type TarefaGestor,
@@ -24,7 +26,16 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   companyGroups = [],
   handleToggleStep,
 }) => {
-  const { rotinas, tarefas, usuarios, saveRotina, saveTarefaAsync, deleteTarefa, updateTarefa, toggleChecklist } = useAtividadesWorkspace();
+  const {
+    rotinas,
+    tarefas,
+    usuarios,
+    saveRotina,
+    saveTarefaAsync,
+    deleteTarefaAsync,
+    updateTarefa,
+    toggleChecklist,
+  } = useAtividadesWorkspace();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [periodo, setPeriodo] = useState<PeriodoFiltro>('semana');
   const [dataBase, setDataBase] = useState(todayKey());
@@ -33,6 +44,8 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   const [modalVincularAberto, setModalVincularAberto] = useState(false);
   const [modalNovaTarefaAberto, setModalNovaTarefaAberto] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+  const [pendingArchive, setPendingArchive] = useState<TarefaGestor | null>(null);
+  const allStatsQuery = usePainelOperacional('todos', dataBase);
 
   const showFeedback = (texto: string, tipo: 'sucesso' | 'erro') => {
     setFeedback({ texto, tipo });
@@ -65,8 +78,15 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
   );
 
   const userStats = useMemo(
-    () => getUserStats(responsaveis, tarefas, companyGroups),
-    [companyGroups, responsaveis, tarefas],
+    () => getUserStats(responsaveis, allStatsQuery.data?.colaboradores || []),
+    [allStatsQuery.data?.colaboradores, responsaveis],
+  );
+
+  const periodStatsQuery = usePainelOperacional(
+    periodo === 'empresas' ? 'mes' : periodo,
+    dataBase,
+    undefined,
+    Boolean(selectedUser) && periodo !== 'empresas',
   );
 
   const filteredTasks = useMemo(() => {
@@ -78,13 +98,31 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
           : !tarefa.responsavelConfigUsuarioId && tarefa.responsavel === selectedUser.nome;
         return pertenceAoUsuario && isTaskInPeriod(tarefa, periodo, dataBase);
       })
-      .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+      .sort((a, b) => (
+        (a.prazoInterno || a.vencimento).localeCompare(b.prazoInterno || b.vencimento)
+      ));
   }, [dataBase, periodo, selectedUser, tarefas]);
 
   const userCompanyGroups = useMemo(() => {
     if (!selectedUser) return [];
-    return companyGroups.filter((group) => group.responsavel === selectedUser.nome);
-  }, [companyGroups, selectedUser]);
+    const userTasks = tarefas.filter((tarefa) => (
+      selectedUser.configUsuarioId
+        ? tarefa.responsavelConfigUsuarioId === selectedUser.configUsuarioId
+        : !tarefa.responsavelConfigUsuarioId && tarefa.responsavel === selectedUser.nome
+    ));
+    const linkedGroups = new Set(userTasks.map((tarefa) => {
+      const competencia = tarefa.competencia?.slice(0, 7)
+        || tarefa.vencimento.slice(0, 7);
+      return `${tarefa.clienteId || tarefa.cliente}::${competencia}`;
+    }));
+    return companyGroups.filter((group) => {
+      const [month, year] = group.competencia.split('/');
+      const competencia = `${year}-${month}`;
+      return group.responsavel === selectedUser.nome
+        || linkedGroups.has(`${group.clienteId}::${competencia}`)
+        || linkedGroups.has(`${group.clienteNome}::${competencia}`);
+    });
+  }, [companyGroups, selectedUser, tarefas]);
 
   const selectedTask = useMemo(() => {
     if (!selectedTaskId) return filteredTasks[0] || null;
@@ -96,7 +134,18 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
     return userCompanyGroups.find((group) => group.id === selectedCompanyId) || userCompanyGroups[0] || null;
   }, [selectedCompanyId, userCompanyGroups]);
 
-  const taskSummary = useMemo(() => getTaskSummary(filteredTasks), [filteredTasks]);
+  const selectedUserStats = useMemo(() => (
+    periodStatsQuery.data?.colaboradores.find((item) => (
+      selectedUser?.configUsuarioId
+        ? item.responsavelConfigUsuarioId === selectedUser.configUsuarioId
+        : item.responsavel === selectedUser?.nome
+    ))
+  ), [periodStatsQuery.data?.colaboradores, selectedUser]);
+
+  const taskSummary = useMemo(
+    () => getTaskSummary(selectedUserStats),
+    [selectedUserStats],
+  );
 
   const resetSelection = () => {
     setSelectedTaskId(null);
@@ -149,15 +198,36 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
       });
   };
 
+  const handleArchive = async () => {
+    if (!pendingArchive) return;
+    try {
+      await deleteTarefaAsync(pendingArchive.id);
+      setSelectedTaskId(null);
+      showFeedback('Tarefa arquivada. O histórico operacional foi preservado.', 'sucesso');
+    } catch {
+      showFeedback('Não foi possível arquivar a tarefa.', 'erro');
+    }
+  };
+
   if (!selectedUser) {
+    if (allStatsQuery.isLoading) {
+      return <p style={{ color: '#64748b' }}>Carregando indicadores da equipe…</p>;
+    }
     return (
-      <UserCardsGrid
-        users={userStats}
-        onSelectUser={(id) => {
-          setSelectedUserId(id);
-          resetSelection();
-        }}
-      />
+      <>
+        {allStatsQuery.isError && (
+          <p style={{ color: '#b91c1c' }}>
+            Não foi possível carregar os indicadores. Atualize a página para tentar novamente.
+          </p>
+        )}
+        <UserCardsGrid
+          users={userStats}
+          onSelectUser={(id) => {
+            setSelectedUserId(id);
+            resetSelection();
+          }}
+        />
+      </>
     );
   }
 
@@ -187,11 +257,10 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
         <>
           <TaskSummaryCards summary={taskSummary} />
           <TaskInspector
-            deleteTarefa={deleteTarefa}
             filteredTasks={filteredTasks}
+            requestArchive={setPendingArchive}
             selectedTask={selectedTask}
             setSelectedTaskId={setSelectedTaskId}
-            taskSummary={taskSummary}
             toggleChecklist={toggleChecklist}
             updateTarefa={updateTarefa}
           />
@@ -217,6 +286,15 @@ export const AbaGerirEquipe: React.FC<AbaGerirEquipeProps> = ({
         onClose={() => setModalNovaTarefaAberto(false)}
         onSalvar={handleCriarTarefaManual}
         usuarioNome={selectedUser.nome}
+      />
+      <SystemQuickModal
+        isOpen={Boolean(pendingArchive)}
+        title="Arquivar tarefa?"
+        message={`A tarefa “${pendingArchive?.titulo || ''}” sairá das filas ativas. Seu histórico continuará preservado.`}
+        confirmLabel="Arquivar"
+        onConfirm={() => { void handleArchive(); }}
+        onClose={() => setPendingArchive(null)}
+        danger
       />
     </div>
   );

@@ -139,7 +139,7 @@ describe('useAtividadesWorkspace task mutations', () => {
     });
   });
 
-  it('invalida workspace, auditoria da tarefa e a raiz de protocolos após o toggle', async () => {
+  it('invalida atividades, painel, auditoria e protocolos após o toggle', async () => {
     const queryClient = makeQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
     const { result } = renderHook(() => useAtividadesWorkspace(), {
@@ -156,8 +156,7 @@ describe('useAtividadesWorkspace task mutations', () => {
       });
     });
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['atividades', 'workspace'],
-      exact: true,
+      queryKey: ['atividades'],
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: protocolosKeys.all });
   });

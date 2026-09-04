@@ -1,15 +1,22 @@
 import React from 'react';
-import { CheckCircle2, Eye, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  Eye,
+  FileCheck2,
+  ShieldAlert,
+  Trash2,
+} from 'lucide-react';
 import { formatDateBR } from '../../services/rotinasAtividadesService';
-import { getPct } from './utils';
 import type { TaskInspectorProps } from './types';
 import { deleteOutlineBtnStyle, styles } from './styles';
 import { EmptyState } from './EmptyState';
 import { ProgressBar } from './ProgressBar';
 
 export const TaskInspector: React.FC<TaskInspectorProps> = ({
-  deleteTarefa,
   filteredTasks,
+  requestArchive,
   selectedTask,
   setSelectedTaskId,
   toggleChecklist,
@@ -21,9 +28,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
         <EmptyState icon={<CheckCircle2 size={36} color="var(--color-gold-primary)" />} text="Nenhuma atividade cadastrada para este colaborador neste período." />
       ) : (
         filteredTasks.map((tarefa) => {
-          const done = tarefa.checklist.filter((item) => item.concluida).length;
-          const total = tarefa.checklist.length;
-          const pct = getPct(done, total);
+          const done = tarefa.etapasConcluidas || 0;
+          const total = tarefa.etapasTotal || tarefa.checklist.length;
+          const pct = tarefa.percentual || 0;
           return (
             <article
               key={tarefa.id}
@@ -48,9 +55,16 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <ProgressBar value={pct} />
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>{done}/{total || 1} itens feitos</span>
-                <span style={{ ...styles.statusSelect, cursor: 'default' }} title="O status é atualizado pelas etapas do checklist">
-                  {tarefa.status}
-                </span>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {tarefa.nivelRisco && tarefa.nivelRisco !== 'baixo' && tarefa.nivelRisco !== 'concluido' && (
+                    <span style={riskBadgeStyle(tarefa.nivelRisco)}>
+                      {tarefa.nivelRisco === 'critico' ? 'Crítico' : tarefa.nivelRisco === 'alto' ? 'Alto risco' : 'Atenção'}
+                    </span>
+                  )}
+                  <span style={{ ...styles.statusSelect, cursor: 'default' }} title="O status é atualizado pelas etapas do checklist">
+                    {tarefa.status}
+                  </span>
+                </div>
               </div>
             </article>
           );
@@ -65,6 +79,32 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             <span style={styles.detailEyebrow}>Fiscalização da tarefa</span>
             <h3 style={styles.detailTitle}>{selectedTask.titulo}</h3>
             <p style={styles.detailMeta}>{selectedTask.cliente} • {selectedTask.responsavel} • {formatDateBR(selectedTask.vencimento)}</p>
+          </div>
+          <div style={riskPanelStyle}>
+            <div>
+              <span style={riskLabelStyle}><CalendarClock size={14} /> Prazo interno</span>
+              <strong>{formatDateBR(selectedTask.prazoInterno || selectedTask.vencimento)}</strong>
+            </div>
+            <div>
+              <span style={riskLabelStyle}><CalendarClock size={14} /> Prazo legal</span>
+              <strong>{formatDateBR(selectedTask.prazoLegal || selectedTask.vencimento)}</strong>
+            </div>
+            <div>
+              <span style={riskLabelStyle}><ShieldAlert size={14} /> Risco</span>
+              <strong style={{ color: selectedTask.nivelRisco === 'critico' || selectedTask.nivelRisco === 'alto' ? '#b91c1c' : '#475569' }}>
+                {selectedTask.nivelRisco === 'critico' ? 'Crítico' : selectedTask.nivelRisco === 'alto' ? 'Alto' : selectedTask.nivelRisco === 'medio' ? 'Atenção' : 'Baixo'}
+              </strong>
+            </div>
+          </div>
+          <div style={signalsStyle}>
+            {selectedTask.diasEmAtraso ? (
+              <span><AlertTriangle size={13} /> {selectedTask.diasEmAtraso} dia(s) em atraso</span>
+            ) : selectedTask.diasParaVencimento === 0 ? (
+              <span>Vence hoje</span>
+            ) : null}
+            {selectedTask.pendenciaRegistrada && <span>Pendência registrada</span>}
+            {selectedTask.evidenciaRegistrada && <span><FileCheck2 size={13} /> Evidência registrada</span>}
+            {selectedTask.revisaoPendente && <span>Aguardando revisão</span>}
           </div>
           <div style={styles.detailSplit}>
             <div>
@@ -116,8 +156,8 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </label>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-            <button onClick={() => deleteTarefa(selectedTask.id)} style={deleteOutlineBtnStyle} type="button">
-              <Trash2 size={14} /> Excluir
+            <button onClick={() => requestArchive(selectedTask)} style={deleteOutlineBtnStyle} type="button">
+              <Trash2 size={14} /> Arquivar
             </button>
           </div>
         </>
@@ -127,3 +167,42 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     </aside>
   </div>
 );
+
+const riskBadgeStyle = (level: string): React.CSSProperties => ({
+  borderRadius: '999px',
+  padding: '4px 7px',
+  background: level === 'critico' || level === 'alto' ? '#fee2e2' : '#fef3c7',
+  color: level === 'critico' || level === 'alto' ? '#b91c1c' : '#a16207',
+  fontSize: '0.66rem',
+  fontWeight: 800,
+});
+
+const riskPanelStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+  gap: '8px',
+  padding: '12px',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  background: '#f8fafc',
+};
+
+const riskLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  marginBottom: '4px',
+  color: '#64748b',
+  fontSize: '0.67rem',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+};
+
+const signalsStyle: React.CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '6px',
+  color: '#9a3412',
+  fontSize: '0.7rem',
+  fontWeight: 700,
+};

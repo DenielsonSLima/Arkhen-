@@ -47,7 +47,7 @@ export const RelatoriosPage: React.FC = () => {
 
   const reportOptions = [
     { id: 'faturamento', label: 'Faturamento & Inadimplência', icon: DollarSign, desc: 'Análise de fluxo financeiro, cobranças e taxas de inadimplência.' },
-    { id: 'conformidade', label: 'Conformidade de Prazos', icon: CheckCircle2, desc: 'Métricas de entrega de obrigações acessórias e guias fiscais.' },
+    { id: 'conformidade', label: 'Cumprimento de Prazos', icon: CheckCircle2, desc: 'Métricas de entrega de obrigações acessórias e guias fiscais.' },
     { id: 'pessoal', label: 'Quadro de Pessoal & Custos', icon: Users, desc: 'Resumos sobre funcionários ativos, folha de pagamento e pendências admissionais.' },
     { id: 'tributario', label: 'Comparativo de Regimes', icon: TrendingUp, desc: 'Estudos e simulações fiscais comparando regimes tributários.' }
   ] as const;

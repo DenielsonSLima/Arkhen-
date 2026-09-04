@@ -152,7 +152,7 @@ export const AgendaPage: React.FC = () => {
       return;
     }
     if (origem === 'atividade') abrirAtividade(openTab, evento);
-    if (origem === 'prazo_fiscal') abrirConformidade(openTab, evento);
+    if (origem === 'prazo_fiscal') abrirPainelOperacional(openTab, evento);
   };
 
   return (
@@ -333,7 +333,7 @@ const abrirAtividade = (openTab: ReturnType<typeof useInternalTabs>['openTab'], 
   });
 };
 
-const abrirConformidade = (openTab: ReturnType<typeof useInternalTabs>['openTab'], evento: Evento) => {
+const abrirPainelOperacional = (openTab: ReturnType<typeof useInternalTabs>['openTab'], evento: Evento) => {
   const navigationContext: NavigationContext = {
     sourceModule: 'agenda',
     sourceId: evento.id,
@@ -341,8 +341,14 @@ const abrirConformidade = (openTab: ReturnType<typeof useInternalTabs>['openTab'
     returnTo: 'agenda',
   };
 
-  openTab('conformidade', 'Conformidade', 'ShieldCheck', {
+  openTab('atividades-painel-operacional', 'Painel Operacional', 'Layers', {
     titleSuffix: 'Riscos e SLA',
-    data: { ...navigationContext, selectedCompanyId: evento.empresaId },
+    data: {
+      ...navigationContext,
+      selectedCompanyId: evento.empresaId,
+      selectedCompanyName: evento.empresaNome,
+      selectedCompetencia: evento.data.slice(0, 7),
+      activeView: 'painel',
+    },
   });
 };

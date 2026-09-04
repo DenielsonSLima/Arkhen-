@@ -1,10 +1,22 @@
 import { supabase } from '../../../../lib/supabase';
+import type { NivelRiscoOperacional } from './painelOperacionalService';
 
 export interface TarefaProgressoOperacional {
   tarefaId: string;
+  clienteId?: string;
+  competencia?: string;
   etapasTotal: number;
   etapasConcluidas: number;
   percentual: number;
+  prazoLegal?: string;
+  prazoInterno?: string;
+  diasEmAtraso: number;
+  diasParaVencimento: number;
+  nivelRisco?: NivelRiscoOperacional;
+  pendenciaRegistrada: boolean;
+  evidenciaRegistrada: boolean;
+  revisaoPendente: boolean;
+  ultimaMovimentacao?: string;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -16,6 +28,19 @@ const boundedInteger = (value: unknown, maximum = Number.MAX_SAFE_INTEGER) => {
   return Math.min(maximum, Math.max(0, Math.round(value)));
 };
 
+const signedInteger = (value: unknown) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.round(value);
+};
+
+const optionalText = (value: unknown) => (
+  typeof value === 'string' && value.trim() ? value.trim() : undefined
+);
+
+const RISK_LEVELS = new Set<NivelRiscoOperacional>([
+  'critico', 'alto', 'medio', 'baixo', 'concluido',
+]);
+
 const normalizeProgress = (value: unknown): TarefaProgressoOperacional | null => {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
   const item = value as JsonRecord;
@@ -23,11 +48,23 @@ const normalizeProgress = (value: unknown): TarefaProgressoOperacional | null =>
   if (!UUID_PATTERN.test(tarefaId)) return null;
 
   const etapasTotal = boundedInteger(item.etapasTotal);
+  const risk = optionalText(item.nivelRisco) as NivelRiscoOperacional | undefined;
   return {
     tarefaId,
+    clienteId: optionalText(item.clienteId),
+    competencia: optionalText(item.competencia),
     etapasTotal,
     etapasConcluidas: Math.min(etapasTotal, boundedInteger(item.etapasConcluidas)),
     percentual: boundedInteger(item.percentual, 100),
+    prazoLegal: optionalText(item.prazoLegal),
+    prazoInterno: optionalText(item.prazoInterno),
+    diasEmAtraso: boundedInteger(item.diasEmAtraso),
+    diasParaVencimento: signedInteger(item.diasParaVencimento),
+    nivelRisco: risk && RISK_LEVELS.has(risk) ? risk : undefined,
+    pendenciaRegistrada: item.pendenciaRegistrada === true,
+    evidenciaRegistrada: item.evidenciaRegistrada === true,
+    revisaoPendente: item.revisaoPendente === true,
+    ultimaMovimentacao: optionalText(item.ultimaMovimentacao),
   };
 };
 

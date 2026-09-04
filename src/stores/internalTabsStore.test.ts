@@ -57,7 +57,7 @@ describe('internalTabsStore', () => {
     expect(JSON.parse(storedState!).activeTabId).toContain('documentos');
   });
 
-  it('migrates legacy Rotinas, Acompanhamento, Obrigações and Enquadramento tabs', async () => {
+  it('migrates legacy Rotinas, Acompanhamento, Obrigações and Conformidade tabs', async () => {
     sessionStorage.setItem('contabil_internal_tabs_state', JSON.stringify({
       persistEnabled: true,
       activeTabId: 'protocolos__legacy',
@@ -84,11 +84,11 @@ describe('internalTabsStore', () => {
           iconName: 'ClipboardList',
         },
         {
-          id: 'parametrizacao-tipos-empresa__legacy',
-          moduleId: 'parametrizacao-tipos-empresa',
-          baseTitle: 'Tipos de Empresa',
-          title: 'Tipos de Empresa',
-          iconName: 'Database',
+          id: 'conformidade__legacy',
+          moduleId: 'conformidade',
+          baseTitle: 'Conformidade',
+          title: 'Conformidade / Empresa Alfa',
+          iconName: 'ShieldCheck',
         },
       ],
     }));
@@ -111,9 +111,9 @@ describe('internalTabsStore', () => {
         title: 'Obrigações',
       }),
       expect.objectContaining({
-        moduleId: 'parametrizacao-tipos-empresa',
-        baseTitle: 'Enquadramento',
-        title: 'Enquadramento',
+        moduleId: 'atividades-painel-operacional',
+        baseTitle: 'Painel Operacional',
+        title: 'Painel Operacional / Empresa Alfa',
       }),
     ]);
   });

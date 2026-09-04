@@ -19,6 +19,14 @@ describe('tarefasProgressoService', () => {
         etapasTotal: 12,
         etapasConcluidas: 9,
         percentual: 75,
+        prazoLegal: '2026-09-10',
+        prazoInterno: '2026-09-08',
+        diasEmAtraso: 0,
+        diasParaVencimento: 4,
+        nivelRisco: 'medio',
+        pendenciaRegistrada: false,
+        evidenciaRegistrada: true,
+        revisaoPendente: false,
       }],
       error: null,
     });
@@ -31,6 +39,14 @@ describe('tarefasProgressoService', () => {
       etapasTotal: 12,
       etapasConcluidas: 9,
       percentual: 75,
+      prazoLegal: '2026-09-10',
+      prazoInterno: '2026-09-08',
+      diasEmAtraso: 0,
+      diasParaVencimento: 4,
+      nivelRisco: 'medio',
+      pendenciaRegistrada: false,
+      evidenciaRegistrada: true,
+      revisaoPendente: false,
     });
   });
 
@@ -40,6 +56,9 @@ describe('tarefasProgressoService', () => {
       etapasTotal: 2,
       etapasConcluidas: 9,
       percentual: 140,
+      diasEmAtraso: -3,
+      diasParaVencimento: -2,
+      nivelRisco: 'forjado',
     }, {
       tarefaId: 'id-forjado',
       etapasTotal: 12,
@@ -52,6 +71,9 @@ describe('tarefasProgressoService', () => {
       etapasTotal: 2,
       etapasConcluidas: 2,
       percentual: 100,
+      diasEmAtraso: 0,
+      diasParaVencimento: -2,
+      nivelRisco: undefined,
     });
   });
 });

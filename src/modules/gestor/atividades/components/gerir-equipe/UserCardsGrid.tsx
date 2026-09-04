@@ -32,7 +32,7 @@ export const UserCardsGrid: React.FC<UserCardsGridProps> = ({ onSelectUser, user
               <span style={{ fontSize: '1.2rem', fontWeight: 700, color: user.progresso === 100 ? '#10b981' : 'var(--color-gold-dark)' }}>
                 {user.progresso}%
               </span>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Andamento</span>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Concluído</span>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', borderLeft: '1px solid #e2e8f0' }}>
               <span style={{ fontSize: '1.2rem', fontWeight: 700, color: user.atrasadas > 0 ? '#ef4444' : '#64748b' }}>
@@ -40,10 +40,20 @@ export const UserCardsGrid: React.FC<UserCardsGridProps> = ({ onSelectUser, user
               </span>
               <span style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Atrasadas</span>
             </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', borderLeft: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: user.emRisco > 0 ? '#dc2626' : '#64748b' }}>
+                {user.emRisco}
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase' }}>Em risco</span>
+            </div>
           </div>
 
+          <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '-7px 0 12px' }}>
+            {user.vencendoHoje} vence(m) hoje · {user.comPendencia} com pendência · {user.taxaNoPrazo}% no prazo
+          </p>
+
           <button onClick={() => onSelectUser(user.id)} style={styles.manageBtn} type="button">
-            Fiscalizar Atividades
+            Analisar atividades
           </button>
         </div>
       ))}

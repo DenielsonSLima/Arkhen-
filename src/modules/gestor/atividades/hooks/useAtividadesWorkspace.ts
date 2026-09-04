@@ -31,7 +31,7 @@ export const useAtividadesWorkspace = () => {
   const permissoesQuery = useAtividadesPodeGerenciar();
 
   const invalidateWorkspace = () => {
-    void queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace() });
+    void queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
   };
 
   const saveRotinaMutation = useMutation({
@@ -101,7 +101,7 @@ export const useAtividadesWorkspace = () => {
     ),
     onSuccess: async (_result, { id }) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: atividadesKeys.workspace(), exact: true }),
+        queryClient.invalidateQueries({ queryKey: atividadesKeys.all }),
         queryClient.invalidateQueries({ queryKey: tarefaChecklistAuditKeys.byTask(id), exact: true }),
         queryClient.invalidateQueries({ queryKey: protocolosKeys.all }),
       ]);
@@ -131,6 +131,7 @@ export const useAtividadesWorkspace = () => {
     saveTarefa: (tarefa: TarefaGestor) => saveTarefaMutation.mutate(tarefa),
     saveTarefaAsync: (tarefa: TarefaGestor) => saveTarefaMutation.mutateAsync(tarefa),
     deleteTarefa: (id: string) => deleteTarefaMutation.mutate(id),
+    deleteTarefaAsync: (id: string) => deleteTarefaMutation.mutateAsync(id),
     updateTarefa: (id: string, patch: TarefaProgressoPatch) => (
       updateTarefaProgressMutation.mutate({ id, patch })
     ),

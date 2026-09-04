@@ -30,7 +30,7 @@ export const AtividadesRelatorio: React.FC<AtividadesRelatorioProps> = ({ data }
         </div>
         <div className="financeiro-stat-card" style={{ padding: '12px' }}>
           <div className="financeiro-stat-data">
-            <span className="financeiro-stat-label">Conformidade (Compliance)</span>
+            <span className="financeiro-stat-label">Entregas no Prazo</span>
             <span className="financeiro-stat-number" style={{ fontSize: '1.25rem', color: data.taxaConformidade >= 90 ? '#059669' : '#d97706' }}>
               {data.taxaConformidade.toFixed(1)}%
             </span>
@@ -40,7 +40,7 @@ export const AtividadesRelatorio: React.FC<AtividadesRelatorioProps> = ({ data }
 
       {/* Distribuição por Tipo de Guia/Obrigação */}
       <div style={{ marginTop: '12px' }}>
-        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Conformidade por Tipo de Obrigação</h4>
+        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Cumprimento por Tipo de Obrigação</h4>
         {data.distribuicaoObrigacoes.length === 0 ? (
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Sem atividades de obrigações registradas.</p>
         ) : (
