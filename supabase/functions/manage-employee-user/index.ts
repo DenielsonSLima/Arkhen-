@@ -1,5 +1,6 @@
 import {
   InputValidationError,
+  generateTemporaryPassword,
   isUuid,
   normalizeContactEmail,
   normalizeCpf,
@@ -22,6 +23,10 @@ import {
   jsonResponse,
   readLimitedBody,
 } from './runtime.ts';
+import {
+  completeFirstAccess,
+  inviteEmployeeByEmail,
+} from './managedEmail.ts';
 
 const AUTH_ALIAS_PATTERN = /^[0-9a-f]{64}@[a-z0-9.-]+\.[a-z]{2,63}$/;
 
@@ -176,18 +181,24 @@ const createEmployee = async (
   payload: JsonRecord,
 ): Promise<Response> => {
   const cpf = normalizeCpf(payload.cpf);
-  const passwordError = validatePassword(payload.password, cpf);
   const nameError = validateEmployeeName(payload.nome);
   const profileId = payload.perfil_id ?? payload.perfilId;
   if (nameError) throw new InputValidationError(nameError);
-  if (passwordError) throw new InputValidationError(passwordError);
   if (!isUuid(profileId)) throw new InputValidationError('Selecione um perfil válido.');
 
   const nome = normalizeEmployeeName(payload.nome);
   const email = normalizeContactEmail(payload.email);
+  if (email) {
+    throw new InputValidationError('O acesso por CPF deve ser usado somente quando não houver e-mail.');
+  }
   const telefone = normalizePhone(payload.telefone);
-  const status = parseEmployeeStatus(payload.status);
+  const status = parseEmployeeStatus('Ativo');
   const accessConfig = parseAccessConfig(payload.access_config ?? payload.accessConfig);
+  let temporaryPassword = generateTemporaryPassword();
+  while (validatePassword(temporaryPassword, cpf)) {
+    temporaryPassword = generateTemporaryPassword();
+  }
+  const credentialVersion = crypto.randomUUID();
   const rpcPayload = {
     nome,
     cpf,
@@ -219,10 +230,14 @@ const createEmployee = async (
 
   const { data: created, error: createError } = await client.auth.admin.createUser({
     email: authAlias,
-    password: payload.password as string,
+    password: temporaryPassword,
     email_confirm: true,
     user_metadata: { nome, perfil: prepared.perfil_nome },
-    app_metadata: { login_method: 'cpf', account_type: 'employee_cpf' },
+    app_metadata: {
+      login_method: 'cpf',
+      account_type: 'employee_cpf',
+      credential_version: credentialVersion,
+    },
   });
   if (createError || !created.user?.id) {
     throw new HttpError(409, 'Não foi possível criar o funcionário.');
@@ -241,7 +256,11 @@ const createEmployee = async (
   if (provisionError || !provisioned) {
     const recovered = await findProvisionedEmployee(client, authUserId);
     if (recovered.usuario) {
-      return jsonResponse({ ok: true, usuario: recovered.usuario }, 201);
+      return jsonResponse({
+        ok: true,
+        usuario: recovered.usuario,
+        temporary_password: temporaryPassword,
+      }, 201);
     }
     if (recovered.lookupFailed) {
       throw new HttpError(
@@ -261,7 +280,11 @@ const createEmployee = async (
     throwRpcError(provisionError, 'Não foi possível concluir o cadastro.');
   }
 
-  return jsonResponse({ ok: true, usuario: publicEmployee(provisioned) }, 201);
+  return jsonResponse({
+    ok: true,
+    usuario: publicEmployee(provisioned),
+    temporary_password: temporaryPassword,
+  }, 201);
 };
 
 const resetPassword = async (
@@ -368,6 +391,10 @@ Deno.serve(async (request) => {
     const payload = await readLimitedBody(request);
     if (payload.action === 'login') return await loginWithCpf(request, payload);
     if (payload.action === 'create') return await createEmployee(request, payload);
+    if (payload.action === 'invite_email') return await inviteEmployeeByEmail(request, payload);
+    if (payload.action === 'complete_first_access') {
+      return await completeFirstAccess(request, payload);
+    }
     if (payload.action === 'reset_password') return await resetPassword(request, payload);
     if (payload.action === 'change_own_password') {
       return await changeOwnPassword(request, payload);

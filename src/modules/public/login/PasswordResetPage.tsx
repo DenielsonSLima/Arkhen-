@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { LoginBanner } from './components/LoginBanner';
 import { PasswordResetForm } from './forms/PasswordResetForm';
+import type { PasswordSetupMode } from './services/passwordRecoveryService';
 import './Login.css';
 import './PasswordReset.css';
 
 interface PasswordResetPageProps {
+  mode: PasswordSetupMode;
   isValidating: boolean;
   isSessionReady: boolean;
   callbackError: string | null;
@@ -14,8 +16,10 @@ interface PasswordResetPageProps {
 
 export const PasswordResetPage = (props: PasswordResetPageProps) => {
   useEffect(() => {
-    document.title = 'Criar nova senha | Arkhen Gestão Contábil';
-  }, []);
+    document.title = props.mode === 'invite'
+      ? 'Ativar acesso | Arkhen Gestão Contábil'
+      : 'Criar nova senha | Arkhen Gestão Contábil';
+  }, [props.mode]);
 
   return (
     <div className="login-container">

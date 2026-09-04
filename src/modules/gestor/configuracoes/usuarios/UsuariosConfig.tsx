@@ -3,6 +3,7 @@ import { Edit2, KeyRound, Trash2, UserPlus, UserX } from 'lucide-react';
 import { useUsuarios } from './hooks/useUsuarios';
 import { UsuarioForm } from './forms/UsuarioForm';
 import { UsuarioPasswordResetModal } from './forms/UsuarioPasswordResetModal';
+import { UsuarioTemporaryPasswordModal } from './forms/UsuarioTemporaryPasswordModal';
 import type { Usuario } from './services/usuariosService';
 import { formatCpf } from '../../../../lib/cpf';
 
@@ -28,6 +29,7 @@ export const UsuariosConfig: React.FC = () => {
     isLoading,
     isSaving,
     showForm,
+    temporaryAccessResult,
     passwordResetUsuario,
     isResettingPassword,
     formValue,
@@ -44,6 +46,7 @@ export const UsuariosConfig: React.FC = () => {
     openPasswordReset,
     closePasswordReset,
     handlePasswordReset,
+    closeTemporaryAccessResult,
   } = useUsuarios();
 
   if (isLoading) {
@@ -91,6 +94,15 @@ export const UsuariosConfig: React.FC = () => {
         />
       )}
 
+      {temporaryAccessResult && (
+        <UsuarioTemporaryPasswordModal
+          usuarioNome={temporaryAccessResult.usuarioNome}
+          cpf={temporaryAccessResult.cpf}
+          temporaryPassword={temporaryAccessResult.temporaryPassword}
+          onClose={closeTemporaryAccessResult}
+        />
+      )}
+
       <div className="table-responsive">
         <table className="config-table">
           <thead>
@@ -110,7 +122,14 @@ export const UsuariosConfig: React.FC = () => {
             {usuarios.map((user) => (
               <tr key={user.id} onClick={() => openEdit(user)} style={{ cursor: 'pointer' }}>
                 <td><strong>{user.nome}</strong></td>
-                <td>{user.formaAcesso === 'cpf' ? 'CPF + senha' : 'E-mail'}</td>
+                <td>
+                  {user.formaAcesso === 'cpf' ? 'CPF + senha' : 'E-mail'}
+                  {user.mustChangePassword && (
+                    <span className="table-badge badge-orange" style={{ marginLeft: 6 }}>
+                      Primeiro acesso
+                    </span>
+                  )}
+                </td>
                 <td>{user.email || '-'}</td>
                 <td>{user.cpf ? formatCpf(user.cpf) : '-'}</td>
                 <td>{user.telefone || '-'}</td>

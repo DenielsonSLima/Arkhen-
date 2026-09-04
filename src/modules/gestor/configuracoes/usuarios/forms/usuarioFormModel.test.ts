@@ -35,8 +35,8 @@ const createInput = (patch: Partial<SaveUsuarioInput> = {}): SaveUsuarioInput =>
   email: '',
   cpf: '529.982.247-25',
   telefone: '',
-  senha: 'SenhaForte123',
-  confirmacaoSenha: 'SenhaForte123',
+  senha: undefined,
+  confirmacaoSenha: undefined,
   perfilId: funcionario.id,
   perfil: 'Funcionário',
   status: 'Ativo',
@@ -68,13 +68,13 @@ describe('usuarioFormModel', () => {
     expect(result.errors.cpf).toContain('CPF válido');
   });
 
-  it('exige senha inicial segura e confirmação no novo acesso por CPF', () => {
+  it('não recebe senha digitada pelo gestor no novo acesso por CPF', () => {
     const result = validateUsuarioForm(createInput({ senha: 'abc', confirmacaoSenha: '' }), perfis);
 
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.errors.senha).toContain('10 a 128 caracteres');
-    expect(result.errors.confirmacaoSenha).toBe('Confirme a senha inicial.');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.senha).toBeUndefined();
+    expect(result.data.confirmacaoSenha).toBeUndefined();
   });
 
   it('não exige senha inicial ao editar um acesso por CPF', () => {
@@ -87,12 +87,12 @@ describe('usuarioFormModel', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejeita senha inicial que contenha o CPF do funcionário', () => {
-    const result = validateUsuarioForm(createInput({ senha: 'A529.982.247-25x', confirmacaoSenha: 'A529.982.247-25x' }), perfis);
+  it('rejeita e-mail no novo cadastro marcado como somente CPF', () => {
+    const result = validateUsuarioForm(createInput({ email: 'contato@empresa.com' }), perfis);
 
     expect(result.success).toBe(false);
     if (result.success) return;
-    expect(result.errors.senha).toContain('sem incluir o CPF');
+    expect(result.errors.email).toContain('deixe o e-mail em branco');
   });
 
   it.each([
@@ -133,11 +133,14 @@ describe('usuarioFormModel', () => {
     expect(result.data.senha).toBeUndefined();
   });
 
-  it('valida e-mail opcional quando ele é informado no modo CPF', () => {
-    const result = validateUsuarioForm(createInput({ email: 'email-invalido' }), perfis);
+  it('preserva e normaliza e-mail de contato ao editar um acesso por CPF', () => {
+    const result = validateUsuarioForm(createInput({
+      id: 'usuario-1',
+      email: 'CONTATO@EMPRESA.COM',
+    }), perfis);
 
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.errors.email).toBe('Informe um e-mail válido.');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.email).toBe('contato@empresa.com');
   });
 });

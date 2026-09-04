@@ -1,8 +1,12 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import {
   createIsolatedPasswordRecoveryClient,
   supabase,
   takeInitialPasswordRecoveryTokens,
+  type PasswordSetupMode,
 } from '../../../../lib/supabase';
+
+export type { PasswordSetupMode } from '../../../../lib/supabase';
 
 export const PASSWORD_RECOVERY_PATH = '/redefinir-senha';
 export const PASSWORD_RECOVERY_SESSION_ERROR =
@@ -12,6 +16,7 @@ export const isPasswordRecoveryPath = (pathname: string) => (
 );
 
 export interface PasswordRecoveryCallback {
+  mode: PasswordSetupMode | null;
   isRecovery: boolean;
   hasRecoveryProof: boolean;
   errorMessage: string | null;
@@ -19,6 +24,7 @@ export interface PasswordRecoveryCallback {
 
 export interface PasswordRecoverySession {
   readonly userId: string;
+  readonly mode: PasswordSetupMode;
   updatePassword: (password: string) => Promise<void>;
   cancel: () => Promise<void>;
 }
@@ -40,38 +46,51 @@ export const inspectPasswordRecoveryCallback = (
   location: Pick<Location, 'pathname' | 'search' | 'hash'> = window.location,
 ): PasswordRecoveryCallback => {
   const params = readAuthParams(location.search, location.hash);
-  const hasRecoveryProof = params.type === 'recovery';
+  const mode: PasswordSetupMode | null = params.type === 'invite' || params.type === 'recovery'
+    ? params.type
+    : null;
+  // Os nomes legados são mantidos porque o App usa este gate para os dois tipos de link.
+  const hasRecoveryProof = mode !== null;
   const isRecovery = isPasswordRecoveryPath(location.pathname) || hasRecoveryProof;
 
   if (!isRecovery) {
-    return { isRecovery: false, hasRecoveryProof: false, errorMessage: null };
+    return { mode: null, isRecovery: false, hasRecoveryProof: false, errorMessage: null };
   }
 
   if (params.errorCode === 'otp_expired') {
     return {
+      mode,
       isRecovery: true,
       hasRecoveryProof,
-      errorMessage: 'Este link de recuperação expirou ou já foi utilizado. Solicite um novo link.',
+      errorMessage: mode === 'invite'
+        ? 'Este convite expirou ou já foi utilizado. Solicite um novo convite ao gestor.'
+        : 'Este link de recuperação expirou ou já foi utilizado. Solicite um novo link.',
     };
   }
 
   if (params.error || params.errorCode || params.errorDescription) {
     return {
+      mode,
       isRecovery: true,
       hasRecoveryProof,
-      errorMessage: 'Não foi possível validar este link de recuperação. Solicite um novo link.',
+      errorMessage: mode === 'invite'
+        ? 'Não foi possível validar este convite. Solicite um novo convite ao gestor.'
+        : 'Não foi possível validar este link de recuperação. Solicite um novo link.',
     };
   }
 
   if (params.code) {
     return {
+      mode,
       isRecovery: true,
       hasRecoveryProof,
-      errorMessage: 'Este link de recuperação não pôde ser validado. Solicite um novo link.',
+      errorMessage: mode === 'invite'
+        ? 'Este convite não pôde ser validado. Solicite um novo convite ao gestor.'
+        : 'Este link de recuperação não pôde ser validado. Solicite um novo link.',
     };
   }
 
-  return { isRecovery: true, hasRecoveryProof, errorMessage: null };
+  return { mode, isRecovery: true, hasRecoveryProof, errorMessage: null };
 };
 
 export const getPasswordRecoveryRedirectUrl = (origin = window.location.origin) => (
@@ -80,6 +99,23 @@ export const getPasswordRecoveryRedirectUrl = (origin = window.location.origin) 
 
 type RecoveryState = 'active' | 'updating' | 'terminal';
 type RecoveryClient = ReturnType<typeof createIsolatedPasswordRecoveryClient>;
+
+interface CompleteFirstAccessResponse {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+}
+
+const readFunctionError = async (error: unknown): Promise<string | undefined> => {
+  if (!(error instanceof FunctionsHttpError)) return undefined;
+
+  try {
+    const body = await error.context.clone().json() as CompleteFirstAccessResponse;
+    return body.error || body.message;
+  } catch {
+    return undefined;
+  }
+};
 
 const disposeRecoveryClient = async (client: RecoveryClient) => {
   try {
@@ -114,6 +150,7 @@ const initializePasswordRecoverySession = async (): Promise<PasswordRecoverySess
   }
 
   const userId = data.user.id;
+  const mode = tokens.mode;
   let state: RecoveryState = 'active';
   const closeTemporarySession = async () => {
     const client = recoveryClient;
@@ -130,30 +167,52 @@ const initializePasswordRecoverySession = async (): Promise<PasswordRecoverySess
 
   return {
     userId,
+    mode,
     async updatePassword(password: string) {
       if (state !== 'active' || !recoveryClient) {
         throw new Error(PASSWORD_RECOVERY_SESSION_ERROR);
       }
 
       state = 'updating';
-      let updateResult;
       try {
-        updateResult = await recoveryClient.auth.updateUser({ password });
-      } catch {
-        state = 'terminal';
-        await closeTemporarySession();
-        throw new Error('Não foi possível confirmar a alteração da senha. Solicite um novo link.');
-      }
+        if (mode === 'invite') {
+          const { data: completion, error: completionError } = await recoveryClient.functions.invoke<
+            CompleteFirstAccessResponse
+          >('manage-employee-user', {
+            body: { action: 'complete_first_access', password },
+          });
+          if (completionError || !completion?.ok) {
+            const functionMessage = await readFunctionError(completionError);
+            throw new Error(
+              completion?.error
+              || completion?.message
+              || functionMessage
+              || completionError?.message
+              || 'Não foi possível concluir o primeiro acesso.',
+            );
+          }
+        } else {
+          const updateResult = await recoveryClient.auth.updateUser({ password });
+          if (updateResult.error) {
+            throw new Error(updateResult.error.message || 'Erro ao atualizar a senha.');
+          }
+          if (!updateResult.data.user || updateResult.data.user.id !== userId) {
+            throw new Error(PASSWORD_RECOVERY_SESSION_ERROR);
+          }
+        }
+      } catch (updateError) {
+        if (mode === 'invite' && recoveryClient) {
+          // O banco pode ter confirmado a troca antes de uma falha transitória no Auth.
+          // Manter a sessão isolada permite repetir a etapa final sem reutilizar o link.
+          state = 'active';
+          if (updateError instanceof Error) throw updateError;
+          throw new Error('Não foi possível concluir o primeiro acesso. Tente novamente.');
+        }
 
-      if (updateResult.error) {
         state = 'terminal';
         await closeTemporarySession();
-        throw new Error(updateResult.error.message || 'Erro ao atualizar a senha.');
-      }
-      if (!updateResult.data.user || updateResult.data.user.id !== userId) {
-        state = 'terminal';
-        await closeTemporarySession();
-        throw new Error(PASSWORD_RECOVERY_SESSION_ERROR);
+        if (updateError instanceof Error) throw updateError;
+        throw new Error('Não foi possível confirmar a alteração da senha. Solicite um novo link.');
       }
 
       state = 'terminal';

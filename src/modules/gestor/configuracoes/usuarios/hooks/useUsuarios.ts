@@ -48,6 +48,12 @@ const toForm = (usuario: Usuario): SaveUsuarioInput => ({
   accessConfig: usuario.accessConfig,
 });
 
+export interface TemporaryAccessResult {
+  usuarioNome: string;
+  cpf: string;
+  temporaryPassword: string;
+}
+
 export const useUsuarios = () => {
   const usuariosQuery = useUsuariosQuery();
   const perfisQuery = usePerfisAcessoQuery();
@@ -58,6 +64,7 @@ export const useUsuarios = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
   const [passwordResetUsuario, setPasswordResetUsuario] = useState<Usuario | null>(null);
+  const [temporaryAccessResult, setTemporaryAccessResult] = useState<TemporaryAccessResult | null>(null);
   const [formValue, setFormValue] = useState<SaveUsuarioInput>(() => defaultForm());
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -108,10 +115,23 @@ export const useUsuarios = () => {
     }
     setFormErrors({});
     try {
-      await saveMutation.mutateAsync(validation.data);
-      setSuccessMsg(formValue.id ? 'Usuário atualizado com sucesso.' : 'Usuário cadastrado com sucesso.');
+      const result = await saveMutation.mutateAsync(validation.data);
+      if (result.delivery?.type === 'temporary_password') {
+        setTemporaryAccessResult({
+          usuarioNome: result.usuario.nome,
+          cpf: result.usuario.cpf,
+          temporaryPassword: result.delivery.temporaryPassword,
+        });
+        saveMutation.reset();
+        setSuccessMsg(null);
+      } else if (result.delivery?.type === 'email_invite') {
+        setSuccessMsg(`Convite enviado para ${result.delivery.email}.`);
+        setTimeout(() => setSuccessMsg(null), 5000);
+      } else {
+        setSuccessMsg('Usuário atualizado com sucesso.');
+        setTimeout(() => setSuccessMsg(null), 3000);
+      }
       closeForm();
-      setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Erro ao salvar usuário.');
     }
@@ -157,6 +177,11 @@ export const useUsuarios = () => {
     setTimeout(() => setSuccessMsg(null), 3000);
   };
 
+  const closeTemporaryAccessResult = () => {
+    setTemporaryAccessResult(null);
+    saveMutation.reset();
+  };
+
   return {
     usuarios,
     perfis,
@@ -164,6 +189,7 @@ export const useUsuarios = () => {
     isSaving: saveMutation.isPending,
     showForm,
     selectedUsuario,
+    temporaryAccessResult,
     passwordResetUsuario,
     isResettingPassword: resetPasswordMutation.isPending,
     formValue,
@@ -180,5 +206,6 @@ export const useUsuarios = () => {
     openPasswordReset,
     closePasswordReset,
     handlePasswordReset,
+    closeTemporaryAccessResult,
   };
 };

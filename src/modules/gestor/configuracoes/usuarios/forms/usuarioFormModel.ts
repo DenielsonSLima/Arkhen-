@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { isValidCpf, normalizeCpf } from '../../../../../lib/cpf';
-import { validateEmployeePassword } from '../../../../../lib/employeePasswordPolicy';
 import type { PerfilAcesso } from '../../perfis/services/perfisService';
 import type { SaveUsuarioInput } from '../services/usuariosService';
 
@@ -59,8 +58,6 @@ const createUsuarioFormSchema = (perfis: PerfilAcesso[]) => usuarioFormBaseSchem
   .superRefine((value, context) => {
     const selectedPerfil = perfis.find((perfil) => perfil.id === value.perfilId);
     const phoneDigits = value.telefone.replace(/\D/g, '');
-    const isCreate = !value.id;
-
     if (!isValidCpf(value.cpf)) {
       context.addIssue({
         code: 'custom',
@@ -68,7 +65,6 @@ const createUsuarioFormSchema = (perfis: PerfilAcesso[]) => usuarioFormBaseSchem
         message: 'Informe um CPF válido com 11 dígitos.',
       });
     }
-
     if (value.email && !EMAIL_SCHEMA.safeParse(value.email).success) {
       context.addIssue({ code: 'custom', path: ['email'], message: 'Informe um e-mail válido.' });
     }
@@ -78,6 +74,14 @@ const createUsuarioFormSchema = (perfis: PerfilAcesso[]) => usuarioFormBaseSchem
         code: 'custom',
         path: ['email'],
         message: 'O e-mail é obrigatório para esta forma de acesso.',
+      });
+    }
+
+    if (!value.id && value.formaAcesso === 'cpf' && value.email) {
+      context.addIssue({
+        code: 'custom',
+        path: ['email'],
+        message: 'Para acesso somente por CPF, deixe o e-mail em branco.',
       });
     }
 
@@ -108,25 +112,6 @@ const createUsuarioFormSchema = (perfis: PerfilAcesso[]) => usuarioFormBaseSchem
         });
       }
 
-      if (isCreate) {
-        const passwordError = validateEmployeePassword(value.senha || '', value.cpf);
-        if (passwordError) {
-          context.addIssue({ code: 'custom', path: ['senha'], message: passwordError });
-        }
-        if (!value.confirmacaoSenha) {
-          context.addIssue({
-            code: 'custom',
-            path: ['confirmacaoSenha'],
-            message: 'Confirme a senha inicial.',
-          });
-        } else if (value.senha !== value.confirmacaoSenha) {
-          context.addIssue({
-            code: 'custom',
-            path: ['confirmacaoSenha'],
-            message: 'A confirmação não corresponde à senha inicial.',
-          });
-        }
-      }
     }
 
     if (value.accessConfig.enabled) {
@@ -159,14 +144,14 @@ const createUsuarioFormSchema = (perfis: PerfilAcesso[]) => usuarioFormBaseSchem
   })
   .transform((value): SaveUsuarioInput => ({
     ...value,
-    email: value.email.toLowerCase(),
     cpf: normalizeCpf(value.cpf),
     telefone: value.telefone.replace(/\D/g, ''),
     perfilId: perfis.find((perfil) => perfil.id === value.perfilId)?.id
       || perfis.find((perfil) => perfil.nome === value.perfil)?.id,
     perfil: perfis.find((perfil) => perfil.id === value.perfilId)?.nome || value.perfil,
-    senha: value.formaAcesso === 'cpf' ? value.senha || '' : undefined,
-    confirmacaoSenha: value.formaAcesso === 'cpf' ? value.confirmacaoSenha || '' : undefined,
+    email: !value.id && value.formaAcesso === 'cpf' ? '' : value.email.toLowerCase(),
+    senha: undefined,
+    confirmacaoSenha: undefined,
   }));
 
 export type UsuarioFormErrorField =

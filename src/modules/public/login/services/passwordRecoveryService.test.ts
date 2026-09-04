@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createIsolatedClient: vi.fn(),
   isolatedSetSession: vi.fn(),
   isolatedUpdateUser: vi.fn(),
+  isolatedInvoke: vi.fn(),
   isolatedSignOut: vi.fn(),
   isolatedDispose: vi.fn(),
   resetPasswordForEmail: vi.fn(),
@@ -42,13 +43,27 @@ describe('password recovery callback', () => {
       pathname: '/login',
       search: '',
       hash: '#type=recovery',
-    })).toEqual({ isRecovery: true, hasRecoveryProof: true, errorMessage: null });
+    })).toEqual({ mode: 'recovery', isRecovery: true, hasRecoveryProof: true, errorMessage: null });
 
     expect(recoveryModule.inspectPasswordRecoveryCallback({
       pathname: recoveryModule.PASSWORD_RECOVERY_PATH,
       search: '',
       hash: '',
-    })).toEqual({ isRecovery: true, hasRecoveryProof: false, errorMessage: null });
+    })).toEqual({ mode: null, isRecovery: true, hasRecoveryProof: false, errorMessage: null });
+  });
+
+  it('detecta convite implicit e expõe o modo do callback', () => {
+    expect(recoveryModule.inspectPasswordRecoveryCallback({
+      pathname: '/login',
+      search: '',
+      hash: '#type=invite',
+    })).toEqual({ mode: 'invite', isRecovery: true, hasRecoveryProof: true, errorMessage: null });
+
+    expect(recoveryModule.inspectPasswordRecoveryCallback({
+      pathname: '/login',
+      search: '',
+      hash: '#type=signup',
+    })).toEqual({ mode: null, isRecovery: false, hasRecoveryProof: false, errorMessage: null });
   });
 
   it('explica callback expirado e falha fechado para PKCE', () => {
@@ -63,6 +78,12 @@ describe('password recovery callback', () => {
       search: '?code=present',
       hash: '',
     }).errorMessage).toMatch(/não pôde ser validado/i);
+
+    expect(recoveryModule.inspectPasswordRecoveryCallback({
+      pathname: recoveryModule.PASSWORD_RECOVERY_PATH,
+      search: '',
+      hash: '#error=access_denied&error_code=otp_expired&type=invite',
+    }).errorMessage).toMatch(/convite expirou|novo convite/i);
   });
 
   it('gera o redirect exato para criar a nova senha', () => {
@@ -79,6 +100,7 @@ describe('passwordRecoveryService', () => {
     mocks.takeTokens.mockReturnValue({
       accessToken: 'recovery-access-token',
       refreshToken: 'recovery-refresh-token',
+      mode: 'recovery',
     });
     mocks.createIsolatedClient.mockReturnValue({
       auth: {
@@ -86,6 +108,9 @@ describe('passwordRecoveryService', () => {
         updateUser: mocks.isolatedUpdateUser,
         signOut: mocks.isolatedSignOut,
         dispose: mocks.isolatedDispose,
+      },
+      functions: {
+        invoke: mocks.isolatedInvoke,
       },
     });
     mocks.isolatedSetSession.mockResolvedValue({
@@ -96,6 +121,7 @@ describe('passwordRecoveryService', () => {
       data: { user: { id: 'recovery-user' } },
       error: null,
     });
+    mocks.isolatedInvoke.mockResolvedValue({ data: { ok: true }, error: null });
     mocks.isolatedSignOut.mockResolvedValue({ error: null });
     mocks.isolatedDispose.mockResolvedValue(undefined);
     mocks.resetPasswordForEmail.mockResolvedValue({ error: null });
@@ -118,6 +144,7 @@ describe('passwordRecoveryService', () => {
     expect(first).toBe(second);
     const [firstSession, secondSession] = await Promise.all([first, second]);
     expect(firstSession).toBe(secondSession);
+    expect(firstSession.mode).toBe('recovery');
     expect(mocks.takeTokens).toHaveBeenCalledOnce();
     expect(mocks.createIsolatedClient).toHaveBeenCalledOnce();
     expect(mocks.isolatedSetSession).toHaveBeenCalledOnce();
@@ -133,11 +160,52 @@ describe('passwordRecoveryService', () => {
 
     expect(session.userId).toBe('recovery-user');
     expect(mocks.isolatedUpdateUser).toHaveBeenCalledWith({ password: 'NovaSenha123' });
+    expect(mocks.isolatedInvoke).not.toHaveBeenCalled();
     expect(mocks.isolatedSignOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(mocks.isolatedDispose).toHaveBeenCalledOnce();
     expect(mocks.globalUpdateUser).not.toHaveBeenCalled();
     expect(mocks.globalSetSession).not.toHaveBeenCalled();
     expect(mocks.globalSignOut).not.toHaveBeenCalled();
+  });
+
+  it('conclui convite pela Edge Function usando a sessão isolada', async () => {
+    mocks.takeTokens.mockReturnValueOnce({
+      accessToken: 'invite-access-token',
+      refreshToken: 'invite-refresh-token',
+      mode: 'invite',
+    });
+    const session = await recoveryModule.passwordRecoveryService.getInitialSession();
+
+    await session.updatePassword('SenhaConvite123');
+
+    expect(session.mode).toBe('invite');
+    expect(mocks.isolatedInvoke).toHaveBeenCalledWith('manage-employee-user', {
+      body: { action: 'complete_first_access', password: 'SenhaConvite123' },
+    });
+    expect(mocks.isolatedUpdateUser).not.toHaveBeenCalled();
+    expect(mocks.isolatedSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(mocks.isolatedDispose).toHaveBeenCalledOnce();
+    expect(mocks.globalUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it('permite repetir a conclusão do convite após falha transitória', async () => {
+    mocks.takeTokens.mockReturnValueOnce({
+      accessToken: 'invite-access-token',
+      refreshToken: 'invite-refresh-token',
+      mode: 'invite',
+    });
+    mocks.isolatedInvoke.mockResolvedValueOnce({
+      data: { ok: false, error: 'Falha temporária ao salvar a nova senha.' },
+      error: null,
+    });
+    const session = await recoveryModule.passwordRecoveryService.getInitialSession();
+
+    await expect(session.updatePassword('SenhaConvite123'))
+      .rejects.toThrow('Falha temporária ao salvar a nova senha.');
+    await expect(session.updatePassword('OutraSenha123')).resolves.toBeUndefined();
+    expect(mocks.isolatedInvoke).toHaveBeenCalledTimes(2);
+    expect(mocks.isolatedUpdateUser).not.toHaveBeenCalled();
+    expect(mocks.isolatedDispose).toHaveBeenCalledOnce();
   });
 
   it('conclui em estado terminal sem aguardar um sign-out remoto pendente', async () => {

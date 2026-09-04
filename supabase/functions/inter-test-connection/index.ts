@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { X509Certificate } from "node:crypto";
+import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
 import {
   getBoletoHealthUrl,
   getBoletoWebhookUrl,
@@ -79,10 +80,16 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
-  const userId = userData.user?.id;
-  if (userError || !userId) {
+  const user = userData.user;
+  if (userError || !user?.id) {
     return jsonResponse({ ok: false, error: "Sessao invalida." }, 401);
   }
+  try {
+    assertManagedCredentialVersion(jwt, user);
+  } catch {
+    return jsonResponse({ ok: false, error: "Sessao invalida." }, 401);
+  }
+  const userId = user.id;
 
   let requestData: Awaited<ReturnType<typeof parseTestRequest>>;
   try {

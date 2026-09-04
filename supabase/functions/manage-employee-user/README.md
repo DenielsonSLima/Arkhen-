@@ -1,11 +1,10 @@
 # manage-employee-user
 
-Edge Function para contas de funcionário autenticadas por CPF, sem usar e-mail ou
-telefone como credencial. O Supabase Auth recebe internamente um alias HMAC-SHA256,
-derivado por uma RPC restrita a `service_role` com segredo persistido no schema
-`private`; ele não é exposto pelas tabelas públicas, UI ou resposta explícita.
-Depois de autenticado, porém, o titular pode observá-lo em `user.email`/JWT; por
-isso o alias não é uma fronteira de segurança.
+Edge Function para provisionar e concluir o primeiro acesso de contas gerenciadas.
+Quem possui e-mail recebe um convite para criar a própria senha. Quem possui somente
+CPF recebe uma senha temporária gerada no servidor e precisa substituí-la no primeiro
+login. Para o login por CPF, o Supabase Auth recebe internamente um alias HMAC-SHA256;
+o alias não é tratado como fronteira de segurança.
 
 ## Variáveis obrigatórias
 
@@ -13,6 +12,8 @@ isso o alias não é uma fronteira de segurança.
 - `SUPABASE_SECRET_KEYS` (JSON automático com uma chave `default` do tipo
   `sb_secret`; a função rejeita chaves legadas)
 - `SUPABASE_SERVICE_ROLE_KEY` (somente ações administrativas)
+- `APP_URL` (origem HTTPS usada no redirect do convite, por exemplo
+  `https://app.exemplo.com`)
 
 O segredo do alias é criado uma única vez pela migration, com 32 bytes aleatórios,
 e acompanha o backup do banco. Não o regenere nem altere o domínio técnico sem uma
@@ -48,7 +49,7 @@ CPF, conta, senha ou acesso são genéricos. A autenticação chama
 `signInWithPassword`, portanto as proteções e o rate limit do GoTrue continuam no
 caminho.
 
-### Criar funcionário
+### Criar funcionário somente com CPF
 
 Exige `Authorization: Bearer <JWT do gestor>`.
 
@@ -57,17 +58,49 @@ Exige `Authorization: Bearer <JWT do gestor>`.
   "action": "create",
   "nome": "Funcionário",
   "cpf": "52998224725",
-  "password": "SenhaForte1",
   "perfil_id": "uuid",
   "email": null,
   "telefone": null,
-  "status": "Ativo",
   "access_config": { "enabled": false }
 }
 ```
 
-O Auth é criado apenas no servidor. Se a RPC transacional falhar, a função
-reconcilia por `auth_user_id` antes de excluir somente o Auth recém-criado.
+O Auth e a senha temporária são criados apenas no servidor. A resposta contém
+`temporary_password` uma única vez e usa `Cache-Control: no-store`; ela não é
+persistida no banco nem registrada em logs. A conta permanece sem acesso aos dados
+da empresa até a criação da senha definitiva.
+
+### Convidar funcionário por e-mail
+
+Exige `Authorization: Bearer <JWT do gestor>`.
+
+```json
+{
+  "action": "invite_email",
+  "nome": "Usuário gestor",
+  "email": "usuario@empresa.com",
+  "cpf": "52998224725",
+  "perfil_id": "uuid",
+  "telefone": "79999999999",
+  "access_config": { "enabled": false }
+}
+```
+
+O vínculo é criado como pendente e inativo antes do envio. O link redireciona para
+`/redefinir-senha`, onde uma sessão isolada chama `complete_first_access`. Se o
+envio falhar, a função compensa o vínculo e o usuário Auth recém-criados.
+
+### Concluir primeiro acesso
+
+Exige o JWT da própria conta `employee_cpf` ou `employee_email`:
+
+```json
+{ "action": "complete_first_access", "password": "SenhaDefinitiva1" }
+```
+
+A confirmação usa uma versão de credencial rotativa entre banco, Auth e JWT. Isso
+mantém o acesso bloqueado durante qualquer falha parcial e permite repetir com
+segurança uma atualização transitória que tenha parado antes de concluir o Auth.
 
 ### Redefinir senha
 
@@ -95,14 +128,13 @@ Sucesso:
 { "ok": true, "usuario_id": "uuid", "must_change_password": false }
 ```
 
-Contas com login por e-mail continuam usando o fluxo Auth tradicional. Configure
-também a política global do Supabase Auth com no mínimo 10 caracteres, letra e
-número: um titular autenticado pode chamar diretamente a API padrão do Auth, que
-não suporta a regra dinâmica de comparar a nova senha com o próprio CPF.
+Configure também a política global do Supabase Auth com no mínimo 10 caracteres,
+letra e número: um titular autenticado pode chamar diretamente a API padrão do Auth,
+que não suporta a regra dinâmica de comparar a nova senha com o próprio CPF.
 
 ## Segurança operacional
 
-`verify_jwt = false` é necessário porque `login` é público. As ações `create`,
-`reset_password` e `change_own_password` validam o JWT manualmente e as RPCs
+`verify_jwt = false` é necessário porque `login` é público. Todas as demais ações
+validam o JWT e, para contas gerenciadas, a versão atual da credencial. As RPCs
 administrativas são executáveis somente por `service_role`. Nunca registre CPF,
-senha, alias ou tokens.
+senha, alias, tokens ou o conteúdo de `temporary_password`.

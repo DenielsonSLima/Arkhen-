@@ -49,8 +49,35 @@ describe('Supabase recovery bootstrap', () => {
     expect(module.takeInitialPasswordRecoveryTokens()).toEqual({
       accessToken: 'access-secret',
       refreshToken: 'refresh-secret',
+      mode: 'recovery',
     });
     expect(module.takeInitialPasswordRecoveryTokens()).toBeNull();
+  });
+
+  it('captura e sanitiza o convite antes de criar o cliente global', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/login?origem=convite#access_token=invite-access&refresh_token=invite-refresh&type=invite&expires_in=3600',
+    );
+
+    const module = await import('./supabase');
+    const globalOptions = mocks.createClient.mock.calls[0]?.[2] as { auth: Record<string, unknown> };
+
+    expect(globalOptions.auth.detectSessionInUrl).toBe(false);
+    expect(mocks.urlsSeenByCreateClient[0]).not.toMatch(/invite-access|invite-refresh/);
+    expect(window.location.href).not.toMatch(/access_token|refresh_token/);
+    expect(window.location.search).toBe('?origem=convite');
+    expect(module.getInitialAuthLocation()).toEqual({
+      pathname: '/login',
+      search: '',
+      hash: '#type=invite',
+    });
+    expect(module.takeInitialPasswordRecoveryTokens()).toEqual({
+      accessToken: 'invite-access',
+      refreshToken: 'invite-refresh',
+      mode: 'invite',
+    });
   });
 
   it('mantém a detecção automática apenas em navegação normal', async () => {

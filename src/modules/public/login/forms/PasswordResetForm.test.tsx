@@ -32,7 +32,7 @@ const fillPasswords = (password: string, confirmation = password) => {
 };
 
 const submit = () => {
-  fireEvent.click(screen.getByRole('button', { name: 'SALVAR NOVA SENHA' }));
+  fireEvent.click(screen.getByRole('button', { name: /SALVAR NOVA SENHA|CRIAR SENHA E ATIVAR ACESSO/ }));
 };
 
 describe('PasswordResetForm', () => {
@@ -73,6 +73,23 @@ describe('PasswordResetForm', () => {
 
     expect(screen.getByRole('alert').textContent).toContain('pelo menos 6 caracteres');
     expect(updatePasswordMock).not.toHaveBeenCalled();
+  });
+
+  it('usa a política forte e os textos de primeiro acesso no modo convite', async () => {
+    renderForm({ mode: 'invite' });
+
+    expect(screen.getByRole('heading', { name: 'Criar senha de acesso' })).toBeDefined();
+    expect(screen.getByText(/10 a 128 caracteres/i)).toBeDefined();
+    fillPasswords('abc123');
+    submit();
+
+    expect(screen.getByRole('alert').textContent).toContain('10 a 128 caracteres');
+    expect(updatePasswordMock).not.toHaveBeenCalled();
+
+    fillPasswords('SenhaConvite123');
+    submit();
+
+    await waitFor(() => expect(updatePasswordMock).toHaveBeenCalledWith('SenhaConvite123'));
   });
 
   it('rejeita confirmação divergente sem chamar o serviço', () => {

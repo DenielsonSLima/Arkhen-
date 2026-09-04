@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import { Eye, EyeOff, IdCard, Mail } from 'lucide-react';
+import { IdCard, Mail, ShieldCheck } from 'lucide-react';
 import { formatCpf } from '../../../../../lib/cpf';
-import {
-  EMPLOYEE_PASSWORD_MAX_LENGTH,
-  EMPLOYEE_PASSWORD_MIN_LENGTH,
-  EMPLOYEE_PASSWORD_REQUIREMENTS,
-} from '../../../../../lib/employeePasswordPolicy';
 import type { PerfilAcesso } from '../../perfis/services/perfisService';
 import type { SaveUsuarioInput, UsuarioAuthMethod, UsuarioStatus } from '../services/usuariosService';
 import {
@@ -35,7 +29,6 @@ export const UsuarioIdentityFields = ({
   errors,
   onChange,
 }: UsuarioIdentityFieldsProps) => {
-  const [showPassword, setShowPassword] = useState(false);
   const isEdit = Boolean(value.id);
   const isCpfAccess = value.formaAcesso === 'cpf';
   const allowedProfiles = isCpfAccess ? getCpfAccessProfiles(perfis) : perfis;
@@ -49,8 +42,9 @@ export const UsuarioIdentityFields = ({
       ...value,
       formaAcesso,
       status: isEdit ? value.status : formaAcesso === 'cpf' ? 'Ativo' : 'Pendente',
-      senha: formaAcesso === 'cpf' ? value.senha || '' : undefined,
-      confirmacaoSenha: formaAcesso === 'cpf' ? value.confirmacaoSenha || '' : undefined,
+      email: formaAcesso === 'cpf' && !isEdit ? '' : value.email,
+      senha: undefined,
+      confirmacaoSenha: undefined,
     };
 
     if (formaAcesso === 'cpf') {
@@ -81,7 +75,7 @@ export const UsuarioIdentityFields = ({
             aria-pressed={isCpfAccess}
           >
             <IdCard size={18} />
-            <span><strong>CPF + senha</strong><small>Para funcionários sem e-mail próprio</small></span>
+            <span><strong>Somente CPF</strong><small>O sistema gera uma senha temporária</small></span>
           </button>
           <button
             type="button"
@@ -90,7 +84,7 @@ export const UsuarioIdentityFields = ({
             aria-pressed={!isCpfAccess}
           >
             <Mail size={18} />
-            <span><strong>E-mail</strong><small>Fluxo legado e perfis de gestão</small></span>
+            <span><strong>E-mail</strong><small>Envia convite para o usuário criar a senha</small></span>
           </button>
         </div>
         {isEdit && <p className="usuario-field-hint">A forma de acesso não pode ser trocada durante a edição.</p>}
@@ -113,23 +107,25 @@ export const UsuarioIdentityFields = ({
           <FieldError id="usuario-nome-error" message={errors.nome} />
         </div>
 
-        <div className={isCpfAccess ? 'form-item-group' : 'form-item-group span-2'}>
-          <label htmlFor="usuario-email">E-mail{isCpfAccess ? ' (opcional)' : ''}</label>
-          <input
-            id="usuario-email"
-            type="email"
-            value={value.email}
-            onChange={(event) => setField('email', event.target.value)}
-            disabled={isSaving}
-            required={!isCpfAccess}
-            maxLength={150}
-            autoComplete="off"
-            aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? 'usuario-email-error' : undefined}
-            placeholder={isCpfAccess ? 'Contato opcional' : 'exemplo@email.com'}
-          />
-          <FieldError id="usuario-email-error" message={errors.email} />
-        </div>
+        {(!isCpfAccess || isEdit) && (
+          <div className={isCpfAccess ? 'form-item-group' : 'form-item-group span-2'}>
+            <label htmlFor="usuario-email">E-mail{isCpfAccess ? ' de contato (opcional)' : ''}</label>
+            <input
+              id="usuario-email"
+              type="email"
+              value={value.email}
+              onChange={(event) => setField('email', event.target.value)}
+              disabled={isSaving}
+              required={!isCpfAccess}
+              maxLength={150}
+              autoComplete="off"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'usuario-email-error' : undefined}
+              placeholder={isCpfAccess ? 'Contato opcional' : 'exemplo@email.com'}
+            />
+            <FieldError id="usuario-email-error" message={errors.email} />
+          </div>
+        )}
 
         <div className="form-item-group">
           <label htmlFor="usuario-cpf">CPF</label>
@@ -168,58 +164,13 @@ export const UsuarioIdentityFields = ({
         </div>
 
         {isCpfAccess && !isEdit && (
-          <>
-            <div className="form-item-group">
-              <label htmlFor="usuario-senha">Senha inicial</label>
-              <div className="usuario-password-field">
-                <input
-                  id="usuario-senha"
-                  type={showPassword ? 'text' : 'password'}
-                  value={value.senha || ''}
-                  onChange={(event) => setField('senha', event.target.value)}
-                  disabled={isSaving}
-                  required
-                  minLength={EMPLOYEE_PASSWORD_MIN_LENGTH}
-                  maxLength={EMPLOYEE_PASSWORD_MAX_LENGTH}
-                  autoComplete="new-password"
-                  aria-invalid={Boolean(errors.senha)}
-                  aria-describedby={errors.senha ? 'usuario-senha-error' : 'usuario-password-hint'}
-                  placeholder="Letras e números"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  disabled={isSaving}
-                  aria-label={showPassword ? 'Ocultar senhas' : 'Exibir senhas'}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <FieldError id="usuario-senha-error" message={errors.senha} />
-            </div>
-
-            <div className="form-item-group">
-              <label htmlFor="usuario-confirmacao-senha">Confirmar senha</label>
-              <input
-                id="usuario-confirmacao-senha"
-                type={showPassword ? 'text' : 'password'}
-                value={value.confirmacaoSenha || ''}
-                onChange={(event) => setField('confirmacaoSenha', event.target.value)}
-                disabled={isSaving}
-                required
-                minLength={EMPLOYEE_PASSWORD_MIN_LENGTH}
-                maxLength={EMPLOYEE_PASSWORD_MAX_LENGTH}
-                autoComplete="new-password"
-                aria-invalid={Boolean(errors.confirmacaoSenha)}
-                aria-describedby={errors.confirmacaoSenha ? 'usuario-confirmacao-error' : undefined}
-                placeholder="Repita a senha"
-              />
-              <FieldError id="usuario-confirmacao-error" message={errors.confirmacaoSenha} />
-            </div>
-            <p id="usuario-password-hint" className="usuario-field-hint span-2">
-              {EMPLOYEE_PASSWORD_REQUIREMENTS}
-            </p>
-          </>
+          <div className="usuario-first-access-note span-2" role="note">
+            <ShieldCheck size={18} />
+            <span>
+              <strong>Senha temporária protegida</strong>
+              Ela será gerada ao salvar, exibida uma única vez e deverá ser trocada no primeiro login.
+            </span>
+          </div>
         )}
 
         <div className="form-item-group">
@@ -253,12 +204,17 @@ export const UsuarioIdentityFields = ({
             id="usuario-status"
             value={value.status}
             onChange={(event) => setField('status', event.target.value as UsuarioStatus)}
-            disabled={isSaving}
+            disabled={isSaving || !isEdit}
           >
             <option value="Ativo">Ativo</option>
             <option value="Pendente">Pendente</option>
             <option value="Inativo">Inativo</option>
           </select>
+          {!isEdit && (
+            <span className="usuario-field-hint">
+              {isCpfAccess ? 'Ficará ativo somente para concluir o primeiro acesso.' : 'Ficará pendente até o aceite do convite.'}
+            </span>
+          )}
         </div>
       </div>
     </>

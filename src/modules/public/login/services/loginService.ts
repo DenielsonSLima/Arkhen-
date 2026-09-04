@@ -34,6 +34,7 @@ export interface LoginResponse {
   message: string;
   needsConfirmation?: boolean;
   blockedByAccess?: boolean;
+  requiresPasswordChange?: boolean;
   user?: {
     id: string;
     nome: string;
@@ -57,11 +58,12 @@ type OnboardingResult = {
   auth_method?: 'email' | 'cpf';
 } | null;
 
-interface AccountAuthorizationResult {
+export interface AccountAuthorizationResult {
   allowed: boolean;
   message: string;
   onboarding: OnboardingResult;
   blockedByAccess?: boolean;
+  requiresPasswordChange?: boolean;
 }
 
 const onboardingRequests = new Map<string, Promise<OnboardingResult>>();
@@ -117,8 +119,9 @@ const authorizationFailure = (
   ),
 });
 
-const isCpfEmployeeAccount = (user: User) => (
+const isManagedEmployeeAccount = (user: User) => (
   user.app_metadata?.account_type === 'employee_cpf'
+  || user.app_metadata?.account_type === 'employee_email'
   || user.app_metadata?.login_method === 'cpf'
 );
 
@@ -165,26 +168,15 @@ const authorizeAuthenticatedUser = async (
     return authorizationFailure(error);
   }
   if (configuredUser) {
-    if (configuredUser.formaAcesso === 'email') {
-      try {
-        await completeOnboarding(user.id, payload);
-        configuredUser = await usuariosService.getUsuarioAtual();
-      } catch (error) {
-        return authorizationFailure(error);
-      }
-      if (!configuredUser) {
-        return {
-          allowed: false,
-          message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
-          onboarding: null,
-          blockedByAccess: true,
-        };
-      }
-    }
-    return { allowed: true, message: '', onboarding: toOnboardingResult(configuredUser) };
+    return {
+      allowed: true,
+      message: '',
+      onboarding: toOnboardingResult(configuredUser),
+      requiresPasswordChange: configuredUser.mustChangePassword,
+    };
   }
 
-  if (isCpfEmployeeAccount(user)) {
+  if (isManagedEmployeeAccount(user)) {
     return {
       allowed: false,
       message: 'Seu usuário não possui uma configuração de acesso válida para esta empresa.',
@@ -257,6 +249,7 @@ export const loginService = {
     return {
       success: true,
       message: 'Login realizado com sucesso!',
+      requiresPasswordChange: authorization.requiresPasswordChange,
       user: {
         id: authenticatedUser.id,
         nome: authorization.onboarding?.nome || authenticatedUser.user_metadata?.nome || authenticatedUser.email?.split('@')[0] || 'Usuário',

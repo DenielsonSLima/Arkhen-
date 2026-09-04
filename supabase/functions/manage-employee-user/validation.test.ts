@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  generateTemporaryPassword,
   isUuid,
   isValidCpf,
   normalizeContactEmail,
@@ -40,6 +41,18 @@ describe('CPF validation', () => {
 });
 
 describe('employee input validation', () => {
+  it('gera senha temporária forte sem depender de dados do gestor', () => {
+    const passwords = new Set(Array.from({ length: 20 }, generateTemporaryPassword));
+    expect(passwords.size).toBe(20);
+    passwords.forEach((password) => {
+      expect(password).toHaveLength(18);
+      expect(validatePassword(password, VALID_CPF)).toBeNull();
+      expect(password).toMatch(/[A-Z]/);
+      expect(password).toMatch(/[a-z]/);
+      expect(password).toMatch(/[0-9]/);
+    });
+  });
+
   it('normaliza credenciais de login sem aplicar política de criação à senha', () => {
     expect(parseCpfLoginCredentials(VALID_CPF, 'SenhaExistente1')).toEqual({
       cpf: '52998224725',

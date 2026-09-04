@@ -184,6 +184,45 @@ export const validatePassword = (password: unknown, cpfValue?: unknown): string 
   return null;
 };
 
+const TEMPORARY_PASSWORD_LENGTH = 18;
+const TEMPORARY_PASSWORD_UPPERCASE = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const TEMPORARY_PASSWORD_LOWERCASE = 'abcdefghijkmnopqrstuvwxyz';
+const TEMPORARY_PASSWORD_DIGITS = '23456789';
+const TEMPORARY_PASSWORD_SYMBOLS = '!@#$%&*+-_';
+const TEMPORARY_PASSWORD_ALPHABET = [
+  TEMPORARY_PASSWORD_UPPERCASE,
+  TEMPORARY_PASSWORD_LOWERCASE,
+  TEMPORARY_PASSWORD_DIGITS,
+  TEMPORARY_PASSWORD_SYMBOLS,
+].join('');
+
+const secureRandomIndex = (length: number): number => {
+  const maximum = Math.floor(0x1_0000_0000 / length) * length;
+  const buffer = new Uint32Array(1);
+  do crypto.getRandomValues(buffer); while ((buffer[0] ?? maximum) >= maximum);
+  return (buffer[0] ?? 0) % length;
+};
+
+const secureRandomCharacter = (alphabet: string): string =>
+  alphabet[secureRandomIndex(alphabet.length)] || alphabet[0] || '';
+
+export const generateTemporaryPassword = (): string => {
+  const characters = [
+    secureRandomCharacter(TEMPORARY_PASSWORD_UPPERCASE),
+    secureRandomCharacter(TEMPORARY_PASSWORD_LOWERCASE),
+    secureRandomCharacter(TEMPORARY_PASSWORD_DIGITS),
+    secureRandomCharacter(TEMPORARY_PASSWORD_SYMBOLS),
+  ];
+  while (characters.length < TEMPORARY_PASSWORD_LENGTH) {
+    characters.push(secureRandomCharacter(TEMPORARY_PASSWORD_ALPHABET));
+  }
+  for (let index = characters.length - 1; index > 0; index -= 1) {
+    const swapIndex = secureRandomIndex(index + 1);
+    [characters[index], characters[swapIndex]] = [characters[swapIndex] || '', characters[index] || ''];
+  }
+  return characters.join('');
+};
+
 export const parseCpfLoginCredentials = (
   cpfValue: unknown,
   passwordValue: unknown,

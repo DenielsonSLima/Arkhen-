@@ -1,10 +1,16 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react';
 import loginLogoImg from '../../../../assets/camada-o.png';
+import {
+  EMPLOYEE_PASSWORD_REQUIREMENTS,
+  validateEmployeePassword,
+} from '../../../../lib/employeePasswordPolicy';
 import { CURRENT_RELEASE } from '../../../../internal/version/release';
 import { validatePassword } from '../services/passwordPolicy';
+import type { PasswordSetupMode } from '../services/passwordRecoveryService';
 
 interface PasswordResetFormProps {
+  mode?: PasswordSetupMode;
   isValidating: boolean;
   isSessionReady: boolean;
   callbackError: string | null;
@@ -13,6 +19,7 @@ interface PasswordResetFormProps {
 }
 
 export const PasswordResetForm = ({
+  mode = 'recovery',
   isValidating,
   isSessionReady,
   callbackError,
@@ -32,11 +39,17 @@ export const PasswordResetForm = ({
     setError(null);
 
     if (!isSessionReady) {
-      setError('A sessão de recuperação não está mais disponível. Solicite um novo link.');
+      setError(
+        mode === 'invite'
+          ? 'A sessão do convite não está mais disponível. Solicite um novo convite ao gestor.'
+          : 'A sessão de recuperação não está mais disponível. Solicite um novo link.',
+      );
       return;
     }
 
-    const validationError = validatePassword(newPassword);
+    const validationError = mode === 'invite'
+      ? validateEmployeePassword(newPassword)
+      : validatePassword(newPassword);
     if (validationError) {
       setError(validationError);
       return;
@@ -52,7 +65,13 @@ export const PasswordResetForm = ({
     try {
       await onSubmitPassword(newPassword);
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Não foi possível atualizar a senha.');
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : mode === 'invite'
+          ? 'Não foi possível concluir o primeiro acesso.'
+          : 'Não foi possível atualizar a senha.',
+      );
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -75,33 +94,44 @@ export const PasswordResetForm = ({
   };
 
   const unavailableMessage = error || callbackError
-    || 'Este link não possui uma sessão de recuperação válida. Solicite um novo link.';
+    || (mode === 'invite'
+      ? 'Este convite não possui uma sessão válida. Solicite um novo convite ao gestor.'
+      : 'Este link não possui uma sessão de recuperação válida. Solicite um novo link.');
+  const isInvite = mode === 'invite';
 
   return (
     <div className="login-card-container animate-fade-in-right">
       <div className="login-card">
         <div className="login-card-header">
           <img src={loginLogoImg} alt="Arkhen Gestão Contábil" className="card-logo-icon" />
-          <h1 className="card-title">Criar nova senha</h1>
+          <h1 className="card-title">{isInvite ? 'Criar senha de acesso' : 'Criar nova senha'}</h1>
           <p className="card-subtitle">
             {isValidating
-              ? 'Validando o link seguro recebido por e-mail...'
+              ? isInvite
+                ? 'Validando o convite seguro recebido por e-mail...'
+                : 'Validando o link seguro recebido por e-mail...'
               : isSessionReady
-              ? 'Defina uma nova senha para concluir a recuperação da sua conta.'
-              : 'O link de recuperação não pôde ser validado.'}
+              ? isInvite
+                ? 'Crie sua senha para concluir o primeiro acesso ao sistema.'
+                : 'Defina uma nova senha para concluir a recuperação da sua conta.'
+              : isInvite
+                ? 'O convite não pôde ser validado.'
+                : 'O link de recuperação não pôde ser validado.'}
           </p>
         </div>
 
         {isValidating ? (
           <div className="login-form">
-            <div role="status" className="success-message">Validando seu link de recuperação...</div>
+            <div role="status" className="success-message">
+              {isInvite ? 'Validando seu convite...' : 'Validando seu link de recuperação...'}
+            </div>
           </div>
         ) : !isSessionReady ? (
           <div className="login-form">
             <div role="alert" className="error-message">{unavailableMessage}</div>
             <button type="button" className="btn-primary" onClick={() => void handleCancel()} disabled={isSubmitting}>
               <ArrowLeft size={18} />
-              Voltar e solicitar outro link
+              {isInvite ? 'Voltar ao login' : 'Voltar e solicitar outro link'}
             </button>
           </div>
         ) : (
@@ -148,11 +178,19 @@ export const PasswordResetForm = ({
               </div>
             </div>
 
-            <p className="card-subtitle">Use pelo menos 6 caracteres, incluindo uma letra e um número.</p>
+            <p className="card-subtitle">
+              {isInvite
+                ? EMPLOYEE_PASSWORD_REQUIREMENTS
+                : 'Use pelo menos 6 caracteres, incluindo uma letra e um número.'}
+            </p>
 
             <button type="submit" className="btn-primary" disabled={isSubmitting}>
               <ShieldCheck size={18} />
-              {isSubmitting ? 'SALVANDO...' : 'SALVAR NOVA SENHA'}
+              {isSubmitting
+                ? 'SALVANDO...'
+                : isInvite
+                ? 'CRIAR SENHA E ATIVAR ACESSO'
+                : 'SALVAR NOVA SENHA'}
             </button>
 
             <div className="back-to-login-container">
@@ -172,8 +210,12 @@ export const PasswordResetForm = ({
         <div className="login-card-footer">
           <ShieldCheck size={20} className="footer-secure-icon" />
           <div className="footer-secure-text">
-            <strong>Recuperação protegida</strong>
-            <span>O acesso ao painel só será liberado depois que a nova senha for criada.</span>
+            <strong>{isInvite ? 'Primeiro acesso protegido' : 'Recuperação protegida'}</strong>
+            <span>
+              {isInvite
+                ? 'O acesso ao painel será liberado após a criação da sua senha.'
+                : 'O acesso ao painel só será liberado depois que a nova senha for criada.'}
+            </span>
           </div>
           <span className="app-version-badge">{CURRENT_RELEASE.label}</span>
         </div>

@@ -19,6 +19,24 @@ const readFunctionError = async (error: unknown): Promise<string | undefined> =>
 };
 
 export const profilePasswordService = {
+  async completeFirstAccess(password: string): Promise<void> {
+    const { data, error } = await supabase.functions.invoke<ChangeOwnPasswordResponse>(
+      'manage-employee-user',
+      { body: { action: 'complete_first_access', password } },
+    );
+
+    if (error || !data?.ok) {
+      const functionMessage = await readFunctionError(error);
+      throw new Error(
+        data?.error
+        || data?.message
+        || functionMessage
+        || error?.message
+        || 'Não foi possível concluir o primeiro acesso.',
+      );
+    }
+  },
+
   async changeOwnCpfPassword(password: string): Promise<void> {
     const { data, error } = await supabase.functions.invoke<ChangeOwnPasswordResponse>(
       'manage-employee-user',

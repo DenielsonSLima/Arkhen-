@@ -4,7 +4,6 @@ import { useLogin } from '../hooks/useLogin';
 import loginLogoImg from '../../../../assets/camada-o.png';
 import signatureLogoImg from '../../../../assets/chatgpt-login.png';
 import type { LoginResponse } from '../services/loginService';
-import { formatCnpj } from '../../../../lib/cnpj';
 
 interface SignupFormProps {
   loginState: ReturnType<typeof useLogin>;
@@ -89,8 +88,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ loginState, onLoginSucce
                       className="form-input"
                       placeholder="00.000.000/0000-00"
                       value={signupCnpj}
-                      onChange={(e) => setSignupCnpj(formatCnpj(e.target.value))}
-                      disabled={isLoading || isSearchingCnpj}
+                      onChange={(e) => setSignupCnpj(e.target.value)}
+                      disabled={isLoading}
                     />
                   </div>
                   <button

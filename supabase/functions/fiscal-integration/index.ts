@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
 import {
   assertCertificateMatchesCnpj,
   parseFiscalPkcs12,
@@ -25,7 +26,12 @@ type RpcError = { message: string } | null;
 type AdminClient = {
   auth: {
     getUser: (jwt: string) => Promise<{
-      data: { user: { id: string } | null };
+      data: {
+        user: {
+          id: string;
+          app_metadata?: Record<string, unknown>;
+        } | null;
+      };
       error: RpcError;
     }>;
   };
@@ -49,6 +55,11 @@ const authenticate = async (req: Request, admin: AdminClient) => {
   if (!jwt) throw new Error("Sessao ausente.");
   const { data, error } = await admin.auth.getUser(jwt);
   if (error || !data.user?.id) throw new Error("Sessao invalida.");
+  try {
+    assertManagedCredentialVersion(jwt, data.user);
+  } catch {
+    throw new Error("Sessao invalida.");
+  }
   return data.user.id;
 };
 

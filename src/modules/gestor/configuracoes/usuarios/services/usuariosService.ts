@@ -62,6 +62,15 @@ export interface SaveUsuarioInput {
   accessConfig: UsuarioAccessConfig;
 }
 
+export type UsuarioProvisioningDelivery =
+  | { type: 'email_invite'; email: string }
+  | { type: 'temporary_password'; temporaryPassword: string };
+
+export interface SaveUsuarioResult {
+  usuario: Usuario;
+  delivery?: UsuarioProvisioningDelivery;
+}
+
 interface UsuarioRow {
   id: string;
   auth_user_id: string | null;
@@ -85,6 +94,8 @@ interface ManageEmployeeUserResponse {
   usuario?: UsuarioRow;
   error?: string;
   message?: string;
+  temporary_password?: string;
+  invite_sent?: boolean;
 }
 
 const USER_SELECT = [
@@ -180,25 +191,55 @@ export const usuariosService = {
     return ((data || []) as unknown as UsuarioRow[]).map(fromRow);
   },
 
-  async saveUsuario(input: SaveUsuarioInput): Promise<Usuario> {
+  async saveUsuario(input: SaveUsuarioInput): Promise<SaveUsuarioResult> {
     if (!input.id && input.formaAcesso === 'cpf') {
-      if (!input.perfilId || !input.senha) {
-        throw new Error('Perfil e senha inicial são obrigatórios para criar o acesso por CPF.');
+      if (!input.perfilId) {
+        throw new Error('O perfil é obrigatório para criar o acesso por CPF.');
       }
 
       const response = await invokeEmployeeUser({
         action: 'create',
         nome: input.nome.trim(),
         cpf: input.cpf,
-        password: input.senha,
         perfil_id: input.perfilId,
-        email: input.email.trim().toLowerCase() || null,
+        email: null,
         telefone: input.telefone.trim() || null,
-        status: input.status,
         access_config: normalizeAccessConfig(input.accessConfig),
       });
       if (!response.usuario) throw new Error('O funcionário foi processado sem retornar o cadastro criado.');
-      return fromRow(response.usuario);
+      if (!response.temporary_password) {
+        throw new Error('O funcionário foi criado, mas a senha temporária não foi retornada.');
+      }
+      return {
+        usuario: fromRow(response.usuario),
+        delivery: {
+          type: 'temporary_password',
+          temporaryPassword: response.temporary_password,
+        },
+      };
+    }
+
+    if (!input.id && input.formaAcesso === 'email') {
+      if (!input.perfilId) {
+        throw new Error('O perfil é obrigatório para enviar o convite.');
+      }
+      const normalizedEmail = input.email.trim().toLowerCase();
+      const response = await invokeEmployeeUser({
+        action: 'invite_email',
+        nome: input.nome.trim(),
+        email: normalizedEmail,
+        cpf: input.cpf,
+        telefone: input.telefone.trim() || null,
+        perfil_id: input.perfilId,
+        access_config: normalizeAccessConfig(input.accessConfig),
+      });
+      if (!response.usuario || response.invite_sent !== true) {
+        throw new Error('O usuário foi processado sem confirmar o envio do convite.');
+      }
+      return {
+        usuario: fromRow(response.usuario),
+        delivery: { type: 'email_invite', email: normalizedEmail },
+      };
     }
 
     const { data: empresaId, error: empresaError } = await supabase.rpc('current_empresa_id');
@@ -232,7 +273,7 @@ export const usuariosService = {
 
     const { data, error } = await request;
     if (error) throw new Error(`Erro ao salvar usuário: ${error.message}`);
-    return fromRow(data as unknown as UsuarioRow);
+    return { usuario: fromRow(data as unknown as UsuarioRow) };
   },
 
   async inativarUsuario(id: string): Promise<void> {

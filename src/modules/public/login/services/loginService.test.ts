@@ -68,7 +68,7 @@ const authUser = (id: string, appMetadata: Record<string, unknown> = {}) => ({
 
 describe('loginService.authorizeAuthenticatedUser', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it('autoriza pelo contexto vinculado sem executar onboarding', async () => {
@@ -89,6 +89,7 @@ describe('loginService.authorizeAuthenticatedUser', () => {
         perfil: 'Funcionário',
         auth_method: 'cpf',
       },
+      requiresPasswordChange: false,
     });
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
@@ -105,27 +106,33 @@ describe('loginService.authorizeAuthenticatedUser', () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
-  it('sincroniza e recarrega o contexto da conta tradicional já configurada', async () => {
+  it('usa diretamente o vínculo já configurado sem executar onboarding', async () => {
     const oldConfig = {
       ...configuredUser,
       formaAcesso: 'email' as const,
       email: 'email-antigo@empresa.com',
     };
-    const refreshedConfig = { ...oldConfig, email: 'email-novo@empresa.com' };
-    mocks.getUsuarioAtual
-      .mockResolvedValueOnce(oldConfig)
-      .mockResolvedValueOnce(refreshedConfig);
-    mocks.rpc.mockResolvedValue({
-      data: { empresa_id: 'empresa-1', email: 'email-novo@empresa.com' },
-      error: null,
-    });
+    mocks.getUsuarioAtual.mockResolvedValue(oldConfig);
 
     const result = await loginService.authorizeAuthenticatedUser(authUser('auth-email'));
 
     expect(result.allowed).toBe(true);
-    expect(result.onboarding?.email).toBe('email-novo@empresa.com');
-    expect(mocks.rpc).toHaveBeenCalledWith('finalizar_cadastro_auth', { p_payload: {} });
-    expect(mocks.getUsuarioAtual).toHaveBeenCalledTimes(2);
+    expect(result.onboarding?.email).toBe('email-antigo@empresa.com');
+    expect(result.requiresPasswordChange).toBe(false);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.getUsuarioAtual).toHaveBeenCalledOnce();
+  });
+
+  it('sinaliza a troca obrigatória antes de liberar o painel', async () => {
+    mocks.getUsuarioAtual.mockResolvedValue({ ...configuredUser, mustChangePassword: true });
+
+    const result = await loginService.authorizeAuthenticatedUser(
+      authUser('auth-1', { account_type: 'employee_cpf' }),
+    );
+
+    expect(result.allowed).toBe(true);
+    expect(result.requiresPasswordChange).toBe(true);
+    expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
   it('preserva onboarding somente para a conta tradicional sem configuração', async () => {

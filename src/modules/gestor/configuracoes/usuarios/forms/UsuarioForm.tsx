@@ -118,8 +118,8 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
   const subtitle = isEdit
     ? 'Clique em salvar para aplicar os dados e regras de acesso.'
     : value.formaAcesso === 'cpf'
-      ? 'O funcionário poderá entrar com CPF e a senha inicial definida.'
-      : 'O usuário seguirá o fluxo legado de acesso por e-mail.';
+      ? 'Uma senha temporária será gerada e exigirá troca no primeiro login.'
+      : 'O usuário receberá um convite para criar a própria senha.';
 
   return (
     <div className="usuario-modal-wrapper animate-fade-in">

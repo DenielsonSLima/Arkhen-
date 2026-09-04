@@ -7,6 +7,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() || defaultSupabase
 export const supabasePublishableKey =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || defaultSupabasePublishableKey;
 const PASSWORD_RECOVERY_PATH = '/redefinir-senha';
+const PASSWORD_SETUP_TYPES = ['invite', 'recovery'] as const;
+export type PasswordSetupMode = typeof PASSWORD_SETUP_TYPES[number];
+
+const isPasswordSetupMode = (value: string | null): value is PasswordSetupMode => (
+  PASSWORD_SETUP_TYPES.some((mode) => mode === value)
+);
 const isPasswordRecoveryPath = (pathname: string) => (
   pathname.replace(/\/+$/, '') === PASSWORD_RECOVERY_PATH
 );
@@ -26,6 +32,7 @@ const AUTH_URL_KEYS = [
 export type InitialPasswordRecoveryTokens = Readonly<{
   accessToken: string;
   refreshToken: string;
+  mode: PasswordSetupMode;
 }>;
 
 const retainAuthControlParams = (rawValue: string, prefix: string) => {
@@ -63,7 +70,7 @@ const initialHashParams = new URLSearchParams((initialBrowserLocation?.hash || '
 const initialAuthType = initialHashParams.get('type') || initialSearchParams.get('type');
 const isPasswordRecoveryLoad = Boolean(
   initialBrowserLocation
-  && (isPasswordRecoveryPath(initialBrowserLocation.pathname) || initialAuthType === 'recovery'),
+  && (isPasswordRecoveryPath(initialBrowserLocation.pathname) || isPasswordSetupMode(initialAuthType)),
 );
 const hasInitialAuthError = Boolean(
   initialHashParams.get('error')
@@ -76,13 +83,14 @@ const hasInitialAuthError = Boolean(
 const initialAccessToken = initialHashParams.get('access_token');
 const initialRefreshToken = initialHashParams.get('refresh_token');
 let initialPasswordRecoveryTokens: InitialPasswordRecoveryTokens | null = (
-  initialAuthType === 'recovery'
+  isPasswordSetupMode(initialAuthType)
   && !hasInitialAuthError
   && initialAccessToken
   && initialRefreshToken
 ) ? {
     accessToken: initialAccessToken,
     refreshToken: initialRefreshToken,
+    mode: initialAuthType,
   } : null;
 
 const initialAuthLocation = initialBrowserLocation ? {

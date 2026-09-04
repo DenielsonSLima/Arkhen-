@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { LoginPage } from './modules/public/login/LoginPage';
 import { PasswordRecoveryGate } from './modules/public/login/PasswordRecoveryGate';
+import { MandatoryPasswordChangePage } from './modules/public/login/MandatoryPasswordChangePage';
 import { PublicSharedDocumentPage } from './modules/public/shared/PublicSharedDocumentPage';
 import { PublicCobrancaPage } from './modules/public/cobranca/PublicCobrancaPage';
 import { GestorLayout } from './modules/gestor/layout/GestorLayout';
@@ -27,6 +28,7 @@ import {
   type PasswordRecoverySession,
 } from './modules/public/login/services/passwordRecoveryService';
 import { syncAuthenticatedUserProfile } from './modules/public/login/services/syncAuthenticatedUserProfile';
+import { profilePasswordService } from './modules/gestor/configuracoes/meu-perfil/profilePasswordService';
 
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
 type PasswordRecoveryStatus = 'validating' | 'ready' | 'error' | 'complete';
@@ -39,12 +41,13 @@ function App() {
   const isLoginOrSignupRoute = currentPath === '/login' || currentPath === '/signup';
   const isPasswordResetRoute = isPasswordRecoveryPath(currentPath);
   const isDemoWebsiteRoute = currentPath === '/demo-publico';
-  const [view, setView] = useState<'loading' | 'login' | 'password-reset' | 'gestor'>('loading');
+  const [view, setView] = useState<'loading' | 'login' | 'password-reset' | 'password-change' | 'gestor'>('loading');
   const [authError, setAuthError] = useState<string | null>(null);
   const [passwordRecoveryStatus, setPasswordRecoveryStatus] = useState<PasswordRecoveryStatus>('validating');
   const [passwordRecoveryError, setPasswordRecoveryError] = useState<string | null>(
     initialPasswordRecovery.current.errorMessage,
   );
+  const [mandatoryPasswordCpf, setMandatoryPasswordCpf] = useState('');
   const viewRef = useRef(view);
   const authenticatedUserIdRef = useRef<string | null>(null);
   const passwordRecoveryContextRef = useRef(initialPasswordRecovery.current.isRecovery);
@@ -76,6 +79,7 @@ function App() {
       clearLocalAuthentication();
       passwordRecoveryContextRef.current = false;
       passwordRecoverySessionRef.current = null;
+      setMandatoryPasswordCpf('');
       setPasswordRecoveryStatus('error');
       setPasswordRecoveryError(null);
       viewRef.current = 'login';
@@ -126,6 +130,15 @@ function App() {
         || authenticatedUserIdRef.current !== user.id) return;
       if (!authorization.allowed) {
         throw new Error(authorization.message);
+      }
+      if (authorization.requiresPasswordChange) {
+        clearLocalAuthentication();
+        authenticatedUserIdRef.current = user.id;
+        setMandatoryPasswordCpf(authorization.onboarding?.cpf || '');
+        setAuthError(null);
+        viewRef.current = 'password-change';
+        setView('password-change');
+        return;
       }
       syncAuthenticatedUserProfile(user, {
         nome: authorization.onboarding?.nome,
@@ -239,6 +252,7 @@ function App() {
         passwordRecoverySessionRef.current = null;
         setPasswordRecoveryStatus('error');
         setAuthError(null);
+        setMandatoryPasswordCpf('');
         sessionStorage.removeItem('contabil_config_active_subtab');
         if (isPasswordRecoveryPath(window.location.pathname)) navigate('/login');
         viewRef.current = 'login';
@@ -267,6 +281,15 @@ function App() {
     internalTabsStore.resetToInicio();
     persistedStorage.removeItem('contabil_internal_tabs_state');
     sessionStorage.removeItem('contabil_config_active_subtab');
+    if (response.requiresPasswordChange) {
+      persistedStorage.removeItem('contabil_auth');
+      persistedStorage.removeItem('gestor_user_profile');
+      setMandatoryPasswordCpf(response.user?.cpf || '');
+      setAuthError(null);
+      viewRef.current = 'password-change';
+      setView('password-change');
+      return;
+    }
     try {
       setAuthError(null);
       persistedStorage.setItem('contabil_auth', 'gestor');
@@ -316,11 +339,14 @@ function App() {
       await recoverySession.updatePassword(password);
     } catch (error) {
       if (passwordRecoverySessionRef.current === recoverySession) {
-        passwordRecoverySessionRef.current = null;
-        setPasswordRecoveryStatus('error');
-        setPasswordRecoveryError(
-          error instanceof Error ? error.message : PASSWORD_RECOVERY_SESSION_ERROR,
-        );
+        if (recoverySession.mode === 'invite') {
+          setPasswordRecoveryStatus('ready');
+          setPasswordRecoveryError(null);
+        } else {
+          passwordRecoverySessionRef.current = null;
+          setPasswordRecoveryStatus('error');
+          setPasswordRecoveryError(error instanceof Error ? error.message : PASSWORD_RECOVERY_SESSION_ERROR);
+        }
       }
       throw error;
     }
@@ -342,6 +368,7 @@ function App() {
       } finally {
         queryClient.clear();
         authenticatedUserIdRef.current = null;
+        setMandatoryPasswordCpf('');
         try {
           persistedStorage.removeItem('contabil_auth');
           persistedStorage.removeItem('gestor_user_profile');
@@ -353,6 +380,26 @@ function App() {
         setView('login');
       }
     })();
+  };
+
+  const handleMandatoryPasswordChange = async (password: string) => {
+    let completionError: unknown;
+    try {
+      await profilePasswordService.completeFirstAccess(password);
+    } catch (error) {
+      completionError = error;
+    }
+    const login = await loginService.autenticar({
+      usuario: mandatoryPasswordCpf,
+      senha: password,
+      role: 'funcionario',
+    });
+    if (login.success && !login.requiresPasswordChange) {
+      handleLoginSuccess(login);
+      return;
+    }
+    if (completionError) throw completionError;
+    throw new Error('Senha criada. Tente continuar novamente ou saia e entre com a nova senha.');
   };
 
   useEffect(() => {
@@ -393,11 +440,22 @@ function App() {
   if (view === 'password-reset' || isPasswordResetRoute) {
     return (
       <PasswordRecoveryGate
+        mode={initialPasswordRecovery.current.mode || undefined}
         status={passwordRecoveryStatus}
         callbackError={passwordRecoveryError}
         onSubmitPassword={handlePasswordUpdate}
         onCancel={() => leavePasswordRecovery()}
         onContinue={() => leavePasswordRecovery()}
+      />
+    );
+  }
+
+  if (view === 'password-change') {
+    return (
+      <MandatoryPasswordChangePage
+        cpf={mandatoryPasswordCpf}
+        onSubmitPassword={handleMandatoryPasswordChange}
+        onLogout={handleLogout}
       />
     );
   }

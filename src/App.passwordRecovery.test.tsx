@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
   removePersistedItem: vi.fn(),
   resetLocalPersistedContext: vi.fn(),
+  setPersistedItem: vi.fn(),
+  completeFirstAccess: vi.fn(),
+  reauthenticate: vi.fn(),
 }));
 
 vi.mock('./lib/supabase', () => ({
@@ -49,11 +52,16 @@ vi.mock('./modules/public/login/services/passwordRecoveryService', async (import
 vi.mock('./modules/public/login/services/loginService', () => ({
   loginService: {
     authorizeAuthenticatedUser: mocks.authorizeAuthenticatedUser,
+    autenticar: mocks.reauthenticate,
   },
 }));
 
 vi.mock('./modules/public/login/services/syncAuthenticatedUserProfile', () => ({
   syncAuthenticatedUserProfile: vi.fn(),
+}));
+
+vi.mock('./modules/gestor/configuracoes/meu-perfil/profilePasswordService', () => ({
+  profilePasswordService: { completeFirstAccess: mocks.completeFirstAccess },
 }));
 
 vi.mock('./modules/public/login/PasswordRecoveryGate', () => ({
@@ -112,7 +120,7 @@ vi.mock('./lib/queryClient', () => ({ queryClient: { clear: vi.fn() } }));
 vi.mock('./lib/persistedStorage', () => ({
   persistedStorage: {
     getItem: vi.fn(() => null),
-    setItem: vi.fn(),
+    setItem: mocks.setPersistedItem,
     removeItem: mocks.removePersistedItem,
     resetLocalContext: mocks.resetLocalPersistedContext,
   },
@@ -127,6 +135,7 @@ const globalSession = {
 };
 const recoveryHandle = {
   userId: 'recovery-user',
+  mode: 'recovery' as const,
   updatePassword: mocks.recoveryUpdatePassword,
   cancel: mocks.recoveryCancel,
 };
@@ -145,6 +154,13 @@ describe('App password recovery isolation', () => {
     mocks.getSession.mockResolvedValue({ data: { session: globalSession }, error: null });
     mocks.getUser.mockResolvedValue({ data: { user: globalSession.user }, error: null });
     mocks.globalSignOut.mockResolvedValue({ error: null });
+    mocks.completeFirstAccess.mockResolvedValue(undefined);
+    mocks.reauthenticate.mockResolvedValue({
+      success: true,
+      message: 'Login realizado com sucesso!',
+      requiresPasswordChange: false,
+      user: { id: 'global-user', nome: 'Maria', cpf: '52998224725', role: 'funcionario' },
+    });
     mocks.getInitialRecoverySession.mockResolvedValue(recoveryHandle);
     mocks.recoveryUpdatePassword.mockResolvedValue(undefined);
     mocks.recoveryCancel.mockResolvedValue(undefined);
@@ -243,6 +259,24 @@ describe('App password recovery isolation', () => {
     expect(mocks.globalSignOut).not.toHaveBeenCalled();
   });
 
+  it('mantém o convite disponível para repetir uma conclusão transitória', async () => {
+    window.history.replaceState({}, '', '/redefinir-senha#type=invite');
+    mocks.getInitialRecoverySession.mockResolvedValueOnce({ ...recoveryHandle, mode: 'invite' });
+    mocks.recoveryUpdatePassword
+      .mockRejectedValueOnce(new Error('Falha temporária.'))
+      .mockResolvedValueOnce(undefined);
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('ready'));
+
+    fireEvent.click(screen.getByRole('button', { name: /concluir redefinição/i }));
+    await waitFor(() => expect(mocks.recoveryUpdatePassword).toHaveBeenCalledOnce());
+    expect(screen.getByTestId('recovery-status').textContent).toBe('ready');
+
+    fireEvent.click(screen.getByRole('button', { name: /concluir redefinição/i }));
+    await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('complete'));
+    expect(mocks.recoveryUpdatePassword).toHaveBeenCalledTimes(2);
+  });
+
   it('cancela somente o handle isolado e volta ao login', async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByTestId('recovery-status').textContent).toBe('ready'));
@@ -264,5 +298,31 @@ describe('App password recovery isolation', () => {
     expect(mocks.getUser).toHaveBeenCalledOnce();
     expect(mocks.authorizeAuthenticatedUser).toHaveBeenCalledWith(globalSession.user);
     expect(mocks.getInitialRecoverySession).not.toHaveBeenCalled();
+  });
+
+  it('não monta o painel antes da troca obrigatória e libera somente após novo login', async () => {
+    window.history.replaceState({}, '', '/');
+    mocks.authorizeAuthenticatedUser
+      .mockResolvedValueOnce({
+        allowed: true,
+        message: '',
+        requiresPasswordChange: true,
+        onboarding: { cpf: '52998224725' },
+      });
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /crie sua senha definitiva/i })).toBeDefined();
+    expect(screen.queryByTestId('gestor-layout')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Nova senha'), { target: { value: 'SenhaForte#2026' } });
+    fireEvent.change(screen.getByLabelText('Confirmar nova senha'), { target: { value: 'SenhaForte#2026' } });
+    fireEvent.click(screen.getByRole('button', { name: /criar senha e continuar/i }));
+
+    expect(await screen.findByTestId('gestor-layout')).toBeDefined();
+    expect(mocks.completeFirstAccess).toHaveBeenCalledWith('SenhaForte#2026');
+    expect(mocks.reauthenticate).toHaveBeenCalledWith({
+      usuario: '52998224725', senha: 'SenhaForte#2026', role: 'funcionario',
+    });
+    expect(mocks.authorizeAuthenticatedUser).toHaveBeenCalledOnce();
+    expect(mocks.setPersistedItem).toHaveBeenCalledWith('contabil_auth', 'gestor');
   });
 });

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
 import { getBolePixCancelUrl } from "../_shared/inter/boleto-charge.ts";
 import {
   createInterMtlsClient,
@@ -34,8 +35,14 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
-  const userId = userData.user?.id;
-  if (userError || !userId) return jsonResponse({ ok: false, error: "Sessao invalida." }, 401);
+  const user = userData.user;
+  if (userError || !user?.id) return jsonResponse({ ok: false, error: "Sessao invalida." }, 401);
+  try {
+    assertManagedCredentialVersion(jwt, user);
+  } catch {
+    return jsonResponse({ ok: false, error: "Sessao invalida." }, 401);
+  }
+  const userId = user.id;
 
   let client: Deno.HttpClient | null = null;
   try {

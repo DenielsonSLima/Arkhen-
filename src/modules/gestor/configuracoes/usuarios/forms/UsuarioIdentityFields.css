@@ -91,6 +91,34 @@
   margin: 5px 0 0;
 }
 
+.usuario-first-access-note {
+  align-items: flex-start;
+  background: #fffbeb;
+  border: 1px solid #f2d08a;
+  border-radius: 9px;
+  color: #8a5a08;
+  display: flex;
+  font-size: 0.7rem;
+  gap: 9px;
+  line-height: 1.45;
+  padding: 10px 12px;
+}
+
+.usuario-first-access-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.usuario-first-access-note span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.usuario-first-access-note strong {
+  color: #674207;
+}
+
 .usuario-field-error {
   color: #b91c1c;
   display: block;
