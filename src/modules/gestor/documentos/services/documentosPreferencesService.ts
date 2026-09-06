@@ -29,7 +29,7 @@ const getCurrentUserId = async () => {
 };
 
 const normalizeRows = <T>(value: unknown): T | null => {
-  if (!value || typeof value !== 'object') return null;
+  if (value === null || value === undefined) return null;
   return value as T;
 };
 

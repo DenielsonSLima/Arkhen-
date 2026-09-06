@@ -44,8 +44,7 @@ export const DocumentMoveDrawer: React.FC<DocumentMoveDrawerProps> = ({
         if (!mounted) return;
         setIsOpen(true);
       } finally {
-        if (!mounted) return;
-        setInitialized(true);
+        if (mounted) setInitialized(true);
       }
     })();
 
@@ -56,11 +55,9 @@ export const DocumentMoveDrawer: React.FC<DocumentMoveDrawerProps> = ({
 
   useEffect(() => {
     if (!initialized) return;
-    try {
-      void documentosPreferencesService.setDrawerState(storageKey, isOpen);
-    } catch {
-      // Local storage can be unavailable in restricted browser contexts.
-    }
+    void documentosPreferencesService.setDrawerState(storageKey, isOpen).catch(() => {
+      // A preferência é opcional; uma falha remota não bloqueia a gaveta.
+    });
   }, [isOpen, storageKey, initialized]);
 
   if (targets.length === 0) return null;
