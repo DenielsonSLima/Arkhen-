@@ -1,9 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
-import {
-  buildInterRegistrationPayload,
-  createInterCharge,
-} from "../_shared/inter/create-charge.ts";
+import { executeInterCharge } from "../_shared/inter/charge-execution.ts";
 import { corsHeaders, jsonResponse } from "../_shared/inter/http.ts";
 import {
   asRecord,
@@ -88,38 +85,7 @@ Deno.serve(async (req) => {
     );
     if (providerError) throw new Error("Banco Inter nao esta ativo.");
 
-    const { data: prepared, error: prepareError } = await supabase.rpc(
-      "preparar_cobranca_inter",
-      { p_user_id: userId, p_payload: payload },
-    );
-    if (prepareError || !prepared) {
-      throw new Error(
-        prepareError?.message || "Falha ao preparar cobranca Inter.",
-      );
-    }
-
-    const execution = await createInterCharge(prepared, payload);
-    const registration = buildInterRegistrationPayload(prepared, execution);
-    const { data: saved, error: saveError } = await supabase.rpc(
-      "registrar_cobranca_inter",
-      { p_user_id: userId, p_payload: registration },
-    );
-    if (saveError) throw new Error(saveError.message);
-
-    return jsonResponse({
-      ok: true,
-      provedor: "inter",
-      cobranca: saved as Record<string, unknown>,
-      integracao: {
-        provedor: "inter",
-        external_id: execution.externalId,
-        tipo: execution.tipo,
-        boleto_url: execution.invoiceUrl || null,
-        pix_copia_cola: execution.pixCopiaECola || null,
-        pix_qr_code: null,
-        payload: execution.providerPayload,
-      },
-    });
+    return jsonResponse(await executeInterCharge(supabase, userId, payload));
   } catch (error) {
     const message = error instanceof Error
       ? error.message

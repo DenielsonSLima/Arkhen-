@@ -223,8 +223,10 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
 
   const handleCancelCobranca = async (id: string) => {
     try {
-      await cancelCobrancaMutation.mutateAsync(id);
-      setTransientSuccess('Cobrança cancelada no Banco Inter e no sistema.');
+      const result = await cancelCobrancaMutation.mutateAsync(id);
+      setTransientSuccess(result.pendente
+        ? result.message || 'Cancelamento solicitado. Aguardando confirmação do Banco Inter.'
+        : 'Cancelamento da cobrança confirmado.');
       setCobrancaToCancel(null);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar cobrança.');
@@ -233,8 +235,10 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
 
   const handleCancelBoleto = async (id: string) => {
     try {
-      await cancelBoletoMutation.mutateAsync(id);
-      setTransientSuccess('Cobrança cancelada no Banco Inter. Documento removido.');
+      const result = await cancelBoletoMutation.mutateAsync(id);
+      setTransientSuccess(result.pendente
+        ? result.message || 'Cancelamento solicitado. Aguardando confirmação do Banco Inter.'
+        : 'Cancelamento confirmado pelo Banco Inter.');
       setBoletoToCancel(null);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao cancelar boleto.');

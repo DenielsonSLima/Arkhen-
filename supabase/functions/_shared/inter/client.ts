@@ -8,6 +8,7 @@ import type {
 } from "./types.ts";
 
 const tokenCache = new Map<string, InterAccessToken>();
+const pendingTokenRequests = new Map<string, Promise<InterAccessToken>>();
 const TOKEN_EXPIRY_SAFETY_MS = 60_000;
 const DEFAULT_TIMEOUT_MS = 12_000;
 
@@ -29,15 +30,22 @@ export const getInterScopes = (config: InterPreparedConfig) => [
   ]),
 ];
 
+export const getInterChargeScopes = (tipo: "pix" | "bolepix") => (
+  tipo === "pix"
+    ? ["cobv.read", "cobv.write"]
+    : ["boleto-cobranca.read", "boleto-cobranca.write"]
+);
+
 const tokenCacheKey = async (
   authUrl: string,
   clientId: string,
   scopes: string[],
   certificate: string,
+  clientSecret: string,
 ) => {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(certificate),
+    new TextEncoder().encode(JSON.stringify([certificate, clientSecret])),
   );
   const fingerprint = Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -67,7 +75,9 @@ const fetchWithTimeout = async (
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new InterApiError(
-        "O servidor do Banco Inter não respondeu dentro do prazo. O certificado foi lido, mas a autenticação OAuth ficou inconclusiva. Tente novamente mais tarde.",
+        url.endsWith("/oauth/v2/token")
+          ? "A autenticacao OAuth do Banco Inter ficou inconclusiva por falta de resposta. Tente novamente mais tarde."
+          : "Banco Inter nao respondeu dentro do prazo. O resultado da operacao ficou inconclusivo; consulte a cobranca antes de repetir a solicitacao.",
         504,
       );
     }
@@ -97,59 +107,71 @@ export const createInterMtlsClient = (config: InterPreparedConfig) => {
 export const getInterAccessToken = async (
   config: InterPreparedConfig,
   client: Deno.HttpClient,
+  scopesOverride?: string[],
 ) => {
-  const scopes = getInterScopes(config);
+  const scopes = [...new Set(scopesOverride ?? getInterScopes(config))].sort();
   const key = await tokenCacheKey(
     config.authUrl,
     config.clientId,
     scopes,
     config.certificadoPem,
+    config.clientSecret,
   );
   const cached = tokenCache.get(key);
   if (cached && cached.expiresAt > Date.now() + TOKEN_EXPIRY_SAFETY_MS) {
     return cached;
   }
+  const pending = pendingTokenRequests.get(key);
+  if (pending) return pending;
 
-  const body = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    grant_type: "client_credentials",
-    scope: scopes.join(" "),
-  });
-  const response = await fetchWithTimeout(config.authUrl, client, {
-    client,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body,
-  }, DEFAULT_TIMEOUT_MS);
+  const request = (async () => {
+    const body = new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      grant_type: "client_credentials",
+      scope: scopes.join(" "),
+    });
+    const response = await fetchWithTimeout(config.authUrl, client, {
+      client,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body,
+    }, DEFAULT_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new InterApiError(safeInterError(response.status), response.status);
+    if (!response.ok) {
+      throw new InterApiError(safeInterError(response.status), response.status);
+    }
+
+    const payload = await response.json().catch(() => ({})) as Record<
+      string,
+      unknown
+    >;
+    const accessToken = typeof payload.access_token === "string"
+      ? payload.access_token.trim()
+      : "";
+    const expiresIn = Number(payload.expires_in);
+    if (!accessToken) {
+      throw new InterApiError("Banco Inter retornou um token invalido.", 502);
+    }
+
+    const token: InterAccessToken = {
+      accessToken,
+      expiresAt: Date.now() +
+        (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600) * 1000,
+      scope: scopes.join(" "),
+    };
+    tokenCache.set(key, token);
+    return token;
+  })();
+  pendingTokenRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    pendingTokenRequests.delete(key);
   }
-
-  const payload = await response.json().catch(() => ({})) as Record<
-    string,
-    unknown
-  >;
-  const accessToken = typeof payload.access_token === "string"
-    ? payload.access_token.trim()
-    : "";
-  const expiresIn = Number(payload.expires_in);
-  if (!accessToken) {
-    throw new InterApiError("Banco Inter retornou um token invalido.", 502);
-  }
-
-  const token: InterAccessToken = {
-    accessToken,
-    expiresAt: Date.now() +
-      (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600) * 1000,
-    scope: scopes.join(" "),
-  };
-  tokenCache.set(key, token);
-  return token;
 };
 
 export const interApiRequest = async (
@@ -173,6 +195,11 @@ export const interApiRequest = async (
 
   const acceptedStatuses = options.acceptedStatuses || [200, 201, 204];
   if (!acceptedStatuses.includes(response.status)) {
+    if (response.status === 401) {
+      for (const [key, cached] of tokenCache) {
+        if (cached === token) tokenCache.delete(key);
+      }
+    }
     throw new InterApiError(safeInterError(response.status), response.status);
   }
   return response;

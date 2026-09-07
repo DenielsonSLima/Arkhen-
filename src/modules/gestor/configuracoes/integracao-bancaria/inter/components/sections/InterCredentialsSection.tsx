@@ -96,6 +96,18 @@ export const InterCredentialsSection: React.FC<InterCredentialsSectionProps> = (
         />
         <CredentialBadge state={clientSecretState} />
       </label>
+      <label className="inter-field">
+        <span>Conta corrente (opcional)</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={config.contaCorrente}
+          maxLength={20}
+          autoComplete="off"
+          onChange={(event) => onPatch({ contaCorrente: event.target.value.replace(/\D/g, '').replace(/^0+/, '') })}
+        />
+        <small>Preencha se a integração do Inter estiver vinculada a mais de uma conta. Inclua o dígito, sem zeros à esquerda.</small>
+      </label>
     </div>
 
     <div className="inter-upload-grid">

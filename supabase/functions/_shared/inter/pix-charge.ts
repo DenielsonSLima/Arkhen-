@@ -27,19 +27,19 @@ export const buildPixDuePayload = (prepared: PreparedInterCharge) => {
   };
   if (cobranca.multaPercentual > 0) {
     valor.multa = {
-      modalidade: "2",
+      modalidade: 2,
       valorPerc: cobranca.multaPercentual.toFixed(2),
     };
   }
   if (cobranca.jurosPercentual > 0) {
     valor.juros = {
-      modalidade: "2",
+      modalidade: 3,
       valorPerc: cobranca.jurosPercentual.toFixed(2),
     };
   }
   if (cobranca.descontoPercentual > 0) {
     valor.desconto = {
-      modalidade: "1",
+      modalidade: "2",
       descontoDataFixa: [{
         data: cobranca.dataVencimento,
         valorPerc: cobranca.descontoPercentual.toFixed(2),

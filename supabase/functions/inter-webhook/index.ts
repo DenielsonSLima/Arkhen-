@@ -1,7 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonResponse } from "../_shared/inter/http.ts";
 import {
+  createInterMtlsClient,
+  getInterAccessToken,
+  interApiRequest,
+} from "../_shared/inter/client.ts";
+import {
+  assertOfficialInterEndpoints,
+  getInterEndpoints,
+} from "../_shared/inter/endpoints.ts";
+import {
+  asRecord,
   asString,
+  parsePreparedConfig,
   readLimitedRequestText,
 } from "../_shared/inter/validation.ts";
 import {
@@ -9,6 +20,7 @@ import {
   parseInterWebhookPayload,
   parseWebhookRouteId,
 } from "../_shared/inter/webhook.ts";
+import { verifyInterWebhookBatch } from "../_shared/inter/webhook-verification.ts";
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return jsonResponse({ ok: false }, 405, false);
@@ -41,30 +53,69 @@ Deno.serve(async (req) => {
   }
 
   const account = asString(req.headers.get("x-conta-corrente"));
-  if (!/^[1-9][0-9]*$/.test(account)) {
-    return jsonResponse({ ok: false }, 401, false);
+  if (account && !/^[0-9]{1,30}$/.test(account)) {
+    return jsonResponse({ ok: false }, 400, false);
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data, error } = await supabase.rpc(
-    "registrar_inter_webhook_eventos",
-    {
-      p_webhook_id: webhookId,
-      p_ambiente: ambiente,
-      p_conta_corrente: account,
-      p_payload: payload,
-    },
-  );
-
-  if (error) {
-    console.error("inter-webhook: falha ao persistir eventos");
-    return jsonResponse({ ok: false }, 500, false);
+  let client: Deno.HttpClient | null = null;
+  try {
+    const { data: prepared, error: preparationError } = await supabase.rpc(
+      "preparar_inter_webhook",
+      {
+        p_webhook_id: webhookId,
+        p_ambiente: ambiente,
+        p_conta_corrente: account,
+      },
+    );
+    if (preparationError || !prepared) {
+      return jsonResponse({ ok: false }, 503, false);
+    }
+    const config = parsePreparedConfig(prepared);
+    const endpoints = getInterEndpoints(
+      ambiente === "producao" ? "producao" : "sandbox",
+    );
+    assertOfficialInterEndpoints(config, endpoints);
+    config.baseUrl = endpoints.baseUrl;
+    config.authUrl = endpoints.authUrl;
+    client = createInterMtlsClient(config);
+    const mtlsClient = client;
+    // Never use the unauthenticated callback account header in a bank request.
+    const verified = await verifyInterWebhookBatch(
+      payload,
+      endpoints,
+      async (url, scopes) => {
+        const token = await getInterAccessToken(config, mtlsClient, scopes);
+        const response = await interApiRequest(
+          url,
+          token,
+          config.contaCorrente,
+          mtlsClient,
+        );
+        return await response.json();
+      },
+    );
+    if (!verified.length) return jsonResponse({ ok: true }, 200, false);
+    const { data, error } = await supabase.rpc(
+      "registrar_inter_webhook_eventos",
+      {
+        p_webhook_id: webhookId,
+        p_ambiente: ambiente,
+        p_conta_corrente: config.contaCorrente,
+        p_payload: verified,
+      },
+    );
+    if (error) throw new Error("Falha ao persistir eventos verificados.");
+    const response = asRecord(data);
+    // A callback may race charge creation. Ask Inter to retry until it is linked.
+    const ok = response.ok === true && Number(response.pendentes || 0) === 0;
+    return jsonResponse({ ok }, ok ? 200 : 503, false);
+  } catch {
+    console.error("inter-webhook: verificacao ou persistencia indisponivel");
+    return jsonResponse({ ok: false }, 503, false);
+  } finally {
+    client?.close();
   }
-
-  const response = data && typeof data === "object" && !Array.isArray(data)
-    ? data as Record<string, unknown>
-    : { ok: true };
-  return jsonResponse({ ok: response.ok !== false }, 200, false);
 });

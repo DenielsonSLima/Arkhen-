@@ -1,6 +1,6 @@
 import { supabase, supabaseProjectUrl } from '../../../../lib/supabase';
 import { emitirNfseManual, consultarNfseManual } from './nfseService';
-import { createRuntimeId } from '../../../../lib/realtimeChannel';
+import { requestBankCharge } from './bankChargeService';
 import { baixarManualCobranca, type ManualSettlementInput } from './manualSettlementService';
 import type {
   CobrancaFinanceira,
@@ -358,20 +358,22 @@ export const financeiroService = {
     if (error) throw new Error(`Erro ao criar contas a pagar parceladas: ${error.message}`);
   },
 
-  async cancelarCobrança(cobrancaId: string): Promise<void> {
+  async cancelarCobrança(cobrancaId: string): Promise<{ pendente: boolean; message?: string }> {
     const { data, error } = await supabase.functions.invoke('bank-cancel-charge', {
       body: { cobranca_id: cobrancaId, motivo: 'Cancelamento solicitado no financeiro' },
     });
     if (error) throw new Error(`Erro ao cancelar cobrança: ${error.message}`);
     if (!data?.ok) throw new Error(data?.error || 'Cobrança não encontrada ou já paga.');
+    return { pendente: data.pendente === true, message: data.message };
   },
 
-  async cancelarBoleto(cobrancaId: string): Promise<void> {
+  async cancelarBoleto(cobrancaId: string): Promise<{ pendente: boolean; message?: string }> {
     const { data, error } = await supabase.functions.invoke('bank-cancel-charge', {
       body: { cobranca_id: cobrancaId, motivo: 'Cancelamento do boleto solicitado no financeiro' },
     });
     if (error) throw new Error(`Erro ao cancelar boleto: ${error.message}`);
     if (!data?.ok) throw new Error(data?.error || 'Apenas cobranças pendentes podem ser canceladas.');
+    return { pendente: data.pendente === true, message: data.message };
   },
 
   emitirNfseManual,
@@ -424,8 +426,7 @@ export const financeiroService = {
     multaPercentual?: number;
     mensagemBoleto?: string;
   }): Promise<CobrancaFinanceira> {
-    const { data, error } = await supabase.functions.invoke('bank-create-charge', {
-      body: {
+    const data = await requestBankCharge({
         cliente_empresa_id: dados.clienteEmpresaId,
         contrato_id: dados.contratoId || '',
         valor: dados.valor,
@@ -438,12 +439,7 @@ export const financeiroService = {
         multa_percentual: dados.multaPercentual || 0,
         mensagem_boleto: dados.mensagemBoleto || '',
         external_reference: dados.contratoId || '',
-        request_id: createRuntimeId('bank-charge-request'),
-      },
     });
-
-    if (error) throw new Error(`Erro ao gerar cobrança bancária: ${error.message}`);
-    if (!data?.ok) throw new Error(data?.error || 'Erro ao gerar cobrança bancária.');
 
     const row = data.cobranca as CobrancaRow;
     if (data.integracao) row.financeiro_cobrancas_integracoes = [data.integracao as CobrancaIntegracaoRow];

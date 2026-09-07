@@ -39,6 +39,7 @@ const wait = (milliseconds: number) =>
 export const createInterCharge = async (
   preparedValue: unknown,
   sourcePayload: Record<string, unknown>,
+  beforeSend: () => Promise<void> = () => Promise.resolve(),
 ): Promise<InterChargeExecution> => {
   const prepared = parsePreparedInterCharge(preparedValue);
   const { config, cobranca } = prepared;
@@ -51,7 +52,9 @@ export const createInterCharge = async (
   let client: Deno.HttpClient | null = null;
   try {
     client = createInterMtlsClient(config);
-    const token = await getInterAccessToken(config, client);
+    const token = await getInterAccessToken(config, client, cobranca.meioPagamento === "Pix"
+      ? ["cobv.read", "cobv.write"]
+      : ["boleto-cobranca.read", "boleto-cobranca.write"]);
 
     if (cobranca.meioPagamento === "Pix") {
       if (!config.modulos.pix) {
@@ -59,6 +62,7 @@ export const createInterCharge = async (
       }
       const txid = reference.slice(0, 32);
       const pixRequest = buildPixDuePayload(prepared);
+      await beforeSend();
       const response = await interApiRequest(
         getPixDueChargeUrl(endpoints, txid),
         token,
@@ -72,14 +76,16 @@ export const createInterCharge = async (
         },
       );
       const providerPayload = await readProviderJson(response);
-      const responseTxid = asString(providerPayload.txid) || txid;
+      const responseTxid = asString(providerPayload.txid);
+      if (responseTxid !== txid) {
+        throw new Error("O Inter retornou um identificador Pix divergente. Consulte a mesma emissão antes de continuar.");
+      }
       return {
         ambiente: prepared.ambienteDb,
         tipo: "pix",
         externalId: responseTxid,
         providerPayload,
         pixCopiaECola: asString(providerPayload.pixCopiaECola),
-        invoiceUrl: asString(providerPayload.location),
       };
     }
 
@@ -87,6 +93,7 @@ export const createInterCharge = async (
       throw new Error("Modulo Boleto do Banco Inter esta desabilitado.");
     }
     const boletoRequest = buildBolePixPayload(prepared, reference);
+    await beforeSend();
     const response = await interApiRequest(
       getBolePixChargeUrl(endpoints),
       token,
@@ -101,8 +108,8 @@ export const createInterCharge = async (
     );
     const creationPayload = await readProviderJson(response);
     const externalId = asString(creationPayload.codigoSolicitacao);
-    if (!externalId) {
-      throw new Error("Banco Inter nao retornou o codigo da cobranca BolePix.");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(externalId)) {
+      throw new Error("O Inter não retornou um identificador válido. Consulte a mesma emissão antes de continuar.");
     }
     let detailPayload: Record<string, unknown> = {};
     for (const delay of [0, 300, 900]) {
@@ -143,6 +150,8 @@ export const buildInterRegistrationPayload = (
 ) => {
   const prepared = parsePreparedInterCharge(preparedValue);
   const { cobranca } = prepared;
+  const providerCharge = asRecord(execution.providerPayload.cobranca);
+  const providerStatus = asString(providerCharge.situacao || execution.providerPayload.status || execution.providerPayload.situacao);
   return {
     cliente_empresa_id: cobranca.clienteEmpresaId,
     contrato_id: cobranca.contratoId,
@@ -154,7 +163,10 @@ export const buildInterRegistrationPayload = (
     ambiente: execution.ambiente,
     tipo: execution.tipo,
     external_id: execution.externalId,
-    provider_payload: execution.providerPayload,
+    provider_payload: {
+      ...execution.providerPayload,
+      ...(providerStatus ? { situacao: providerStatus } : {}),
+    },
     pix_copia_cola: execution.pixCopiaECola || "",
     invoice_url: execution.invoiceUrl || "",
   };

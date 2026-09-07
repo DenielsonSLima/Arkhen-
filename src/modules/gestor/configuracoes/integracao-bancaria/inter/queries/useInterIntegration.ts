@@ -29,6 +29,10 @@ export const useInterIntegration = () => {
   });
   const webhookMutation = useMutation({
     mutationFn: interService.configureWebhook,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.inter() });
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.integracaoBancaria() });
+    },
   });
 
   const config = configQuery.data || null;
