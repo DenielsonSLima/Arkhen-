@@ -1,0 +1,8 @@
+{
+  "nodeModulesDir": "none",
+  "lock": true,
+  "tasks": {
+    "check": "deno check index.ts",
+    "test": "deno test ../_shared/webiss emission-action_test.ts"
+  }
+}

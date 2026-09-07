@@ -1,4 +1,5 @@
 import { supabase, supabaseProjectUrl } from '../../../../lib/supabase';
+import { emitirNfseManual, consultarNfseManual } from './nfseService';
 import { createRuntimeId } from '../../../../lib/realtimeChannel';
 import { baixarManualCobranca, type ManualSettlementInput } from './manualSettlementService';
 import type {
@@ -45,6 +46,8 @@ interface CobrancaRow {
   status: CobrancaFinanceira['status'];
   meio_pagamento: CobrancaFinanceira['meioPagamento'];
   nfse_id: string | null;
+  nfse_status: string | null;
+  nfse_rps_numero: number | null;
   data_pagamento: string | null;
   data_cancelamento: string | null;
   created_at: string;
@@ -149,6 +152,8 @@ const fromCobrancaRow = (row: CobrancaRow): CobrancaFinanceira => {
     meioPagamento: row.meio_pagamento,
     bankChargeId: integration?.external_id || undefined,
     nfseId: row.nfse_id || undefined,
+    nfseStatus: row.nfse_status || undefined,
+    nfseRpsNumero: row.nfse_rps_numero == null ? undefined : String(row.nfse_rps_numero),
     paymentUrl: integration?.boleto_url || interDocumentUrl,
     bankSlipUrl: integration?.boleto_url || interDocumentUrl,
     bankSlipPdfUrl: interDocumentUrl,
@@ -291,7 +296,7 @@ export const financeiroService = {
   async getCobranças(signal?: AbortSignal): Promise<CobrancaFinanceira[]> {
     const { data, error } = await supabase
       .from('financeiro_cobrancas')
-      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,nfse_id,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,ambiente,external_id,tipo,status,boleto_url,pix_copia_cola,pix_qr_code,payload)')
+      .select('id,public_token,empresa_id,contrato_id,cliente_empresa_id,descricao,categoria,valor,data_vencimento,status,meio_pagamento,nfse_id,nfse_status,nfse_rps_numero,data_pagamento,data_cancelamento,created_at,updated_at,financeiro_cobrancas_integracoes(provedor,ambiente,external_id,tipo,status,boleto_url,pix_copia_cola,pix_qr_code,payload)')
       .order('data_vencimento', { ascending: false })
       .abortSignal(signal ?? new AbortController().signal);
 
@@ -369,14 +374,8 @@ export const financeiroService = {
     if (!data?.ok) throw new Error(data?.error || 'Apenas cobranças pendentes podem ser canceladas.');
   },
 
-  async emitirNfseManual(cobrancaId: string): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('fiscal-integration', {
-      body: { action: 'emit-nfse', cobranca_id: cobrancaId },
-    });
-    if (error) throw new Error(`Erro ao emitir NFS-e: ${error.message}`);
-    if (!data?.ok || !data?.nfseId) throw new Error(data?.error || 'O WebISS não confirmou a emissão da NFS-e.');
-    return String(data.nfseId);
-  },
+  emitirNfseManual,
+  consultarNfseManual,
 
   async baixarManualCobrancaCustom(dados: ManualSettlementInput): Promise<void> {
     await baixarManualCobranca(dados);

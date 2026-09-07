@@ -156,7 +156,9 @@ export const FiscalRps: React.FC<FiscalRpsProps> = ({
             <option value="1 - Microempresa Municipal">1 - Microempresa Municipal</option>
             <option value="2 - Estimativa">2 - Estimativa</option>
             <option value="3 - Sociedade de Profissionais">3 - Sociedade de Profissionais</option>
-            <option value="4 - Simples Nacional">4 - Simples Nacional</option>
+            <option value="4 - Cooperativa">4 - Cooperativa</option>
+            <option value="5 - MEI">5 - MEI</option>
+            <option value="6 - ME/EPP">6 - ME/EPP</option>
           </select>
         </div>
       </div>
@@ -187,6 +189,26 @@ export const FiscalRps: React.FC<FiscalRpsProps> = ({
         </div>
       </div>
 
+      <div className="form-row-grid">
+        <div className="form-item-group">
+          <label>Optante pelo Simples Nacional</label>
+          <select value={config.optanteSimplesNacional || ''} disabled={saving}
+            onChange={event => setConfig(prev => ({ ...prev, optanteSimplesNacional: event.target.value }))}>
+            <option value="">Selecione conforme cadastro fiscal</option>
+            <option value="1">Sim</option>
+            <option value="2">Não</option>
+          </select>
+        </div>
+        <div className="form-item-group">
+          <label>Responsável pela retenção do ISS</label>
+          <select value={config.responsavelRetencao || ''} disabled={saving || !config.issRetido.startsWith('1')}
+            onChange={event => setConfig(prev => ({ ...prev, responsavelRetencao: event.target.value }))}>
+            <option value="">Selecione quando houver retenção</option>
+            <option value="1">Tomador</option>
+            <option value="2">Intermediário</option>
+          </select>
+        </div>
+      </div>
     </form>
   );
 };

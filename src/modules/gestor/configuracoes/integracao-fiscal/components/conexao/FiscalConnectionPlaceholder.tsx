@@ -1,16 +1,15 @@
 import React from 'react';
 
-export const FiscalConnectionPlaceholder: React.FC = () => {
-  return (
-    <div className="fiscal-connection-placeholder">
-      <div className="form-divider-title">Conexão com Provedor (futuro)</div>
-      <p className="input-helper-text">
-        Este painel será usado para registrar o canal de conexão real (OAuth, token, webhook e trilha de falhas).
-        Por enquanto o fluxo continua concentrado na configuração do contexto de emissão por município.
-      </p>
-      <button type="button" className="btn-add-user" disabled>
-        Conexão futura com webservice
-      </button>
-    </div>
-  );
-};
+export const FiscalConnectionPlaceholder: React.FC = () => (
+  <div className="fiscal-connection-placeholder">
+    <div className="form-divider-title">Conexão WebISS</div>
+    <p className="input-helper-text">
+      Salve o contexto, configure o certificado A1 e os parâmetros do RPS. No resumo,
+      verifique os pré-requisitos e execute os testes de conexão e assinatura.
+      A emissão e a consulta de notas são realizadas pelo faturamento, com a cobrança selecionada.
+    </p>
+    <p className="input-helper-text">
+      Confirme o cadastro/CeC e a habilitação do contribuinte no portal da prefeitura antes da emissão.
+    </p>
+  </div>
+);

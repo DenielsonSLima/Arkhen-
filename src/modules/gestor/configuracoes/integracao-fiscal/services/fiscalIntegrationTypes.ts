@@ -28,6 +28,8 @@ export interface FiscalConfigData {
   regimeEspecial: string;
   incentivadorCultural: string;
   issRetido: string;
+  optanteSimplesNacional?: string;
+  responsavelRetencao?: string;
 }
 
 export interface NfsStats {
@@ -103,3 +105,11 @@ export interface FiscalStoredContext {
 }
 
 export type FiscalStoredContexts = Record<string, FiscalStoredContext>;
+
+export interface FiscalReadiness {
+  ready: boolean;
+  blockers: string[];
+  environment: string;
+  endpoint: string;
+  certificateConfigured: boolean;
+}

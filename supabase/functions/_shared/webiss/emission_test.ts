@@ -16,7 +16,7 @@ const assertThrows = (operation: () => unknown, message: string) => {
   throw new Error(`Era esperado erro contendo: ${message}`);
 };
 
-const preparedFixture = () => ({
+export const preparedFixture = () => ({
   rps: { numero: "101", serie: "A", data: "2026-09-02" },
   prestador: {
     cnpj: "00.000.000/e08g-12",
@@ -44,6 +44,7 @@ const preparedFixture = () => ({
     issRetido: "2",
     exigibilidadeIss: "1",
     regimeEspecial: "0",
+    optanteSimplesNacional: "2",
     incentivoFiscal: "2",
     codigoMunicipio: "2802908",
   },
@@ -76,4 +77,47 @@ Deno.test("XML WebISS falha antes do envio quando o documento e invalido", () =>
     () => buildUnsignedRps(invalidCustomer),
     "CPF/CNPJ do tomador WebISS invalido",
   );
+});
+
+Deno.test("RPS segue ABRASF 2.02 sem InfRps extra e aliquota percentual", () => {
+  const xml = buildUnsignedRps(preparedFixture());
+  assertIncludes(xml, '<Rps Id="RPS101"><IdentificacaoRps>');
+  if (xml.includes("InfRps")) throw new Error("InfRps nao existe no schema ABRASF");
+  assertIncludes(xml, "<Aliquota>5.0000</Aliquota>");
+  if (xml.includes("<RegimeEspecialTributacao>0")) throw new Error("Regime zero deve ser omitido");
+  assertIncludes(xml, "<OptanteSimplesNacional>2</OptanteSimplesNacional>");
+});
+
+Deno.test("Simples Nacional nao e inferido do regime especial", () => {
+  const prepared = preparedFixture();
+  prepared.servico.regimeEspecial = "4";
+  assertIncludes(buildUnsignedRps(prepared), "<OptanteSimplesNacional>2</OptanteSimplesNacional>");
+  prepared.servico.optanteSimplesNacional = "";
+  assertThrows(() => buildUnsignedRps(prepared), "Simples Nacional");
+});
+
+Deno.test("RPS rejeita valor invalido e retencao incompleta antes de assinar", () => {
+  const prepared = preparedFixture();
+  prepared.servico.valor = Number.NaN;
+  assertThrows(() => buildUnsignedRps(prepared), "Valor do servico invalido");
+  prepared.servico.valor = 100;
+  prepared.servico.issRetido = "1";
+  assertThrows(() => buildUnsignedRps(prepared), "Responsavel pela retencao");
+});
+
+Deno.test("RPS rejeita dados maiores que o XSD e nao gera tags opcionais vazias", () => {
+  const prepared = preparedFixture();
+  prepared.tomador.endereco = "A".repeat(126);
+  assertThrows(() => buildUnsignedRps(prepared), "endereco");
+  prepared.tomador.endereco = "Rua A";
+  prepared.tomador.cep = "12";
+  assertThrows(() => buildUnsignedRps(prepared), "CEP");
+  prepared.tomador.cep = "49500000";
+  prepared.servico.valor = 10_000_000_000_000;
+  assertThrows(() => buildUnsignedRps(prepared), "Valor do servico");
+  prepared.servico.valor = 100;
+  prepared.servico.codigoCnae = "";
+  prepared.servico.codigoTributacaoMunicipio = "";
+  const xml = buildUnsignedRps(prepared);
+  if (xml.includes("<CodigoCnae>") || xml.includes("<CodigoTributacaoMunicipio>")) throw new Error("Tags opcionais vazias");
 });

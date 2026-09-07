@@ -1,11 +1,13 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.6";
 import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
 import {
   assertCertificateMatchesCnpj,
   parseFiscalPkcs12,
 } from "../_shared/webiss/certificate.ts";
 import { validateWebIssWsdl } from "../_shared/webiss/connection.ts";
-import { emitWebIssNfse } from "../_shared/webiss/emission.ts";
+import { testCertificateSignature } from "../_shared/webiss/signature.ts";
+import { configurationBlockers } from "../_shared/webiss/configuration.ts";
+import { handleEmissionAction } from "./emission-action.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,7 +77,8 @@ const prepareWebIss = async (
     throw new Error("Esta operacao real esta habilitada somente para WebISS Itabaiana/SE.");
   }
   const rawClientId = asString(payload.cliente_id);
-  const clientId = rawClientId && isUuid(rawClientId) ? rawClientId : null;
+  if (rawClientId && !isUuid(rawClientId)) throw new Error("Cliente fiscal invalido.");
+  const clientId = rawClientId || null;
   const { data, error } = await admin.rpc("preparar_configuracao_webiss_itabaiana", {
     p_user_id: userId,
     p_cliente_id: clientId,
@@ -105,10 +108,11 @@ const logOperation = async (
 const validatePreparedCertificate = (prepared: Record<string, unknown>) => {
   const certificate = parseFiscalPkcs12(
     asString(prepared.certificadoBase64),
-    asString(prepared.certificadoSenha),
+    typeof prepared.certificadoSenha === "string" ? prepared.certificadoSenha : "",
   );
-  const metadata = asRecord(prepared.certificadoMetadata);
-  assertCertificateMatchesCnpj(certificate, asString(metadata.certificadoCNPJ));
+  const cnpj = asString(asRecord(prepared.prestador).cnpj);
+  if (!cnpj) throw new Error("CNPJ do emitente ausente. Confira o cadastro e a migration de diagnostico WebISS.");
+  assertCertificateMatchesCnpj(certificate, cnpj);
   return certificate;
 };
 
@@ -116,37 +120,26 @@ const handleJsonAction = async (
   admin: AdminClient, userId: string, payload: Record<string, unknown>,
 ) => {
   const action = asString(payload.action);
-  if (action === "emit-nfse") {
+  if (action === "emit-nfse" || action === "consult-nfse") {
     const chargeId = asString(payload.cobranca_id || payload.cobrancaId);
     if (!isUuid(chargeId)) return jsonResponse({ ok: false, error: "Cobranca invalida." }, 400);
-    const { data, error } = await admin.rpc("preparar_emissao_nfse_webiss", {
-      p_user_id: userId,
-      p_cobranca_id: chargeId,
-    });
-    if (error || !data) throw new Error(error?.message || "Emissao fiscal indisponivel.");
-    const prepared = asRecord(data);
-    if (prepared.jaEmitida === true) {
-      return jsonResponse({ ok: true, success: true, nfseId: asString(prepared.nfseId), jaEmitida: true });
-    }
-    const certificate = validatePreparedCertificate(prepared);
-    const result = await emitWebIssNfse(prepared, certificate);
-    const { data: nfseId, error: confirmError } = await admin.rpc("confirmar_emissao_nfse_webiss", {
-      p_user_id: userId,
-      p_cobranca_id: chargeId,
-      p_nfse_id: result.nfseId,
-      p_protocolo: result.protocolo,
-      p_payload: result.payload,
-    });
-    if (confirmError || !nfseId) throw new Error("NFS-e emitida, mas a confirmacao local falhou.");
-    return jsonResponse({ ok: true, success: true, nfseId, protocolo: result.protocolo });
+    return jsonResponse(await handleEmissionAction(admin, userId, chargeId, action === "consult-nfse"));
   }
-  if (action === "register-operation") {
-    const { error } = await admin.rpc("registrar_operacao_fiscal_edge", {
-      p_user_id: userId,
-      p_payload: payload,
+  if (action === "diagnostic-readiness") {
+    const blockers: string[] = [];
+    let prepared: Record<string, unknown> = {};
+    try { prepared = await prepareWebIss(admin, userId, payload); }
+    catch (error) { blockers.push(error instanceof Error ? error.message : "Configuracao indisponivel."); }
+    const cfg = asRecord(prepared.configuracao);
+    if (Object.keys(prepared).length) {
+      try { validatePreparedCertificate(prepared); } catch (error) { blockers.push(error instanceof Error ? error.message : "Certificado invalido."); }
+      blockers.push(...configurationBlockers(cfg));
+    }
+    return jsonResponse({ ok: true, success: true, ready: blockers.length === 0, blockers,
+      environment: prepared.ambiente || payload.ambiente, endpoint: prepared.endpoint || null,
+      certificateConfigured: Boolean(prepared.certificadoBase64),
+      message: "Verificacao local de pre-requisitos; a autorizacao municipal e a homologacao do CeC precisam ser confirmadas no WebISS.",
     });
-    if (error) throw new Error(error.message);
-    return jsonResponse({ ok: true });
   }
   if (action !== "test-connection" && action !== "test-certificate") {
     return jsonResponse({ ok: false, error: "Acao fiscal nao suportada." }, 400);
@@ -154,6 +147,12 @@ const handleJsonAction = async (
 
   const prepared = await prepareWebIss(admin, userId, payload);
   try {
+    if (action === "test-connection") {
+      const wsdl = await validateWebIssWsdl(asString(prepared.wsdlUrl));
+      const message = "WSDL WebISS acessivel e operacoes identificadas. Este teste nao confirma certificado, autorizacao municipal ou emissao.";
+      await logOperation(admin, userId, prepared, "Sucesso", message, wsdl);
+      return jsonResponse({ ok: true, success: true, message, endpoint: prepared.endpoint, ...wsdl });
+    }
     const certificate = validatePreparedCertificate(prepared);
     const baseResult = {
       certificateValidFrom: certificate.validFrom,
@@ -162,16 +161,10 @@ const handleJsonAction = async (
       certificateSubject: certificate.subject,
       certificateCnpj: certificate.cnpj,
     };
-    if (action === "test-certificate") {
-      const message = "Certificado A1 e chave privada validados para assinatura XML.";
-      await logOperation(admin, userId, prepared, "Sucesso", message, baseResult);
-      return jsonResponse({ ok: true, success: true, message, ...baseResult });
-    }
-
-    const wsdl = await validateWebIssWsdl(asString(prepared.wsdlUrl));
-    const message = "WSDL oficial de Itabaiana e certificado A1 validados. Integração pronta para homologação do CeC.";
-    await logOperation(admin, userId, prepared, "Sucesso", message, { ...baseResult, ...wsdl });
-    return jsonResponse({ ok: true, success: true, message, endpoint: prepared.endpoint, ...baseResult, ...wsdl });
+    const signature = testCertificateSignature(certificate);
+    const message = "Certificado A1 validado com assinatura XML e verificacao criptografica locais. A autorizacao municipal depende do WebISS.";
+    await logOperation(admin, userId, prepared, "Sucesso", message, { ...baseResult, ...signature });
+    return jsonResponse({ ok: true, success: true, message, ...baseResult, ...signature });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha na validacao WebISS.";
     await logOperation(admin, userId, prepared, "Erro", message, {}).catch(() => undefined);
@@ -191,7 +184,8 @@ const handleCertificateUpload = async (
   if (!/\.(pfx|p12)$/i.test(file.name)) {
     return jsonResponse({ ok: false, error: "Envie um certificado .pfx ou .p12." }, 400);
   }
-  const password = asString(form.get("certificadoSenha"));
+  const passwordValue = form.get("certificadoSenha");
+  const password = typeof passwordValue === "string" ? passwordValue : "";
   const context = asRecord(JSON.parse(asString(form.get("context")) || "{}"));
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);

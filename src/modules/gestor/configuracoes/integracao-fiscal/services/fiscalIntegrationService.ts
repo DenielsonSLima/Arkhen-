@@ -18,6 +18,7 @@ import {
 import type {
   FiscalConfigData,
   FiscalContextInput,
+  FiscalReadiness,
   FiscalPrefeituraProfile,
   FiscalLocationGroup,
   FiscalMunicipalityContext,
@@ -42,22 +43,14 @@ export class WebIssAdapter implements NfsProviderAdapter {
   id = 'WebISS';
   name = 'WebISS Provedor';
 
-  async testConnection(user: string, pass: string): Promise<{ success: boolean; message: string }> {
-    if (!user || !pass) {
-      return { success: false, message: 'Usuário e senha são obrigatórios.' };
-    }
-
-    return { success: true, message: 'Conexão enviada para validação segura na Edge Function.' };
+  async testConnection(_user: string, _pass: string): Promise<{ success: boolean; message: string }> {
+    throw new Error('O teste WebISS exige contexto municipal e deve ser executado pelo serviço fiscal seguro.');
   }
 
-  async emitNfse(config: FiscalConfigData, _rpsNumber: string): Promise<{ success: boolean; nfseNumber?: string; protocolo?: string; message: string }> {
-    return {
-      success: true,
-      nfseNumber: String(Number(config.ultimoNumeroNfse || 0) + 1),
-      protocolo: `PROT-${Math.floor(100000 + Math.random() * 900000)}`,
-      message: 'Operação encaminhada para o provedor fiscal.',
-    };
+  async emitNfse(_config: FiscalConfigData, _rpsNumber: string): Promise<{ success: boolean; message: string }> {
+    throw new Error('A emissão WebISS exige uma cobrança e deve ser executada pelo backend de faturamento.');
   }
+
 }
 
 type RawFiscalData = Partial<FiscalMunicipalityData> & {
@@ -71,7 +64,7 @@ const SECRET_PLACEHOLDER = '••••••••';
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-const sanitizeSecretInput = (value: string | undefined) => (value || '').replace(/•/g, '').trim();
+const sanitizeSecretInput = (value: string | undefined) => value === SECRET_PLACEHOLDER ? '' : value || '';
 
 const resolveDefaultConfigForMunicipio = (input: { uf: string; municipio: string }): FiscalConfigData => {
   const profile = getPrefeituraProfile(input.uf, input.municipio);
@@ -144,6 +137,8 @@ const normalizeConfig = (value: unknown, fallback?: FiscalConfigData): FiscalCon
     regimeEspecial: normalizeString(source.regimeEspecial, base.regimeEspecial),
     incentivadorCultural: normalizeString(source.incentivadorCultural, base.incentivadorCultural),
     issRetido: normalizeString(source.issRetido, base.issRetido),
+    optanteSimplesNacional: normalizeString(source.optanteSimplesNacional, ''),
+    responsavelRetencao: normalizeString(source.responsavelRetencao, ''),
   };
 };
 
@@ -235,7 +230,7 @@ const createDraftData = (input: FiscalContextInput): FiscalMunicipalityData => {
       companyName: normalized.companyName,
       uf: normalized.uf,
       municipio: normalized.municipio,
-      isActive: normalized.isActive,
+      isActive: false,
     },
     config,
     stats: normalizeStats({}),
@@ -292,6 +287,8 @@ const toUpsertPayload = (context: FiscalContextInput, config: FiscalConfigData, 
   regimeEspecial: config.regimeEspecial,
   incentivadorCultural: config.incentivadorCultural,
   issRetido: config.issRetido,
+  optanteSimplesNacional: config.optanteSimplesNacional || '',
+  responsavelRetencao: config.responsavelRetencao || '',
 });
 
 export const fiscalIntegrationService = {
@@ -323,7 +320,8 @@ export const fiscalIntegrationService = {
     return getEnvironmentUrlForProfile(profile, ambiente);
   },
 
-  getAdapter(_providerId: string): NfsProviderAdapter {
+  getAdapter(providerId: string): NfsProviderAdapter {
+    if (providerId !== 'WebISS') throw new Error('Provedor fiscal não implementado.');
     return new WebIssAdapter();
   },
 
@@ -371,6 +369,8 @@ export const fiscalIntegrationService = {
         p_payload: {
           inscricaoMunicipal: config.inscricaoMunicipal,
           codigoCnae: config.codigoCnae,
+          optanteSimplesNacional: config.optanteSimplesNacional || '',
+          responsavelRetencao: config.responsavelRetencao || '',
         },
       });
       if (parametersError) throw parametersError;
@@ -383,6 +383,18 @@ export const fiscalIntegrationService = {
 
   async setContextActive(context: FiscalContextInput, config: FiscalConfigData, active: boolean): Promise<FiscalMunicipalityData> {
     return this.saveConfig(context, config, active);
+  },
+
+  async getReadiness(context: FiscalContextInput, config: FiscalConfigData): Promise<FiscalReadiness> {
+    const data = await invokeFiscalEdge({ action: 'diagnostic-readiness', ...toUpsertPayload(context, config, false) });
+    if (typeof data.ready !== 'boolean' || !Array.isArray(data.blockers)) throw new Error('Diagnóstico fiscal indisponível.');
+    return {
+      ready: data.ready,
+      blockers: data.blockers.filter((item): item is string => typeof item === 'string'),
+      environment: typeof data.environment === 'string' ? data.environment : config.ambiente,
+      endpoint: typeof data.endpoint === 'string' ? data.endpoint : '',
+      certificateConfigured: data.certificateConfigured === true,
+    };
   },
 
   async testConnection(context: FiscalContextInput, config: FiscalConfigData): Promise<{ success: boolean; message: string }> {

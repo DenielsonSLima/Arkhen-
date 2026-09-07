@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { fiscalKeys } from '../../configuracoes/integracao-fiscal/queries/useFiscalQueries';
 import { configuracoesKeys } from '../../configuracoes/queries/configuracoesKeys';
 import { faturamentoKeys } from '../../faturamento/queries/faturamentoKeys';
 import {
@@ -108,7 +109,23 @@ export const useEmitirNfseFinanceiraMutation = () => {
 
   return useMutation({
     mutationFn: (id: string) => financeiroService.emitirNfseManual(id),
-    onSuccess: () => invalidateFinanceiro(queryClient),
+    retry: false,
+    onSettled: () => {
+      invalidateFinanceiro(queryClient);
+      queryClient.invalidateQueries({ queryKey: fiscalKeys.all });
+    },
+  });
+};
+
+export const useConsultarNfseFinanceiraMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeiroService.consultarNfseManual(id),
+    retry: false,
+    onSettled: () => {
+      invalidateFinanceiro(queryClient);
+      queryClient.invalidateQueries({ queryKey: fiscalKeys.all });
+    },
   });
 };
 

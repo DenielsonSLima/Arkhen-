@@ -39,6 +39,7 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
         {config.certificadoDiasRestantes ? getCertBadge(config.certificadoDiasRestantes) : null}
       </div>
 
+      <p className="input-helper-text">O teste de assinatura usa o certificado armazenado no servidor. Salve mudanças de senha antes de testar.</p>
       <div className="cert-uploader-container">
         
         {/* Drag and Drop Zone */}
@@ -61,7 +62,7 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
           <label htmlFor="cert-file-input" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
             <Upload className="upload-icon" size={28} />
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-dark)', marginTop: '8px' }}>
-              {config.certificadoNome ? config.certificadoNome : 'Arraste seu certificado digital A1 aqui'}
+              {config.certificadoNome ? config.certificadoNome : 'Arraste seu certificado A1 (.pfx/.p12, até 3 MB) aqui'}
             </span>
             <span className="file-helper">Formatos aceitos: .PFX ou .P12</span>
             <button 

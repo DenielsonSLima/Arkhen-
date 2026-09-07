@@ -100,6 +100,7 @@ export const FiscalAmbiente: React.FC<FiscalAmbienteProps> = ({
         </div>
       </div>
 
+      <p className="input-helper-text">Os diagnósticos usam a configuração salva no servidor. Salve as alterações antes de testar.</p>
       {/* Diagnostic Connection Section */}
       <div style={{ marginTop: '20px', borderTop: '1px solid #f4f6f9', paddingTop: '16px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>

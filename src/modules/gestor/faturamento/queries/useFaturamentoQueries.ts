@@ -1,3 +1,4 @@
+import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   faturamentoService,
@@ -62,3 +63,10 @@ export const useFaturamentoInadimplenciaQuery = (filters: { minDias?: number; se
     ...faturamentoQueryOptions,
   })
 );
+
+export const useFaturamentoClientesQuery = (enabled: boolean) => useQuery({
+  queryKey: ['gestao-empresarial', 'companies'],
+  queryFn: () => gestaoEmpresarialService.getCompanies(),
+  enabled,
+  ...faturamentoQueryOptions,
+});

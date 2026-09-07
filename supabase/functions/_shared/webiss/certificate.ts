@@ -31,7 +31,7 @@ const normalizeBase64 = (value: string) => value.replace(/^data:[^,]+,/, "").rep
 
 const decodeBase64 = (value: string) => {
   const normalized = normalizeBase64(value);
-  if (!normalized || normalized.length > 4 * 1024 * 1024) {
+  if (!normalized || normalized.length > 4 * 1024 * 1024 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized) || normalized.length % 4 !== 0) {
     throw new Error("Certificado ausente ou acima do limite de 3 MB.");
   }
   try {
@@ -103,15 +103,20 @@ export const parseFiscalPkcs12 = (base64: string, password: string): FiscalCerti
   ];
   const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag] || [];
   const key = keyBags.find((bag) => bag.key)?.key;
-  const certificate = certBags.find(
-    (bag: { cert?: ForgeCertificate }) => bag.cert,
-  )?.cert;
+  // A PFX can store the issuing chain before the leaf. Select the certificate
+  // whose RSA public key matches the private key, never the first certificate.
+  const certificate = certBags.find((bag: { cert?: ForgeCertificate & { publicKey: unknown } }) => {
+    if (!bag.cert || !key) return false;
+    const publicKey = bag.cert.publicKey as { n?: { compareTo: (n: unknown) => number }; e?: { compareTo: (e: unknown) => number } };
+    return publicKey.n?.compareTo(key.n) === 0 && publicKey.e?.compareTo(key.e) === 0;
+  })?.cert;
   if (!key || !certificate) throw new Error("PFX/P12 sem chave privada ou certificado A1.");
 
   const validFrom = certificate.validity.notBefore;
   const validUntil = certificate.validity.notAfter;
   const daysRemaining = Math.ceil((validUntil.getTime() - Date.now()) / 86_400_000);
-  if (daysRemaining < 0) throw new Error(`Certificado expirado em ${validUntil.toISOString().slice(0, 10)}.`);
+  if (validFrom.getTime() > Date.now()) throw new Error("Certificado ainda nao e valido.");
+  if (validUntil.getTime() <= Date.now()) throw new Error(`Certificado expirado em ${validUntil.toISOString().slice(0, 10)}.`);
 
   const commonName = readAttribute(certificate, "CN");
   const organization = readAttribute(certificate, "O");

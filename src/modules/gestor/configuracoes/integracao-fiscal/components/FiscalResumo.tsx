@@ -1,9 +1,14 @@
 import React from 'react';
+import type { FiscalReadiness } from '../services/fiscalIntegrationTypes';
 import { Play, Key, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import type { FiscalConfigData, NfsStats, NfsHistoryItem } from '../services/fiscalIntegrationService';
 
 interface FiscalResumoProps {
   config: FiscalConfigData;
+  isActive: boolean;
+  readiness?: FiscalReadiness;
+  readinessLoading?: boolean;
+  readinessError?: string;
   stats: NfsStats;
   history: NfsHistoryItem[];
   syncing: boolean;
@@ -21,6 +26,7 @@ interface FiscalResumoProps {
 
 export const FiscalResumo: React.FC<FiscalResumoProps> = ({
   config,
+  isActive, readiness, readinessLoading, readinessError,
   stats,
   history,
   syncing,
@@ -53,8 +59,8 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
         <div className="bancaria-summary-card gold-border">
           <span className="summary-label">Status da Integração</span>
           <span className="summary-value" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', marginTop: '4px' }}>
-            <span className={`status-dot ${certificadoDiasRestantes > 0 ? 'active' : 'inactive'}`}></span>
-            {certificadoDiasRestantes > 0 ? 'Ativo / Em Produção' : 'Atenção / Inativo'}
+            <span className={`status-dot ${isActive && readiness?.ready ? 'active' : 'inactive'}`}></span>
+            {!isActive ? 'Configuração desabilitada' : readinessLoading ? 'Verificando configuração' : readiness?.ready ? 'Pré-requisitos configurados' : 'Configuração com pendências'}
           </span>
         </div>
 
@@ -79,12 +85,21 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
         </div>
       </div>
 
+      <div className="fiscal-actions-card" role="status">
+        <h3>Preparação para emissão WebISS</h3>
+        <p className="input-helper-text">Ambiente: <strong>{config.ambiente === 'producao' ? 'Produção' : 'Homologação — testes sem valor fiscal'}</strong>.</p>
+        {readinessError && <p className="error-banner">Não foi possível verificar os pré-requisitos: {readinessError}</p>}
+        {!readiness && !readinessLoading && !readinessError && <p>Salve o contexto para verificar os pré-requisitos no servidor.</p>}
+        {readiness?.blockers.length ? <ul>{readiness.blockers.map(item => <li key={item}>{item}</li>)}</ul> : null}
+        <p className="input-helper-text">O cadastro/CeC e a autorização para emissão precisam estar aprovados no portal municipal. O teste de conexão verifica o serviço; o teste A1 verifica a assinatura local.</p>
+      </div>
+
       {/* Integration Statistics Cards */}
       <div>
         <div className="table-actions-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3>Estatísticas de Emissão (NFS-e)</h3>
           <span className="input-helper-text" style={{ fontSize: '0.78rem', margin: 0 }}>
-            Atualizado automaticamente pelo conector da prefeitura.
+            Registros fiscais armazenados neste contexto.
           </span>
         </div>
 
@@ -141,7 +156,7 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
             className="btn-secondary-action"
           >
             <RefreshCw size={15} />
-            <span>Sincronizar Lotes</span>
+            <span>Atualizar registros locais</span>
           </button>
 
           <button
@@ -151,7 +166,7 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
             className="btn-secondary-action"
           >
             <FileText size={15} />
-            <span>Consultar Última NFS-e</span>
+            <span>Ver última NFS-e registrada</span>
           </button>
 
           <button
@@ -161,7 +176,7 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
             className="btn-secondary-action"
           >
             <Sparkles size={15} />
-            <span>Consultar Próxima Numeração</span>
+            <span>Ver próximo RPS cadastrado</span>
           </button>
         </div>
 
@@ -174,7 +189,7 @@ export const FiscalResumo: React.FC<FiscalResumoProps> = ({
               </div>
             )}
             {certResult && (
-              <div className="success-banner" style={{ margin: 0, padding: '10px 14px' }}>
+              <div className={certResult.success ? 'success-banner' : 'error-banner'} style={{ margin: 0, padding: '10px 14px' }}>
                 <strong>Certificado:</strong> {certResult.message}
               </div>
             )}

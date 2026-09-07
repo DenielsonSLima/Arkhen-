@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useFaturamentoClientesQuery } from '../queries/useFaturamentoQueries';
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +19,6 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
-import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import {
   useCreateCobrancaFinanceiraMutation,
   useEmitirNfseFinanceiraMutation,
@@ -58,11 +57,7 @@ const getTodayString = () => {
 type NovoLancamentoTipo = 'cobranca' | 'nfse' | 'nfseComCobranca';
 
 export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps> = ({ isOpen, onClose }) => {
-  const clientesQuery = useQuery({
-    queryKey: ['gestao-empresarial', 'companies'],
-    queryFn: gestaoEmpresarialService.getCompanies,
-    enabled: isOpen,
-  });
+  const clientesQuery = useFaturamentoClientesQuery(isOpen);
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
   const emitNfseMutation = useEmitirNfseFinanceiraMutation();
   const [step, setStep] = useState(1);
@@ -79,6 +74,8 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [generatedCobranca, setGeneratedCobranca] = useState<CobrancaFinanceira | null>(null);
   const [copyStatus, setCopyStatus] = useState('');
+  const [nfseFailure, setNfseFailure] = useState(false);
+  const [nfseAmbiente, setNfseAmbiente] = useState<'homologacao' | 'producao' | null>(null);
   const schedule = useManagedTimeout();
 
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -89,17 +86,23 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const isSomenteNfse = tipo === 'nfse';
   const isSubmitPending = createCobrancaMutation.isPending || emitNfseMutation.isPending;
   const getSuccessMessage = () => {
+    if (nfseFailure) return 'Cobrança criada. A NFS-e não foi confirmada; consulte a situação no Financeiro antes de tentar emitir novamente.';
+    if (nfseAmbiente === 'homologacao') return 'Teste de NFS-e concluído em homologação, sem valor fiscal. A cobrança permanece sem NFS-e de produção.';
     if (isSomenteNfse) return 'Cobrança criada e NFS-e emitida.';
     if (tipo === 'nfseComCobranca') return 'Cobrança gerada e NFS-e emitida em seguida.';
     return 'Cobrança criada no Banco Inter e registrada no financeiro.';
   };
   const getStep3Title = () => {
+    if (nfseFailure) return 'Cobrança criada — NFS-e pendente';
+    if (nfseAmbiente === 'homologacao') return 'NFS-e de homologação — sem valor fiscal';
     if (isSomenteNfse) return 'NFS-e emitida';
     if (tipo === 'nfseComCobranca') return 'Cobrança e NFS-e emitidas';
     return 'Cobrança gerada';
   };
 
   const resetForm = () => {
+    setNfseAmbiente(null);
+    setNfseFailure(false);
     setStep(1);
     setTipo('cobranca');
     setClienteEmpresaId('');
@@ -186,8 +189,14 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
       });
       let updatedCobranca = cobranca;
       if (tipo === 'nfse' || tipo === 'nfseComCobranca') {
-        const nfseId = await emitNfseMutation.mutateAsync(cobranca.id);
-        updatedCobranca = { ...cobranca, nfseId };
+        try {
+          const result = await emitNfseMutation.mutateAsync(cobranca.id);
+          setNfseAmbiente(result.ambiente);
+          updatedCobranca = result.ambiente === 'producao' ? { ...cobranca, nfseId: result.nfseId } : cobranca;
+        } catch (error) {
+          setNfseFailure(true);
+          setErrorMsg(error instanceof Error ? error.message : 'A NFS-e não foi confirmada.');
+        }
       }
 
       setGeneratedCobranca(updatedCobranca);
@@ -378,41 +387,16 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               <textarea rows={2} maxLength={220} placeholder="Ex: Após o vencimento, cobrar juros e multa conforme contrato." value={mensagemBoleto} onChange={(event) => setMensagemBoleto(event.target.value)} />
             </div>
 
-            {/* Live calculations preview */}
-            {(parsePercentInput(descontoPercentual) > 0 || parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && parseCurrencyInput(valor) > 0 && (
-              <div className="faturamento-form-group" style={{ gridColumn: '1 / -1', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '8px' }}>Simulação de Valores:</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {parsePercentInput(descontoPercentual) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#475569' }}>Valor com desconto (até o vencimento):</span>
-                      <strong style={{ color: '#16a34a' }}>
-                        {formatCurrency(parseCurrencyInput(valor) * (1 - parsePercentInput(descontoPercentual)))}
-                      </strong>
-                    </div>
-                  )}
-                  {(parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                      <span style={{ color: '#475569' }}>Valor após o vencimento (com multa e juros/mês):</span>
-                      <strong style={{ color: '#dc2626' }}>
-                        {formatCurrency(
-                          parseCurrencyInput(valor) +
-                          (parseCurrencyInput(valor) * parsePercentInput(multaPercentual)) +
-                          (parseCurrencyInput(valor) * parsePercentInput(jurosPercentual))
-                        )}
-                      </strong>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            <p className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
+              Desconto, juros e multa serão aplicados pelo serviço de cobrança conforme as condições informadas.
+            </p>
           </div>
         )}
 
         {step === 3 && generatedCobranca && (
           <div className="faturamento-success-panel">
             <div className="faturamento-success-alert">
-              <Check size={18} />
+              {nfseFailure ? <AlertTriangle size={18} /> : <Check size={18} />}
               <span>{getSuccessMessage()}</span>
             </div>
 
@@ -429,30 +413,6 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
                 <span>Vencimento</span>
                 <strong>{formatDate(generatedCobranca.dataVencimento)}</strong>
               </div>
-
-              {/* Discount row */}
-              {parsePercentInput(descontoPercentual) > 0 && (
-                <div>
-                  <span>Com desconto (até o vencimento)</span>
-                  <strong style={{ color: '#16a34a' }}>
-                    {formatCurrency(generatedCobranca.valor * (1 - parsePercentInput(descontoPercentual)))}
-                  </strong>
-                </div>
-              )}
-
-              {/* Fine and interest row */}
-              {(parsePercentInput(multaPercentual) > 0 || parsePercentInput(jurosPercentual) > 0) && (
-                <div>
-                  <span>Após o vencimento (valor + multa + juros/mês)</span>
-                  <strong style={{ color: '#dc2626' }}>
-                    {formatCurrency(
-                      generatedCobranca.valor + 
-                      (generatedCobranca.valor * parsePercentInput(multaPercentual)) + 
-                      (generatedCobranca.valor * parsePercentInput(jurosPercentual))
-                    )}
-                  </strong>
-                </div>
-              )}
 
               <div>
                 <span>Status</span>

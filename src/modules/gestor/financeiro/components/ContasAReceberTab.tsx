@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Search, Calendar, CheckCircle2, Clipboard, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, ExternalLink, TrendingUp, Wallet } from 'lucide-react';
 import type { CobrancaFinanceira } from '../services/financeiroService';
 import './ContasAReceberTab.css';
+import { NfseChargeActions } from './NfseChargeActions';
 import '../../faturamento/Faturamento.css';
 import { matchesCnpjSearch } from '../../../../lib/cnpj';
 
@@ -358,6 +359,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
                 <th style={{ width: '130px' }}>Status / Meio</th>
                 <th>Cliente</th>
                 <th>Descrição / Categoria</th>
+                <th>NFS-e / RPS</th>
                 <th style={{ width: '140px', textAlign: 'right' }}>Valor</th>
                 <th style={{ width: '180px' }}>Vencimento / Pagamento</th>
                 <th style={{ width: '110px', textAlign: 'center' }}>Ações</th>
@@ -395,6 +397,7 @@ export const ContasAReceberTab: React.FC<ContasAReceberTabProps> = ({
                         <span className="table-cell-category" style={{ fontSize: '0.75rem', color: '#64748b' }}>{getCategory(item)}</span>
                       </div>
                     </td>
+                    <td><NfseChargeActions charge={item} /></td>
                     <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                       <strong className={`table-cell-value ${isItemOverdue ? 'overdue' : (item.status === 'Pago' ? 'paid' : '')}`}>
                         {onFormatCurrency(item.valor)}

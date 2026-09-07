@@ -25,6 +25,8 @@ export interface CobrancaFinanceira {
   meioPagamento: 'Pix' | 'Boleto' | 'Ambos';
   bankChargeId?: string;
   nfseId?: string;
+  nfseStatus?: string;
+  nfseRpsNumero?: string;
   paymentUrl?: string;
   bankSlipUrl?: string;
   bankSlipPdfUrl?: string;

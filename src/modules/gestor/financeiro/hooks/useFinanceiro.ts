@@ -243,8 +243,10 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
 
   const handleEmitirNfseManual = async (id: string) => {
     try {
-      const nfseId = await emitirNfseMutation.mutateAsync(id);
-      setTransientSuccess(`Nota Fiscal de Serviço (NFS-e) emitida com sucesso! ID: ${nfseId}`, 4000);
+      const result = await emitirNfseMutation.mutateAsync(id);
+      setTransientSuccess(result.ambiente === 'homologacao'
+        ? `NFS-e de homologação nº ${result.nfseId}. Sem valor fiscal; cobrança não marcada como emitida.`
+        : `NFS-e confirmada com sucesso! Número: ${result.nfseId}`, 6000);
     } catch (err) {
       setTransientError(err instanceof Error ? err.message : 'Falha ao emitir NFS-e.');
     }
