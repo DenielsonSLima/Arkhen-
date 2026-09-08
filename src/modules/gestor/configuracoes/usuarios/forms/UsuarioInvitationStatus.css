@@ -2,17 +2,51 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  min-width: 200px;
-  max-width: 300px;
+  gap: 10px;
+  min-width: 0;
   white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.usuario-invitation-label {
+  color: var(--color-text-dark, #242720);
+  font-size: 0.83rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .usuario-invitation-status small {
   color: var(--color-text-muted, #64748b);
   line-height: 1.4;
+  font-size: 0.72rem;
+}
+
+.usuario-invitation-status .usuario-invitation-delivery-note { font-size: 0.66rem; }
+
+.usuario-invitation-send {
+  align-self: stretch;
+  min-height: 38px;
+  padding: 9px 12px;
+  border: 1px solid #2d302a;
+  border-radius: 7px;
+  background: #2d302a;
+  color: #fff5df;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.usuario-invitation-send:hover:not(:disabled) { background: #454536; }
+.usuario-invitation-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.usuario-invitation-status [role='status'] {
+  color: #246441;
+  font-size: 0.74rem;
+  line-height: 1.4;
 }
 
 .usuario-invitation-status [role='alert'] {
   color: var(--color-error);
+  font-size: 0.74rem;
 }

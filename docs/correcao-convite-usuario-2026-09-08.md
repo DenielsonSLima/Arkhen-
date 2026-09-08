@@ -102,4 +102,16 @@ conferidos contra o código revisado. Chamadas sintéticas sem sessão retornara
 401 para criar convite, consultar status e reenviar, confirmando que a validação
 do endereço passa e a autenticação continua obrigatória. O retorno Auth para
 `/redefinir-senha` também foi reconfirmado. Nenhuma conta ou envio real foi criado
-nessa verificação. O frontend segue no PR #20 para integração após a função.
+nessa verificação. A publicação do frontend está registrada no PR #20.
+
+## Visualização e acompanhamento
+
+A gestão de usuários usa cards responsivos com identificação, perfil, contato,
+status de acesso e convite. Cada convite pendente tem ação explícita de enviar
+ou reenviar; confirmação ou falha aparece no card correspondente. O estado é
+consultado novamente mesmo quando a resposta do envio falha, evitando exibir
+“Não enviado” se o servidor já tiver enviado o e-mail.
+
+“Enviado em” indica registro do serviço de envio, não confirmação de entrega na
+caixa de entrada. A tela diferencia esse estado de convite aceito e de primeira
+senha ainda pendente. Nenhum envio é disparado ao abrir ou atualizar os cards.

@@ -33,15 +33,20 @@ export const UsuarioInvitationStatus = ({
 
   return (
     <div className="usuario-invitation-status">
-      <span>{label}</span>
+      <span className="usuario-invitation-label">{label}</span>
       <small>
         {accepted
           ? 'O usuário deve concluir a senha na página de ativação já aberta.'
           : 'O usuário cria a primeira senha pelo link do convite no e-mail.'}
       </small>
+      {((known && Boolean(sentAt) && !accepted) || resend.isSuccess) && (
+        <small className="usuario-invitation-delivery-note">
+          Envio registrado; entrega na caixa de entrada não confirmada.
+        </small>
+      )}
       <button
         type="button"
-        className="btn-cancel"
+        className="usuario-invitation-send"
         disabled={!known || accepted || isLoading || resend.isPending}
         onClick={(event) => {
           event.stopPropagation();

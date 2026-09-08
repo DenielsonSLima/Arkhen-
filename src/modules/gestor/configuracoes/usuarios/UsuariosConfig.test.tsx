@@ -1,18 +1,20 @@
 /** @vitest-environment jsdom */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UsuariosConfig } from './UsuariosConfig';
 
 const mocks = vi.hoisted(() => ({
   saveUsuario: vi.fn(), getUsuarios: vi.fn(), listInvitations: vi.fn(), resendInvitation: vi.fn(),
+  excluirUsuario: vi.fn(),
 }));
 
 vi.mock('./services/usuariosService', () => ({
   usuariosService: {
     getUsuarios: mocks.getUsuarios,
     saveUsuario: mocks.saveUsuario,
+    excluirUsuario: mocks.excluirUsuario,
   },
 }));
 
@@ -53,6 +55,65 @@ describe('cadastro de usuário por convite', () => {
     usuario_id: 'usuario-pendente', invited_at: null,
     confirmation_sent_at: null, email_confirmed_at: null,
   };
+
+  it('exibe cards e reenvia somente o convite do card escolhido, sem abrir edição por clique no conteúdo', async () => {
+    const otherUser = { ...pendingUser, id: 'usuario-outro', nome: 'Joana Exemplo', email: 'joana@example.com' };
+    mocks.getUsuarios.mockResolvedValue([pendingUser, otherUser]);
+    mocks.listInvitations.mockResolvedValue([
+      invitation,
+      { ...invitation, usuario_id: 'usuario-outro', invited_at: '2026-09-08T14:00:00Z' },
+    ]);
+    mocks.resendInvitation.mockResolvedValue(undefined);
+    render(<QueryClientProvider client={queryClient}><UsuariosConfig /></QueryClientProvider>);
+
+    const mariaCard = await screen.findByRole('article', { name: 'Maria da Silva' });
+    const joanaCard = screen.getByRole('article', { name: 'Joana Exemplo' });
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(within(mariaCard).getByText('Administrador')).toBeDefined();
+    expect(within(mariaCard).getByText('Pendente')).toBeDefined();
+    expect(within(mariaCard).getByText('maria@example.com')).toBeDefined();
+    expect(within(mariaCard).getByText('529.982.247-25')).toBeDefined();
+    expect(within(mariaCard).getByText('E-mail + senha')).toBeDefined();
+    fireEvent.click(within(mariaCard).getByText('maria@example.com'));
+    expect(screen.queryByText('Editar Usuário')).toBeNull();
+    expect(await within(mariaCard).findByText('Não enviado')).toBeDefined();
+    expect(within(joanaCard).getByText(/^Enviado em /)).toBeDefined();
+    expect(within(joanaCard).getByText('Envio registrado; entrega na caixa de entrada não confirmada.')).toBeDefined();
+
+    fireEvent.click(within(joanaCard).getByRole('button', { name: 'Reenviar convite' }));
+    expect((await within(joanaCard).findByRole('status')).textContent).toBe('Convite enviado para joana@example.com.');
+    expect(mocks.resendInvitation).toHaveBeenCalledExactlyOnceWith('usuario-outro', expect.anything());
+    expect(within(mariaCard).queryByRole('status')).toBeNull();
+    expect(within(mariaCard).getByText('Não enviado')).toBeDefined();
+    fireEvent.click(within(mariaCard).getByRole('button', { name: 'Editar Maria da Silva' }));
+    expect(screen.getByText('Editar Usuário')).toBeDefined();
+  });
+
+  it('preserva ações adequadas à conta no card e confirma exclusão pelo modal do sistema', async () => {
+    const cpfUser = { ...pendingUser, id: 'usuario-cpf', nome: 'Carlos Exemplo', formaAcesso: 'cpf', status: 'Ativo' };
+    const unlinkedUser = { ...pendingUser, id: 'usuario-sem-auth', authUserId: null, nome: 'Cadastro Exemplo', status: 'Inativo' };
+    mocks.getUsuarios.mockResolvedValue([cpfUser, unlinkedUser]);
+    mocks.excluirUsuario.mockResolvedValue(undefined);
+    render(<QueryClientProvider client={queryClient}><UsuariosConfig /></QueryClientProvider>);
+
+    const cpfCard = await screen.findByRole('article', { name: 'Carlos Exemplo' });
+    const unlinkedCard = screen.getByRole('article', { name: 'Cadastro Exemplo' });
+    expect(within(cpfCard).getByRole('button', { name: 'Inativar Carlos Exemplo' })).toBeDefined();
+    expect(within(cpfCard).getByRole('button', { name: 'Redefinir senha de Carlos Exemplo' })).toBeDefined();
+    expect(within(cpfCard).queryByRole('button', { name: /Excluir cadastro/ })).toBeNull();
+    expect(within(unlinkedCard).queryByRole('button', { name: /Inativar/ })).toBeNull();
+    expect(within(unlinkedCard).queryByRole('button', { name: /Redefinir senha/ })).toBeNull();
+    expect(mocks.listInvitations).not.toHaveBeenCalled();
+
+    fireEvent.click(within(unlinkedCard).getByRole('button', { name: 'Excluir cadastro de Cadastro Exemplo' }));
+    expect(screen.getByText('Excluir cadastro?')).toBeDefined();
+    expect(mocks.excluirUsuario).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(mocks.excluirUsuario).not.toHaveBeenCalled();
+    fireEvent.click(within(unlinkedCard).getByRole('button', { name: 'Excluir cadastro de Cadastro Exemplo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir cadastro', exact: true }));
+    await waitFor(() => expect(mocks.excluirUsuario).toHaveBeenCalledWith(unlinkedUser));
+  });
 
   it('envia apenas por clique, impede duplicação durante envio e atualiza o status confirmado', async () => {
     mocks.getUsuarios.mockResolvedValue([pendingUser]);
