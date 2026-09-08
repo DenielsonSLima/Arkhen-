@@ -111,7 +111,7 @@ describe('cadastro de usuário por convite', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     expect(mocks.excluirUsuario).not.toHaveBeenCalled();
     fireEvent.click(within(unlinkedCard).getByRole('button', { name: 'Excluir cadastro de Cadastro Exemplo' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Excluir cadastro', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir cadastro' }));
     await waitFor(() => expect(mocks.excluirUsuario).toHaveBeenCalledWith(unlinkedUser));
   });
 
