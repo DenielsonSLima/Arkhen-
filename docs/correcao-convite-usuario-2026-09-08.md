@@ -64,6 +64,11 @@ node supabase/tests/run-convites-email.mjs /caminho/temporario/node_modules/@ele
 A publicação deve incluir a migration no Supabase e o código no GitHub.
 Não é necessário republicar a Edge Function: sua validação estava correta.
 
-A aplicação no Supabase ficou pendente de autorização explícita: a revisão
-automática bloqueou a remoção do gatilho de produção por afetar a confirmação
-das novas contas. A solicitação bloqueada não alterou o banco.
+Após autorização explícita do responsável, a migration foi aplicada no Supabase
+em 08/09/2026 e registrada com a versão `20260908121459`. A verificação posterior
+confirmou a ausência do gatilho e a preservação da quantidade de contas e do
+estado de confirmação de todas as contas existentes. O arquivo local usa a mesma
+versão registrada no banco.
+
+Nenhum convite foi enviado durante a validação; uma nova tentativa de cadastro
+pelo administrador executará o fluxo normal de envio.

@@ -27,7 +27,7 @@ try {
   // migration real; nenhum usuario ou convite e criado fora do banco em memoria.
   await db.exec('SELECT test_reproduzir_auto_confirm_legado()');
   console.log('PASS legacy Auth INSERT then metadata UPDATE reproduces 42501');
-  await db.exec(await read('../migrations/20260908120713_respeitar_confirmacao_email_auth.sql'));
+  await db.exec(await read('../migrations/20260908121459_respeitar_confirmacao_email_auth.sql'));
   await db.exec('SELECT test_convites_email_apos_correcao()');
   console.log('PASS invite provisioning, pending access, denial cases and explicit confirmation');
 } finally {
