@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import type { SaveUsuarioInput } from './usuariosService';
 
 const mocks = vi.hoisted(() => ({
@@ -56,6 +57,24 @@ const createUsuarioRow = (patch: Record<string, unknown> = {}) => ({
 
 describe('usuariosService.saveUsuario', () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it('preserva o motivo de acesso negado retornado no HTTP 403 do convite', async () => {
+    const message = 'Você não tem permissão para gerenciar usuários.';
+    mocks.invoke.mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(new Response(JSON.stringify({ error: message }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      })),
+    });
+
+    await expect(usuariosService.saveUsuario(createInput({
+      formaAcesso: 'email',
+      email: 'maria@example.com',
+      telefone: '79999999999',
+    }))).rejects.toThrow(message);
+    expect(mocks.invoke).toHaveBeenCalledTimes(1);
+  });
 
   it('cria acesso por CPF sem enviar senha e devolve a senha temporária do servidor', async () => {
     mocks.invoke.mockResolvedValue({

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 import type { Usuario } from '../../../gestor/configuracoes/usuarios/services/usuariosService';
 
@@ -185,6 +185,8 @@ describe('loginService.cadastrar', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => vi.unstubAllGlobals());
+
   const signupPayload = {
     nome: 'Maria da Silva',
     empresaNome: 'Contabilidade Exemplo',
@@ -194,6 +196,26 @@ describe('loginService.cadastrar', () => {
     cpf: '529.982.247-25',
     telefone: '(79) 99999-9999',
   };
+
+  it('aguarda confirmação de e-mail sem liberar usuário ou executar onboarding quando não há sessão', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://arkhen.vercel.app' } });
+    mocks.signUp.mockResolvedValue({
+      data: { user: authUser('auth-aguardando-confirmacao'), session: null },
+      error: null,
+    });
+
+    const result = await loginService.cadastrar(signupPayload);
+
+    expect(mocks.signUp).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      success: true,
+      needsConfirmation: true,
+      message: 'Cadastro criado. Confirme seu e-mail antes de entrar.',
+    });
+    expect(result.user).toBeUndefined();
+    expect(mocks.getUsuarioAtual).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
 
   it.each([
     [{ cpf: '111.111.111-11' }, 'CPF válido'],

@@ -141,7 +141,6 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
 
       <form onSubmit={onSubmit} className="usuario-modal-form">
         <div className="usuario-modal-content-scroll">
-          {errorMessage && <div className="form-alert-banner error usuario-modal-error" role="alert">{errorMessage}</div>}
           <div className="usuario-modal-columns">
             {/* Coluna Esquerda: Dados Gerais */}
             <div className="usuario-modal-col-left">
@@ -399,6 +398,11 @@ export const UsuarioForm: React.FC<UsuarioFormProps> = ({
           </div>
         </div>
 
+        {errorMessage && (
+          <div className="form-alert-banner error usuario-modal-error" role="alert">
+            {errorMessage}
+          </div>
+        )}
         <div className="usuario-modal-footer">
           <button
             type="button"
