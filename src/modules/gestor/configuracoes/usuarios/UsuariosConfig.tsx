@@ -1,26 +1,11 @@
 import React from 'react';
-import { Edit2, KeyRound, Trash2, UserPlus, UserX } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useUsuarios } from './hooks/useUsuarios';
 import { UsuarioForm } from './forms/UsuarioForm';
 import { UsuarioPasswordResetModal } from './forms/UsuarioPasswordResetModal';
 import { UsuarioTemporaryPasswordModal } from './forms/UsuarioTemporaryPasswordModal';
-import type { Usuario } from './services/usuariosService';
-import { formatCpf } from '../../../../lib/cpf';
-
-const weekdays = [1, 2, 3, 4, 5];
-
-const getAccessSummary = (user: Usuario) => {
-  if (!user.accessConfig.enabled) return 'Livre';
-  const isWeekdays = user.accessConfig.days.length === weekdays.length
-    && weekdays.every((day) => user.accessConfig.days.includes(day));
-  const isCommercialHours = user.accessConfig.intervals.length === 1
-    && user.accessConfig.intervals[0]?.start === '08:00'
-    && user.accessConfig.intervals[0]?.end === '18:00';
-  if (isWeekdays && isCommercialHours) return 'Horário comercial';
-  const days = user.accessConfig.days.length === 7 ? 'Todos os dias' : `${user.accessConfig.days.length} dia(s)`;
-  const intervals = `${user.accessConfig.intervals.length} intervalo(s)`;
-  return `${days} / ${intervals}`;
-};
+import { UsuarioCard } from './components/UsuarioCard';
+import { useUsuarioInvitationsQuery } from './queries/useUsuarioInvitationsQueries';
 
 export const UsuariosConfig: React.FC = () => {
   const {
@@ -48,9 +33,10 @@ export const UsuariosConfig: React.FC = () => {
     handlePasswordReset,
     closeTemporaryAccessResult,
   } = useUsuarios();
+  const invitations = useUsuarioInvitationsQuery(usuarios);
 
   if (isLoading) {
-    return <div className="sub-loading">Carregando usuários reais do Supabase...</div>;
+    return <div className="sub-loading">Carregando usuários...</div>;
   }
 
   return (
@@ -58,7 +44,7 @@ export const UsuariosConfig: React.FC = () => {
       <div className="submodule-card-header flex-header">
         <div>
           <h2>Gestão de Usuários</h2>
-          <p>Gerencie dados, perfis, status e janelas de acesso por dia e horário.</p>
+          <p>Acompanhe acessos, convites e permissões da sua equipe.</p>
         </div>
         <button className="btn-add-user" onClick={openCreate}>
           <UserPlus size={16} /> Novo Usuário
@@ -103,105 +89,26 @@ export const UsuariosConfig: React.FC = () => {
         />
       )}
 
-      <div className="table-responsive">
-        <table className="config-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Acesso</th>
-              <th>E-mail</th>
-              <th>CPF</th>
-              <th>Telefone</th>
-              <th>Perfil</th>
-              <th>Status</th>
-              <th>Restrição</th>
-              <th style={{ textAlign: 'right' }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((user) => (
-              <tr key={user.id} onClick={() => openEdit(user)} style={{ cursor: 'pointer' }}>
-                <td><strong>{user.nome}</strong></td>
-                <td>
-                  {user.formaAcesso === 'cpf' ? 'CPF + senha' : 'E-mail'}
-                  {user.mustChangePassword && (
-                    <span className="table-badge badge-orange" style={{ marginLeft: 6 }}>
-                      Primeiro acesso
-                    </span>
-                  )}
-                </td>
-                <td>{user.email || '-'}</td>
-                <td>{user.cpf ? formatCpf(user.cpf) : '-'}</td>
-                <td>{user.telefone || '-'}</td>
-                <td>{user.perfil}</td>
-                <td>
-                  <span className={`table-badge ${user.status === 'Ativo' ? 'badge-green' : user.status === 'Pendente' ? 'badge-orange' : 'badge-gray'}`}>
-                    {user.status}
-                  </span>
-                </td>
-                <td>{getAccessSummary(user)}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button
-                      className="btn-action-responsavel"
-                      title="Editar"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openEdit(user);
-                      }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {user.status !== 'Inativo' && (
-                      <button
-                        className="btn-action-responsavel"
-                        title="Inativar"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleInativar(user);
-                        }}
-                      >
-                        <UserX size={14} />
-                      </button>
-                    )}
-                    {user.formaAcesso === 'cpf' && user.authUserId && (
-                      <button
-                        className="btn-action-responsavel"
-                        title="Redefinir senha"
-                        aria-label={`Redefinir senha de ${user.nome}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openPasswordReset(user);
-                        }}
-                      >
-                        <KeyRound size={14} />
-                      </button>
-                    )}
-                    {!user.authUserId && (
-                      <button
-                        className="btn-action-responsavel"
-                        title="Excluir cadastro sem conta de acesso"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleExcluir(user);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+      <div className="usuario-cards-region">
+        {usuarios.length > 0 ? (
+          <div className="usuario-cards-grid">
+            {usuarios.map((usuario) => (
+              <UsuarioCard
+                key={usuario.id}
+                usuario={usuario}
+                invitation={invitations.data?.find((invitation) => invitation.usuario_id === usuario.id)}
+                invitationLoading={invitations.isPending}
+                invitationError={invitations.isError}
+                onEdit={openEdit}
+                onInativar={handleInativar}
+                onResetPassword={openPasswordReset}
+                onExcluir={handleExcluir}
+              />
             ))}
-            {usuarios.length === 0 && (
-              <tr>
-                <td colSpan={9} style={{ textAlign: 'center', color: '#64748b' }}>
-                  Nenhum usuário cadastrado para esta empresa.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <div className="usuario-cards-empty">Nenhum usuário cadastrado para esta empresa.</div>
+        )}
       </div>
     </div>
   );

@@ -17,8 +17,8 @@ import {
   authenticateActor,
   createServiceClient,
   jsonResponse,
-  requireEnvironment,
 } from './runtime.ts';
+import { inviteRedirectUrl } from './inviteConfiguration.ts';
 
 const publicEmployee = (value: unknown): JsonRecord => {
   const user = asRecord(value);
@@ -55,19 +55,6 @@ const throwRpcError = (
     throw new HttpError(400, error.message || fallback);
   }
   throw new HttpError(500, fallback);
-};
-
-const inviteRedirectUrl = (): string => {
-  let url: URL;
-  try {
-    url = new URL(requireEnvironment('APP_URL'));
-  } catch {
-    throw new HttpError(503, 'Serviço de convites temporariamente indisponível.');
-  }
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
-    throw new HttpError(503, 'Serviço de convites temporariamente indisponível.');
-  }
-  return new URL('/redefinir-senha', url.origin).toString();
 };
 
 const findProvisionedEmailUser = async (
@@ -141,6 +128,8 @@ export const inviteEmployeeByEmail = async (
   const cpf = normalizeCpf(payload.cpf);
   const telefone = normalizePhone(payload.telefone);
   const accessConfig = parseAccessConfig(payload.access_config ?? payload.accessConfig);
+  // Validar o destino antes de criar Auth ou vinculo evita cadastros sem convite.
+  const redirectTo = inviteRedirectUrl();
   const credentialVersion = crypto.randomUUID();
   const rpcPayload = {
     nome,
@@ -201,10 +190,18 @@ export const inviteEmployeeByEmail = async (
     }
   }
 
-  const { error: inviteError } = await client.auth.admin.inviteUserByEmail(email, {
-    redirectTo: inviteRedirectUrl(),
-    data: { nome, conta_gerenciada: true },
-  });
+  let inviteError: unknown;
+  try {
+    const result = await client.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: { nome, conta_gerenciada: true },
+    });
+    inviteError = result.error;
+  } catch {
+    // Uma falha de rede pode ocorrer depois do envio. A compensacao no banco
+    // recusa apagar um convite ja enviado e preserva o estado para reconciliacao.
+    inviteError = true;
+  }
   if (inviteError) {
     await compensateEmailProvisioning(client, actorUserId, authUserId);
     throw new HttpError(503, 'Não foi possível enviar o e-mail de convite. Tente novamente.');

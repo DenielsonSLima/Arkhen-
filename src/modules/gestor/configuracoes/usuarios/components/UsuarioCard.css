@@ -1,0 +1,195 @@
+.usuario-cards-region {
+  container-type: inline-size;
+}
+
+.usuario-cards-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.usuario-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light, #e6e4de);
+  border-top: 3px solid var(--color-gold-primary, #c59235);
+  border-radius: 14px;
+  background: var(--color-white-card, #fff);
+  box-shadow: 0 6px 20px rgb(31 29 24 / 4%);
+}
+
+.usuario-card:focus-within {
+  border-color: var(--color-gold-primary, #c59235);
+}
+
+.usuario-card-header {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--color-border-light, #e6e4de);
+}
+
+.usuario-card-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #242720;
+  color: #e4bf78;
+}
+
+.usuario-card-identity {
+  flex: 1 1 110px;
+  min-width: 0;
+}
+
+.usuario-card-identity h3 {
+  margin: 0;
+  color: var(--color-text-dark, #242720);
+  font-family: var(--font-serif);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.usuario-card-identity p {
+  margin: 4px 0 0;
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.usuario-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.usuario-card-status::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.usuario-card-status.active { background: #edf7f1; color: #246441; }
+.usuario-card-status.pending { background: #fff3d9; color: #805910; }
+.usuario-card-status.inactive { background: #eff1f3; color: #626973; }
+
+.usuario-card-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 14px;
+  margin: 0;
+  padding: 20px;
+}
+
+.usuario-card-details dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  color: var(--color-text-muted, #64748b);
+  font-size: 0.69rem;
+}
+
+.usuario-card-details dd {
+  margin: 0;
+  color: var(--color-text-dark, #242720);
+  font-size: 0.81rem;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.usuario-card-email,
+.usuario-card-access,
+.usuario-card-schedule {
+  grid-column: 1 / -1;
+}
+
+.usuario-card-first-access {
+  display: block;
+  margin-top: 4px;
+  color: #805910;
+  font-size: 0.69rem;
+}
+
+.usuario-card-invitation {
+  margin: 0 20px 20px;
+  padding: 15px;
+  border: 1px solid #ead9b5;
+  border-radius: 10px;
+  background: #fffcf5;
+}
+
+.usuario-card-invitation h4 {
+  margin: 0 0 8px;
+  color: #805910;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.usuario-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border-light, #e6e4de);
+  background: #fafbf9;
+}
+
+.usuario-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid #dddeda;
+  border-radius: 7px;
+  background: #fff;
+  color: #394037;
+  font: inherit;
+  font-size: 0.71rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.usuario-card-actions button:hover { border-color: #b28a40; background: #fffcf5; }
+.usuario-card-actions .usuario-card-action-danger { color: #a13939; }
+
+.usuario-card button:focus-visible {
+  outline: 2px solid var(--color-gold-primary, #c59235);
+  outline-offset: 3px;
+}
+
+.usuario-cards-empty {
+  padding: 48px 20px;
+  border: 1px dashed var(--color-border-light, #e6e4de);
+  border-radius: 14px;
+  color: var(--color-text-muted, #64748b);
+  text-align: center;
+}
+
+@container (min-width: 680px) {
+  .usuario-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container (min-width: 1040px) {
+  .usuario-cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

@@ -165,7 +165,8 @@ describe('contrato de acesso do funcionário por CPF', () => {
     expect(emailInvitesMigration).not.toContain("'admin', false");
     expect(emailInvitesMigration).toContain('TO service_role');
     expect(emailEdgeFunction).toContain('client.auth.admin.inviteUserByEmail');
-    expect(emailEdgeFunction).toContain("new URL('/redefinir-senha'");
+    expect(readWorkspaceFile('supabase/functions/manage-employee-user/inviteConfiguration.ts'))
+      .toContain("new URL('/redefinir-senha'");
     expect(edgeFunction).toContain("payload.action === 'invite_email'");
   });
 
