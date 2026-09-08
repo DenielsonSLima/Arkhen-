@@ -27,6 +27,7 @@ import {
   completeFirstAccess,
   inviteEmployeeByEmail,
 } from './managedEmail.ts';
+import { getEmailInvitationStatus, resendEmailInvite } from './emailInvitations.ts';
 
 const AUTH_ALIAS_PATTERN = /^[0-9a-f]{64}@[a-z0-9.-]+\.[a-z]{2,63}$/;
 
@@ -392,6 +393,8 @@ Deno.serve(async (request) => {
     if (payload.action === 'login') return await loginWithCpf(request, payload);
     if (payload.action === 'create') return await createEmployee(request, payload);
     if (payload.action === 'invite_email') return await inviteEmployeeByEmail(request, payload);
+    if (payload.action === 'email_invitation_status') return await getEmailInvitationStatus(request);
+    if (payload.action === 'resend_email_invite') return await resendEmailInvite(request, payload);
     if (payload.action === 'complete_first_access') {
       return await completeFirstAccess(request, payload);
     }

@@ -12,8 +12,12 @@ o alias não é tratado como fronteira de segurança.
 - `SUPABASE_SECRET_KEYS` (JSON automático com uma chave `default` do tipo
   `sb_secret`; a função rejeita chaves legadas)
 - `SUPABASE_SERVICE_ROLE_KEY` (somente ações administrativas)
-- `APP_URL` (origem HTTPS usada no redirect do convite, por exemplo
-  `https://app.exemplo.com`)
+
+`APP_URL` é opcional: sem valor, o convite usa a origem canônica
+`https://arkhen.vercel.app`. Para outro ambiente, configure a origem HTTPS e
+autorize `/redefinir-senha` na lista de redirecionamentos do Supabase Auth.
+Um valor explícito inválido é recusado antes da criação da conta. O destino nunca
+é derivado de headers enviados pelo cliente.
 
 O segredo do alias é criado uma única vez pela migration, com 32 bytes aleatórios,
 e acompanha o backup do banco. Não o regenere nem altere o domínio técnico sem uma
@@ -89,6 +93,20 @@ Exige `Authorization: Bearer <JWT do gestor>`.
 O vínculo é criado como pendente e inativo antes do envio. O link redireciona para
 `/redefinir-senha`, onde uma sessão isolada chama `complete_first_access`. Se o
 envio falhar, a função compensa o vínculo e o usuário Auth recém-criados.
+
+### Consultar ou reenviar convites pendentes
+
+`{ "action": "email_invitation_status" }` exige JWT do gestor e retorna
+`invitations` com `usuario_id`, `invited_at`, `confirmation_sent_at` e
+`email_confirmed_at` dos convites válidos da própria empresa. Estado pendente
+sozinho não comprova envio. As datas Auth registram o envio pelo serviço, sem
+comprovar entrega na caixa de entrada.
+
+`{ "action": "resend_email_invite", "usuario_id": "uuid" }` exige o mesmo
+gestor e revalida empresa, perfil ativo, vínculo, identidade Auth e credencial.
+Envia o convite para a mesma conta, sem recriar dados. Contas que já aceitaram o
+link não podem ser reenviadas por essa ação. Somente um clique explícito do gestor
+dispara envio; consultar status não envia nada.
 
 ### Concluir primeiro acesso
 

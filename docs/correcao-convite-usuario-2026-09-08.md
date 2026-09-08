@@ -61,8 +61,8 @@ node supabase/tests/run-convites-email.mjs /caminho/temporario/node_modules/@ele
 - Frontend: mensagem acessível após erro e teste integrado do formulário.
 - Segurança: confronto com a ordem real da API Auth e revisão das proteções.
 
-A publicação deve incluir a migration no Supabase e o código no GitHub.
-Não é necessário republicar a Edge Function: sua validação estava correta.
+A primeira correção publicou a migration no Supabase e o código no GitHub,
+preservando a validação original da Edge Function.
 
 Após autorização explícita do responsável, a migration foi aplicada no Supabase
 em 08/09/2026 e registrada com a versão `20260908121459`. A verificação posterior
@@ -72,3 +72,31 @@ versão registrada no banco.
 
 Nenhum convite foi enviado durante a validação; uma nova tentativa de cadastro
 pelo administrador executará o fluxo normal de envio.
+
+## Segunda falha: cadastro pendente sem envio
+
+A tentativa de 09:18 retornou HTTP 503 depois do provisionamento. O cadastro
+permaneceu `Pendente`, mas `invited_at` e `confirmation_sent_at` estavam nulos.
+A mensagem posterior identificou a falha em `inviteRedirectUrl`: `APP_URL`
+ausente ou inválido era verificado somente depois de gravar Auth e vínculo.
+
+A Edge agora tem destino canônico quando a configuração opcional não existe e
+valida um valor explícito antes de qualquer criação. Falhas de transporte no envio
+também seguem a compensação protegida, que não apaga um convite já enviado.
+
+Uma nova consulta autorizada mostra o estado real do convite. O gestor pode
+enviar/reenviar convites ainda não aceitos pela mesma conta pendente, sem apagar
+ou recriar os cadastros. A interface diferencia ausência de envio, data registrada,
+aceite com senha pendente e falha na consulta. Não há reenvio automático.
+
+O redirecionamento remoto foi conferido com token sintético inválido, sem seguir
+ou consumir link real: Supabase respondeu 303 para
+`https://arkhen.vercel.app/redefinir-senha` com erro de token expirado. A página
+respondeu HTTP 200. Os testes de callback/primeira senha passaram; nenhum e-mail
+real foi disparado nessa verificação. Essa segunda correção requer publicação
+da Edge Function e do frontend.
+
+O deploy dessa segunda correção foi bloqueado pela revisão automática por exigir
+autorização explícita para publicar as alterações de envio/reenvio. A Edge de
+produção continua na versão 2. O código fica preparado em branch de revisão; a
+publicação da função deve preceder a integração do frontend na `main`.

@@ -6,6 +6,8 @@ import { UsuarioPasswordResetModal } from './forms/UsuarioPasswordResetModal';
 import { UsuarioTemporaryPasswordModal } from './forms/UsuarioTemporaryPasswordModal';
 import type { Usuario } from './services/usuariosService';
 import { formatCpf } from '../../../../lib/cpf';
+import { UsuarioInvitationStatus } from './forms/UsuarioInvitationStatus';
+import { hasPendingEmailInvitation, useUsuarioInvitationsQuery } from './queries/useUsuarioInvitationsQueries';
 
 const weekdays = [1, 2, 3, 4, 5];
 
@@ -48,6 +50,7 @@ export const UsuariosConfig: React.FC = () => {
     handlePasswordReset,
     closeTemporaryAccessResult,
   } = useUsuarios();
+  const invitations = useUsuarioInvitationsQuery(usuarios);
 
   if (isLoading) {
     return <div className="sub-loading">Carregando usuários reais do Supabase...</div>;
@@ -114,6 +117,7 @@ export const UsuariosConfig: React.FC = () => {
               <th>Telefone</th>
               <th>Perfil</th>
               <th>Status</th>
+              <th>Convite</th>
               <th>Restrição</th>
               <th style={{ textAlign: 'right' }}>Ações</th>
             </tr>
@@ -138,6 +142,16 @@ export const UsuariosConfig: React.FC = () => {
                   <span className={`table-badge ${user.status === 'Ativo' ? 'badge-green' : user.status === 'Pendente' ? 'badge-orange' : 'badge-gray'}`}>
                     {user.status}
                   </span>
+                </td>
+                <td onClick={(event) => event.stopPropagation()}>
+                  {hasPendingEmailInvitation(user) ? (
+                    <UsuarioInvitationStatus
+                      usuario={user}
+                      invitation={invitations.data?.find((invitation) => invitation.usuario_id === user.id)}
+                      isLoading={invitations.isPending}
+                      isError={invitations.isError}
+                    />
+                  ) : '—'}
                 </td>
                 <td>{getAccessSummary(user)}</td>
                 <td>
@@ -195,7 +209,7 @@ export const UsuariosConfig: React.FC = () => {
             ))}
             {usuarios.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={10} style={{ textAlign: 'center', color: '#64748b' }}>
                   Nenhum usuário cadastrado para esta empresa.
                 </td>
               </tr>

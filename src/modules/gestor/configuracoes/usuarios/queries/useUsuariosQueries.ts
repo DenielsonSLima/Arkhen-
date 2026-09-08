@@ -16,6 +16,7 @@ export const useSaveUsuarioMutation = () => {
     mutationFn: (input: SaveUsuarioInput) => usuariosService.saveUsuario(input),
     onSuccess: () => Promise.all([
       queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuarios() }),
+      queryClient.invalidateQueries({ queryKey: configuracoesKeys.usuariosConvites() }),
       queryClient.invalidateQueries({ queryKey: configuracoesKeys.perfisAcesso() }),
     ]),
   });

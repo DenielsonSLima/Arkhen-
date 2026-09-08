@@ -4,6 +4,7 @@ export const configuracoesKeys = {
   marcaDagua: () => [...configuracoesKeys.all, 'marca-dagua'] as const,
   perfisAcesso: () => [...configuracoesKeys.all, 'perfis-acesso'] as const,
   usuarios: () => [...configuracoesKeys.all, 'usuarios'] as const,
+  usuariosConvites: () => [...configuracoesKeys.all, 'usuarios-convites'] as const,
   xmlModelos: () => [...configuracoesKeys.all, 'xml-modelos'] as const,
   contasBancarias: () => [...configuracoesKeys.all, 'contas-bancarias'] as const,
   contasBancariasResumo: () => [...configuracoesKeys.contasBancarias(), 'resumo'] as const,
