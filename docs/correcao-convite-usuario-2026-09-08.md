@@ -96,7 +96,10 @@ respondeu HTTP 200. Os testes de callback/primeira senha passaram; nenhum e-mail
 real foi disparado nessa verificação. Essa segunda correção requer publicação
 da Edge Function e do frontend.
 
-O deploy dessa segunda correção foi bloqueado pela revisão automática por exigir
-autorização explícita para publicar as alterações de envio/reenvio. A Edge de
-produção continua na versão 2. O código fica preparado em branch de revisão; a
-publicação da função deve preceder a integração do frontend na `main`.
+Após autorização explícita, a segunda correção foi publicada em 08/09/2026:
+`manage-employee-user` está ativa na versão 3, com todos os seis arquivos
+conferidos contra o código revisado. Chamadas sintéticas sem sessão retornaram
+401 para criar convite, consultar status e reenviar, confirmando que a validação
+do endereço passa e a autenticação continua obrigatória. O retorno Auth para
+`/redefinir-senha` também foi reconfirmado. Nenhuma conta ou envio real foi criado
+nessa verificação. O frontend segue no PR #20 para integração após a função.
