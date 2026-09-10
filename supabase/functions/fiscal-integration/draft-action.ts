@@ -6,6 +6,7 @@ import {
 // Reuse the established send/consult/finalize state machine with a fiscal draft ID.
 // The adapter never creates financial charges or calls a banking service.
 const draftRpcs: Record<string, string> = {
+  registrar_envio_nfse_webiss: "registrar_envio_rascunho_webiss",
   preparar_emissao_nfse_webiss: "preparar_emissao_rascunho_webiss",
   preparar_consulta_nfse_webiss: "preparar_consulta_rascunho_webiss",
   confirmar_emissao_nfse_webiss: "confirmar_emissao_rascunho_webiss",

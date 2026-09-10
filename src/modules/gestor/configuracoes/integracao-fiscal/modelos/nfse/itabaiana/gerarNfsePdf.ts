@@ -22,7 +22,7 @@ export function gerarNfsePdf(nfse: NfseFiscalData, options: NfseModeloOptions) {
   pdf.setFont('helvetica', 'bold').setFontSize(14).text('MUNICÍPIO DE ITABAIANA', left + 27, top + 4);
   pdf.setFont('helvetica', 'normal').setFontSize(11).text('Secretaria Municipal da Fazenda', left + 27, top + 11);
   pdf.setFontSize(8).text(['Departamento Tributário - Rua Francisco Santos, Nº 160 - Centro', 'CEP: 49.500-000 - Itabaiana/SE Telefone: (79) 3431-9711'], left + 27, top + 15);
-  drawValidationPanel(pdf, nfse, options, top);
+  const validationHeight = drawValidationPanel(pdf, nfse, options, top);
   pdf.setDrawColor('#888888').setLineWidth(0.3).line(left, top + 23, 156, top + 23);
   pdf.setFont('helvetica', 'bold').setFontSize(left > 4 ? 10.8 : 11.5).text('NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e', (left + 156) / 2, top + 28, { align: 'center' });
   layout.setY(top + 32);
@@ -32,7 +32,7 @@ export function gerarNfsePdf(nfse: NfseFiscalData, options: NfseModeloOptions) {
   row([{ label: 'Reg. Especial Tributação', value: regimeLabel(nfse.regimeTributacao), weight: 2.2 },
     { label: 'Exigibilidade do ISS', value: [exigibilidadeLabel(nfse.exigibilidadeIss),
       nfse.municipioIncidencia ? `em ${nfse.municipioIncidencia}` : ''].filter(Boolean).join(' '), weight: 2 }], 156 - left);
-  layout.setY(Math.max(layout.getY(), top + 60));
+  layout.setY(Math.max(layout.getY(), top + validationHeight));
   const prestador = nfse.prestador;
   section('Prestador de serviços');
   row([{ label: 'Razão Social', value: prestador.nome }]);

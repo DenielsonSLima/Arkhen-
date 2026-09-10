@@ -1,9 +1,9 @@
 import { assertResponseMatchesRps, buildRpsQuery, buildSoapEnvelope, parseWebIssResponse, requestWebIss, WebIssError } from "./soap.ts";
 import { parseXml, readLimitedXml, xmlEscape } from "./xml.ts";
 
-const xml = '<GerarNfseResposta xmlns="http://www.abrasf.org.br/nfse.xsd"><ListaNfse><CompNfse><Nfse><InfNfse><Numero>88</Numero><CodigoVerificacao>ABC</CodigoVerificacao><DeclaracaoPrestacaoServico><InfDeclaracaoPrestacaoServico><Rps><IdentificacaoRps><Numero>10</Numero><Serie>A</Serie><Tipo>1</Tipo></IdentificacaoRps></Rps><Prestador><CpfCnpj><Cnpj>11222333000181</Cnpj></CpfCnpj><InscricaoMunicipal>15</InscricaoMunicipal></Prestador></InfDeclaracaoPrestacaoServico></DeclaracaoPrestacaoServico></InfNfse></Nfse></CompNfse></ListaNfse></GerarNfseResposta>';
+const xml = '<GerarNfseResposta xmlns="http://www.abrasf.org.br/nfse.xsd"><ListaNfse><CompNfse><Nfse><InfNfse><Numero>88</Numero><CodigoVerificacao>ABC</CodigoVerificacao><DeclaracaoPrestacaoServico><InfDeclaracaoPrestacaoServico><Rps><IdentificacaoRps><Numero>10</Numero><Serie>A</Serie><Tipo>1</Tipo></IdentificacaoRps></Rps><Prestador><CpfCnpj><Cnpj>11222333000181</Cnpj></CpfCnpj><InscricaoMunicipal>15</InscricaoMunicipal></Prestador><TomadorServico><IdentificacaoTomador><CpfCnpj><Cpf>11144477735</Cpf></CpfCnpj></IdentificacaoTomador></TomadorServico><Servico><Valores><ValorServicos>405.00</ValorServicos></Valores></Servico></InfDeclaracaoPrestacaoServico></DeclaracaoPrestacaoServico></InfNfse></Nfse></CompNfse></ListaNfse></GerarNfseResposta>';
 const soap = (output: string, cdata = false) => `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><GerarNfseResponse xmlns="http://nfse.abrasf.org.br"><outputXML xmlns="">${cdata ? `<![CDATA[${output}]]>` : xmlEscape(output)}</outputXML></GerarNfseResponse></s:Body></s:Envelope>`;
-const prepared = { rps: { numero: "10", serie: "A" }, prestador: { cnpj: "11222333000181", inscricaoMunicipal: "15" } };
+const prepared = { tomador: { documento: "11144477735" }, servico: { valor: "405.00" }, rps: { numero: "10", serie: "A" }, prestador: { cnpj: "11222333000181", inscricaoMunicipal: "15" } };
 function assertThrows(fn: () => unknown) { let threw = false; try { fn(); } catch { threw = true; } if (!threw) throw new Error("Esperava rejeicao"); }
 
 Deno.test("SOAP aceita outputXML escaped ou CDATA e correlaciona prestador/RPS", () => {
@@ -27,6 +27,19 @@ Deno.test("SOAP somente classifica retorno municipal de erro como rejeicao concl
     throw error;
   }
   throw new Error("Rejeicao nao identificada");
+});
+Deno.test("Consulta por RPS preserva XML e situacao de CompNfse cancelada ou substituida", () => {
+  const cancelled = '<NfseCancelamento versao="2.02"><Confirmacao><Pedido><InfPedidoCancelamento><IdentificacaoNfse><Numero>88</Numero><CpfCnpj><Cnpj>11222333000181</Cnpj></CpfCnpj><InscricaoMunicipal>15</InscricaoMunicipal><CodigoMunicipio>2802908</CodigoMunicipio></IdentificacaoNfse><CodigoCancelamento>1</CodigoCancelamento></InfPedidoCancelamento></Pedido><DataHora>2026-09-10T10:00:00</DataHora></Confirmacao></NfseCancelamento>';
+  const substituted = '<NfseSubstituicao versao="2.02"><SubstituicaoNfse><NfseSubstituidora>89</NfseSubstituidora></SubstituicaoNfse></NfseSubstituicao>';
+  for (const status of [cancelled, substituted, cancelled + substituted]) {
+    const output = xml.replaceAll('GerarNfseResposta', 'ConsultarNfseRpsResposta')
+      .replace('<ListaNfse>', '').replace('</ListaNfse>', '')
+      .replace('</CompNfse>', `${status}</CompNfse>`);
+    const parsed = parseWebIssResponse(soap(output), 'ConsultarNfsePorRps');
+    const expected = status.includes('NfseSubstituicao') ? 'substituida' : 'cancelada';
+    if (parsed.payload.situacao !== expected || parsed.payload.xml !== output) throw new Error('Situacao/XML perdidos');
+    assertResponseMatchesRps(parsed.payload, prepared);
+  }
 });
 Deno.test("Consulta usa root ABRASF correto e SOAP parametros unqualified", () => {
   const envelope = buildSoapEnvelope("ConsultarNfsePorRps", buildRpsQuery(prepared));
@@ -52,4 +65,12 @@ Deno.test("Data fiscal sem offset usa horario de Itabaiana; rejeita datas inexis
   if(parse("2026-08-20T00:15:00")!=="2026-08-20T03:15:00.000Z") throw new Error("Data local interpretada como UTC");
   if(parse("2026-08-20T00:15:00Z")!=="2026-08-20T00:15:00.000Z") throw new Error("Offset explicito ignorado");
   for(const date of ["2026-02-30T12:00:00","2026-08-20T25:00:00","data invalida"]) assertThrows(()=>parse(date));
+});
+
+Deno.test("Correlacao bloqueia tomador/valor divergentes e aceita mesmo decimal sem arredondar", () => {
+  const payload = parseWebIssResponse(soap(xml), "GerarNfse").payload;
+  assertThrows(() => assertResponseMatchesRps(payload, { ...prepared, tomador: { documento: "12345678909" } }));
+  assertThrows(() => assertResponseMatchesRps(payload, { ...prepared, servico: { valor: "405.01" } }));
+  assertThrows(() => assertResponseMatchesRps(payload, { ...prepared, servico: { valor: "405.001" } }));
+  assertResponseMatchesRps(payload, { ...prepared, servico: { valor: 405 } });
 });

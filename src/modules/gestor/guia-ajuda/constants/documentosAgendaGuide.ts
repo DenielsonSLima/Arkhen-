@@ -1,0 +1,161 @@
+import type { GuideModule } from '../types';
+
+export const DOCUMENTOS_GUIDE: GuideModule = {
+  id: 'documentos', title: 'Documentos', icon: 'FolderOpen',
+  description: 'Envie arquivos, organize pastas, localize documentos de clientes e gere compartilhamentos temporários.',
+  articles: [
+    {
+      id: 'documentos-localizar', title: 'Encontrar documentos na biblioteca ou por empresa',
+      summary: 'Escolha o acervo correto e combine busca, formato, categoria e ordenação.',
+      path: 'Documentos → Biblioteca / Por Empresa / Todos os Documentos', prerequisites: ['Ter acesso ao acervo desejado.'],
+      steps: [
+        { title: 'Escolha o acervo', description: 'Abra Biblioteca para os documentos pessoais, Por Empresa para os clientes ativos ou Inativas para os clientes inativos.' },
+        { title: 'Abra a empresa e a pasta', description: 'Na visão Por Empresa, selecione a empresa e depois a pasta. Confira o caminho exibido antes de abrir o arquivo.' },
+        { title: 'Busque e filtre', description: 'Digite o nome na busca. Use Formatos e Todas Categorias para reduzir os resultados. Se necessário, remova esses filtros.' },
+        { title: 'Organize a visualização', description: 'Escolha lista, cards ou visualização compacta. Use os seletores de agrupamento e ordenação para organizar por tipo, categoria, pasta, empresa ou data.' },
+        { title: 'Amplie a consulta', description: 'Se não encontrar o arquivo, consulte Todos os Documentos e confirme se ele não pertence a outra pasta ou a uma empresa inativa.' },
+      ], verification: ['O arquivo pertence à empresa e pasta pretendidas.', 'O formato e a categoria correspondem ao documento procurado.'],
+      tips: ['O texto da busca menciona conteúdo simulado; prefira nome, formato e categoria e não dependa de busca dentro do texto de todos os arquivos.'],
+    },
+    {
+      id: 'documentos-enviar', title: 'Enviar arquivos e pastas, com categoria e validade',
+      summary: 'Guarde os documentos na empresa ou biblioteca correta e confira o resultado do envio.',
+      path: 'Documentos → Biblioteca ou Por Empresa → Enviar / Pasta', prerequisites: ['Arquivos disponíveis no computador.', 'Empresa e pasta de destino identificadas.'],
+      steps: [
+        { title: 'Defina o destino', description: 'Abra Biblioteca ou entre no cliente em Por Empresa. Abra a pasta na qual pretende guardar os arquivos.' },
+        { title: 'Selecione os arquivos', description: 'Clique em Enviar / Pasta. No formulário, use Selecionar arquivos ou Selecionar pasta e confira os nomes da seleção.' },
+        { title: 'Classifique o conteúdo', description: 'Escolha Categoria. Se faltar uma categoria, use Nova ao lado do campo e cadastre uma descrição adequada ao acervo.' },
+        { title: 'Explique e controle a validade', description: 'Preencha Descrição para facilitar consultas futuras. Se o documento vencer, marque Controlar validade e informe a data.' },
+        { title: 'Envie', description: 'Clique em Enviar ou Enviar arquivos, conforme a quantidade. Aguarde o término e leia qualquer erro apontado para a seleção.' },
+        { title: 'Confira o arquivo salvo', description: 'Volte à pasta de destino, localize o documento e confira nome, categoria e acesso ao arquivo antes de considerar o envio concluído.' },
+      ], verification: ['Os arquivos enviados aparecem na pasta e empresa corretas.', 'O documento abre ou pode ser baixado sem erro.'],
+      tips: ['Antes de reenviar um lote com falha, confira quais arquivos já foram salvos para evitar duplicações.'], related: ['documentos-organizar'],
+    },
+    {
+      id: 'documentos-organizar', title: 'Criar pastas, organizar e renomear arquivos',
+      summary: 'Mantenha um padrão de nomes e pastas para que qualquer pessoa encontre o documento.',
+      path: 'Documentos → Biblioteca ou Por Empresa', prerequisites: ['Ter acesso de edição ao acervo.', 'Definir um padrão de organização, como cliente, assunto e ano.'],
+      steps: [
+        { title: 'Abra o destino', description: 'Entre na biblioteca ou na empresa e abra a pasta que será a pasta principal da nova organização.' },
+        { title: 'Crie uma pasta', description: 'Clique em Nova Pasta, informe o nome e confirme a criação. Se estiver dentro de outra pasta, confira o destino indicado no formulário.' },
+        { title: 'Organize os arquivos', description: 'Use os controles de mover disponíveis no acervo para escolher o destino. Confira o caminho antes de finalizar a movimentação.' },
+        { title: 'Ajuste os nomes', description: 'No arquivo, use a ação de renomear quando disponível, informe um nome que identifique o conteúdo e salve a alteração.' },
+        { title: 'Confira a organização', description: 'Abra a pasta de destino e localize novamente o arquivo. Utilize o caminho de navegação para retornar à pasta anterior.' },
+      ], verification: ['A pasta está no nível esperado e os documentos aparecem dentro dela.', 'O novo nome permite reconhecer assunto e período do documento.'],
+      tips: ['A exclusão de pasta com arquivos pode ser bloqueada; reorganize o conteúdo antes de tentar excluir uma pasta vazia.', 'Categorias complementam a organização em pastas e podem ser gerenciadas no botão Categorias.'],
+    },
+    {
+      id: 'documentos-baixar', title: 'Consultar, baixar arquivos e exportar uma pasta em ZIP',
+      summary: 'Confira o conteúdo disponível e obtenha uma cópia para uso fora do sistema.',
+      path: 'Documentos → arquivo ou pasta', prerequisites: ['Arquivo já enviado e acessível.'],
+      steps: [
+        { title: 'Localize o documento', description: 'Escolha o acervo, empresa e pasta e busque o nome do documento desejado.' },
+        { title: 'Confira o conteúdo', description: 'Abra o arquivo pelos controles disponíveis. Nos formatos com visualização, confira empresa, datas e conteúdo antes de baixar ou compartilhar.' },
+        { title: 'Baixe um arquivo', description: 'Use a ação de download do documento e aguarde o arquivo no local de downloads do seu navegador.' },
+        { title: 'Baixe uma pasta', description: 'Na pasta desejada, utilize Baixar pasta em ZIP para reunir o conteúdo em um arquivo compactado.' },
+        { title: 'Valide a cópia', description: 'Abra o arquivo baixado. Para ZIP, extraia os arquivos e confira se o conteúdo esperado está presente.' },
+      ], verification: ['A cópia baixada contém o documento esperado e abre corretamente.'],
+      tips: ['Uma visualização de XML fiscal auxilia a leitura do arquivo; a presença na biblioteca não demonstra, por si só, autorização fiscal.'],
+    },
+    {
+      id: 'documentos-compartilhar', title: 'Gerar um link temporário de compartilhamento',
+      summary: 'Selecione os arquivos, defina expiração e proteção e copie o link gerado.',
+      path: 'Documentos → selecionar arquivos → Compartilhar', prerequisites: ['Arquivos salvos no acervo.', 'Definir quais documentos o destinatário deve acessar.'],
+      steps: [
+        { title: 'Selecione os documentos', description: 'Marque os arquivos desejados e use Compartilhar. Revise Arquivos selecionados e a empresa de cada documento.' },
+        { title: 'Defina a duração', description: 'Escolha Expiração do link e confira até quando o acesso ficará disponível na prévia apresentada.' },
+        { title: 'Configure a proteção', description: 'Se necessário, ative Proteger com senha. Confira Senha temporária ou use Gerar para trocar a senha.' },
+        { title: 'Gere o compartilhamento', description: 'Clique em Gerar compartilhamento e aguarde a mensagem com os links criados.' },
+        { title: 'Copie o acesso', description: 'Use Copiar link para copiar apenas o endereço, ou Copiar links para copiar as informações dos documentos, expiração e senha quando incluída. Clique em Concluir.' },
+        { title: 'Confira o registro', description: 'Abra Compartilhados e localize o arquivo ou lote. Confirme status, expiração e documentos incluídos antes de encaminhar o acesso.' },
+      ], verification: ['O registro do compartilhamento corresponde aos arquivos selecionados.', 'A expiração e a exigência de senha estão conforme o planejado.'],
+      tips: ['Gerar ou copiar um link não envia mensagem automaticamente ao destinatário.', 'Um lote pode compartilhar o mesmo endereço entre vários arquivos. Confira a lista completa antes de encaminhar.'], related: ['documentos-gerenciar-links'],
+    },
+    {
+      id: 'documentos-gerenciar-links', title: 'Consultar, renovar ou revogar compartilhamentos',
+      summary: 'Controle o acesso aos links já criados e encerre um compartilhamento quando necessário.',
+      path: 'Documentos → Compartilhados', prerequisites: ['Existir um compartilhamento no acervo acessível ao seu perfil.'],
+      steps: [
+        { title: 'Abra o histórico', description: 'Entre em Compartilhados, também acessível por Mais opções → Arquivos compartilhados.' },
+        { title: 'Localize o registro', description: 'Busque por arquivo ou empresa e use os filtros de situação, como Ativos, para localizar o link.' },
+        { title: 'Confira o lote', description: 'Revise os arquivos vinculados, o status e a expiração. Use os controles de copiar link ou senha quando disponíveis.' },
+        { title: 'Encerre um acesso ativo', description: 'Use Revogar e leia a confirmação Revogar Compartilhamento antes de confirmar o encerramento do acesso.' },
+        { title: 'Renove quando necessário', description: 'Para um registro com a ação Renovar, abra o formulário, confira os parâmetros apresentados e confirme. Depois consulte novamente o status e a nova expiração.' },
+      ], verification: ['Um link revogado deixa de aparecer como ativo.', 'Um link renovado apresenta a expiração atualizada.'],
+      tips: ['Senhas geradas em outro dispositivo podem não estar disponíveis para exibição local; observe a indicação da tela.'],
+    },
+  ],
+};
+
+export const AGENDA_GUIDE: GuideModule = {
+  id: 'agenda', title: 'Agenda', icon: 'CalendarDays',
+  description: 'Planeje compromissos, consulte tarefas e prazos, acompanhe a equipe e configure eventos recorrentes.',
+  articles: [
+    {
+      id: 'agenda-calendario', title: 'Consultar o calendário e entender a origem dos itens',
+      summary: 'Encontre eventos, atividades e prazos do dia sem confundir as suas formas de edição.',
+      path: 'Agenda → Calendário', prerequisites: ['Ter acesso à agenda.'],
+      steps: [
+        { title: 'Escolha o período', description: 'Abra Calendário e use a navegação dos meses. Selecione um dia para consultar os itens daquela data.' },
+        { title: 'Filtre a consulta', description: 'Use os filtros de tipo, categoria, funcionário e empresa. Limpe os filtros quando quiser recuperar a visão completa.' },
+        { title: 'Leia os grupos', description: 'Consulte os quadros do dia e dos próximos eventos. Eles separam compromissos manuais, calendário, prazos fiscais e atividades.' },
+        { title: 'Abra a origem', description: 'Em um evento manual, a edição abre o formulário do evento. Em uma atividade, o acesso leva a Minha Fila; em um prazo fiscal, ao Painel Operacional.' },
+        { title: 'Confira o contexto', description: 'Na tela de destino, confirme empresa e período. Faça a atualização na função correspondente e volte à agenda para conferir a informação.' },
+      ], verification: ['A data selecionada e os filtros correspondem ao que você pretende consultar.'],
+      tips: ['Um prazo exibido no calendário não significa que uma obrigação foi transmitida ou concluída.'], related: ['agenda-novo-evento', 'atividades-minha-fila'],
+    },
+    {
+      id: 'agenda-novo-evento', title: 'Cadastrar um evento e definir recorrência',
+      summary: 'Agende uma reunião ou compromisso com data, responsável e instruções.',
+      path: 'Agenda → Novo Evento', prerequisites: ['Definir título, data e responsável do compromisso.'],
+      steps: [
+        { title: 'Abra o formulário', description: 'Selecione o dia no calendário, se desejar, e clique em Novo Evento.' },
+        { title: 'Identifique o compromisso', description: 'Preencha Título, selecione Tipo de Evento e Categoria. Use um título que descreva a ação esperada.' },
+        { title: 'Defina quando e para quem', description: 'Preencha Data e, se necessário, Hora. Selecione Empresa Vinculada quando o evento pertencer a um cliente e confira Responsável.' },
+        { title: 'Adicione as instruções', description: 'Em Descrição / Observações, informe pauta, preparação e referências necessárias para executar o compromisso.' },
+        { title: 'Defina a repetição', description: 'Se o compromisso se repetir, ative a opção de recorrência e selecione Período de Recorrência: mensal, bimestral, trimestral, semestral ou anual.' },
+        { title: 'Salve e localize', description: 'Clique em Salvar. Consulte o dia do evento e confira título, horário, empresa e responsável.' },
+      ], verification: ['O evento aparece no dia escolhido com os dados informados.'],
+      tips: ['Empresa e horário são opcionais. Os responsáveis disponíveis dependem do seu acesso.'],
+    },
+    {
+      id: 'agenda-editar-concluir', title: 'Editar, concluir e excluir um compromisso manual',
+      summary: 'Atualize a agenda conforme o compromisso acontece ou muda de data.',
+      path: 'Agenda → Calendário → evento manual', prerequisites: ['Evento manual cadastrado e permissão para alterá-lo.'],
+      steps: [
+        { title: 'Localize o compromisso', description: 'Selecione o dia e use os filtros para localizar o evento. Confira título, empresa e responsável.' },
+        { title: 'Edite os dados', description: 'Use a edição do evento, ajuste título, data, horário, categoria, responsável ou observações e clique em Salvar.' },
+        { title: 'Registre a conclusão', description: 'Quando o compromisso tiver sido cumprido, use o controle de conclusão disponível no cartão e confira a situação exibida.' },
+        { title: 'Exclua se necessário', description: 'Para remover um evento manual, use excluir e leia a confirmação antes de confirmar. Aguarde o resultado da operação.' },
+        { title: 'Confira a agenda', description: 'Para reagendamento, consulte a nova data; para exclusão, confirme que o item saiu da lista. Para atividades e prazos, use a origem do registro.' },
+      ], verification: ['A edição permanece ao reabrir o evento.', 'A conclusão ou exclusão foi refletida na agenda.'],
+      tips: ['Os controles variam conforme a origem do item e a permissão do usuário.'],
+    },
+    {
+      id: 'agenda-equipe-configuracao', title: 'Consultar a equipe e configurar tipos, categorias e cores',
+      summary: 'Padronize a organização visual da agenda e acompanhe os compromissos por responsável.',
+      path: 'Agenda → Equipe / filtros', prerequisites: ['Perfil com permissão de gestão da agenda para configurações e visão Equipe.'],
+      steps: [
+        { title: 'Abra Equipe', description: 'Selecione a aba Equipe e use os filtros de funcionário, empresa, tipo ou categoria para conferir a distribuição de eventos.' },
+        { title: 'Consulte a origem', description: 'Abra o item desejado para editar um evento manual ou consultar a tela de origem de uma atividade ou prazo.' },
+        { title: 'Configure tipos', description: 'Na área dos filtros, abra Gerenciar Tipos e ajuste as opções utilizadas pela equipe. Salve as alterações no formulário.' },
+        { title: 'Configure categorias e cores', description: 'Use Gerenciar Categorias para organizar os assuntos. No gerenciamento de cores dos responsáveis, ajuste a identificação visual e salve.' },
+        { title: 'Confira as opções', description: 'Abra Novo Evento e confira os tipos e categorias ativos. Retorne ao calendário para verificar a identificação dos responsáveis.' },
+      ], verification: ['Os tipos e categorias desejados aparecem nas opções de cadastro.', 'A visão Equipe considera os filtros escolhidos.'],
+    },
+    {
+      id: 'agenda-padroes', title: 'Cadastrar e revisar os padrões recorrentes da agenda',
+      summary: 'Configure eventos recorrentes, feriados e prazos apresentados pela agenda do escritório.',
+      path: 'Agenda → Padrões', prerequisites: ['Perfil de gestor.', 'Datas e regras previamente conferidas pela equipe responsável.'],
+      steps: [
+        { title: 'Localize o padrão', description: 'Abra Padrões e filtre por Todos, Obrigações, Feriados ou Datas. Se não existir o item, clique em Novo padrão.' },
+        { title: 'Identifique o evento', description: 'Preencha Título e Descrição. Escolha Tipo, Escopo e Categoria conforme a finalidade do evento.' },
+        { title: 'Defina a regra', description: 'Selecione Regra: Anual fixa, Páscoa +/- dias, Todo mês ou Último dia útil. Preencha os campos de mês, dia ou deslocamento apresentados para a opção escolhida.' },
+        { title: 'Confira a vigência na agenda', description: 'Ajuste Hora, meses aplicáveis quando disponíveis e a indicação de ativo. Confira se a regra corresponde ao evento que pretende exibir.' },
+        { title: 'Grave os padrões', description: 'Clique em Salvar tudo e aguarde a mensagem de resultado.' },
+        { title: 'Verifique as datas', description: 'Volte ao Calendário e consulte os meses afetados para conferir título e data dos eventos gerados pelo padrão.' },
+      ], verification: ['O padrão salvo permanece na lista e aparece na data esperada no calendário.'],
+      tips: ['Esses padrões são exibidos para todas as empresas. Confira o alcance da alteração antes de salvar.', 'O cadastro do padrão organiza a agenda; não realiza a entrega fiscal.'],
+    },
+  ],
+};

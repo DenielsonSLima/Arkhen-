@@ -8,7 +8,7 @@ export const statusLabels = (options: NfseModeloOptions) => [
   options.demonstracao ? 'MODELO DEMONSTRATIVO - SEM VALOR FISCAL'
     : options.ambiente === 'homologacao' ? 'HOMOLOGAÇÃO - SEM VALOR FISCAL'
     : options.ambiente === 'nao_identificado' ? 'AMBIENTE NÃO IDENTIFICADO - ESPELHO DO XML' : '',
-  options.cancelada ? 'NFS-e CANCELADA' : '',
+  options.substituida ? 'NFS-e SUBSTITUÍDA' : options.cancelada ? 'NFS-e CANCELADA' : '',
 ].filter(Boolean);
 
 /** Medidas em mm. Hierarquia e divisórias próximas à referência WebISS. */

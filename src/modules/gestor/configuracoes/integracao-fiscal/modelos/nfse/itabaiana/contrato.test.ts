@@ -42,6 +42,9 @@ describe('Contrato de apresentação WebISS Itabaiana', () => {
       'MODELO DEMONSTRATIVO - SEM VALOR FISCAL', 'NFS-e CANCELADA',
     ]);
   });
+  it('destaca a substituição sem apresentar a nota como ativa', () => {
+    expect(statusLabels({ ambiente: 'producao', substituida: true })).toContain('NFS-e SUBSTITUÍDA');
+  });
   it('usa o item explícito para o enquadramento e preserva descrição recebida', () => {
     expect(descricaoEnquadramento(parse())).toContain('Planejamento, coordenação');
     expect(descricaoEnquadramento({ ...parse(), itemListaServico: '17.19', codigoServico: '1719' })).toContain('Contabilidade');

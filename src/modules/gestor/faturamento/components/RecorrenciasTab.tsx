@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Pause, Calendar, FileText, Activity } from 'lucide-react';
 import { useFaturamentoRecorrenciasQuery } from '../queries/useFaturamentoQueries';
 import { ModalNovaRecorrencia } from './ModalNovaRecorrencia';
+import { RecorrenciaExecucoes } from './RecorrenciaExecucoes';
 import { RecorrenciaDetailView } from './RecorrenciaDetailView';
 
 export const RecorrenciasTab = () => {
@@ -59,7 +60,7 @@ export const RecorrenciasTab = () => {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
         {recorrenciasQuery.isLoading && (
           <div className="faturamento-card" style={{ padding: 20, gridColumn: '1 / -1' }}>Carregando recorrências...</div>
         )}
@@ -137,8 +138,8 @@ export const RecorrenciasTab = () => {
                 <Calendar size={14} /> Todo dia {item.dia}
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
-                {item.emissaoNfse && <span style={{ padding: '2px 6px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600 }} title="Emite NFS-e Automática">NFS-e</span>}
-                {item.cobranca && <span style={{ padding: '2px 6px', backgroundColor: '#f8fafc', color: '#0f172a', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, border: '1px solid #e2e8f0' }} title="Gera Cobrança Automática">Cob</span>}
+                {item.emissaoNfse && <span style={{ padding: '2px 6px', backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600 }} title="Preferência por NFS-e; emissão manual">NFS-e</span>}
+                {item.cobranca && <span style={{ padding: '2px 6px', backgroundColor: '#f8fafc', color: '#0f172a', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, border: '1px solid #e2e8f0' }} title="Consulte a configuração e as execuções por competência">Cob</span>}
               </div>
             </div>
           </div>
@@ -150,6 +151,7 @@ export const RecorrenciasTab = () => {
         )}
       </div>
 
+      <RecorrenciaExecucoes />
       <ModalNovaRecorrencia isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );

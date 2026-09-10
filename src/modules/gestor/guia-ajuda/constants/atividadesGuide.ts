@@ -1,0 +1,102 @@
+import type { GuideModule } from '../types';
+
+export const ATIVIDADES_GUIDE: GuideModule = {
+  id: 'atividades', title: 'Atividades', icon: 'ListChecks',
+  description: 'Organize tarefas, configure rotinas recorrentes, execute checklists e acompanhe os fechamentos dos clientes.',
+  articles: [
+    {
+      id: 'atividades-minha-fila', title: 'Minha Fila: encontrar o que fazer agora',
+      summary: 'Use prazo, busca e progresso para escolher a próxima tarefa e abrir suas instruções.',
+      path: 'Atividades → Minha Fila', prerequisites: ['Ter tarefas atribuídas ao seu usuário.'],
+      steps: [
+        { title: 'Escolha o período', description: 'Abra Minha Fila e selecione Hoje, Semana ou Mês. Use Atrasadas para localizar o que passou do prazo e Internas para o trabalho do escritório.' },
+        { title: 'Ajuste a data', description: 'Use Período anterior, Próximo período ou o campo de data de referência para consultar outra data.' },
+        { title: 'Busque a tarefa', description: 'Digite parte do título, cliente ou responsável na busca. Limpe o texto para voltar a ver as demais tarefas.' },
+        { title: 'Confira o cartão', description: 'Leia cliente, prazo, prioridade, status e progresso do checklist. Um cartão com pendências ainda exige ação.' },
+        { title: 'Abra os detalhes', description: 'Use Ver detalhes no cartão para consultar as etapas e observações antes de começar.' },
+      ], verification: ['A empresa, o prazo e o responsável dos detalhes correspondem ao trabalho que você vai executar.'],
+      tips: ['Se a lista estiver vazia, confira os filtros e a data. A fila apresenta as tarefas permitidas ao seu perfil.'], related: ['atividades-executar', 'atividades-nova-tarefa'],
+    },
+    {
+      id: 'atividades-nova-tarefa', title: 'Cadastrar uma tarefa avulsa do escritório',
+      summary: 'Registre uma demanda pontual com vencimento, prioridade e etapas claras.',
+      path: 'Atividades → Minha Fila → Nova tarefa', prerequisites: ['Definir o objetivo, o prazo e as etapas da demanda.'],
+      steps: [
+        { title: 'Abra o cadastro', description: 'Clique em Nova tarefa e confira o nome apresentado em Nova Tarefa para.' },
+        { title: 'Identifique a demanda', description: 'Preencha Título da Atividade com uma ação clara, como “Conferir documentos recebidos”. Confira Cliente / Empresa Vinculada.' },
+        { title: 'Classifique', description: 'Escolha Categoria e Prioridade. Preencha Data de Vencimento com a data em que a demanda deve estar pronta.' },
+        { title: 'Descreva as etapas', description: 'Em Checklist (um item por linha), escreva cada etapa separadamente. Use Descrição / Notas para explicar documentos necessários e resultado esperado.' },
+        { title: 'Grave', description: 'Clique em Criar Atividade, aguarde o retorno e consulte o período do vencimento na fila.' },
+      ], verification: ['A nova tarefa aparece na fila com o título, prazo e checklist informados.'],
+      tips: ['Neste formulário, a opção disponível de cliente é Escritório. Para recorrências de uma empresa, utilize Rotinas.', 'Sem etapas informadas, o cadastro utiliza a etapa “Executar atividade”.'], related: ['atividades-nova-rotina'],
+    },
+    {
+      id: 'atividades-executar', title: 'Executar etapas, registrar observações e concluir',
+      summary: 'Documente o trabalho realizado e confira os registros de conclusão da tarefa.',
+      path: 'Atividades → Minha Fila → Ver detalhes', prerequisites: ['Ter acesso de edição à tarefa.', 'Ter executado e conferido a etapa antes de marcá-la.'],
+      steps: [
+        { title: 'Confira o contexto', description: 'Abra Ver detalhes e leia Empresa / Cliente, Prazo / Vencimento, Frequência e Responsável.' },
+        { title: 'Registre o andamento', description: 'Escreva as informações necessárias em Observações / bloqueio e clique em Salvar observação. Aguarde a confirmação antes de fechar os detalhes.' },
+        { title: 'Marque cada etapa realizada', description: 'No Checklist de Etapas, marque apenas o trabalho já executado. Aguarde o fim de “Salvando alteração do checklist...” antes da próxima alteração.' },
+        { title: 'Justifique a última etapa', description: 'Quando restar uma etapa, preencha Evidência ou justificativa da conclusão, descrevendo o que foi conferido e o comprovante utilizado. Depois marque a etapa final.' },
+        { title: 'Confira o registro', description: 'Verifique o status Concluída, o progresso e a data de conclusão. As etapas mostram a data e o autor quando o registro de auditoria está disponível.' },
+        { title: 'Retorne à fila', description: 'Clique em Fechar Detalhes e confira o cartão atualizado. Se aparecer erro de gravação ou auditoria indisponível, trate a mensagem antes de considerar o registro conferido.' },
+      ], verification: ['O status e o progresso refletem as etapas efetivamente concluídas.', 'As observações permanecem ao reabrir os detalhes.'],
+      tips: ['Controles desabilitados podem indicar ausência de permissão ou uma gravação em andamento.', 'Se o horário não foi registrado, o sistema informa essa ausência; não use o horário da consulta como horário de conclusão.'],
+    },
+    {
+      id: 'atividades-nova-rotina', title: 'Criar uma rotina recorrente por empresa',
+      summary: 'Defina a repetição, o responsável e o checklist que orientarão as próximas execuções.',
+      path: 'Atividades → Rotinas → Empresas → empresa → Nova rotina', prerequisites: ['Ter perfil com acesso à gestão de rotinas.', 'Empresa cadastrada e responsável disponível.'],
+      steps: [
+        { title: 'Escolha a empresa', description: 'Em Rotinas, abra Empresas e selecione o cliente. Clique em Nova rotina ou Criar primeira rotina.' },
+        { title: 'Escolha o conteúdo', description: 'Selecione Checklist base (opcional) ou Rotina manual, sem modelo. Preencha Nome da rotina e Categoria.' },
+        { title: 'Defina a repetição', description: 'Selecione Frequência e Primeira execução. Na frequência Personalizada, preencha Intervalo em dias.' },
+        { title: 'Atribua o trabalho', description: 'Escolha Prioridade e Responsável padrão. Esse usuário será a referência para a execução da rotina.' },
+        { title: 'Complete as instruções', description: 'Informe Etapas do checklist (uma por linha) e Observações. Confira se deve marcar Incluir finais de semana na agenda.' },
+        { title: 'Salve e confira', description: 'Clique em Salvar rotina. Confira a rotina na empresa e consulte Minha Fila na data correspondente para verificar as tarefas disponibilizadas.' },
+      ], verification: ['A rotina aparece na empresa correta com frequência e responsável corretos.', 'A primeira execução corresponde ao início planejado.'],
+      tips: ['As obrigações originadas no cadastro do parceiro mantêm o conteúdo e a recorrência definidos nesse cadastro.'], related: ['atividades-editar-rotina'],
+    },
+    {
+      id: 'atividades-editar-rotina', title: 'Editar, desativar e redistribuir rotinas',
+      summary: 'Mantenha as instruções e os responsáveis atualizados, inclusive para várias rotinas.',
+      path: 'Atividades → Rotinas → Empresas ou Consulta', prerequisites: ['Ter permissão para gerenciar rotinas.', 'Identificar as empresas e rotinas que precisam da alteração.'],
+      steps: [
+        { title: 'Abra a rotina', description: 'Em Empresas, entre no cliente e use Editar rotina. Corrija os campos disponíveis e clique em Salvar rotina.' },
+        { title: 'Respeite a origem', description: 'Quando a tela informar que a rotina veio do parceiro, altere aqui o responsável. Para conteúdo e recorrência, abra Rotinas e Obrigações no cadastro do parceiro.' },
+        { title: 'Troque um responsável', description: 'Na lista da empresa, use o seletor de responsável da rotina e confira o novo nome após a gravação.' },
+        { title: 'Prepare uma alteração em lote', description: 'Abra Consulta, filtre por empresa, frequência ou responsável e marque somente as rotinas desejadas.' },
+        { title: 'Aplique a redistribuição', description: 'Escolha o novo responsável na barra da seleção e clique em Alterar responsável. Leia e confirme a alteração em lote apresentada.' },
+        { title: 'Desative quando necessário', description: 'Na empresa, use Desativar rotina e confira a confirmação antes de prosseguir. Depois consulte novamente para verificar o resultado.' },
+      ], verification: ['Todas as rotinas selecionadas exibem o responsável esperado.', 'A edição de uma rotina do parceiro respeitou os campos disponíveis.'],
+      tips: ['Use o filtro Sem responsável para localizar rotinas sem atribuição.', 'Alterar uma configuração de rotina exige conferir as tarefas existentes; não presuma que todo histórico será reescrito.'],
+    },
+    {
+      id: 'atividades-fechamentos', title: 'Conferir o fechamento de um cliente por competência',
+      summary: 'Acompanhe as etapas do mês, confira a auditoria e registre os valores disponíveis no fechamento.',
+      path: 'Atividades → Fechamentos de Clientes', prerequisites: ['Ter acesso de gestão às atividades.', 'Cliente com atividades de fechamento disponíveis.'],
+      steps: [
+        { title: 'Localize o cliente', description: 'Abra Fechamentos de Clientes, ajuste os filtros e selecione a empresa no período desejado.' },
+        { title: 'Confira a competência', description: 'No detalhe, confira o nome, CNPJ, competência e responsável antes de alterar qualquer informação.' },
+        { title: 'Leia o resumo', description: 'Abra Resumo & Auditoria para consultar o panorama do fechamento.' },
+        { title: 'Entre na atividade', description: 'Selecione a aba com o nome da atividade. Em Etapas de Fechamento, confira e marque as etapas efetivamente executadas conforme os controles disponíveis.' },
+        { title: 'Registre os valores aplicáveis', description: 'Quando a atividade apresentar o bloco de valores, use Lançar / Editar Valores. Informe os valores já apurados nos campos correspondentes e clique em Salvar Alterações.' },
+        { title: 'Faça a conferência final', description: 'Reveja o status, as etapas, as datas e os valores. Consulte o acompanhamento da mesma empresa e competência para conferir as evidências de entrega.' },
+      ], verification: ['O período consultado é o mês de referência correto.', 'Os valores e etapas conferem com a documentação usada no fechamento.'],
+      tips: ['Competência é o período ao qual o trabalho se refere. Ela pode ser diferente da data de vencimento.', 'O lançamento de valores registra informações no fechamento; a execução das obrigações deve ser conferida nos serviços correspondentes.'], related: ['acompanhamento-concluir'],
+    },
+    {
+      id: 'atividades-equipe-painel', title: 'Equipe e Painel Operacional: acompanhar atrasos e carga',
+      summary: 'Identifique responsáveis sobrecarregados e clientes que precisam de intervenção.',
+      path: 'Atividades → Equipe / Painel Operacional', prerequisites: ['Ter perfil de gestão das atividades.'],
+      steps: [
+        { title: 'Consulte a equipe', description: 'Abra Equipe e ajuste o período para consultar carga, atrasos, conclusões e pendências por colaborador.' },
+        { title: 'Investigue o responsável', description: 'Selecione o usuário e consulte os clientes e tarefas apresentados para entender a origem das pendências.' },
+        { title: 'Abra o painel', description: 'Entre em Painel Operacional e confira o período antes de interpretar os indicadores.' },
+        { title: 'Priorize os riscos', description: 'Leia os indicadores de atraso, risco, pendência e vencimento do dia. Consulte Prioridades de intervenção para identificar os itens mais urgentes.' },
+        { title: 'Compare os agrupamentos', description: 'Use Por responsável, Por cliente e Por rotina para identificar concentrações de trabalho. Ajuste a atribuição em Rotinas quando necessário.' },
+      ], verification: ['A análise considera o mesmo período em todas as visões.', 'Cada pendência priorizada tem empresa e responsável identificados.'], related: ['atividades-editar-rotina'],
+    },
+  ],
+};

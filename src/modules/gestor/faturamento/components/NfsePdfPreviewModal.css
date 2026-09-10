@@ -1,0 +1,23 @@
+.nfse-pdf-backdrop { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; padding: 24px; background: #08111dd9; backdrop-filter: blur(5px); }
+.nfse-pdf-modal { display: flex; flex-direction: column; width: min(1200px, 100%); height: calc(100dvh - 48px); border: 1px solid #a9803e; border-radius: 14px; overflow: hidden; background: #152337; color: #f0f4f8; box-shadow: 0 24px 90px #0007; }
+.nfse-pdf-header { display: flex; gap: 16px; align-items: center; justify-content: space-between; padding: 18px 22px; }
+.nfse-pdf-header h2 { display: flex; gap: 9px; align-items: center; color: #fff; font-size: 1.1rem; margin: 0; }
+.nfse-pdf-header p { color: #becbdd; margin: 7px 0 0; font-size: .82rem; }
+.nfse-pdf-modal button, .nfse-pdf-modal a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; border: 1px solid #617187; border-radius: 8px; padding: 9px 14px; background: #22344b; color: #fff; cursor: pointer; font: inherit; text-decoration: none; }
+.nfse-pdf-modal :focus-visible { outline: 3px solid #edc780; outline-offset: -3px; }
+.nfse-pdf-modal button:disabled { opacity: .5; cursor: not-allowed; }
+.nfse-pdf-content { flex: 1; min-height: 0; background: #e6e9ed; }
+.nfse-pdf-content iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff; }
+.nfse-pdf-status { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; color: #25374f; }
+.nfse-pdf-footer { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 22px; }
+.nfse-pdf-footer > span { font-size: .78rem; color: #becbdd; }
+.nfse-pdf-footer > div { display: flex; gap: 10px; flex-shrink: 0; }
+.nfse-pdf-modal .nfse-pdf-download { background: #bd8e36; border-color: #d6ae61; color: #fff; }
+@media (max-width: 640px) {
+  .nfse-pdf-backdrop { padding: 8px; }
+  .nfse-pdf-modal { height: calc(100dvh - 16px); }
+  .nfse-pdf-header, .nfse-pdf-footer { padding: 12px; }
+  .nfse-pdf-header h2 { font-size: .95rem; }
+  .nfse-pdf-footer { flex-wrap: wrap; }
+  .nfse-pdf-footer > div { width: 100%; justify-content: flex-end; }
+}

@@ -2,12 +2,37 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { editableFiscalData } from '../forms/nfse/fiscalFormData';
 import { fiscalBillingKeys } from '../queries/useFaturamentoFiscalQueries';
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn(), parse: vi.fn(), prepare: vi.fn(), downloadPdf: vi.fn() }));
 vi.mock('../../../../lib/supabase', () => ({ supabase: { rpc: mocks.rpc, functions: { invoke: mocks.invoke } } }));
+vi.mock('../../documentos/xml/shared/xmlFiscalParser', () => ({ parseFiscalXml: mocks.parse }));
+vi.mock('../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/carregarModelo', () => ({ prepararNfsePdf: mocks.prepare, baixarNfsePdf: mocks.downloadPdf }));
 import { faturamentoFiscalService as service } from './faturamentoFiscalService';
 const scope = { fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao' as const, dataInicial: '2026-01-01', dataFinal: '2026-09-10' };
 beforeEach(() => { vi.resetAllMocks(); mocks.rpc.mockResolvedValue({ data: {}, error: null }); mocks.invoke.mockResolvedValue({ data: { ok: true }, error: null }); });
 describe('Contrato fiscal Faturamento', () => {
+  it('prepara a nota importada com empresa, ambiente e cancelamento sem disparar download', async () => {
+    const nfse = { numero: '292' };
+    const blob = new Blob(['pdf'], { type: 'application/pdf' });
+    mocks.rpc.mockResolvedValue({ data: { xml: '<xml/>', numero: '292', empresaId: 'tenant', ambiente: 'producao' } });
+    mocks.parse.mockReturnValue({ nfse, isCanceled: false });
+    mocks.prepare.mockResolvedValue({ blob, filename: 'NFS-e-292-producao.pdf' });
+    const result = await service.preparePdf({ id: 'importada', origem: 'consultada', ambiente: 'producao', status: 'cancelada' });
+    expect(mocks.rpc).toHaveBeenCalledWith('obter_documento_nfse_webiss', { p_rascunho_id: 'importada', p_origem: 'consultada', p_ambiente: 'producao' });
+    expect(mocks.prepare).toHaveBeenCalledWith(nfse, { empresaId: 'tenant', ambiente: 'producao', cancelada: true, substituida: false });
+    expect(result.blob).toBe(blob);
+    expect(mocks.downloadPdf).not.toHaveBeenCalled();
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+  it.each([
+    { numero: 'outra', empresaId: 'tenant', ambiente: 'producao' },
+    { numero: '292', empresaId: '', ambiente: 'producao' },
+    { numero: '292', empresaId: 'tenant', ambiente: 'homologacao' },
+  ])('não prepara um documento incompatível: %j', async document => {
+    mocks.rpc.mockResolvedValue({ data: { xml: '<xml/>', ...document } });
+    mocks.parse.mockReturnValue({ nfse: { numero: '292' } });
+    await expect(service.preparePdf({ id: 'nota', origem: 'consultada', ambiente: 'producao' })).rejects.toThrow('XML incompatível');
+    expect(mocks.prepare).not.toHaveBeenCalled();
+  });
   it('filtra histórico por emitente, parceiro e período no servidor', async () => {
     await service.list({ fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao', dataInicial: '2026-08-01', dataFinal: '2026-09-10', status: 'confirmada', search: '292' });
     expect(mocks.rpc).toHaveBeenCalledWith('listar_faturamento_nfse_webiss', {

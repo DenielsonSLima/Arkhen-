@@ -1,6 +1,6 @@
 import { asRecord, descendants, direct, nodeText, parseXml, readLimitedXml, text, xmlEscape } from "./xml.ts";
 import type { FiscalCertificate } from "./certificate.ts";
-import { requireValidCnpj } from "../fiscal-document.ts";
+import { requireValidCnpj, normalizeFiscalDocument } from "../fiscal-document.ts";
 
 export const ENDPOINTS = new Set([
   "https://itabaianase.webiss.com.br/ws/nfse.asmx",
@@ -33,7 +33,7 @@ function authorizedEmissionTimestamp(value: string): string | undefined {
   return timestamp.toISOString();
 }
 
-export function parseWebIssResponse(soap: string, operation: WebIssOperation): { nfseId: string; protocolo: string; payload: {numero: string; codigoVerificacao: string; xml: string; dataEmissao?: string} } {
+export function parseWebIssResponse(soap: string, operation: WebIssOperation): { nfseId: string; protocolo: string; payload: {numero: string; codigoVerificacao: string; xml: string; dataEmissao?: string; situacao: "confirmada" | "cancelada" | "substituida"} } {
   const doc = parseXml(soap);
   const root = doc.documentElement;
   const fault = descendants(root, "Fault")[0];
@@ -55,13 +55,15 @@ export function parseWebIssResponse(soap: string, operation: WebIssOperation): {
     });
     throw new WebIssError(messages.length ? `WebISS: ${messages.join("; ").slice(0, 1800)}` : "WebISS nao retornou NFS-e nem rejeicao conclusiva.", messages.length > 0);
   }
+  const situacao = descendants(response, "NfseSubstituicao").length ? "substituida"
+    : descendants(response, "NfseCancelamento").length ? "cancelada" : "confirmada";
   const info = infos[0];
   const number = nodeText(direct(info, "Numero"));
   const verification = nodeText(direct(info, "CodigoVerificacao"));
   if (!/^\d{1,15}$/.test(number) || !verification) throw new WebIssError("NFS-e retornada sem numero ou codigo de verificacao valido.");
   return {
     nfseId: number, protocolo: verification,
-    payload: { numero: number, codigoVerificacao: verification, xml: output,
+    payload: { numero: number, codigoVerificacao: verification, xml: output, situacao,
       dataEmissao: authorizedEmissionTimestamp(nodeText(direct(info, "DataEmissao"))) },
   };
 }
@@ -116,4 +118,24 @@ export function assertResponseMatchesRps(payload: { xml: string }, prepared: Rec
     nodeText(provider && direct(provider, "InscricaoMunicipal")) !== text(expectedProvider.inscricaoMunicipal)) {
     throw new WebIssError("A NFS-e retornada nao corresponde ao prestador e RPS solicitados; reconciliacao bloqueada.");
   }
+  const customer = direct(declaration, "TomadorServico") || direct(declaration, "Tomador");
+  const customerId = customer && direct(customer, "IdentificacaoTomador");
+  const customerDoc = customerId && direct(customerId, "CpfCnpj");
+  const returnedDocument = normalizeFiscalDocument(nodeText(customerDoc && (direct(customerDoc, "Cnpj") || direct(customerDoc, "Cpf"))));
+  const expectedDocument = normalizeFiscalDocument(asRecord(prepared.tomador).documento);
+  const service = direct(declaration, "Servico");
+  const values = service && direct(service, "Valores");
+  if (!expectedDocument || returnedDocument !== expectedDocument ||
+    canonicalAmount(nodeText(values && direct(values, "ValorServicos"))) !== canonicalAmount(asRecord(prepared.servico).valor)) {
+    throw new WebIssError("A NFS-e retornada nao corresponde ao tomador e valor do snapshot; reconciliacao bloqueada.");
+  }
+
+}
+
+/** Decimal comparison without floating point rounding or business recalculation. */
+function canonicalAmount(value: unknown): string {
+  const raw = text(value);
+  if (!/^\d{1,15}(?:\.\d{1,2})?$/.test(raw)) throw new WebIssError("Valor fiscal ausente ou invalido na correlacao do retorno.");
+  const [integer, fraction = ""] = raw.split(".");
+  return `${BigInt(integer)}.${fraction.padEnd(2, "0")}`;
 }

@@ -49,7 +49,7 @@ export async function handleEmissionAction(
   }
   const prepared = asRecord(data);
   const ambiente = text(prepared.ambiente);
-  if (prepared.jaEmitida === true) {
+  if (prepared.jaEmitida === true && !consultOnly) {
     return {
       ok: true,
       success: true,
@@ -85,8 +85,13 @@ export async function handleEmissionAction(
       await awaitWebissInterval(admin, ambiente, deps.wait);
       result = await deps.consult(prepared, certificate);
     } else {
-      const signedXml = deps.sign(prepared, certificate);
+      const signedXml = await deps.sign(prepared, certificate);
       await awaitWebissInterval(admin, ambiente, deps.wait);
+      const { error: archiveError } = await admin.rpc("registrar_envio_nfse_webiss", {
+        p_user_id: userId, p_cobranca_id: chargeId,
+        p_tentativa_id: prepared.tentativaId, p_xml: signedXml,
+      });
+      if (archiveError) throw new Error("Nao foi possivel preservar o XML assinado. Nenhuma emissao foi enviada.");
       sent = true;
       result = await deps.emit(prepared, certificate, signedXml);
     }
@@ -116,7 +121,10 @@ export async function handleEmissionAction(
       protocolo: result.protocolo,
       ambiente,
       reconciliada: mustConsult,
-      message: ambiente === "homologacao"
+      situacao: result.payload.situacao,
+      message: result.payload.situacao !== "confirmada"
+        ? `NFS-e ${result.payload.situacao} no WebISS; XML e situacao fiscal atualizados.`
+        : ambiente === "homologacao"
         ? "NFS-e de homologacao registrada; sem efeito fiscal de producao."
         : "NFS-e confirmada no WebISS.",
     };

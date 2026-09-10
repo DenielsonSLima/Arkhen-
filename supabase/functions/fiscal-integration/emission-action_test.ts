@@ -10,7 +10,7 @@ const certificate = { cnpj: "11222333000181" } as FiscalCertificate;
 const result = {
   nfseId: "88",
   protocolo: "ABC",
-  payload: { numero: "88", codigoVerificacao: "ABC", xml: "<Nfse/>" },
+  payload: { numero: "88", codigoVerificacao: "ABC", xml: "<Nfse/>", situacao: "confirmada" as const },
 };
 function setup(
   options: {
@@ -22,6 +22,9 @@ function setup(
     cnpj?: string;
     noToken?: boolean;
     gateFails?: boolean;
+    alreadyConfirmed?: boolean;
+    archiveFails?: boolean;
+    cancelled?: boolean;
   } = {},
 ) {
   const calls: Array<{ name: string; args?: Record<string, unknown> }> = [];
@@ -43,10 +46,16 @@ function setup(
           error: options.gateFails ? { message: "PRIVATE_SECRET" } : null,
         };
       }
+      if (name === "registrar_envio_nfse_webiss") {
+        events.push("archive");
+        return { data: null, error: options.archiveFails ? { message: "archive failed" } : null };
+      }
       if (name.startsWith("preparar_")) {
         return {
           error: null,
           data: {
+            jaEmitida: options.alreadyConfirmed || false,
+            nfseId: options.alreadyConfirmed ? "88" : undefined,
             tentativaId: options.noToken ? undefined : token,
             reconciliarPrimeiro: options.reconcile || false,
             ambiente: "homologacao",
@@ -73,7 +82,7 @@ function setup(
       if (password !== " senha ") throw new Error("Senha sofreu trim");
       return certificate;
     },
-    sign: () => {
+    sign: async () => {
       events.push("sign");
       if (options.signFails) throw new Error("Assinatura invalida");
       return "signed";
@@ -82,7 +91,7 @@ function setup(
       events.push("emit");
       sends++;
       if (options.emitError) throw options.emitError;
-      return result;
+      return options.cancelled ? { ...result, payload: { ...result.payload, situacao: "cancelada" as const } } : result;
     },
     consult: async () => {
       events.push("consult");
@@ -90,7 +99,7 @@ function setup(
       if (options.consultFails) {
         throw new WebIssError("E4: NFS-e nao encontrada", true);
       }
-      return result;
+      return options.cancelled ? { ...result, payload: { ...result.payload, situacao: "cancelada" as const } } : result;
     },
   };
   return {
@@ -155,6 +164,11 @@ Deno.test("Falha antes do envio, rejeicao municipal e timeout persistem estados 
       expected: "incerta",
       sends: 1,
     },
+    {
+      options: { emitError: new WebIssError("NFS-e cancelada ou substituida. Nao reenvie a emissao.") },
+      expected: "incerta",
+      sends: 1,
+    },
     { options: { confirmFails: true }, expected: "incerta", sends: 1 },
   ];
   for (const scenario of scenarios) {
@@ -185,7 +199,7 @@ Deno.test("Backend bloqueia certificado de outro CNPJ e RPC legado sem token", a
 Deno.test("Envio e consulta aguardam reserva global antes de qualquer SOAP", async () => {
   const fresh = setup();
   await fresh.run();
-  if (fresh.events.join() !== "sign,reserve,wait,emit") {
+  if (fresh.events.join() !== "sign,reserve,wait,archive,emit") {
     throw new Error("Envio fora do intervalo");
   }
   const read = setup();
@@ -220,4 +234,19 @@ Deno.test("Falha gate e pre-envio; reconciliacao conserva incerteza e consulta n
       throw new Error("Erro gate expos segredo");
     }
   }
+});
+
+Deno.test("Consulta explicita revalida nota confirmada e persiste cancelamento sem novo envio", async () => {
+  const test = setup({ alreadyConfirmed: true, cancelled: true });
+  const response = await test.run(true);
+  if (test.counts().queries !== 1 || test.counts().sends !== 0 || response.situacao !== "cancelada") throw new Error("Consulta retornou cache ou reenviou");
+  const payload = test.calls.find((c) => c.name === "confirmar_emissao_nfse_webiss")?.args?.p_payload as Record<string, unknown>;
+  if (payload.situacao !== "cancelada" || payload.xml !== "<Nfse/>") throw new Error("Evidencia fiscal perdida");
+});
+Deno.test("XML final e arquivado antes do SOAP; falha de arquivo impede transmissao", async () => {
+  const test = setup(); await test.run();
+  const archive = test.calls.find((c) => c.name === "registrar_envio_nfse_webiss")?.args;
+  if (archive?.p_xml !== "signed" || archive.p_tentativa_id !== token) throw new Error("XML/token perdido");
+  const failed = setup({ archiveFails: true }); await expectFailure(() => failed.run());
+  if (failed.counts().sends || finishStatus(failed) !== "falha_pre_envio") throw new Error("Enviou sem arquivo");
 });

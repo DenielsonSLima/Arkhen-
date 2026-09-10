@@ -44,7 +44,7 @@ Deno.test("Emissao draft de producao bloqueada antes de reservar RPS", async () 
     throw new Error("Bloqueio de producao falhou");
   }
 });
-Deno.test("Consulta draft de producao confirmada permanece disponivel", async () => {
+Deno.test("Consulta draft confirmada exige snapshot para revalidar e nao retorna cache", async () => {
   const calls: string[] = [];
   const client: FiscalRpcClient = {
     rpc: async (name) => {
@@ -55,11 +55,10 @@ Deno.test("Consulta draft de producao confirmada permanece disponivel", async ()
       };
     },
   };
-  const result = await handleDraftAction(client, "user", "draft", true);
-  if (
-    result.nfseId !== "88" ||
-    calls.join() !== "preparar_consulta_rascunho_webiss"
-  ) throw new Error("Consulta indevidamente bloqueada");
+  let failed = false;
+  try { await handleDraftAction(client, "user", "draft", true); }
+  catch (error) { failed = String(error).includes("Contrato de emissao segura ausente"); }
+  if (!failed || calls.join() !== "preparar_consulta_rascunho_webiss") throw new Error("Consulta retornou cache como evidencia municipal");
 });
 Deno.test("Adaptador draft permite somente reserva global whitelist sem alterar contexto RPC", async () => {
   const calls: Array<{ name: string; args?: Record<string, unknown> }> = [];
@@ -92,4 +91,11 @@ Deno.test("Adaptador draft permite somente reserva global whitelist sem alterar 
   if (!failed || calls.length !== 1) {
     throw new Error("RPC arbitraria permitida");
   }
+});
+
+Deno.test("Adaptador preserva XML final e tentativa ao arquivar envio do rascunho", async () => {
+  let recorded: unknown;
+  const adapter = draftRpcClient({ rpc: async (name, args) => { recorded = { name, args }; return { data: null, error: null }; } });
+  await adapter.rpc("registrar_envio_nfse_webiss", { p_user_id: "user", p_cobranca_id: "draft", p_tentativa_id: "token", p_xml: "signed" });
+  if (JSON.stringify(recorded) !== JSON.stringify({ name: "registrar_envio_rascunho_webiss", args: { p_user_id: "user", p_tentativa_id: "token", p_xml: "signed", p_rascunho_id: "draft" } })) throw new Error("Arquivo sem contexto");
 });

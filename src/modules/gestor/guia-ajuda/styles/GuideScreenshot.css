@@ -1,0 +1,43 @@
+.guide-screenshot-figure { margin: 25px 0; min-width: 0; border: 1px solid #dde4eb; border-radius: 12px; overflow: hidden; background: #f8fafc; }
+.guide-screenshot-preview { display: block; position: relative; width: 100%; border: 0; padding: 0; background: #edf0f4; cursor: zoom-in !important; }
+.guide-screenshot-image { display: block; position: relative; width: 100%; }
+.guide-screenshot-image img { display: block; width: 100%; height: auto; }
+.guide-screenshot-marker { position: absolute; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #b37b20; color: #fff; font: 750 13px/1 system-ui, sans-serif; box-shadow: 0 1px 0 3px #17263bcc, 0 3px 9px #0006; pointer-events: none; }
+.guide-screenshot-expand { position: absolute; bottom: 12px; right: 12px; display: flex; gap: 7px; align-items: center; border: 1px solid #b99456; border-radius: 7px; background: #15263bed; color: #f7deb3; font-size: 0.72rem; padding: 9px 12px; box-shadow: 0 2px 9px #0002; }
+.guide-screenshot-preview:hover .guide-screenshot-expand { background: #203b56; }
+.guide-screenshot-preview:focus-visible { outline-offset: -4px !important; }
+.guide-screenshot-figure figcaption { padding: 14px 18px; font-size: 0.78rem; font-weight: 650; line-height: 1.6; color: #34465b; }
+.guide-screenshot-legend { display: grid; gap: 13px; list-style: none; margin: 0; padding: 0 18px 18px; }
+.guide-screenshot-legend li { display: flex; gap: 10px; align-items: flex-start; }
+.guide-screenshot-legend li > span { flex-shrink: 0; display: grid; place-items: center; width: 24px; height: 24px; background: #f0e3ca; color: #755016; border-radius: 50%; font-size: 0.72rem; font-weight: 750; }
+.guide-screenshot-legend strong { font-size: 0.78rem; line-height: 1.5; color: #273b51; }
+.guide-screenshot-legend p { margin: 3px 0 0; color: #536477; line-height: 1.6; font-size: 0.76rem; }
+.guide-screenshot-backdrop { position: fixed; inset: 0; z-index: 10050; display: flex; align-items: center; justify-content: center; background: #08111dd9; padding: 24px; backdrop-filter: blur(5px); }
+.guide-screenshot-dialog { display: flex; flex-direction: column; width: min(1500px, 100%); max-height: calc(100dvh - 48px); min-width: 0; min-height: 0; border: 1px solid #a9803e; border-radius: 14px; overflow: hidden; background: #152337; color: #edf2f8; box-shadow: 0 24px 100px #0008; }
+.guide-screenshot-toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 20px; flex-shrink: 0; }
+.guide-screenshot-toolbar > div { flex: 1; min-width: 0; }
+.guide-screenshot-toolbar span { color: #edc780; text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.62rem; }
+.guide-screenshot-toolbar h2 { color: #fff; font-size: 1rem; line-height: 1.45; margin: 4px 0 0; overflow-wrap: anywhere; }
+.guide-screenshot-toolbar button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; flex-shrink: 0; border: 1px solid #657184; border-radius: 7px; background: #22344b; color: #fff; padding: 8px 12px; cursor: pointer; font: inherit; font-size: 0.78rem; }
+.guide-screenshot-toolbar button:hover { background: #354965; border-color: #d1a45d; }
+.guide-screenshot-dialog :focus-visible { outline: 3px solid #e7ba6d; outline-offset: -3px; }
+.guide-screenshot-hint { margin: 0; padding: 0 20px 14px; color: #bdcadb; font-size: 0.74rem; line-height: 1.6; flex-shrink: 0; }
+.guide-screenshot-viewport { container-type: size; height: min(65dvh, 820px); min-height: 100px; overflow: auto; overscroll-behavior: contain; background: #0b1522; flex: 1 1 auto; }
+.guide-screenshot-viewport .guide-screenshot-image { width: min(100cqw, calc(100cqh * var(--guide-image-ratio))); margin: 0 auto; }
+.guide-screenshot-viewport.is-zoomed .guide-screenshot-image { width: 200%; min-width: 1400px; }
+.guide-screenshot-dialog > .guide-screenshot-legend { padding: 16px 20px; margin: 0; border-top: 1px solid #3b4c63; max-height: 23dvh; overflow-y: auto; flex-shrink: 0; }
+.guide-screenshot-dialog .guide-screenshot-legend strong { color: #f3d4a0; }
+.guide-screenshot-dialog .guide-screenshot-legend p { color: #c9d4e3; }
+@media (max-width: 640px) {
+  .guide-screenshot-backdrop { padding: 8px; }
+  .guide-screenshot-dialog { max-height: calc(100dvh - 16px); border-radius: 10px; }
+  .guide-screenshot-toolbar { flex-wrap: wrap; gap: 8px; padding: 12px; }
+  .guide-screenshot-toolbar > div { flex-basis: calc(100% - 55px); order: 0; }
+  .guide-screenshot-toolbar h2 { font-size: 0.88rem; }
+  .guide-screenshot-toolbar button:last-child { order: 1; }
+  .guide-screenshot-toolbar button[aria-pressed] { order: 2; }
+  .guide-screenshot-hint { padding: 0 12px 12px; font-size: 0.7rem; }
+  .guide-screenshot-marker { width: 22px; height: 22px; font-size: 11px; }
+  .guide-screenshot-expand { bottom: 7px; right: 7px; font-size: 0.66rem; padding: 7px 9px; }
+  .guide-screenshot-dialog > .guide-screenshot-legend { padding: 12px; max-height: 26dvh; }
+}

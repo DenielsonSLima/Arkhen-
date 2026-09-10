@@ -1,6 +1,6 @@
 import { supabase } from '../../../../lib/supabase';
 import { parseFiscalXml } from '../../documentos/xml/shared/xmlFiscalParser';
-import { baixarNfsePdf } from '../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/carregarModelo';
+import { baixarNfsePdf, prepararNfsePdf } from '../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/carregarModelo';
 import type { FiscalDocument, FiscalDraft, FiscalDraftInput, FiscalEmitter, FiscalHistoryFilters, FiscalReview, FiscalPartnerScope, FiscalSyncResult, FiscalPreviousNote } from './faturamentoFiscalTypes';
 
 async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
@@ -19,6 +19,14 @@ async function fiscalAction<T>(action: string, body: Record<string, unknown>): P
   if (!data || data.ok === false) throw new Error(data?.error || 'Resposta fiscal indisponível.');
   return data as T;
 }
+
+function validateDocument(document: FiscalDocument, note: Pick<FiscalDraft, 'ambiente'>) {
+  const summary = parseFiscalXml(document.xml);
+  if (!summary.nfse || summary.nfse.numero !== document.numero || !document.empresaId || document.ambiente !== note.ambiente
+    || !['homologacao', 'producao'].includes(document.ambiente)) throw new Error('XML incompatível com a nota selecionada.');
+  return { ...summary, nfse: summary.nfse };
+}
+
 export const faturamentoFiscalService = {
   tenant: () => rpc<string>('current_empresa_id'),
   emitters: () => rpc<FiscalEmitter[]>('listar_contextos_emissao_webiss'),
@@ -49,13 +57,19 @@ export const faturamentoFiscalService = {
   document: (note: Pick<FiscalDraft, 'id' | 'origem' | 'ambiente'>) => rpc<FiscalDocument>('obter_documento_nfse_webiss', {
     p_rascunho_id: note.id, p_origem: note.origem, p_ambiente: note.ambiente,
   }),
+  async preparePdf(note: Pick<FiscalDraft, 'id' | 'origem' | 'ambiente'> & { status?: string }) {
+    const document = await this.document(note);
+    const summary = validateDocument(document, note);
+    return prepararNfsePdf(summary.nfse, {
+      empresaId: document.empresaId, ambiente: document.ambiente,
+      cancelada: summary.isCanceled || note.status === 'cancelada', substituida: note.status === 'substituida',
+    });
+  },
   async download(note: Pick<FiscalDraft, 'id' | 'origem' | 'ambiente'> & { status?: string }, format: 'pdf' | 'xml') {
     const document = await this.document(note);
-    const summary = parseFiscalXml(document.xml);
-    if (!summary.nfse || summary.nfse.numero !== document.numero || !document.empresaId || document.ambiente !== note.ambiente
-      || !['homologacao', 'producao'].includes(document.ambiente)) throw new Error('XML incompatível com a nota selecionada.');
+    const summary = validateDocument(document, note);
     if (format === 'pdf') {
-      await baixarNfsePdf(summary.nfse, { empresaId: document.empresaId, ambiente: document.ambiente, cancelada: summary.isCanceled || note.status === 'cancelada' });
+      await baixarNfsePdf(summary.nfse, { empresaId: document.empresaId, ambiente: document.ambiente, cancelada: summary.isCanceled || note.status === 'cancelada', substituida: note.status === 'substituida' });
       return;
     }
     const url = URL.createObjectURL(new Blob([document.xml], { type: 'application/xml' }));

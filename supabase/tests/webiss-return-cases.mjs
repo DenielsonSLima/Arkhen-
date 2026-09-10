@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+
+export async function testFiscalReturn({ db, scalar, ids, input }) {
+  const draft = await scalar('select salvar_rascunho_nfse_webiss($1)', [input]);
+  let prepared = await scalar('select preparar_emissao_rascunho_webiss($1,$2)', [ids.tenant, draft.id]);
+  const signed = '<GerarNfseEnvio><Rps>final signed bytes</Rps></GerarNfseEnvio>';
+  await scalar('select registrar_envio_rascunho_webiss($1,$2,$3,$4)', [ids.tenant, draft.id, prepared.tentativaId, signed]);
+  assert.equal(await scalar('select xml_envio from app_private.webiss_rascunhos where id=$1', [draft.id]), signed);
+  await scalar('select finalizar_tentativa_rascunho_webiss($1,$2,$3,$4,$5)', [ids.tenant, draft.id, prepared.tentativaId, 'falha_pre_envio', 'archive response failed before SOAP']);
+  assert.equal(await scalar('select xml_envio from app_private.webiss_rascunhos where id=$1', [draft.id]), null);
+  prepared = await scalar('select preparar_emissao_rascunho_webiss($1,$2)', [ids.tenant, draft.id]);
+  await scalar('select registrar_envio_rascunho_webiss($1,$2,$3,$4)', [ids.tenant, draft.id, prepared.tentativaId, signed]);
+  await scalar('select finalizar_tentativa_rascunho_webiss($1,$2,$3,$4,$5)', [ids.tenant, draft.id, prepared.tentativaId, 'incerta', 'SOAP timeout']);
+  assert.equal(await scalar('select xml_envio from app_private.webiss_rascunhos where id=$1', [draft.id]), signed);
+  prepared = await scalar('select preparar_emissao_rascunho_webiss($1,$2)', [ids.tenant, draft.id]);
+  assert.equal(prepared.reconciliarPrimeiro, true);
+
+  await assert.rejects(scalar('select registrar_envio_rascunho_webiss($1,$2,$3,$4)', [ids.tenant, draft.id, ids.other, signed]), /Tentativa/);
+  const initial = { tentativaId: prepared.tentativaId, numero: '301', codigoVerificacao: 'R301', xml: '<CompNfse><Nfse/></CompNfse>', situacao: 'confirmada', dataEmissao: '2026-09-10T14:00:00-03:00' };
+  const confirm = (body) => scalar('select confirmar_emissao_rascunho_webiss($1,$2,$3,$4,$5)', [ids.tenant, draft.id, '301', 'R301', body]);
+  await confirm(initial);
+  const beforeRps = await scalar("select configuracao->>'proximoNumeroRps' from configuracoes_integracao_fiscal where id=$1", [ids.config]);
+  const consultation = await scalar('select preparar_consulta_rascunho_webiss($1,$2)', [ids.tenant, draft.id]);
+  assert.equal(consultation.jaEmitida, false);
+  assert.equal(consultation.tentativaId, prepared.tentativaId);
+  assert.deepEqual(consultation.rps, prepared.rps);
+  const canceled = { ...initial, situacao: 'cancelada', xml: '<CompNfse><Nfse/><NfseCancelamento/></CompNfse>' };
+  await assert.rejects(scalar('select confirmar_emissao_rascunho_webiss($1,$2,$3,$4,$5)', [ids.tenant, draft.id, '999', 'R301', canceled]), /Numero diverge/);
+  await confirm(canceled);
+  const after = await scalar('select app_private.webiss_rascunho_dto(d) from app_private.webiss_rascunhos d where id=$1', [draft.id]);
+  assert.equal(after.status, 'cancelada');
+  assert.equal(await scalar('select status from app_private.webiss_rascunhos where id=$1', [draft.id]), 'confirmada');
+  assert.equal(await scalar('select resultado->>\'xml\' from app_private.webiss_rascunhos where id=$1', [draft.id]), canceled.xml);
+  assert.equal((await scalar('select obter_documento_nfse_webiss($1)', [draft.id])).xml, canceled.xml);
+  assert.equal((await scalar('select preparar_emissao_rascunho_webiss($1,$2)', [ids.tenant, draft.id])).jaEmitida, true);
+  assert.equal(await scalar("select configuracao->>'proximoNumeroRps' from configuracoes_integracao_fiscal where id=$1", [ids.config]), beforeRps);
+  const logs = await scalar('select count(*)::int from configuracoes_integracao_fiscal_logs');
+  await confirm(canceled);
+  assert.equal(await scalar('select count(*)::int from configuracoes_integracao_fiscal_logs'), logs);
+  await assert.rejects(confirm(initial), /regrediu/);
+  const substituted = { ...initial, situacao: 'substituida', xml: '<CompNfse><Nfse/><NfseSubstituicao/></CompNfse>' };
+  await confirm(substituted);
+  const history = await scalar('select listar_faturamento_nfse_webiss()');
+  assert.equal(history.find((n) => n.numeroNfse === '301').status, 'substituida');
+  assert.equal((await scalar('select listar_ultimas_nfse_parceiro_webiss($1,$2,$3)', [ids.config, ids.client, 'homologacao'])).some((n) => n.numeroNfse === '301'), false);
+  assert.equal(await scalar('select count(*)::int from financeiro_cobrancas'), 0);
+  console.log('PASS fiscal return: archive, same RPS real consultation context, canceled/substituted XML, terminal state, idempotency and no banking effect');
+
+  const charge = '00000000-0000-4000-8000-000000000088';
+  const attempt = '00000000-0000-4000-8000-000000000089';
+  await db.query('insert into financeiro_cobrancas(id,empresa_id,cliente_empresa_id,valor,status) values($1,$2,$3,405,\'Pendente\')', [charge, ids.tenant, ids.client]);
+  await db.query(`insert into app_private.webiss_emissoes(empresa_id,cobranca_id,ambiente,fiscal_config_id,snapshot,tentativa_id,status,lease_ate)
+    values($1,$2,'producao',$3,$4,$5,'processando',now()+interval '90 seconds')`, [ids.tenant, charge, ids.config, { ...prepared, ambiente: 'producao' }, attempt]);
+  await scalar('select registrar_envio_nfse_webiss($1,$2,$3,$4)', [ids.tenant, charge, attempt, signed]);
+  const body = { ...initial, tentativaId: attempt, numero: '302', codigoVerificacao: 'R302', situacao: 'cancelada', xml: canceled.xml };
+  await scalar('select confirmar_emissao_nfse_webiss($1,$2,$3,$4,$5)', [ids.tenant, charge, '302', 'R302', body]);
+  await assert.rejects(scalar('select confirmar_emissao_nfse_webiss($1,$2,$3,$4,$5)', [ids.tenant, charge, '999', 'R302', body]), /Numero fiscal divergente/);
+  assert.equal(await scalar('select nfse_status from financeiro_cobrancas where id=$1', [charge]), 'cancelada');
+  assert.equal(await scalar('select nfse_payload->>\'xml\' from financeiro_cobrancas where id=$1', [charge]), canceled.xml);
+  assert.equal(await scalar('select xml_envio from app_private.webiss_emissoes where cobranca_id=$1', [charge]), signed);
+  const c = await scalar('select preparar_consulta_nfse_webiss($1,$2)', [ids.tenant, charge]);
+  assert.equal(c.jaEmitida, false); assert.equal(c.tentativaId, attempt);
+  await db.query("select set_config('test.empresa',$1,false)", [ids.other]);
+  await assert.rejects(scalar('select preparar_consulta_nfse_webiss($1,$2)', [ids.other, charge]), /contexto/);
+  await assert.rejects(scalar('select confirmar_emissao_rascunho_webiss($1,$2,$3,$4,$5)', [ids.other, draft.id, '301', 'R301', substituted]), /Tentativa/);
+  await db.query("select set_config('test.empresa',$1,false)", [ids.tenant]);
+  await db.exec('SET ROLE service_role');
+  await assert.rejects(scalar('select confirmar_emissao_rascunho_webiss_base($1,$2,$3,$4,$5)', [ids.tenant, draft.id, '301', 'R301', initial]), /permission denied/);
+  await db.exec('RESET ROLE');
+  console.log('PASS charge fiscal status, archive, consult confirmed, tenant boundary and old RPC bypass denied');
+}

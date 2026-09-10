@@ -26,3 +26,13 @@ export async function baixarNfsePdf(nfse: NfseFiscalData, options: NfseModeloOpt
   const pdf = gerarNfsePdf(nfse, loaded);
   pdf.save(`NFS-e-${nfse.numero.replace(/[^a-z0-9-]/gi, '')}-${options.ambiente}.pdf`);
 }
+
+/** Prepara o mesmo modelo do download sem iniciar um salvamento no navegador. */
+export async function prepararNfsePdf(nfse: NfseFiscalData, options: NfseModeloOptions) {
+  const [{ gerarNfsePdf }, loaded] = await Promise.all([import('./gerarNfsePdf'), carregarModelo(nfse, options)]);
+  const pdf = gerarNfsePdf(nfse, loaded);
+  return {
+    blob: pdf.output('blob'),
+    filename: `NFS-e-${nfse.numero.replace(/[^a-z0-9-]/gi, '')}-${options.ambiente}.pdf`,
+  };
+}

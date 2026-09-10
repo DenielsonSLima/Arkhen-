@@ -150,6 +150,14 @@ a {
   animation: pageFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Evita animar a camada inteira do shell autenticado, que apresentou
+   conteúdo transparente durante a revisão visual no Safari. */
+#root > .animate-page-fade:has(.gestor-panel-container) {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
 @keyframes pageFadeIn {
   from {
     opacity: 0;

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Banknote, CalendarDays, Check, FileText, Percent, Repeat, X } from 'lucide-react';
 import { gestaoEmpresarialService } from '../../gestao-empresarial/services/gestaoEmpresarialService';
-import { useCreateCobrancaFinanceiraMutation, useSaveContratoFinanceiroMutation } from '../../financeiro/queries/useFinanceiroQueries';
+import { useRecorrenciaMutations } from '../queries/useRecorrenciaQueries';
+import type { RecorrenciaConfig } from '../services/recorrenciaService';
+import { RecorrenciaScheduleFields } from '../forms/RecorrenciaScheduleFields';
 import {
   BillingClientSelect,
   BillingInputFrame,
@@ -13,7 +15,7 @@ import {
   parseCurrencyInput,
   parsePercentInput,
 } from './billingFormUtils';
-import { formatLocalISODate } from '../utils/dateUtils';
+
 
 interface ModalNovaRecorrenciaProps {
   isOpen: boolean;
@@ -26,8 +28,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
     queryFn: gestaoEmpresarialService.getCompanies,
     enabled: isOpen,
   });
-  const saveContratoMutation = useSaveContratoFinanceiroMutation();
-  const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
+  const mutations = useRecorrenciaMutations();
   const [emitCobranca, setEmitCobranca] = useState(true);
   const [clienteEmpresaId, setClienteEmpresaId] = useState('');
   const [valorMensal, setValorMensal] = useState('');
@@ -40,16 +41,25 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
   const [mensagemBoleto, setMensagemBoleto] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [automacaoAtiva, setAutomacaoAtiva] = useState(false);
+  const initialSchedule = (): RecorrenciaConfig => ({
+    meioPagamento: 'Ambos', descontoPercentual: 0, jurosPercentual: 0, multaPercentual: 0, mensagemBoleto: '',
+    diaProcessamento: 1, primeiraCompetencia: '', competenciaOffset: 0, modoFiscal: 'sem_nfse',
+    ambiente: 'homologacao', fiscalConfigId: '', dadosFiscais: {},
+  });
+  const [schedule, setSchedule] = useState<RecorrenciaConfig>(initialSchedule);
+  const pendingExecution = useRef<string | null>(null);
+  const submitting = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contractSaved, setContractSaved] = useState(false);
+
   if (!isOpen) return null;
 
-  const getNextDueDate = (day: number) => {
-    const today = new Date();
-    const due = new Date(today.getFullYear(), today.getMonth(), Math.min(Math.max(day, 1), 28));
-    if (due < today) due.setMonth(due.getMonth() + 1);
-    return formatLocalISODate(due);
-  };
-
   const resetForm = () => {
+    pendingExecution.current = null;
+    setContractSaved(false);
+    setAutomacaoAtiva(false);
+    setSchedule(initialSchedule());
     setEmitCobranca(true);
     setClienteEmpresaId('');
     setValorMensal('');
@@ -64,55 +74,53 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
   };
 
   const handleClose = () => {
-    resetForm();
+    if (submitting.current) return;
+    if (!pendingExecution.current) resetForm();
     onClose();
   };
 
   const handleSubmit = async () => {
+    if (submitting.current) return;
     const valor = parseCurrencyInput(valorMensal);
-    if (!clienteEmpresaId || valor <= 0) {
+    if (!pendingExecution.current && (!clienteEmpresaId || valor <= 0)) {
       setErrorMsg('Selecione o parceiro e informe um valor mensal válido.');
       return;
     }
-
+    submitting.current = true;
+    setIsSubmitting(true);
     try {
       setErrorMsg(null);
-      const contrato = await saveContratoMutation.mutateAsync({
-        clienteEmpresaId,
-        descricaoServico,
-        valorMensal: valor,
-        diaVencimento,
-        emissaoAutomaticaNfse: false,
-        ativo: true,
-        gerarCobranca: false,
-      });
-
-      if (emitCobranca) {
-        await createCobrancaMutation.mutateAsync({
-          clienteEmpresaId,
-          contratoId: contrato.id,
-          valor,
-          dataVencimento: getNextDueDate(diaVencimento),
-          descricao: descricaoServico,
-          categoria: 'Faturamento recorrente',
-          meioPagamento,
-          descontoPercentual: parsePercentInput(descontoPercentual),
-          jurosPercentual: parsePercentInput(jurosPercentual),
-          multaPercentual: parsePercentInput(multaPercentual),
-          mensagemBoleto: mensagemBoleto.trim(),
+      if (!pendingExecution.current) {
+        const result = await mutations.save.mutateAsync({
+          clienteEmpresaId, descricaoServico, valorMensal: valor, diaVencimento, ativo: true,
+          recorrenciaAtiva: automacaoAtiva, gerarPrimeiraCobranca: emitCobranca,
+          recorrenciaConfig: { ...schedule, meioPagamento,
+            descontoPercentual: parsePercentInput(descontoPercentual),
+            jurosPercentual: parsePercentInput(jurosPercentual), multaPercentual: parsePercentInput(multaPercentual),
+            mensagemBoleto: mensagemBoleto.trim() },
         });
+        if (result.execucao) {
+          pendingExecution.current = result.execucao.id;
+          setContractSaved(true);
+        }
       }
+      if (pendingExecution.current) await mutations.run.mutateAsync(pendingExecution.current);
+      resetForm();
+      onClose();
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'Falha ao salvar recorrência.');
-      return;
+      const detail = error instanceof Error ? error.message : 'Falha ao salvar recorrência.';
+      setErrorMsg(pendingExecution.current
+        ? `Contrato salvo. A primeira cobrança ainda não foi confirmada. Tente novamente para consultar a mesma operação. ${detail}`
+        : detail);
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
     }
-
-    handleClose();
   };
 
   const modalContent = (
     <div className="faturamento-modal-backdrop">
-      <div className="faturamento-card faturamento-charge-modal">
+      <div className="faturamento-card faturamento-charge-modal" role="dialog" aria-modal="true" aria-label="Nova recorrência">
         <div className="faturamento-modal-header">
           <div className="faturamento-modal-title-wrap">
             <span className="faturamento-modal-title-icon">
@@ -120,16 +128,16 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             </span>
             <div>
               <h2>Nova recorrência</h2>
-              <p>Contrato mensal com padrão de cobrança pelo Banco Inter.</p>
+              <p>Mensalidades por competência, cobrança e preparação da NFS-e.</p>
             </div>
           </div>
-          <button onClick={handleClose} className="faturamento-modal-close" title="Fechar">
+          <button disabled={isSubmitting} onClick={handleClose} className="faturamento-modal-close" title="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        <div className="faturamento-charge-form">
-          <BillingSectionTitle title="Cliente e mensalidade" description="Dados fixos que orientam a emissão recorrente." />
+        <fieldset className="faturamento-charge-form" disabled={isSubmitting || contractSaved} inert={isSubmitting || contractSaved} style={{ border: 0, margin: 0, minWidth: 0 }}>
+          <BillingSectionTitle title="Cliente e mensalidade" description="Cadastre o parceiro e as condições que serão usadas nas mensalidades." />
 
           <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
             <label>Parceiro / Cliente</label>
@@ -149,6 +157,7 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
               <input
                 type="text"
                 inputMode="numeric"
+                aria-label="Valor mensal"
                 placeholder="R$ 0,00"
                 value={valorMensal}
                 onChange={(event) => setValorMensal(formatCurrencyInput(event.target.value))}
@@ -157,11 +166,11 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
           </div>
 
           <div className="faturamento-form-group">
-            <label>Dia de Vencimento/Emissão</label>
+            <label>Dia de vencimento</label>
             <BillingInputFrame icon={
               <CalendarDays size={16} />
             }>
-              <select value={diaVencimento} onChange={(event) => setDiaVencimento(Number(event.target.value))}>
+              <select aria-label="Dia de vencimento" value={diaVencimento} onChange={(event) => setDiaVencimento(Number(event.target.value))}>
                 {[...Array(28)].map((_, i) => (
                   <option key={i + 1} value={i + 1}>Dia {i + 1}</option>
                 ))}
@@ -183,20 +192,20 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
             </BillingInputFrame>
           </div>
 
-          <BillingSectionTitle title="Automação Banco Inter" description="Primeira cobrança e padrão financeiro da recorrência." />
+          <BillingSectionTitle title="Condições Banco Inter" description="As condições ficam salvas no contrato para cada competência." />
 
           <label className="faturamento-switch-row" style={{ gridColumn: '1 / -1' }}>
             <input type="checkbox" checked={emitCobranca} onChange={(e) => setEmitCobranca(e.target.checked)} />
             <span>
               <strong>Gerar primeira cobrança automaticamente</strong>
-              <small>Cria uma cobrança BolePix no Banco Inter para o próximo vencimento.</small>
+              <small>Processa a primeira competência após salvar. Se ocorrer falha, a mesma execução poderá ser retomada.</small>
             </span>
           </label>
 
-          {emitCobranca && (
+          {(emitCobranca || automacaoAtiva) && (
             <>
               <div className="faturamento-form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Forma de Pagamento Padrão</label>
+                <label>Forma de pagamento</label>
                 <select value={meioPagamento} onChange={(event) => setMeioPagamento(event.target.value as 'Pix' | 'Boleto' | 'Ambos')}>
                   <option value="Ambos">Boleto + Pix</option>
                   <option value="Pix">Apenas Pix</option>
@@ -231,18 +240,20 @@ export const ModalNovaRecorrencia: React.FC<ModalNovaRecorrenciaProps> = ({ isOp
               </div>
             </>
           )}
-        </div>
+          <RecorrenciaScheduleFields config={schedule} onChange={setSchedule} active={automacaoAtiva} onActiveChange={setAutomacaoAtiva} />
+        </fieldset>
 
+        {contractSaved && <p role="status">Contrato salvo. A execução está registrada no histórico e pode ser retomada mesmo após recarregar a página.</p>}
         {errorMsg && <div className="faturamento-error-message">{errorMsg}</div>}
 
         <div className="faturamento-modal-actions">
           <div />
           <button
             onClick={() => void handleSubmit()}
-            disabled={saveContratoMutation.isPending || createCobrancaMutation.isPending}
+            disabled={isSubmitting}
             className="faturamento-btn-primary"
           >
-            <Check size={16} /> {saveContratoMutation.isPending || createCobrancaMutation.isPending ? 'Salvando...' : 'Salvar Recorrência'}
+            <Check size={16} /> {isSubmitting ? 'Salvando...' : contractSaved ? 'Retomar primeira cobrança' : 'Salvar Recorrência'}
           </button>
         </div>
       </div>

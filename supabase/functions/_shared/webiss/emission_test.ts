@@ -35,6 +35,7 @@ export const preparedFixture = () => ({
     telefone: "(79) 99999-9999",
   },
   servico: {
+    competencia: "2026-09-01",
     valor: 100,
     descricao: "Honorarios contabeis",
     itemListaServico: "17.19",
@@ -131,4 +132,23 @@ Deno.test("Rascunho preserva competencia distinta, incidencia separada e NBS opc
   assertIncludes(xml,"<MunicipioIncidencia>2800308</MunicipioIncidencia>");
   assertIncludes(xml,"<CodigoNbs>123456789</CodigoNbs>");
   assertThrows(()=>buildUnsignedRps({...base,servico:{...base.servico,competencia:"2026-02-30"}}),"Competencia");
+});
+
+Deno.test("RPS bloqueia tributos e grupos nao implementados em vez de omiti-los", () => {
+  const base = preparedFixture();
+  for (const extra of [{ valorPis: 1 }, { ValorCofins: "3,00" }, { descontoIncondicionado: 10 },
+    { IBSCBS: { CST: "000" } }, { intermediario: { documento: "11222333000181" } },
+    { codigoTributarioDesconhecido: "000" }]) {
+    assertThrows(() => buildUnsignedRps({ ...base, servico: { ...base.servico, ...extra } }), "nao suportados");
+  }
+  assertThrows(() => buildUnsignedRps({ ...base, IBSCBS: { CST: "000" } }), "nao suportado");
+});
+
+Deno.test("RPS aceita ausencia e zeros explicitos de tributos e descontos nao utilizados", () => {
+  const base = preparedFixture();
+  const xml = buildUnsignedRps({ ...base, servico: { ...base.servico,
+    valorPis: 0, ValorCofins: "0,00", valorInss: null, descontoIncondicionado: "0.0000", IBSCBS: undefined,
+  } });
+  assertIncludes(xml, "<ValorServicos>100.00</ValorServicos>");
+  if (xml.includes("ValorPis") || xml.includes("IBSCBS")) throw new Error("Grupo vazio nao deve ser emitido.");
 });

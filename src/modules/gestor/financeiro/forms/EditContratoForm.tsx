@@ -120,7 +120,7 @@ export const EditContratoForm: React.FC<EditContratoFormProps> = ({ contrato, on
           style={{ width: '16px', height: '16px', cursor: 'pointer' }}
         />
         <label htmlFor="edit-emissao-automatica" style={{ fontSize: '0.85rem', color: '#64748b', cursor: 'pointer', userSelect: 'none' }}>
-          Habilitar emissão automática de NFS-e pelo WebISS
+          Registrar preferência por NFS-e (emissão manual; sem agendamento automático)
         </label>
       </div>
 

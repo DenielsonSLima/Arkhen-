@@ -1,0 +1,106 @@
+// PostgreSQL isolado: não acessa Supabase, Inter ou WebISS.
+// node supabase/tests/run-recorrencias.mjs /tmp/.../@electric-sql/pglite/dist/index.js
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+const { PGlite }=await import(pathToFileURL(resolve(process.argv[2])).href);
+const db=new PGlite(); const read=p=>readFile(new URL(p,import.meta.url),'utf8');
+const scalar=async(sql,params=[])=>Object.values((await db.query(sql,params)).rows[0])[0];
+const t='00000000-0000-4000-8000-000000000001',other='00000000-0000-4000-8000-000000000002',client='00000000-0000-4000-8000-000000000021',config='00000000-0000-4000-8000-000000000011';
+try {
+  await db.exec(await read('fixtures/webiss_schema.sql')); await db.exec(await read('fixtures/recorrencia_schema.sql'));
+  // Rascunhos reais dependem desta tabela e helper, mantidos pela própria migration fiscal.
+  const source=await read('../migrations/20260910030106_webiss_rascunhos_fiscais.sql');
+  await db.exec(source.slice(0,source.indexOf('CREATE FUNCTION public.listar_contextos_emissao_webiss()'))+'COMMIT;');
+  for(const name of ['20260910150651_financeiro_recorrencias_duraveis.sql','20260910150708_financeiro_recorrencias_worker.sql','20260910150715_financeiro_recorrencias_scheduler.sql']) {
+    await db.exec(await read('../migrations/'+name)); console.log('PASS migration '+name);
+  }
+  await db.query("select set_config('test.empresa',$1,false),set_config('test.user',$1,false)",[t]);
+  await db.query('insert into empresas values($1),($2)',[t,other]);await db.query('insert into auth.users values($1),($2)',[t,other]);
+  await db.query("insert into perfis values($1,$1,true,'admin'),($2,$2,true,'admin')",[t,other]);
+  await db.query("insert into clientes(id,empresa_id,nome) values($1,$2,'Cliente')",[client,t]);
+  await db.query("insert into configuracoes_integracao_fiscal(id,empresa_id,ativo,uf,municipio,provedor,ambiente) values($1,$2,true,'SE','Itabaiana','WebISS','homologacao')",[config,t]);
+  const today=await scalar("select (now() AT TIME ZONE 'America/Maceio')::date::text");const first=today.slice(0,7)+'-01'; const day=Math.min(28,Number(today.slice(-2)));
+  const payload={clienteEmpresaId:client,descricaoServico:'Honorários [MES]/[ANO]',valorMensal:405,diaVencimento:day,automacaoAtiva:false,gerarPrimeiraCobranca:true,
+    config:{meioPagamento:'Ambos',descontoPercentual:1,jurosPercentual:2,multaPercentual:3,mensagemBoleto:'Mensagem',competenciaOffset:0,diaProcessamento:day,primeiraCompetencia:first,gerarCobranca:true,modoFiscal:'rascunho',fiscalConfigId:config,ambiente:'homologacao',dadosFiscais:{itemListaServico:'17.03'}}};
+  const request='00000000-0000-4000-8000-000000000101';
+  const saved=await scalar('select salvar_recorrencia_financeira($1,$2)',[request,payload]);
+  assert.equal(saved.contrato.recorrencia_ativa,false); assert.equal(saved.execucao.competencia,first);
+  assert.equal(saved.execucao.chargePayload.desconto_percentual,1);
+  assert.equal(saved.execucao.chargePayload.data_vencimento,today);
+  const repeated=await scalar('select salvar_recorrencia_financeira($1,$2)',[request,payload]);
+  assert.equal(saved.contrato.id,repeated.contrato.id);assert.equal(saved.execucao.requestId,repeated.execucao.requestId);
+  await assert.rejects(scalar('select salvar_recorrencia_financeira($1,$2)',[request,{...payload,valorMensal:900}]),/outros dados/);
+  assert.equal(await scalar('select count(*)::int from financeiro_configuracoes'),1);
+  assert.equal(await scalar('select materializar_recorrencias_financeiras()'),0);
+  console.log('PASS durable save identity, immutable same-request retry, terms and opt-in disabled');
+  let job=await scalar('select reivindicar_execucao_recorrencia($1)',[saved.execucao.id]);
+  assert.equal(job.etapa,'cobranca');assert.ok(job.leaseToken);
+  assert.equal(await scalar('select reivindicar_execucao_recorrencia($1)',[job.id]),null);
+  await scalar('select falhar_execucao_recorrencia($1,$2,$3)',[job.id,job.leaseToken,'Retorno incerto']);
+  assert.equal(await scalar('select reivindicar_execucao_recorrencia($1)',[job.id]),null);
+  await scalar('select autorizar_execucao_recorrencia($1)',[job.id]);
+  const retry=await scalar('select reivindicar_execucao_recorrencia($1)',[job.id]);
+  assert.equal(retry.requestId,job.requestId); assert.deepEqual(retry.chargePayload,job.chargePayload); assert.notEqual(retry.leaseToken,job.leaseToken);
+  await assert.rejects(scalar('select falhar_execucao_recorrencia($1,$2,$3)',[job.id,job.leaseToken,'Stale']),/substituido/);
+  job=retry;
+  const charge='00000000-0000-4000-8000-000000000201';
+  await db.query("insert into financeiro_cobrancas(id,empresa_id,contrato_id,cliente_empresa_id,data_vencimento,status,valor) values($1,$2,$3,$4,$5,'Pendente',405)",[charge,t,saved.contrato.id,client,today]);
+  await assert.rejects(scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[job.id,job.leaseToken,{etapa:'cobranca',cobrancaId:charge}]),/identidade/);
+  await db.query('insert into inter_cobranca_tentativas values($1,$2,$3)',[t,job.requestId,charge]);
+  let done=await scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[job.id,job.leaseToken,{etapa:'cobranca',cobrancaId:charge}]);assert.equal(done.etapa,'rascunho');
+  job=await scalar('select reivindicar_execucao_recorrencia($1)',[job.id]);
+  const draft=await scalar('select preparar_rascunho_recorrencia($1,$2)',[job.id,job.leaseToken]);
+  assert.equal(draft.rascunhoId,job.id);assert.deepEqual(await scalar('select preparar_rascunho_recorrencia($1,$2)',[job.id,job.leaseToken]),draft);
+  assert.equal(await scalar('select rps_numero from app_private.webiss_rascunhos where id=$1',[draft.rascunhoId]),null);
+  done=await scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[job.id,job.leaseToken,{etapa:'rascunho',rascunhoId:draft.rascunhoId}]);
+  assert.equal(done.status,'aguardando_revisao');assert.equal(await scalar('select reivindicar_execucao_recorrencia($1)',[job.id]),null);
+  console.log('PASS lease, stable bank retry, verified charge identity, deterministic draft and review without RPS');
+  await db.query("select set_config('test.can_manage','false',false)");
+  await assert.rejects(scalar('select salvar_recorrencia_financeira($1,$2)',[crypto.randomUUID(),payload]),/Permissao/);
+  await db.query("select set_config('test.can_manage','true',false),set_config('test.empresa',$1,false),set_config('test.user',$1,false)",[other]);
+  await assert.rejects(scalar('select autorizar_execucao_recorrencia($1)',[job.id]),/fora da empresa/);
+  assert.deepEqual(await scalar('select listar_execucoes_recorrencia()'),[]);
+  await db.query("select set_config('test.empresa',$1,false),set_config('test.user',$1,false)",[t]);
+  await db.exec('GRANT USAGE ON SCHEMA public,auth TO authenticated; GRANT UPDATE,SELECT ON financeiro_configuracoes TO authenticated; SET ROLE authenticated;');
+  await assert.rejects(db.query('update financeiro_configuracoes set recorrencia_ativa=true where id=$1',[saved.contrato.id]),/operacao autorizada/);
+  await assert.rejects(db.query('update financeiro_configuracoes set valor_mensal=9999 where id=$1',[saved.contrato.id]),/operacao autorizada/);
+  await db.exec('RESET ROLE;');
+  const token='a'.repeat(64);await db.query("insert into app_private.financeiro_recorrencia_worker_tickets(token_hash,expires_at) values(encode(extensions.digest($1,'sha256'),'hex'),now()+interval '1 minute')",[token]);
+  assert.equal(await scalar('select consumir_capacidade_recorrencia($1)',[token]),true);assert.equal(await scalar('select consumir_capacidade_recorrencia($1)',[token]),false);
+  assert.equal(await scalar("select has_function_privilege('authenticated','public.reivindicar_execucao_recorrencia(uuid)','EXECUTE')"),false);
+  console.log('PASS manager RBAC, tenant boundaries, direct-write guard, worker privilege and single-use capability');
+  const previous=await scalar("select (date_trunc('month',now() AT TIME ZONE 'America/Maceio')-interval '1 month')::date::text");
+  const paidInput={...payload,automacaoAtiva:true,gerarPrimeiraCobranca:false,config:{...payload.config,competenciaOffset:-1,primeiraCompetencia:previous,modoFiscal:'no_pagamento'}};
+  const scheduled=await scalar('select salvar_recorrencia_financeira($1,$2)',[crypto.randomUUID(),paidInput]);
+  assert.equal(scheduled.execucao,null);
+  assert.equal(await scalar('select materializar_recorrencias_financeiras()'),1);
+  assert.equal(await scalar('select materializar_recorrencias_financeiras()'),0);
+  let paidJob=await scalar('select reivindicar_execucao_recorrencia()');
+  assert.equal(paidJob.competencia,previous); assert.equal(paidJob.dataVencimento,today);
+  const paidCharge=crypto.randomUUID();
+  await db.query("insert into financeiro_cobrancas(id,empresa_id,contrato_id,cliente_empresa_id,data_vencimento,status,valor) values($1,$2,$3,$4,$5,'Pendente',405)",[paidCharge,t,scheduled.contrato.id,client,today]);
+  await db.query('insert into inter_cobranca_tentativas values($1,$2,$3)',[t,paidJob.requestId,paidCharge]);
+  done=await scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[paidJob.id,paidJob.leaseToken,{etapa:'cobranca',cobrancaId:paidCharge}]);
+  assert.equal(done.status,'aguardando_pagamento'); assert.equal(done.etapa,'rascunho');
+  assert.equal(await scalar('select reivindicar_execucao_recorrencia($1)',[paidJob.id]),null);
+  assert.equal(await scalar('select count(*)::int from app_private.webiss_rascunhos where id=$1',[paidJob.id]),0);
+  await db.query("update financeiro_cobrancas set status='Pago' where id=$1",[paidCharge]);
+  paidJob=await scalar('select reivindicar_execucao_recorrencia($1)',[paidJob.id]);
+  const paidDraft=await scalar('select preparar_rascunho_recorrencia($1,$2)',[paidJob.id,paidJob.leaseToken]);
+  assert.equal(await scalar("select dados->>'dataEmissao' from app_private.webiss_rascunhos where id=$1",[paidDraft.rascunhoId]),today);
+  assert.equal(await scalar("select dados->>'competencia' from app_private.webiss_rascunhos where id=$1",[paidDraft.rascunhoId]),previous);
+  await scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[paidJob.id,paidJob.leaseToken,{etapa:'rascunho',rascunhoId:paidDraft.rascunhoId}]);
+  paidJob=await scalar('select reivindicar_execucao_recorrencia($1)',[paidJob.id]);assert.equal(paidJob.etapa,'fiscal');
+  await db.query(`update app_private.webiss_rascunhos set status='confirmada',numero_nfse='123',resultado='{"situacao":"cancelada"}' where id=$1`,[paidJob.id]);
+  await assert.rejects(scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[paidJob.id,paidJob.leaseToken,{etapa:'fiscal',nfseId:'123'}]),/nao confirmada/);
+  await db.query(`update app_private.webiss_rascunhos set resultado='{"situacao":"confirmada"}' where id=$1`,[paidJob.id]);
+  done=await scalar('select finalizar_etapa_recorrencia($1,$2,$3)',[paidJob.id,paidJob.leaseToken,{etapa:'fiscal',nfseId:'123'}]);assert.equal(done.status,'concluida');
+  await scalar('select pausar_recorrencia_financeira($1)',[scheduled.contrato.id]);
+  assert.equal(await scalar('select recorrencia_ativa from financeiro_configuracoes where id=$1',[scheduled.contrato.id]),false);
+  await assert.rejects(scalar('select salvar_recorrencia_financeira($1,$2)',[crypto.randomUUID(),{...payload,config:{...payload.config,primeiraCompetencia:'0001-01-01'}}]),/12 meses/);
+  assert.equal(await scalar('select app_private.agendar_worker_recorrencias()'),0);
+  console.log('PASS monthly unique queue, prior competence, payment gate, actual RPS date, cancelled evidence rejection and pause');
+
+} catch(error) { console.error(error.message, error.where || ''); process.exitCode=1; } finally {await db.close();}

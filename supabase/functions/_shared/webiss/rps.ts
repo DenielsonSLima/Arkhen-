@@ -2,6 +2,7 @@ import {
   parseFiscalDocument,
   requireValidCnpj,
 } from "../fiscal-document.ts";
+import { assertSupportedRpsScope } from "./rps-scope.ts";
 
 const asRecord = (value: unknown): Record<string, unknown> => (
   value && typeof value === "object" && !Array.isArray(value)
@@ -24,6 +25,7 @@ export const buildUnsignedRps = (prepared: Record<string, unknown>) => {
   const provider = asRecord(prepared.prestador);
   const customer = asRecord(prepared.tomador);
   const service = asRecord(prepared.servico);
+  assertSupportedRpsScope(prepared, service);
   const providerDocument = requireValidCnpj(
     provider.cnpj,
     "CNPJ do prestador WebISS",

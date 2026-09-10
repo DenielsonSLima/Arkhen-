@@ -11,6 +11,7 @@ export interface NfseModeloOptions {
   marcaDagua?: NfseMarcaDagua;
   brasaoImagem?: string | Uint8Array;
   cancelada?: boolean;
+  substituida?: boolean;
   demonstracao?: boolean;
 }
 

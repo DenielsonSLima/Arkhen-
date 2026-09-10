@@ -24,12 +24,13 @@ import { FaturamentoPage, type FaturamentoTab, type FaturamentoViewMode } from '
 import { AgendaPage } from '../agenda/AgendaPage';
 import { RelatoriosPage } from '../relatorios/RelatoriosPage';
 import { ConfiguracoesPage } from '../configuracoes/ConfiguracoesPage';
-import { GuiaAjudaPage } from '../guia-ajuda/GuiaAjudaPage';
 import { ReformaTributariaPage } from '../reforma-tributaria/ReformaTributariaPage';
 import { resolveFinanceiroInitialTab } from './gestorModuleContext';
 
 const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage')
   .then((module) => ({ default: module.DocumentosPage })));
+const GuiaAjudaPage = React.lazy(() => import('../guia-ajuda/GuiaAjudaPage')
+  .then((module) => ({ default: module.GuiaAjudaPage })));
 
 type GestorModuleContentProps = {
   id: string;
@@ -163,7 +164,7 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
     }
     case 'relatorios': return <RelatoriosPage />;
     case 'configuracoes': return <ConfiguracoesPage />;
-    case 'guia-ajuda': return <GuiaAjudaPage />;
+    case 'guia-ajuda': return <React.Suspense fallback={<div className="submodule-content-card" role="status">Carregando o manual do sistema…</div>}><GuiaAjudaPage /></React.Suspense>;
     default: return <InicioPage onInitialReady={onInitialReady} />;
   }
 };

@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Eye, FileDown, FileCode2, RefreshCw, Edit3, XCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { formatCpfOrCnpj } from '../../../../lib/cnpj';
+import { Eye, FileText, FileCode2, RefreshCw, Edit3, XCircle } from 'lucide-react';
 import { useFiscalBillingHistory, useFiscalBillingTenant, useFiscalDraftMutations, useFiscalEmitters } from '../queries/useFaturamentoFiscalQueries';
 import { useFaturamentoClientesQuery } from '../queries/useFaturamentoQueries';
 import { faturamentoFiscalService } from '../services/faturamentoFiscalService';
 import type { FiscalDraft, FiscalHistoryFilters } from '../services/faturamentoFiscalTypes';
 import { NfseDraftForm } from '../forms/nfse/NfseDraftForm';
+import { NfsePdfPreviewModal } from './NfsePdfPreviewModal';
 import { NfseHistoryFilters } from './NfseHistoryFilters';
 import { formatNfseCompetencia, formatNfseDate, nfseStatusLabels } from '../utils/nfseHistoryPresentation';
 import './HistoricoNfseTab.css';
@@ -13,17 +15,19 @@ export const HistoricoNfseTab = () => {
   const tenant = useFiscalBillingTenant();
   const emitters = useFiscalEmitters(tenant.data || '');
   const clients = useFaturamentoClientesQuery(true);
+  const partnerDocuments = useMemo(() => new Map((clients.data || []).map(client => [client.id, client.cnpj])), [clients.data]);
   const [filters, setFilters] = useState<FiscalHistoryFilters>({});
   const [search, setSearch] = useState('');
   const [resetKey, setResetKey] = useState(0);
   const invalidPeriod = Boolean(filters.dataInicial && filters.dataFinal && filters.dataInicial > filters.dataFinal);
   const notes = useFiscalBillingHistory(invalidPeriod ? '' : tenant.data || '', filters);
   const actions = useFiscalDraftMutations();
+  const [preview, setPreview] = useState<FiscalDraft>();
   const [selected, setSelected] = useState<FiscalDraft>();
   const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [pendingId, setPendingId] = useState('');
   const busy = !!pendingId;
   const changeFilters = (next: FiscalHistoryFilters) => { setFilters(next); setMessage(''); setError(''); };
-  const execute = async (note: FiscalDraft, action: 'pdf' | 'xml' | 'consult') => {
+  const execute = async (note: FiscalDraft, action: 'xml' | 'consult') => {
     setError(''); setMessage(''); setPendingId(note.id);
     try {
       if (action === 'consult') {
@@ -47,17 +51,19 @@ export const HistoricoNfseTab = () => {
       <th>NFS-e / RPS</th><th>Parceiro</th><th>Ambiente</th><th>Competência / emissão</th><th>Valor</th><th>Status fiscal</th><th>Ações</th>
     </tr></thead><tbody>
       {(notes.data || []).map(note => {
+        const partnerDocument = partnerDocuments.get(note.clienteId)?.trim();
+        const documentLabel = partnerDocument && /^\d{11}$/.test(partnerDocument.replace(/[.\-/\s]/g, '')) ? 'CPF' : 'CNPJ';
         const editable = note.origem === 'rascunho' && ['rascunho', 'falha_pre_envio'].includes(note.status);
         return <tr key={`${note.origem}-${note.id}`}>
           <td><strong>{note.numeroNfse || 'Ainda sem NFS-e'}</strong><small>RPS: {note.rpsNumero || 'Não reservado'} {note.rpsSerie || ''}</small></td>
-          <td>{note.parceiro || note.clienteId}<small>{note.origem === 'consultada' ? 'Importada' : 'Registrada no Arkhen'}</small></td>
+          <td>{note.parceiro || note.clienteId}<small>{partnerDocument ? `${documentLabel}: ${formatCpfOrCnpj(partnerDocument)}` : clients.isLoading ? 'Carregando CPF/CNPJ...' : 'CPF/CNPJ não informado'}</small><small>{note.origem === 'consultada' ? 'Importada' : 'Registrada no Arkhen'}</small></td>
           <td><span className={`nfse-history-environment ${note.ambiente}`}>{note.ambiente === 'homologacao' ? 'Homologação' : 'Produção'}</span>{note.ambiente === 'homologacao' && <small>Sem valor fiscal</small>}</td>
           <td>{formatNfseCompetencia(note.dados?.competencia)}<small>{note.emissao ? `Emitida em ${formatNfseDate(note.emissao)}` : 'Sem emissão confirmada'}</small></td>
           <td>{note.valor != null || note.dados?.valor ? Number(note.valor ?? note.dados.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Não informado'}</td>
           <td><span className={`nfse-history-status ${note.status}`}>{nfseStatusLabels[note.status] || note.status}</span>{note.mensagem && <small>{note.mensagem}</small>}</td>
           <td><div className="nfse-history-actions">
             <button type="button" disabled={busy} onClick={() => setSelected(note)} title={editable ? 'Editar / revisar' : 'Detalhes'} aria-label={editable ? 'Editar / revisar' : 'Detalhes'}>{editable ? <Edit3 size={16} /> : <Eye size={16} />}</button>
-            <button type="button" disabled={busy || !note.xmlDisponivel} onClick={() => void execute(note, 'pdf')} title="Baixar PDF" aria-label="PDF"><FileDown size={16} /></button>
+            <button type="button" disabled={busy || !note.xmlDisponivel} onClick={() => setPreview(note)} title="Visualizar PDF" aria-label="Visualizar PDF"><FileText size={16} /></button>
             <button type="button" disabled={busy || !note.xmlDisponivel} onClick={() => void execute(note, 'xml')} title="Baixar XML" aria-label="XML"><FileCode2 size={16} /></button>
             <button type="button" disabled={busy || !note.rpsNumero || !['rascunho', 'cobranca'].includes(note.origem || '')} onClick={() => void execute(note, 'consult')} title="Consultar o mesmo RPS" aria-label="Consultar RPS"><RefreshCw size={16} className={pendingId === note.id ? 'nfse-history-spinning' : ''} /></button>
             <button type="button" disabled title="Cancelamento WebISS ainda não disponível no emissor" aria-label="Cancelar indisponível"><XCircle size={16} /></button>
@@ -67,6 +73,7 @@ export const HistoricoNfseTab = () => {
       {(tenant.isLoading || notes.isLoading) && <tr><td colSpan={7} className="nfse-history-empty">Carregando histórico fiscal...</td></tr>}
       {!notes.isLoading && !notes.isError && !tenant.isLoading && !tenant.isError && !notes.data?.length && <tr><td colSpan={7} className="nfse-history-empty">Nenhuma nota encontrada com os filtros selecionados.</td></tr>}
     </tbody></table></div>
+    {preview && <NfsePdfPreviewModal key={`${preview.origem}-${preview.id}-${preview.ambiente}`} note={preview} onClose={() => setPreview(undefined)} />}
     {selected && <NfseDraftForm key={selected.id} initial={selected} onClose={() => setSelected(undefined)} />}
   </div>;
 };

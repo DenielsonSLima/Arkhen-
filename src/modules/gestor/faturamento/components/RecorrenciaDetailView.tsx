@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CheckCircle, Clock, Settings, FileText, DollarSign, Search, Download, Eye, Receipt } from 'lucide-react';
+import { RecorrenciaExecucoes } from './RecorrenciaExecucoes';
+import { RecorrenciaConfigForm } from '../forms/RecorrenciaConfigForm';
+import { ArrowLeft, CheckCircle, Clock, Settings, FileText, Search, Download, Eye, Receipt } from 'lucide-react';
 
 interface RecorrenciaDetailViewProps {
   recorrencia: any;
@@ -8,8 +10,6 @@ interface RecorrenciaDetailViewProps {
 
 export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ recorrencia, onBack }) => {
   const [activeTab, setActiveTab] = useState<'historico' | 'configuracoes'>('historico');
-  const emitNfse = Boolean(recorrencia.emissaoNfse);
-  const emitCobranca = Boolean(recorrencia.cobranca);
   const historico = recorrencia.historico || [];
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -82,6 +82,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'historico' && <RecorrenciaExecucoes contratoId={recorrencia.id} />}
       {activeTab === 'historico' && (
         <div className="faturamento-card" style={{ padding: 0 }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -96,7 +97,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
             <table className="faturamento-table">
               <thead>
                 <tr>
-                  <th>Data de Emissão</th>
+                  <th>Vencimento</th>
                   <th>Tipo</th>
                   <th>Valor</th>
                   <th>Status</th>
@@ -149,82 +150,7 @@ export const RecorrenciaDetailView: React.FC<RecorrenciaDetailViewProps> = ({ re
         </div>
       )}
 
-      {activeTab === 'configuracoes' && (
-        <div className="faturamento-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1e293b', margin: 0 }}>Automações e Preferências</h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Toggle NFS-e */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText size={18} color="#3b82f6" /> Emitir NFS-e Automaticamente
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>A nota fiscal será gerada e enviada ao cliente na data programada.</p>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <div style={{ position: 'relative' }}>
-                  <input type="checkbox" className="sr-only" checked={emitNfse} disabled readOnly />
-                  <div style={{ width: '40px', height: '24px', backgroundColor: emitNfse ? '#10b981' : '#cbd5e1', borderRadius: '12px', transition: 'background-color 0.2s' }}></div>
-                  <div style={{ position: 'absolute', left: emitNfse ? '18px' : '2px', top: '2px', width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}></div>
-                </div>
-              </label>
-            </div>
-
-            {emitNfse && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingLeft: '24px' }}>
-                 <div className="faturamento-form-group">
-                  <label>Tipo de Serviço Padrão</label>
-                  <select defaultValue="17.19" disabled>
-                    <option value="17.19">17.19 - Contabilidade, inclusive serviços técnicos e auxiliares</option>
-                  </select>
-                </div>
-                <div className="faturamento-form-group">
-                  <label>Descrição Padrão da NFS-e</label>
-                  <textarea rows={2} defaultValue="Referente a honorários contábeis do mês de [MES]/[ANO]" disabled />
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Variáveis disponíveis: [MES], [ANO], [NOME_CLIENTE]</span>
-                </div>
-              </div>
-            )}
-
-            {/* Toggle Cobrança */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '16px' }}>
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <DollarSign size={18} color="#10b981" /> Gerar Cobrança Automaticamente
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>Gera BolePix pelo Banco Inter e envia para o cliente.</p>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <div style={{ position: 'relative' }}>
-                  <input type="checkbox" className="sr-only" checked={emitCobranca} disabled readOnly />
-                  <div style={{ width: '40px', height: '24px', backgroundColor: emitCobranca ? '#10b981' : '#cbd5e1', borderRadius: '12px', transition: 'background-color 0.2s' }}></div>
-                  <div style={{ position: 'absolute', left: emitCobranca ? '18px' : '2px', top: '2px', width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}></div>
-                </div>
-              </label>
-            </div>
-
-             {emitCobranca && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingLeft: '24px' }}>
-                 <div className="faturamento-form-group">
-                  <label>Forma de Pagamento Padrão</label>
-                  <select defaultValue="boleto_pix" disabled>
-                    <option value="boleto_pix">Boleto + Pix</option>
-                    <option value="pix">Apenas Pix</option>
-                    <option value="credit">Cartão de Crédito</option>
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button className="faturamento-btn-primary" disabled title="A edição exige o vínculo fiscal e financeiro da recorrência no backend.">
-              Configuração somente leitura
-            </button>
-          </div>
-        </div>
-      )}
+      {activeTab === 'configuracoes' && <RecorrenciaConfigForm contratoId={recorrencia.id} />}
     </div>
   );
 };

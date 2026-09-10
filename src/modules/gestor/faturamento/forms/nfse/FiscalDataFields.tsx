@@ -15,10 +15,10 @@ const sections: { title: string; hint?: string; fields: (keyof FiscalDraftData)[
     fields: ['exigibilidadeIss', 'issRetido', 'responsavelRetencao', 'aliquotaIss', 'optanteSimplesNacional', 'regimeEspecial', 'incentivoFiscal'] },
   { title: 'Complemento do tomador', fields: ['tomadorNumero', 'tomadorCodigoMunicipio'] },
 ];
-export function FiscalDataFields({ data, onChange, disabled }: {
-  data: FiscalDraftData; onChange: (data: FiscalDraftData) => void; disabled?: boolean;
+export function FiscalDataFields({ data, onChange, disabled, recurring = false }: {
+  data: FiscalDraftData; onChange: (data: FiscalDraftData) => void; disabled?: boolean; recurring?: boolean;
 }) {
-  return <>{sections.map(section => <fieldset disabled={disabled} className="nfse-fields" key={section.title}>
+  return <>{sections.filter(section => !recurring || section.title !== 'Serviço e competência').map(section => <fieldset disabled={disabled} className="nfse-fields" key={section.title}>
     <legend>{section.title}</legend>
     {section.hint && <p className="nfse-full">{section.hint}</p>}
     {section.fields.map(key => {

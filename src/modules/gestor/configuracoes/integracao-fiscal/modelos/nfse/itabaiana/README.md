@@ -1,6 +1,6 @@
 # Layout próprio da NFS-e de Itabaiana/SE
 
-Modelo A4 inspirado na organização do PDF fornecido pelo usuário, sem copiar seu selo gráfico, código de barras ou identificadores. O quadro de validação recebe destaque no canto superior direito, com número, código de verificação e QR Code vetorial de 27 mm. O WebISS autoriza a NFS-e; o aplicativo apresenta o XML confirmado neste layout, com texto selecionável, brasão e marca d'água do prestador. Não é uma nova autorização fiscal nem o PDF oficial do portal.
+Modelo A4 inspirado na organização do PDF fornecido pelo usuário, com ornamento próprio e identificadores da nota representada. O quadro de validação recebe destaque no canto superior direito, com número, código de verificação, QR Code vetorial de 27 mm e código de barras quando há chave nacional compatível. O WebISS autoriza a NFS-e; o aplicativo apresenta o XML confirmado neste layout, com texto selecionável, brasão e marca d'água do prestador. Não é uma nova autorização fiscal nem o PDF oficial do portal.
 
 ## Arquivos e uso
 
@@ -8,6 +8,7 @@ Modelo A4 inspirado na organização do PDF fornecido pelo usuário, sem copiar 
 - `pdfLayout.ts`: medidas, hierarquia visual, campos, paginação e rodapé.
 - `modelo.ts`: ambiente explícito, município, legendas de códigos e endereços de validação.
 - `qrCode.ts`: seleção do destino e geração do QR Code vetorial, com margem branca de quatro módulos.
+- `codigoBarras.ts`: extração conferida do código numérico da chave nacional e desenho ITF vetorial, preservando zeros iniciais.
 - `carregarModelo.ts`: imagens locais e download; jsPDF é carregado sob demanda.
 - `NfseItabaianaDocument.tsx`: prévia do mesmo PDF que será baixado.
 - `assets/`: brasão SVG vetorial e PNG derivado em 1500 × 1840. A marca da empresa é carregada do cadastro, não deste diretório.
@@ -77,3 +78,13 @@ Validação desta revisão: 25 testes em 5 suítes, TypeScript/Vite, leitura ind
 ## Conferência da marca cadastrada
 
 Em 09/09/2026, a configuração consultada estava habilitada, centralizada, com tamanho e opacidade em 100%. A imagem já continha o logo suave e a faixa dourada esquerda. A prévia foi regenerada com esse arquivo real, mantendo os identificadores fiscais fictícios da fixture. Conferidas a página inteira, a continuidade em três páginas, a leitura do QR e a margem dos textos fora da faixa lateral. Consulta por empresa, RLS e permissão de leitura verificadas sem alteração remota.
+
+## Código de barras conferido em 10/09/2026
+
+Foram decodificadas as barras de dois PDFs WebISS independentes: a nota 2026000000292 fornecida pelo usuário e a nota pública 2026000000022, primeira página de `docs/integrations/webiss/fontes/municipio/nfse-publica-itabaiana-2026-04-01.pdf`. Ambas usam Interleaved 2 of 5 (ITF), sem dígito adicional, com razão largo/estreito 3:1. Os conteúdos lidos foram respectivamente `0003063115` e `0002867418`; correspondem ao campo numérico de nove posições da chave nacional, completado com zero à esquerda para dez posições. Essa correspondência é **observação dos dois documentos**, não uma regra universal publicada pelo WebISS.
+
+A [tabela de composição da chave do guia oficial NFS-e](https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/guia-emissorpubliconacionalweb_snnfse-ern-v12.pdf), página 95, identifica as posições dos campos; a soma da tabela é 50 caracteres, apesar de o parágrafo introdutório do guia citar 44. O [codificador ITF do JsBarcode](https://github.com/lindell/JsBarcode/blob/master/src/barcodes/ITF/ITF.js) também foi consultado para conferir a simbologia. Nenhum pacote adicional foi incorporado.
+
+O modelo lê a chave recebida em `NfseFiscalData.chaveAcesso`, já extraída de `ChaveAcesso` no XML. Só desenha as barras para uma chave numérica de 50 posições de Itabaiana/SE cujo CPF/CNPJ e número coincidam com a nota; sem chave, em demonstração ou ambiente desconhecido, preserva o quadro sem inventar identificador. Não calcula tributos, não altera a chave nem deriva o código a partir do número da NFS-e. O ITF serve como representação do identificador observado; não substitui a consulta de autenticidade pelo WebISS.
+
+O painel cresce de 60 para 69 mm quando há barras, preservando o QR de 27 mm, barras com 7 mm de altura e margem branca lateral de dez módulos. O início do bloco do prestador acompanha essa altura. Testes cobrem a sequência exata de 57 elementos do selo original, o segundo exemplar, ausência/divergência de chave e paginação; o PDF resultante também foi renderizado localmente para conferir o espaço de ambos os códigos.

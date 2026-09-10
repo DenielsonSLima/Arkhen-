@@ -23,7 +23,7 @@ try {
   const cpfStart=cpfSource.indexOf('CREATE OR REPLACE FUNCTION public.cpf_valido(');
   await db.exec(cpfSource.slice(cpfStart,cpfSource.indexOf('$$;',cpfStart)+3));
   for(const migration of ['20260907135151_webiss_emissao_segura.sql','20260907135202_webiss_parametros_diagnostico.sql',
-    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql','20260910032827_webiss_historico_filtros.sql']) {
+    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql','20260910032827_webiss_historico_filtros.sql','20260910150700_webiss_retorno_fiscal_completo.sql']) {
     await db.exec(await read('../migrations/'+migration));
     console.log('PASS migration '+migration);
   }
@@ -118,6 +118,8 @@ try {
   assert.deepEqual(localDay.map(x=>x.numeroNfse),['109']);
   console.log('PASS history exact emitter/partner/status/period filters, municipal timezone, legacy calls and no RPC overload');
 
+  const { testFiscalReturn } = await import('./webiss-return-cases.mjs');
+  await testFiscalReturn({ db, scalar, ids, input });
   await db.query("update configuracoes_integracao_fiscal set ativo=false where id=$1",[ids.config]);
   const consultInactive=await scalar('select preparar_consulta_parceiro_webiss($1,$2,$3,$4)',[ids.tenant,ids.config,ids.client,'producao']);
   assert.equal(consultInactive.ambiente,'producao');
