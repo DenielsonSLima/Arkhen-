@@ -42,24 +42,23 @@ describe('Histórico fiscal', () => {
     await waitFor(() => expect(mocks.consult).toHaveBeenCalledWith(note));
     expect((screen.getByRole('button', { name: 'Cancelar indisponível' }) as HTMLButtonElement).disabled).toBe(true);
   });
-  it('consulta produção diretamente no histórico e lista importadas sem abrir nova emissão', async () => {
-    let imported = false;
-    mocks.list.mockImplementation(async () => imported ? [{ ...note, id: 'imported', origem: 'consultada', ambiente: 'producao', numeroNfse: '300', emissao: '2026-09-10T02:00:00Z' }] : []);
-    mocks.sync.mockImplementation(async () => { imported = true; return { coverage: 'complete', notesCount: 1, periodo: { inicio: '2026-08-01', fim: '2026-09-10' }, pagesRead: 1 }; });
+  it('filtra notas existentes sem exigir importação manual ou abrir nova emissão', async () => {
+    mocks.list.mockResolvedValue([{ ...note, id: 'imported', origem: 'consultada', ambiente: 'producao', numeroNfse: '300', emissao: '2026-09-10T02:00:00Z' }]);
     mount();
     await screen.findByRole('option', { name: /Escritório/ });
-    expect((screen.getByRole('button', { name: 'Consultar WebISS' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Consultar WebISS' })).toBeNull();
     fireEvent.change(screen.getByLabelText('Emitente'), { target: { value: 'emitter' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Pesquisar parceiro / tomador' }), { target: { value: '12345678' } });
     fireEvent.click(screen.getByRole('option', { name: /UNILASE LTDA/ }));
     fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
     fireEvent.change(screen.getByLabelText('Emissão de'), { target: { value: '2026-08-01' } });
     fireEvent.change(screen.getByLabelText('Emissão até'), { target: { value: '2026-09-10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Consultar WebISS' }));
-    await waitFor(() => expect(mocks.sync).toHaveBeenCalledWith({ fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao', dataInicial: '2026-08-01', dataFinal: '2026-09-10' }, '2026-08-01', '2026-09-10'));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Filtrar' }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Filtrar' }));
     await screen.findByText('300');
-    expect(screen.getByText('Importada do WebISS')).toBeTruthy(); expect(screen.getByText('Emitida em 09/09/2026')).toBeTruthy();
+    expect(screen.getByText('Importada')).toBeTruthy(); expect(screen.getByText('Emitida em 09/09/2026')).toBeTruthy();
     expect(mocks.list).toHaveBeenLastCalledWith(expect.objectContaining({ fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao', dataInicial: '2026-08-01', dataFinal: '2026-09-10' }));
+    expect(mocks.sync).not.toHaveBeenCalled();
     expect(mocks.emit).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
