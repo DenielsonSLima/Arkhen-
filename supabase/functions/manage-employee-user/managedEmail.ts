@@ -19,6 +19,7 @@ import {
   jsonResponse,
 } from './runtime.ts';
 import { inviteRedirectUrl } from './inviteConfiguration.ts';
+import { invitationSendError } from './invitationErrors.ts';
 
 const publicEmployee = (value: unknown): JsonRecord => {
   const user = asRecord(value);
@@ -204,7 +205,7 @@ export const inviteEmployeeByEmail = async (
   }
   if (inviteError) {
     await compensateEmailProvisioning(client, actorUserId, authUserId);
-    throw new HttpError(503, 'Não foi possível enviar o e-mail de convite. Tente novamente.');
+    throw invitationSendError(inviteError);
   }
 
   return jsonResponse({ ok: true, usuario: provisioned, invite_sent: true }, 201);

@@ -116,4 +116,16 @@ describe('envio de convite e falhas parciais', () => {
     await expect(inviteEmployeeByEmail(request, payload)).rejects.toThrow('reconciliação');
     expect(mocks.deleteUser).not.toHaveBeenCalled();
   });
+
+  it('informa limite de envio no cadastro e preserva a compensação segura', async () => {
+    mocks.invite.mockResolvedValue({ error: { code: 'over_email_send_rate_limit', status: 429 } });
+    await expect(inviteEmployeeByEmail(request, payload)).rejects.toMatchObject({
+      status: 429, message: expect.stringContaining('limite de envios'),
+    });
+    expect(mocks.invite).toHaveBeenCalledTimes(1);
+    expect(mocks.rpc).toHaveBeenCalledWith('desfazer_provisionamento_funcionario_email', {
+      p_actor_user_id: 'actor-id', p_auth_user_id: 'auth-id',
+    });
+    expect(mocks.deleteUser).toHaveBeenCalledWith('auth-id');
+  });
 });

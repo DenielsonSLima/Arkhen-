@@ -175,4 +175,14 @@ describe('resend email invitation', () => {
     expect(mocks.authenticate).not.toHaveBeenCalled();
     expect(mocks.invite).not.toHaveBeenCalled();
   });
+
+  it.each([{ code: 'over_email_send_rate_limit' }, { status: 429 }])(
+    'informa limite de envio sem declarar sucesso nem repetir automaticamente: %j', async (error) => {
+      mocks.invite.mockResolvedValue({ data: { user: null }, error });
+      await expect(resendEmailInvite(request, { usuario_id: userId })).rejects.toMatchObject({
+        status: 429, message: expect.stringContaining('Este convite não foi enviado agora'),
+      });
+      expect(mocks.invite).toHaveBeenCalledTimes(1);
+    },
+  );
 });

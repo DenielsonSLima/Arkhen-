@@ -7,6 +7,7 @@ import {
   jsonResponse,
 } from './runtime.ts';
 import { inviteRedirectUrl } from './inviteConfiguration.ts';
+import { invitationSendError } from './invitationErrors.ts';
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type PendingInvitation = {
@@ -137,7 +138,7 @@ export const resendEmailInvite = async (
     { redirectTo, data: { nome: usuario.nome, conta_gerenciada: true } },
   );
   if (inviteError || invited.user?.id !== usuario.auth_user_id) {
-    throw new HttpError(503, 'Não foi possível enviar o e-mail de convite. Tente novamente.');
+    throw invitationSendError(inviteError);
   }
   return jsonResponse({ ok: true, usuario_id: usuario.id, invite_sent: true });
 };

@@ -154,8 +154,15 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
     return () => window.clearTimeout(timer);
   }, [initialContentReady, modulesReady]);
 
-  const navigate = (id: string) => {
+  const navigate = (id: string, configSubTab: string | null = null) => {
     if (!modulesReady || !isRouteEnabled(id, enabledModuleIds)) return;
+    if (id === 'configuracoes') {
+      if (configSubTab) sessionStorage.setItem('contabil_config_initial_subtab', configSubTab);
+      else sessionStorage.removeItem('contabil_config_initial_subtab');
+      if (activeModuleId === 'configuracoes' && !activeVisibleTab) {
+        window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: configSubTab } }));
+      }
+    }
     activateModule(id);
   };
 
@@ -177,18 +184,11 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
   }, []);
 
   const openMyProfile = () => {
-    if (!modulesReady || !isRouteEnabled('configuracoes', enabledModuleIds)) return;
-    sessionStorage.setItem('contabil_config_initial_subtab', 'meu-perfil');
-    window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: 'meu-perfil' } }));
-    navigate('configuracoes');
+    navigate('configuracoes', 'meu-perfil');
   };
 
   const selectGlobalSearch = (result: GlobalSearchResult) => {
     if (!modulesReady || !isRouteEnabled(result.moduleId, enabledModuleIds)) return;
-    if (result.configSubTab) {
-      sessionStorage.setItem('contabil_config_initial_subtab', result.configSubTab);
-      window.dispatchEvent(new CustomEvent('open_config_subtab', { detail: { subTab: result.configSubTab } }));
-    }
     if (result.context) {
       handleModuleContextChange(result.moduleId, result.context);
       setModuleContextVersions((current) => ({
@@ -196,7 +196,7 @@ export const GestorLayout: React.FC<GestorLayoutProps> = ({ onLogout }) => {
         [result.moduleId]: (current[result.moduleId] || 0) + 1,
       }));
     }
-    navigate(result.moduleId);
+    navigate(result.moduleId, result.configSubTab);
     globalSearch.setTerm('');
     globalSearch.setFocused(false);
   };

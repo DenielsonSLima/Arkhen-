@@ -27,7 +27,7 @@ import { supabase } from '../../../lib/supabase';
 
 import './Configuracoes.css';
 
-const ACTIVE_CONFIG_SUBTAB_KEY = 'contabil_config_active_subtab';
+const INITIAL_CONFIG_SUBTAB_KEY = 'contabil_config_initial_subtab';
 
 const CONFIG_CARD_PERMISSIONS: Record<string, string[]> = {
   'meu-perfil': ['meu-perfil:manage'],
@@ -117,30 +117,28 @@ export const ConfiguracoesPage: React.FC = () => {
     if (permissoesAtuais.includes('*')) return true;
     return (CONFIG_CARD_PERMISSIONS[cardId] || []).some((permissao) => permissoesAtuais.includes(permissao));
   }, [permissaoConfigQuery.isError, permissaoConfigQuery.isFetching, permissoesAtuais]);
-  const [activeSubTab, setActiveSubTab] = useState<string | null>(() => {
-    const initial = sessionStorage.getItem('contabil_config_initial_subtab');
-    if (initial) {
-      sessionStorage.removeItem('contabil_config_initial_subtab');
-      return initial;
-    }
-    return sessionStorage.getItem(ACTIVE_CONFIG_SUBTAB_KEY);
-  });
+  const [activeSubTab, setActiveSubTab] = useState<string | null>(
+    () => sessionStorage.getItem(INITIAL_CONFIG_SUBTAB_KEY),
+  );
 
   useEffect(() => {
-    if (activeSubTab) sessionStorage.setItem(ACTIVE_CONFIG_SUBTAB_KEY, activeSubTab);
-    else sessionStorage.removeItem(ACTIVE_CONFIG_SUBTAB_KEY);
-  }, [activeSubTab]);
+    // Apenas atalhos explícitos abrem um submódulo; não restaurar a última visita.
+    sessionStorage.removeItem(INITIAL_CONFIG_SUBTAB_KEY);
+    sessionStorage.removeItem('contabil_config_active_subtab');
+  }, []);
 
   useEffect(() => {
+    if (permissaoConfigQuery.isFetching) return;
     if (activeSubTab && !podeAcessarCard(activeSubTab)) {
-      setActiveSubTab('meu-perfil');
+      setActiveSubTab(null);
     }
-  }, [activeSubTab, podeAcessarCard]);
+  }, [activeSubTab, podeAcessarCard, permissaoConfigQuery.isFetching]);
 
   useEffect(() => {
     const handleOpenSubTab = (event: Event) => {
-      const subTab = (event as CustomEvent<{ subTab?: string }>).detail?.subTab;
-      if (subTab) {
+      const subTab = (event as CustomEvent<{ subTab?: string | null }>).detail?.subTab;
+      if (subTab !== undefined) {
+        sessionStorage.removeItem(INITIAL_CONFIG_SUBTAB_KEY);
         setActiveSubTab(subTab);
       }
     };
@@ -258,8 +256,11 @@ export const ConfiguracoesPage: React.FC = () => {
   const cardsVisiveis = cards.filter((card) => podeAcessarCard(card.id));
 
   const renderActiveSubModule = () => {
+    if (activeSubTab !== 'meu-perfil' && permissaoConfigQuery.isFetching) {
+      return <div role="status">Carregando configurações...</div>;
+    }
     if (activeSubTab && !podeAcessarCard(activeSubTab)) {
-      return <MeuPerfilConfig />;
+      return null;
     }
     switch (activeSubTab) {
       case 'meu-perfil':
