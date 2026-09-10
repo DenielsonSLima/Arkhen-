@@ -22,7 +22,6 @@ export function useFiscalConfig() {
   const [certResult, setCertResult] = useState<DiagnosticResult | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [showCertModal, setShowCertModal] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const companies = useMemo(() => queries.companies.data ?? [], [queries.companies.data]);
@@ -159,7 +158,7 @@ export function useFiscalConfig() {
     testingCert: queries.certificate.isPending || (queries.diagnostic.isPending && queries.diagnostic.variables?.kind === 'certificate'),
     connectionResult, certResult, handleTestConnection: () => test('connection'), handleTestCert: () => test('certificate'),
     handleSyncData: () => refreshLocal('all'), handleQueryLastNfse: () => refreshLocal('last'), handleQueryNextNum: () => refreshLocal('next'),
-    dragActive, showCertModal, setShowCertModal, handleDrag, handleDrop, handleFileChange, handleSaveConfig,
+    dragActive, handleDrag, handleDrop, handleFileChange, handleSaveConfig,
     readiness, ...historyFilters,
   };
 }

@@ -26,8 +26,8 @@ export const FiscalConfig: React.FC = () => {
     locationTree, openContext, handleSelectCompany, handleSelectUf, handleSelectMunicipio,
     handleOpenDraftContext, handleToggleContextStatus, syncing, testingConnection,
     testingCert, connectionResult, certResult, handleTestConnection, handleTestCert,
-    handleSyncData, handleQueryLastNfse, handleQueryNextNum, dragActive, showCertModal,
-    setShowCertModal, handleDrag, handleDrop, handleFileChange, handleSaveConfig,
+    handleSyncData, handleQueryLastNfse, handleQueryNextNum, dragActive,
+    handleDrag, handleDrop, handleFileChange, handleSaveConfig,
     filteredHistory, filterPeriodoInicio, setFilterPeriodoInicio, filterPeriodoFim,
     setFilterPeriodoFim, filterStatus, setFilterStatus, filterOperacao, setFilterOperacao,
     filterNotaNum, setFilterNotaNum, searchQuery, setSearchQuery, readiness,
@@ -212,8 +212,6 @@ export const FiscalConfig: React.FC = () => {
             dragActive={dragActive}
             testingCert={testingCert}
             certResult={certResult}
-            showCertModal={showCertModal}
-            setShowCertModal={setShowCertModal}
             onTestCert={handleTestCert}
             onDrag={handleDrag}
             onDrop={handleDrop}

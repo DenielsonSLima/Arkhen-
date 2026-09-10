@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload } from 'lucide-react';
+import { formatCpfOrCnpj } from '../../../../../lib/cnpj';
 import type { FiscalConfigData } from '../services/fiscalIntegrationService';
 
 interface FiscalCertificadoProps {
@@ -8,8 +9,6 @@ interface FiscalCertificadoProps {
   dragActive: boolean;
   testingCert: boolean;
   certResult: { success: boolean; message: string } | null;
-  showCertModal: boolean;
-  setShowCertModal: React.Dispatch<React.SetStateAction<boolean>>;
   onTestCert: () => void;
   onDrag: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -23,20 +22,22 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
   dragActive,
   testingCert,
   certResult,
-  showCertModal,
-  setShowCertModal,
   onTestCert,
   onDrag,
   onDrop,
   onFileChange,
   getCertBadge,
 }) => {
+  const hasCertificate = Boolean(config.certificadoArquivoConfigured || config.certificadoNome);
+  const validity = config.certificadoValidade?.replace(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/, '$3/$2/$1');
+  const days = config.certificadoDiasRestantes;
+
   return (
     <div className="config-form">
       
       <div className="form-divider-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Certificado Digital A1</span>
-        {config.certificadoDiasRestantes ? getCertBadge(config.certificadoDiasRestantes) : null}
+        {hasCertificate && days != null ? getCertBadge(days) : null}
       </div>
 
       <p className="input-helper-text">O teste de assinatura usa o certificado armazenado no servidor. Salve mudanças de senha antes de testar.</p>
@@ -91,24 +92,6 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
             <button
               type="button"
-              onClick={() => setShowCertModal(true)}
-              className="btn-add-user"
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #cbd5e1',
-                color: 'var(--color-text-dark)',
-                boxShadow: 'none',
-                padding: '9px 16px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Visualizar Dados
-            </button>
-
-            <button
-              type="button"
               onClick={onTestCert}
               disabled={testingCert}
               className="btn-save-settings"
@@ -136,40 +119,30 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
         </div>
       )}
 
-      {/* Detailed Cert Information inside standard Arkhen box */}
-      {showCertModal && (
-        <div className="watermark-details-panel animate-fade-in" style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowCertModal(false)}
-            style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', fontSize: '1.25rem', color: 'var(--color-text-dark-muted)', cursor: 'pointer' }}
-          >
-            &times;
-          </button>
-          
-          <div className="form-divider-title" style={{ margin: 0, paddingBottom: '8px' }}>Informações Extraídas do Certificado</div>
-          
-          <div className="form-row-grid" style={{ gap: '12px' }}>
-            <div className="form-item-group">
-              <label>Nome do Arquivo</label>
-              <input type="text" readOnly value={config.certificadoNome || 'Nenhum certificado carregado'} style={{ backgroundColor: '#fdfdfd' }} />
-            </div>
-            <div className="form-item-group">
-              <label>CNPJ Cadastrado</label>
-              <input type="text" readOnly value={config.certificadoCNPJ || '-'} style={{ backgroundColor: '#fdfdfd' }} />
-            </div>
+      {hasCertificate && (
+        <section className="watermark-details-panel animate-fade-in" aria-labelledby="certificado-dados-titulo">
+          <div id="certificado-dados-titulo" className="form-divider-title" style={{ margin: 0, paddingBottom: '8px' }}>
+            Dados do certificado cadastrado
           </div>
-
+          <div className="form-item-group" style={{ marginTop: '12px' }}>
+            <label htmlFor="certificado-empresa">Empresa / Titular do certificado</label>
+            <input id="certificado-empresa" type="text" readOnly value={config.certificadoEmpresa || '-'} />
+          </div>
           <div className="form-row-grid" style={{ gap: '12px', marginTop: '12px' }}>
             <div className="form-item-group">
-              <label>Razão Social / Titular</label>
-              <input type="text" readOnly value={config.certificadoEmpresa || '-'} style={{ backgroundColor: '#fdfdfd' }} />
+              <label htmlFor="certificado-cnpj">CNPJ do certificado</label>
+              <input id="certificado-cnpj" type="text" readOnly value={config.certificadoCNPJ ? formatCpfOrCnpj(config.certificadoCNPJ) : '-'} />
             </div>
             <div className="form-item-group">
-              <label>Vencimento</label>
-              <input type="text" readOnly value={config.certificadoValidade || '-'} style={{ backgroundColor: '#fdfdfd' }} />
+              <label htmlFor="certificado-validade">Data de validade</label>
+              <input id="certificado-validade" type="text" readOnly value={validity || '-'} />
+            </div>
+            <div className="form-item-group">
+              <label htmlFor="certificado-dias">Dias restantes</label>
+              <input id="certificado-dias" type="text" readOnly value={days == null ? '-' : days < 0 ? 'Expirado' : `${days} ${days === 1 ? 'dia' : 'dias'}`} />
             </div>
           </div>
-        </div>
+        </section>
       )}
 
     </div>
