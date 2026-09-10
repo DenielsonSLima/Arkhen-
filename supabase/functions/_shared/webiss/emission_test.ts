@@ -121,3 +121,14 @@ Deno.test("RPS rejeita dados maiores que o XSD e nao gera tags opcionais vazias"
   const xml = buildUnsignedRps(prepared);
   if (xml.includes("<CodigoCnae>") || xml.includes("<CodigoTributacaoMunicipio>")) throw new Error("Tags opcionais vazias");
 });
+
+Deno.test("Rascunho preserva competencia distinta, incidencia separada e NBS opcional", () => {
+  const base=preparedFixture();
+  const xml=buildUnsignedRps({...base,servico:{...base.servico,competencia:"2026-08-01",municipioIncidencia:"2800308",codigoNbs:"123456789"}});
+  assertIncludes(xml,"<DataEmissao>2026-09-02</DataEmissao>");
+  assertIncludes(xml,"<Competencia>2026-08-01</Competencia>");
+  assertIncludes(xml,"<CodigoMunicipio>2802908</CodigoMunicipio>");
+  assertIncludes(xml,"<MunicipioIncidencia>2800308</MunicipioIncidencia>");
+  assertIncludes(xml,"<CodigoNbs>123456789</CodigoNbs>");
+  assertThrows(()=>buildUnsignedRps({...base,servico:{...base.servico,competencia:"2026-02-30"}}),"Competencia");
+});

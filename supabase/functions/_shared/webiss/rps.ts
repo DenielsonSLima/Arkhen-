@@ -60,6 +60,11 @@ export const buildUnsignedRps = (prepared: Record<string, unknown>) => {
   if (text(customer.codigoMunicipio) && !/^\d{7}$/.test(text(customer.codigoMunicipio))) throw new Error("Codigo IBGE do tomador invalido.");
   if (text(service.codigoCnae) && !/^\d{7}$/.test(text(service.codigoCnae))) throw new Error("CNAE invalido.");
   if (text(service.codigoTributacaoMunicipio).length > 20) throw new Error("Codigo de tributacao municipal invalido.");
+  const competence = text(service.competencia) || text(rps.data);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(competence) || new Date(competence).toISOString().slice(0, 10) !== competence) throw new Error("Competencia invalida.");
+  const incidence = text(service.municipioIncidencia) || text(service.codigoMunicipio);
+  if (!/^\d{7}$/.test(incidence)) throw new Error("Municipio de incidencia invalido.");
+  if (text(service.codigoNbs) && !/^\d{9}$/.test(text(service.codigoNbs))) throw new Error("NBS invalido.");
   const hasInvalidXmlCharacter = (value: unknown): boolean => {
     if (typeof value === "string") return Array.from(value).some((character) => {
       const code = character.codePointAt(0)!;
@@ -79,7 +84,7 @@ export const buildUnsignedRps = (prepared: Record<string, unknown>) => {
         `<Rps Id="${rpsId}"><IdentificacaoRps>` +
           `<Numero>${xmlEscape(rps.numero)}</Numero><Serie>${xmlEscape(rps.serie)}</Serie><Tipo>1</Tipo>` +
         `</IdentificacaoRps><DataEmissao>${xmlEscape(rps.data)}</DataEmissao><Status>1</Status></Rps>` +
-        `<Competencia>${xmlEscape(rps.data)}</Competencia><Servico><Valores>` +
+        `<Competencia>${xmlEscape(competence)}</Competencia><Servico><Valores>` +
           `<ValorServicos>${Number(service.valor).toFixed(2)}</ValorServicos>` +
           optionalTag("Aliquota", aliquota) +
         `</Valores><IssRetido>${digits(service.issRetido).slice(0, 1) || "2"}</IssRetido>` +
@@ -87,10 +92,11 @@ export const buildUnsignedRps = (prepared: Record<string, unknown>) => {
           `<ItemListaServico>${xmlEscape(text(service.itemListaServico).replace(/[^0-9.]/g, ""))}</ItemListaServico>` +
           optionalTag("CodigoCnae", digits(service.codigoCnae)) +
           optionalTag("CodigoTributacaoMunicipio", service.codigoTributacaoMunicipio) +
+          optionalTag("CodigoNbs", service.codigoNbs) +
           `<Discriminacao>${xmlEscape(text(service.descricao).slice(0, 2000))}</Discriminacao>` +
           `<CodigoMunicipio>${xmlEscape(service.codigoMunicipio)}</CodigoMunicipio>` +
           `<ExigibilidadeISS>${digits(service.exigibilidadeIss).slice(0, 1) || "1"}</ExigibilidadeISS>` +
-          `<MunicipioIncidencia>${xmlEscape(service.codigoMunicipio)}</MunicipioIncidencia>` +
+          `<MunicipioIncidencia>${xmlEscape(incidence)}</MunicipioIncidencia>` +
         `</Servico><Prestador><CpfCnpj><Cnpj>${xmlEscape(providerDocument)}</Cnpj></CpfCnpj>` +
           `<InscricaoMunicipal>${xmlEscape(provider.inscricaoMunicipal)}</InscricaoMunicipal></Prestador>` +
         `<Tomador><IdentificacaoTomador><CpfCnpj><${documentTag}>${xmlEscape(customerDocument)}</${documentTag}>` +

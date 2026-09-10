@@ -20,7 +20,20 @@ export function buildSoapEnvelope(operation: WebIssOperation, xml: string) {
     `</${operation}Request></soap:Body></soap:Envelope>`;
 }
 
-export function parseWebIssResponse(soap: string, operation: WebIssOperation) {
+function authorizedEmissionTimestamp(value: string): string | undefined {
+  if (!value) return undefined;
+  const parts = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})?$/.exec(value);
+  if (!parts || Number(parts[2]) > 23 || Number(parts[3]) > 59 || Number(parts[4]) > 59) {
+    throw new WebIssError("Data de emissao retornada pelo WebISS invalida.");
+  }
+  const calendar = new Date(parts[1] + "T00:00:00Z");
+  const timestamp = new Date(parts[5] ? value : value + "-03:00");
+  if (!Number.isFinite(calendar.getTime()) || calendar.toISOString().slice(0, 10) !== parts[1]
+    || !Number.isFinite(timestamp.getTime())) throw new WebIssError("Data de emissao retornada pelo WebISS invalida.");
+  return timestamp.toISOString();
+}
+
+export function parseWebIssResponse(soap: string, operation: WebIssOperation): { nfseId: string; protocolo: string; payload: {numero: string; codigoVerificacao: string; xml: string; dataEmissao?: string} } {
   const doc = parseXml(soap);
   const root = doc.documentElement;
   const fault = descendants(root, "Fault")[0];
@@ -48,7 +61,8 @@ export function parseWebIssResponse(soap: string, operation: WebIssOperation) {
   if (!/^\d{1,15}$/.test(number) || !verification) throw new WebIssError("NFS-e retornada sem numero ou codigo de verificacao valido.");
   return {
     nfseId: number, protocolo: verification,
-    payload: { numero: number, codigoVerificacao: verification, xml: output },
+    payload: { numero: number, codigoVerificacao: verification, xml: output,
+      dataEmissao: authorizedEmissionTimestamp(nodeText(direct(info, "DataEmissao"))) },
   };
 }
 

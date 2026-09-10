@@ -1,0 +1,58 @@
+[
+  {
+    "path": "03-exemplos-xml/01-consultas/ConsultarNfseFaixaEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 5,
+    "log": "00-controle/validacao-xsd/ConsultarNfseFaixaEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/01-consultas/ConsultarNfseRpsEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 5,
+    "log": "00-controle/validacao-xsd/ConsultarNfseRpsEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/01-consultas/ConsultarNfseServicoPrestadoEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 10,
+    "log": "00-controle/validacao-xsd/ConsultarNfseServicoPrestadoEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/01-consultas/ConsultarNfseServicoTomadoEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 12,
+    "log": "00-controle/validacao-xsd/ConsultarNfseServicoTomadoEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/02-emissao/EnviarLoteRpsSincronoEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 65,
+    "log": "00-controle/validacao-xsd/EnviarLoteRpsSincronoEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/02-emissao/GerarNfseEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 58,
+    "log": "00-controle/validacao-xsd/GerarNfseEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/03-cancelamento/CancelarNfseEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 6,
+    "log": "00-controle/validacao-xsd/CancelarNfseEnvio.log"
+  },
+  {
+    "path": "03-exemplos-xml/04-substituicao/SubstituirNfseEnvio.xml",
+    "well_formed": true,
+    "xsd_valid": false,
+    "error_count": 67,
+    "log": "00-controle/validacao-xsd/SubstituirNfseEnvio.log"
+  }
+]

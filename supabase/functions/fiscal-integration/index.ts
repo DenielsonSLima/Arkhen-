@@ -1,3 +1,5 @@
+import { handleDraftAction } from "./draft-action.ts";
+import { handleConsultationAction } from "./consultation-action.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.6";
 import { assertManagedCredentialVersion } from "../_shared/managed-auth.ts";
 import {
@@ -120,6 +122,12 @@ const handleJsonAction = async (
   admin: AdminClient, userId: string, payload: Record<string, unknown>,
 ) => {
   const action = asString(payload.action);
+  if (action === "sync-consulted-nfse") return jsonResponse(await handleConsultationAction(admin, userId, payload));
+  if (action === "emit-draft" || action === "consult-draft") {
+    const draftId = asString(payload.rascunho_id);
+    if (!isUuid(draftId)) return jsonResponse({ ok: false, error: "Rascunho invalido." }, 400);
+    return jsonResponse(await handleDraftAction(admin, userId, draftId, action === "consult-draft", Deno.env.get("WEBISS_DRAFT_PRODUCTION_ENABLED") === "true"));
+  }
   if (action === "emit-nfse" || action === "consult-nfse") {
     const chargeId = asString(payload.cobranca_id || payload.cobrancaId);
     if (!isUuid(chargeId)) return jsonResponse({ ok: false, error: "Cobranca invalida." }, 400);

@@ -11,6 +11,7 @@ const dependencies = { consult: consultWebIssNfse, emit: emitWebIssNfse, sign: p
 export async function handleEmissionAction(
   admin: FiscalRpcClient, userId: string, chargeId: string, consultOnly: boolean,
   deps: typeof dependencies = dependencies,
+  validatePrepared?: (prepared: Record<string, unknown>) => void,
 ) {
   const { data, error } = await admin.rpc(consultOnly ? "preparar_consulta_nfse_webiss" : "preparar_emissao_nfse_webiss", {
     p_user_id: userId, p_cobranca_id: chargeId,
@@ -27,6 +28,7 @@ export async function handleEmissionAction(
   let sent = false;
   const mustConsult = consultOnly || prepared.reconciliarPrimeiro === true;
   try {
+    validatePrepared?.(prepared);
     const certificate = deps.parseCertificate(text(prepared.certificadoBase64), typeof prepared.certificadoSenha === "string" ? prepared.certificadoSenha : "");
     assertCertificateMatchesCnpj(certificate, text(asRecord(prepared.prestador).cnpj));
     let result;

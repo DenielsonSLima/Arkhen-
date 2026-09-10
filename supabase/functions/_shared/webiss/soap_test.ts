@@ -38,3 +38,18 @@ Deno.test("Transporte bloqueia endpoint arbitrario antes de abrir cliente e limi
   try { await readLimitedXml(new Response("abcdef"), 3); throw new Error("payload aceito"); }
   catch (error) { if (!(error instanceof Error) || !error.message.includes("limite")) throw error; }
 });
+
+Deno.test("Retorno preserva data fiscal autorizada sem substituir por relogio local", () => {
+  const date="2026-09-10T10:20:30-03:00";
+  const output=xml.replace("<Numero>88</Numero>",`<Numero>88</Numero><DataEmissao>${date}</DataEmissao>`);
+  if(parseWebIssResponse(soap(output),"GerarNfse").payload.dataEmissao!=="2026-09-10T13:20:30.000Z") throw new Error("Data fiscal perdida");
+  if(parseWebIssResponse(soap(xml),"GerarNfse").payload.dataEmissao!==undefined) throw new Error("Data inventada");
+});
+
+Deno.test("Data fiscal sem offset usa horario de Itabaiana; rejeita datas inexistentes", () => {
+  const parse = (date:string) => parseWebIssResponse(soap(xml.replace("<Numero>88</Numero>",
+    `<Numero>88</Numero><DataEmissao>${date}</DataEmissao>`)),"GerarNfse").payload.dataEmissao;
+  if(parse("2026-08-20T00:15:00")!=="2026-08-20T03:15:00.000Z") throw new Error("Data local interpretada como UTC");
+  if(parse("2026-08-20T00:15:00Z")!=="2026-08-20T00:15:00.000Z") throw new Error("Offset explicito ignorado");
+  for(const date of ["2026-02-30T12:00:00","2026-08-20T25:00:00","data invalida"]) assertThrows(()=>parse(date));
+});

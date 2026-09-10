@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import {
   useCreateCobrancaFinanceiraMutation,
-  useEmitirNfseFinanceiraMutation,
 } from '../../financeiro/queries/useFinanceiroQueries';
 import type { CobrancaFinanceira } from '../../financeiro/services/financeiroService';
 import {
@@ -40,6 +39,7 @@ import {
   getPublicCobrancaLink,
 } from '../cobrancas/utils/cobrancaLinks';
 import { useManagedTimeout } from '../hooks/useManagedTimeout';
+import { NfseDraftForm } from '../forms/nfse/NfseDraftForm';
 
 interface ModalNovoLancamentoAvulsoProps {
   isOpen: boolean;
@@ -59,7 +59,6 @@ type NovoLancamentoTipo = 'cobranca' | 'nfse' | 'nfseComCobranca';
 export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps> = ({ isOpen, onClose }) => {
   const clientesQuery = useFaturamentoClientesQuery(isOpen);
   const createCobrancaMutation = useCreateCobrancaFinanceiraMutation();
-  const emitNfseMutation = useEmitirNfseFinanceiraMutation();
   const [step, setStep] = useState(1);
   const [tipo, setTipo] = useState<NovoLancamentoTipo>('cobranca');
   const [clienteEmpresaId, setClienteEmpresaId] = useState('');
@@ -74,8 +73,6 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [generatedCobranca, setGeneratedCobranca] = useState<CobrancaFinanceira | null>(null);
   const [copyStatus, setCopyStatus] = useState('');
-  const [nfseFailure, setNfseFailure] = useState(false);
-  const [nfseAmbiente, setNfseAmbiente] = useState<'homologacao' | 'producao' | null>(null);
   const schedule = useManagedTimeout();
 
   const formatCurrency = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -84,25 +81,11 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
   };
   const isSomenteNfse = tipo === 'nfse';
-  const isSubmitPending = createCobrancaMutation.isPending || emitNfseMutation.isPending;
-  const getSuccessMessage = () => {
-    if (nfseFailure) return 'Cobrança criada. A NFS-e não foi confirmada; consulte a situação no Financeiro antes de tentar emitir novamente.';
-    if (nfseAmbiente === 'homologacao') return 'Teste de NFS-e concluído em homologação, sem valor fiscal. A cobrança permanece sem NFS-e de produção.';
-    if (isSomenteNfse) return 'Cobrança criada e NFS-e emitida.';
-    if (tipo === 'nfseComCobranca') return 'Cobrança gerada e NFS-e emitida em seguida.';
-    return 'Cobrança criada no Banco Inter e registrada no financeiro.';
-  };
-  const getStep3Title = () => {
-    if (nfseFailure) return 'Cobrança criada — NFS-e pendente';
-    if (nfseAmbiente === 'homologacao') return 'NFS-e de homologação — sem valor fiscal';
-    if (isSomenteNfse) return 'NFS-e emitida';
-    if (tipo === 'nfseComCobranca') return 'Cobrança e NFS-e emitidas';
-    return 'Cobrança gerada';
-  };
+  const isSubmitPending = createCobrancaMutation.isPending;
+  const getSuccessMessage = () => 'Cobrança criada no Banco Inter e registrada no financeiro.';
+  const getStep3Title = () => 'Cobrança gerada';
 
   const resetForm = () => {
-    setNfseAmbiente(null);
-    setNfseFailure(false);
     setStep(1);
     setTipo('cobranca');
     setClienteEmpresaId('');
@@ -160,6 +143,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
   };
 
   const handleSubmit = async () => {
+    if (tipo === 'nfse') return;
     const parsedValor = parseCurrencyInput(valor);
     if (!clienteEmpresaId) {
       setErrorMsg('Por favor, selecione um parceiro/cliente.');
@@ -187,24 +171,16 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
         multaPercentual: parsePercentInput(multaPercentual),
         mensagemBoleto: mensagemBoleto.trim(),
       });
-      let updatedCobranca = cobranca;
-      if (tipo === 'nfse' || tipo === 'nfseComCobranca') {
-        try {
-          const result = await emitNfseMutation.mutateAsync(cobranca.id);
-          setNfseAmbiente(result.ambiente);
-          updatedCobranca = result.ambiente === 'producao' ? { ...cobranca, nfseId: result.nfseId } : cobranca;
-        } catch (error) {
-          setNfseFailure(true);
-          setErrorMsg(error instanceof Error ? error.message : 'A NFS-e não foi confirmada.');
-        }
-      }
-
-      setGeneratedCobranca(updatedCobranca);
-      setStep(3);
+      setGeneratedCobranca(cobranca);
+      setStep(tipo === 'nfseComCobranca' ? 4 : 3);
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'Falha ao gerar lançamento.');
     }
   };
+
+  if (step === 2 && tipo === 'nfse') return <NfseDraftForm onClose={handleClose} onBack={() => setStep(1)} />;
+  if (step === 4 && generatedCobranca) return <NfseDraftForm onClose={handleClose} cobrancaId={generatedCobranca.id}
+    clienteId={clienteEmpresaId} valor={generatedCobranca.valor} descricao={descricao} />;
 
   const modalContent = (
     <div className="faturamento-modal-backdrop">
@@ -251,7 +227,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               </span>
               <span>
                 <strong>Somente NFS-e</strong>
-                <small>Gerar a cobrança base e emitir nota fiscal automaticamente.</small>
+                <small>Preparar rascunho fiscal sem boleto ou Pix; revisar antes de transmitir.</small>
               </span>
             </button>
             <button
@@ -263,7 +239,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               </span>
               <span>
                 <strong>NFS-e + cobrança</strong>
-                <small>Emitir NFS-e e manter cobrança ativa no financeiro.</small>
+                <small>Criar cobrança no Banco Inter e depois preparar a NFS-e para revisão.</small>
               </span>
             </button>
           </div>
@@ -396,7 +372,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
         {step === 3 && generatedCobranca && (
           <div className="faturamento-success-panel">
             <div className="faturamento-success-alert">
-              {nfseFailure ? <AlertTriangle size={18} /> : <Check size={18} />}
+              <Check size={18} />
               <span>{getSuccessMessage()}</span>
             </div>
 
@@ -485,7 +461,7 @@ export const ModalNovoLancamentoAvulso: React.FC<ModalNovoLancamentoAvulsoProps>
               disabled={isSubmitPending}
               className="faturamento-btn-primary"
             >
-              <Check size={16} /> {isSubmitPending ? 'Gerando...' : 'Confirmar Geração'}
+              <Check size={16} /> {isSubmitPending ? 'Gerando cobrança...' : tipo === 'nfseComCobranca' ? 'Criar cobrança e preparar NFS-e' : 'Confirmar Geração'}
             </button>
           )}
         </div>
