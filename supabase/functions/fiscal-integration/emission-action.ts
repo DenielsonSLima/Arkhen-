@@ -39,7 +39,7 @@ export async function handleEmissionAction(
     }
     const { data: nfseId, error: confirmError } = await admin.rpc("confirmar_emissao_nfse_webiss", {
       p_user_id: userId, p_cobranca_id: chargeId, p_nfse_id: result.nfseId,
-      p_protocolo: result.protocolo, p_payload: { ...result.payload, tentativaId: prepared.tentativaId },
+      p_protocolo: result.protocolo, p_payload: { ...result.payload, tentativaId: prepared.tentativaId, cobrancaId: chargeId },
     });
     if (confirmError || !nfseId) throw new Error("NFS-e localizada no WebISS, mas a confirmacao local falhou. Consulte o RPS para reconciliar; nao reenvie a emissao.");
     return {

@@ -1,3 +1,5 @@
+import { NfseItabaianaDocument } from '../../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/NfseItabaianaDocument';
+import { isItabaiana } from '../../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/modelo';
 import React from 'react';
 import { formatCpfOrCnpj } from '../../../../../lib/cnpj';
 import type { NfseFiscalData, XmlFiscalParty, XmlFiscalSummary } from '../shared/xmlFiscalTypes';
@@ -12,22 +14,6 @@ const normalizeBooleanLabel = (value: string) => {
   if (value === '1' || value.toLowerCase() === 'true') return 'Sim';
   if (value === '2' || value === '0' || value.toLowerCase() === 'false') return 'Não';
   return value || '-';
-};
-
-const qrCells = (payload: string) => {
-  const source = payload || 'nfse';
-  let seed = 0;
-  for (let index = 0; index < source.length; index += 1) {
-    seed = (seed * 31 + source.charCodeAt(index)) >>> 0;
-  }
-
-  return Array.from({ length: 81 }, (_, index) => {
-    const row = Math.floor(index / 9);
-    const col = index % 9;
-    const finder = (row < 3 && col < 3) || (row < 3 && col > 5) || (row > 5 && col < 3);
-    if (finder) return row === 0 || row === 2 || col === 0 || col === 2 || (row % 2 === 1 && col % 2 === 1);
-    return ((seed >> ((index + row + col) % 24)) & 1) === 1;
-  });
 };
 
 const Field: React.FC<{ label: string; value?: string; wide?: boolean }> = ({ label, value, wide }) => (
@@ -61,14 +47,6 @@ const TaxCell: React.FC<{ label: string; value?: string }> = ({ label, value }) 
   </div>
 );
 
-const NfseQrCode: React.FC<{ payload: string }> = ({ payload }) => (
-  <div className="nfse-qr" aria-label="QR Code da NFS-e">
-    {qrCells(payload).map((active, index) => (
-      <span key={index} className={active ? 'active' : ''} />
-    ))}
-  </div>
-);
-
 const getMunicipioHeader = (nfse: NfseFiscalData) => (
   nfse.prestador.municipio
     ? `PREFEITURA MUNICIPAL DE ${nfse.prestador.municipio.toUpperCase()}`
@@ -85,6 +63,7 @@ export const NfsePdfDocument: React.FC<NfsePdfDocumentProps> = ({
   empresaLogoUrl,
   empresaNome,
   marcaDaguaTexto,
+  ambiente = 'nao_identificado',
 }) => {
   const nfse = summary.nfse;
 
@@ -99,6 +78,11 @@ export const NfsePdfDocument: React.FC<NfsePdfDocumentProps> = ({
         </article>
       </div>
     );
+  }
+
+  if (isItabaiana(nfse)) {
+    return <NfseItabaianaDocument nfse={nfse} ambiente={ambiente} empresaNome={empresaNome}
+      cancelada={summary.isCanceled} />;
   }
 
   const total = nfse.valorLiquido || nfse.valorServicos || summary.sections
@@ -152,7 +136,7 @@ export const NfsePdfDocument: React.FC<NfsePdfDocumentProps> = ({
           </aside>
 
           <div className="nfse-qr-wrap">
-            <NfseQrCode payload={nfse.qrPayload || summary.subtitle} />
+            <strong>Validação da NFS-e</strong>
             <span>Autenticidade consultável pelo código de verificação</span>
           </div>
         </header>

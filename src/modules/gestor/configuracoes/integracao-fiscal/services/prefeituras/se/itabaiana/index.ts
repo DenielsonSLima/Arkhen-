@@ -3,7 +3,7 @@ import { itabaianaEmitirNotaOperacoes } from './emitir-nota';
 import { itabaianaCancelarNotaOperacoes } from './cancelar-nota';
 import { itabaianaConsultarNFSEOperacoes } from './consultar-nfse';
 import { itabaianaBaixarXmlOperacoes } from './baixar-xml';
-import prefeituraLogoUrl from './prefeitura-itabaiana-logo.svg';
+import prefeituraLogoUrl from '../../../../modelos/nfse/itabaiana/assets/brasao-itabaiana.svg';
 
 export const ItabaianaPrefeituraProfile: FiscalPrefeituraProfile = {
   id: 'SE-Itabaiana-WebISS',

@@ -11,6 +11,8 @@ export interface XmlFiscalSection {
 }
 
 export interface XmlFiscalParty {
+  nomeFantasia?: string;
+  codigoMunicipio?: string;
   nome: string;
   documento: string;
   inscricaoMunicipal: string;
@@ -24,6 +26,17 @@ export interface XmlFiscalParty {
 }
 
 export interface NfseFiscalData {
+  municipioIncidencia?: string;
+  descricaoServico?: string;
+  codigoMunicipioGerador?: string;
+  exigibilidadeIss?: string;
+  descontoCondicionado?: string;
+  descontoIncondicionado?: string;
+  outrasRetencoes?: string;
+  valorIssRetido?: string;
+  chaveAcesso?: string;
+  nbs?: string;
+  complementoTributario?: XmlFiscalField[];
   numero: string;
   codigoVerificacao: string;
   dataEmissao: string;

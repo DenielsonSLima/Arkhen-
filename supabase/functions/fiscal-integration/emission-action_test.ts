@@ -35,6 +35,7 @@ Deno.test("Tentativa nova assina e envia uma vez, preserva token e homologacao",
   if (test.counts().sends !== 1 || test.counts().queries !== 0 || response.ambiente !== "homologacao") throw new Error("Fluxo incorreto");
   const payload = test.calls.find((call) => call.name === "confirmar_emissao_nfse_webiss")?.args?.p_payload as Record<string, unknown>;
   if (payload.tentativaId !== token) throw new Error("Token perdido");
+  if (payload.cobrancaId !== "charge") throw new Error("Vinculo do XML com a cobranca perdido");
 });
 Deno.test("Tentativa incerta somente consulta; nao reenvia mesmo se municipio nao acha RPS", async () => {
   for (const consultFails of [false, true]) {

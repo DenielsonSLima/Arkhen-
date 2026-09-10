@@ -2,6 +2,7 @@ import { getPrefeituraProfile } from '../../../configuracoes/integracao-fiscal/s
 import type { NfseFiscalData } from '../shared/xmlFiscalTypes';
 
 export interface NfseVisualIdentityOptions {
+  ambiente?: 'homologacao' | 'producao' | 'nao_identificado';
   emitidaPeloSistema?: boolean;
   empresaLogoUrl?: string;
   empresaNome?: string;

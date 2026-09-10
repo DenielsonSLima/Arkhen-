@@ -70,9 +70,16 @@ const fromRow = (row: MarcaDaguaRow | null): MarcaDaguaDados => {
 
 export const marcaDaguaService = {
   async getMarcaDaguaConfig(): Promise<MarcaDaguaDados> {
+    const { data: empresaId, error } = await supabase.rpc('current_empresa_id');
+    if (error || !empresaId) throw new Error('Não foi possível identificar a empresa da marca d’água.');
+    return marcaDaguaService.getMarcaDaguaConfigDaEmpresa(String(empresaId));
+  },
+  async getMarcaDaguaConfigDaEmpresa(empresaId: string): Promise<MarcaDaguaDados> {
+    if (!empresaId) throw new Error('Empresa obrigatória para consultar a marca d’água.');
     const { data, error } = await supabase
       .from('configuracoes_marca_dagua')
       .select('habilitado,file_url,file_url_paisagem,file_url_retrato,posicao,opacidade,tamanho,posicao_paisagem,posicao_retrato,opacidade_paisagem,opacidade_retrato,tamanho_paisagem,tamanho_retrato')
+      .eq('empresa_id', empresaId)
       .maybeSingle<MarcaDaguaRow>();
 
     if (error) throw error;

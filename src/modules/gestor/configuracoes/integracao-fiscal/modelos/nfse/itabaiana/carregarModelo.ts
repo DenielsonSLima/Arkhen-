@@ -1,0 +1,28 @@
+import brasaoUrl from './assets/brasao-itabaiana.png';
+import type { NfseFiscalData } from '../../../../../documentos/xml/shared/xmlFiscalTypes';
+import { type NfseModeloOptions } from './modelo';
+import { carregarFontes } from './fontes';
+import { marcaDaguaService, type MarcaDaguaDados } from '../../../../marca-dagua/services/marcaDaguaService';
+import { carregarMarcaDagua } from './marcaDagua';
+
+const loadImage = async (url: string): Promise<Uint8Array> => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Não foi possível carregar a imagem do modelo da NFS-e.');
+  return new Uint8Array(await response.arrayBuffer());
+};
+
+export async function carregarModelo(_nfse: NfseFiscalData, options: NfseModeloOptions, config?: MarcaDaguaDados) {
+  const cadastro = config ?? await (options.empresaId
+    ? marcaDaguaService.getMarcaDaguaConfigDaEmpresa(options.empresaId)
+    : marcaDaguaService.getMarcaDaguaConfig());
+  const [brasaoImagem, marcaDagua, fontes] = await Promise.all([
+    options.brasaoImagem || loadImage(brasaoUrl), carregarMarcaDagua(cadastro), options.fontes || carregarFontes(),
+  ]);
+  return { ...options, brasaoImagem, marcaDagua, fontes };
+}
+
+export async function baixarNfsePdf(nfse: NfseFiscalData, options: NfseModeloOptions) {
+  const [{ gerarNfsePdf }, loaded] = await Promise.all([import('./gerarNfsePdf'), carregarModelo(nfse, options)]);
+  const pdf = gerarNfsePdf(nfse, loaded);
+  pdf.save(`NFS-e-${nfse.numero.replace(/[^a-z0-9-]/gi, '')}-${options.ambiente}.pdf`);
+}
