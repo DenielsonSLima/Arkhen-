@@ -2,11 +2,11 @@
 
 Data: 10/09/2026. Reunião com `auditoria_recorrencias`, `auditoria_contrato` e `auditoria_retorno`. Coordenação principal: comparação entre código local e publicado, leitura delimitada do banco, interface, validação e publicação.
 
-## Conclusão do trabalho local
+## Conclusão e publicação
 
 O ciclo durável de recorrência foi implementado: contrato e preferências persistidos, execução única por contrato/competência, cobrança, preparação do rascunho e etapa fiscal conforme o modo escolhido. A recuperação usa os mesmos identificadores depois de falha ou recarga da página. O envio WebISS passa por validação XSD e assinatura; o retorno conserva XML e situação municipal, incluindo cancelamento e substituição.
 
-**Implementação e testes locais não comprovam emissão autorizada nem liberam produção.** A publicação do conjunto e sua verificação final permanecem pendentes nesta versão do relatório. O escritório ainda precisa da comprovação de credenciamento/configuração no ambiente pretendido e de uma emissão autorizada em homologação, seguida de consulta consistente pelo mesmo RPS. Nenhuma transmissão fiscal foi realizada na revisão.
+**Implementação e testes locais não comprovam emissão autorizada nem liberam produção.** O conjunto foi publicado e a versão pública foi conferida. O escritório ainda precisa da comprovação de credenciamento/configuração no ambiente pretendido e de uma emissão autorizada em homologação, seguida de consulta consistente pelo mesmo RPS. Nenhuma transmissão fiscal foi realizada na revisão.
 
 ## Diagnóstico inicial — antes das correções
 
@@ -78,9 +78,9 @@ A existência dos modos de transmissão recorrente e do seletor Produção não 
 - XML representativo assinado com certificado descartável foi validado contra XSD e assinatura. Fixture local não é evidência de autorização fiscal real.
 - Bateria final: 96 testes Deno, 89 testes Vitest e os dois runners SQL PGlite passaram. Build TypeScript/Vite aprovado também em cópia isolada contendo apenas os arquivos desta publicação; alerta preexistente de tamanho de chunks permanece.
 
-## Publicação do backend e conferência posterior
+## Publicação verificada
 
-As quatro migrations foram aplicadas em 10/09/2026. Função `fiscal-integration` v9 e `recurrence-worker` v1 ativas. RLS conferida nas três tabelas privadas; scheduler ativo a cada minuto. Após a publicação do backend: zero contratos com agendamento ativo, zero execuções, dez notas importadas preservadas. Nenhuma cobrança ou transmissão foi realizada. O frontend acompanha o commit desta alteração, com verificação de implantação registrada após sua conclusão.
+As quatro migrations foram aplicadas em 10/09/2026. Função `fiscal-integration` v9 e `recurrence-worker` v1 ativas. RLS conferida nas três tabelas privadas; scheduler ativo a cada minuto. Após a publicação do backend: zero contratos com agendamento ativo, zero execuções, dez notas importadas preservadas. Nenhuma cobrança ou transmissão foi realizada. Frontend publicado pelo commit `dfc8e9391bb2810f2029a2988bb87594267dc4f2`, com status Vercel success. Domínio `https://arkhen.vercel.app` serve `index-B_-1Z2AX.js` e `index-CtXfKz15.css`, iguais ao build isolado verificado. Foram encontrados os componentes de prévia PDF e recorrência e o chunk `GuiaAjudaPage-CcP2G2pe.js`; imagem real `parceiro-cnpj.jpg` respondeu HTTP200 image/jpeg. Worker publicado rejeitou requisição sem sessão com HTTP403. RPCs de execução conferidas exclusivas de service_role; três execuções consecutivas do cron foram bem-sucedidas.
 
 Próxima validação fiscal, quando expressamente autorizada: nota concreta de homologação, dados revisados, retorno autorizado, consulta do mesmo RPS e comparação XML/PDF. Nenhuma etapa desse documento autoriza emissão real ou produção.
 

@@ -9,7 +9,7 @@ Data: 10/09/2026. Solicitação: substituir o guia resumido por módulos separad
 - **manual_gestao:** mapeou Faturamento, Financeiro, Simulações, Reforma Tributária, Configurações e Relatórios. Entregou 37 artigos e documentou os recursos indisponíveis ou demonstrativos.
 - **Integração principal:** implementou catálogo, primeiros passos, busca global sem distinção de acentos, índice por módulo, leitura individual, assuntos relacionados e navegação anterior/próximo.
 
-Total: **13 módulos e 82 tutoriais**. Cada artigo contém finalidade, caminho na interface, pré-requisitos, passos numerados e verificação do resultado. Dicas explicam condições e limites reais.
+Total final: **13 módulos e 84 tutoriais**. A revisão do faturamento acrescentou dois tutoriais sobre configuração e execuções recorrentes. Cada artigo contém finalidade, caminho na interface, pré-requisitos, passos numerados e verificação do resultado. Dicas explicam condições e limites reais.
 
 ## Fundamentação e revisão cruzada
 
