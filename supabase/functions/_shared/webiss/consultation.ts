@@ -1,4 +1,9 @@
 import type { FiscalCertificate } from "./certificate.ts";
+import { providerErrorFromResponse } from "./consultation-provider-error.ts";
+import {
+  clientCreationError,
+  ConsultationError,
+} from "./consultation-error.ts";
 import { parseFiscalDocument, requireValidCnpj } from "../fiscal-document.ts";
 import {
   descendants,
@@ -71,9 +76,7 @@ export function parseConsultationResponse(
 ) {
   const root = parseXml(soap).documentElement;
   if (descendants(root, "Fault").length) {
-    throw new Error(
-      "Falha SOAP na consulta WebISS; nenhuma emissao foi enviada.",
-    );
+    throw new ConsultationError("VALIDATE_SOAP");
   }
   const outputs = descendants(root, "outputXML");
   if (outputs.length !== 1) {
@@ -89,21 +92,40 @@ export function parseConsultationResponse(
     );
   }
   const errors = direct(response, "ListaMensagemRetorno");
-  if (errors) {
-    const codes = descendants(errors, "MensagemRetorno").map((item) =>
-      nodeText(direct(item, "Codigo"))
-    ).filter((code) => /^[A-Za-z0-9-]{1,20}$/.test(code));
-    throw new Error(
-      `Consulta WebISS rejeitada${
-        codes.length ? ` (${codes.join(", ")})` : ""
-      }; nenhum resultado confirmado.`,
-    );
+  const messages = errors ? descendants(errors, "MensagemRetorno") : [];
+  if (messages.length) {
+    // WebISS E212 explicitly means no matching note. A mixed error or any
+    // accompanying document is never converted into an empty success.
+    if (
+      messages.every((item) => nodeText(direct(item, "Codigo")) === "E212") &&
+      descendants(response, "CompNfse").length === 0
+    ) {
+      return {
+        notes: [] as ConsultedNote[],
+        next: undefined,
+        ambiguous: false,
+      };
+    }
+    throw providerErrorFromResponse(messages);
   }
   const list = direct(response, "ListaNfse");
-  if (!list) throw new Error("Lista de notas ausente na resposta WebISS.");
+  if (!list) {
+    throw new ConsultationError(
+      errors ? "VALIDATE_EMPTY_MESSAGES" : "VALIDATE_RESPONSE",
+    );
+  }
   const comps = Array.from(list.childNodes).filter((node) =>
     node.nodeType === 1 && (node as Element).localName === "CompNfse"
   ) as Element[];
+  // Compatibility tolerance, not the XSD choice: an empty message wrapper is
+  // ignored only alongside actual CompNfse documents, all validated below.
+  if (
+    errors &&
+    (comps.length === 0 || nodeText(errors) ||
+      Array.from(errors.childNodes).some((node) => node.nodeType === 1))
+  ) {
+    throw new ConsultationError("VALIDATE_EMPTY_MESSAGES");
+  }
   if (comps.length > 50) {
     throw new Error(
       "Pagina WebISS excedeu 50 documentos previstos no contrato.",
@@ -132,7 +154,12 @@ export async function requestConsultationPage(
   page: number,
   certificate: FiscalCertificate,
 ) {
-  const xml = buildConsultationXml(context, period, page);
+  let xml: string;
+  try {
+    xml = buildConsultationXml(context, period, page);
+  } catch {
+    throw new ConsultationError("VALIDATE_REQUEST");
+  }
   const header =
     `<cabecalho xmlns="${NS}" versao="2.02"><versaoDados>2.02</versaoDados></cabecalho>`;
   const body =
@@ -143,10 +170,15 @@ export async function requestConsultationPage(
     `<nfseDadosMsg xmlns="">${
       xmlEscape(xml)
     }</nfseDadosMsg></${CONSULTATION_OPERATION}Request></soap:Body></soap:Envelope>`;
-  const client = Deno.createHttpClient({
-    cert: certificate.certificatePem,
-    key: certificate.privateKeyPem,
-  });
+  let client: Deno.HttpClient;
+  try {
+    client = Deno.createHttpClient({
+      cert: certificate.certificatePem,
+      key: certificate.privateKeyPem,
+    });
+  } catch (error) {
+    throw clientCreationError(error);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
@@ -163,17 +195,33 @@ export async function requestConsultationPage(
     });
     if (!response.ok) {
       await response.body?.cancel();
-      throw new Error(`Consulta WebISS respondeu HTTP ${response.status}.`);
+      throw new ConsultationError(
+        [401, 403].includes(response.status)
+          ? "TRANSPORT_HTTP_AUTH"
+          : response.status >= 500
+          ? "TRANSPORT_HTTP_SERVER"
+          : response.status >= 400
+          ? "TRANSPORT_HTTP_CLIENT"
+          : "TRANSPORT_HTTP",
+      );
     }
-    return parseConsultationResponse(
-      await readLimitedXml(response, 4 * 1024 * 1024),
-      context,
-      period,
-      page,
+    const soap = await readLimitedXml(response, 4 * 1024 * 1024);
+    try {
+      return parseConsultationResponse(soap, context, period, page);
+    } catch (error) {
+      throw error instanceof ConsultationError
+        ? error
+        : new ConsultationError("VALIDATE_RESPONSE");
+    }
+  } catch (error) {
+    throw error instanceof ConsultationError ? error : new ConsultationError(
+      controller.signal.aborted ? "TRANSPORT_TIMEOUT" : "TRANSPORT_FAILED",
     );
   } finally {
     clearTimeout(timer);
-    client.close();
+    try {
+      client.close();
+    } catch { /* Cleanup cannot replace the safe diagnostic. */ }
   }
 }
 
@@ -182,20 +230,26 @@ export async function collectLatestConsultedNotes(
   period: ConsultationPeriod,
   certificate: FiscalCertificate,
   requestPage = requestConsultationPage,
+  beforeRequest: () => Promise<void> = () => Promise.resolve(),
 ) {
   validateConsultationPeriod(period);
   // Bounded work: at most 5 pages/250 documents in an explicit period, never full unbounded history.
   const records = new Map<string, ConsultedNote>();
   let page = 1, pagesRead = 0, complete = false;
   for (; pagesRead < 5;) {
+    try {
+      await beforeRequest();
+    } catch (error) {
+      throw error instanceof ConsultationError
+        ? error
+        : new ConsultationError("TRANSPORT_GATE");
+    }
     const result = await requestPage(context, period, page, certificate);
     pagesRead += 1;
     for (const note of result.notes) {
       const prior = records.get(note.numero_nfse);
       if (prior && prior.xml !== note.xml) {
-        throw new Error(
-          "Nota mudou durante paginacao; atualize a consulta antes de copiar.",
-        );
+        throw new ConsultationError("VALIDATE_CHANGED");
       }
       records.set(note.numero_nfse, note);
     }

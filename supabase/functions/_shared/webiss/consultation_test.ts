@@ -7,6 +7,7 @@ import {
 import type { ConsultationContext } from "./consultation-data.ts";
 import type { FiscalCertificate } from "./certificate.ts";
 import { xmlEscape } from "./xml.ts";
+import { safeConsultationDiagnostic } from "./consultation-error.ts";
 
 const assert = (value: unknown, message = "Falha na verificacao") => {
   if (!value) throw new Error(message);
@@ -52,6 +53,151 @@ const parse = (notes: string, next = "", page = 1) =>
     consultationPeriod,
     page,
   );
+
+Deno.test("E212 sozinho sem documentos confirma ausencia; erro misto ou documento rejeita", async () => {
+  const read = (codes: string[], notes = "") =>
+    parseConsultationResponse(
+      `<Envelope><outputXML>${
+        xmlEscape(
+          `<ConsultarNfseServicoPrestadoResposta xmlns="http://www.abrasf.org.br/nfse.xsd"><ListaMensagemRetorno>${
+            codes.map((code) =>
+              `<MensagemRetorno><Codigo>${code}</Codigo><Mensagem>Resposta fiscal</Mensagem></MensagemRetorno>`
+            ).join("")
+          }</ListaMensagemRetorno>${
+            notes ? `<ListaNfse>${notes}</ListaNfse>` : ""
+          }</ConsultarNfseServicoPrestadoResposta>`,
+        )
+      }</outputXML></Envelope>`,
+      consultationContext,
+      consultationPeriod,
+      2,
+    );
+  assert(
+    read(["E212"]).notes.length === 0 &&
+      read(["E212", "E212"]).next === undefined,
+  );
+  await rejects(() => read(["E212", "L999"]));
+  await rejects(() => read(["E212"], noteFixture(292)));
+  const events: string[] = [];
+  const result = await collectLatestConsultedNotes(
+    consultationContext,
+    consultationPeriod,
+    certificate,
+    async (_context, _period, page) => {
+      events.push(`page${page}`);
+      return page === 1
+        ? parse(noteFixture(292), "<ProximaPagina>2</ProximaPagina>")
+        : read(["E212"]);
+    },
+    async () => {
+      events.push("gate");
+    },
+  );
+  assert(
+    result.notes.length === 1 && result.notes[0].numero_nfse === "292" &&
+      result.pagesRead === 2 && result.coverage === "complete",
+  );
+  assert(events.join(",") === "gate,page1,gate,page2");
+});
+
+Deno.test("gate falho impede SOAP e L999 nunca dispara retry automatico", async () => {
+  let calls = 0;
+  await rejects(() =>
+    collectLatestConsultedNotes(
+      consultationContext,
+      consultationPeriod,
+      certificate,
+      async () => {
+        calls++;
+        return parse(noteFixture(1));
+      },
+      async () => {
+        throw new Error("PRIVATE_SECRET");
+      },
+    )
+  );
+  assert(calls === 0);
+  await rejects(() =>
+    collectLatestConsultedNotes(
+      consultationContext,
+      consultationPeriod,
+      certificate,
+      async () => {
+        calls++;
+        throw new Error("L999");
+      },
+      async () => {},
+    )
+  );
+  assert(calls === 1);
+});
+
+Deno.test("consulta tolera wrapper de mensagens vazio apenas com notas validadas", async () => {
+  const wrap = (inside: string) =>
+    `<Envelope><outputXML>${
+      xmlEscape(
+        `<ConsultarNfseServicoPrestadoResposta xmlns="http://www.abrasf.org.br/nfse.xsd">${inside}</ConsultarNfseServicoPrestadoResposta>`,
+      )
+    }</outputXML></Envelope>`;
+  const read = (inside: string) =>
+    parseConsultationResponse(
+      wrap(inside),
+      consultationContext,
+      consultationPeriod,
+      1,
+    );
+  const valid = `<ListaMensagemRetorno/><ListaNfse>${
+    noteFixture(292)
+  }</ListaNfse>`;
+  assert(read(valid).notes[0].numero_nfse === "292");
+  await rejects(() => read(valid.replace("35898750000107", "28767294000109")));
+  for (
+    const inside of [
+      "<ListaMensagemRetorno/>",
+      "<ListaMensagemRetorno/><ListaNfse/>",
+      `<ListaMensagemRetorno>PRIVATE</ListaMensagemRetorno><ListaNfse>${
+        noteFixture(292)
+      }</ListaNfse>`,
+    ]
+  ) {
+    let caught: unknown;
+    try {
+      read(inside);
+    } catch (error) {
+      caught = error;
+    }
+    assert(
+      safeConsultationDiagnostic(caught)?.code === "VALIDATE_EMPTY_MESSAGES",
+    );
+  }
+  for (const codigo of ["L001", "123", "PRIVATE_SECRET"]) {
+    let caught: unknown;
+    try {
+      read(
+        `<ListaMensagemRetorno><MensagemRetorno><Codigo>${codigo}</Codigo><Mensagem>PRIVATE</Mensagem></MensagemRetorno></ListaMensagemRetorno><ListaNfse>${
+          noteFixture(292)
+        }</ListaNfse>`,
+      );
+    } catch (error) {
+      caught = error;
+    }
+    const diagnostic = safeConsultationDiagnostic(caught);
+    assert(
+      diagnostic?.code === "VALIDATE_PROVIDER" &&
+        !diagnostic.message.includes("PRIVATE"),
+    );
+    if (codigo !== "PRIVATE_SECRET") {
+      assert(diagnostic?.message.endsWith(`(${codigo})`));
+    }
+  }
+  await rejects(() =>
+    read(
+      `<ListaMensagemRetorno><MensagemRetorno/></ListaMensagemRetorno><ListaNfse>${
+        noteFixture(292)
+      }</ListaNfse>`,
+    )
+  );
+});
 
 Deno.test("consulta cria somente XML de servicos prestados com prestador/tomador/periodo/pagina", () => {
   const xml = buildConsultationXml(consultationContext, consultationPeriod, 2);

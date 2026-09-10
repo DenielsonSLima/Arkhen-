@@ -1,4 +1,4 @@
-import { XMLSerializer } from "npm:@xmldom/xmldom@0.8.15";
+import { serializeWithNamespaceContext } from "./xml-context.ts";
 import { normalizeFiscalDocument } from "../fiscal-document.ts";
 import { descendants, direct, nodeText } from "./xml.ts";
 
@@ -190,7 +190,7 @@ export function extractConsultedNote(
     numero_nfse: numero,
     codigo_verificacao: verification,
     data_emissao: timestamp.toISOString(),
-    xml: new XMLSerializer().serializeToString(comp),
+    xml: serializeWithNamespaceContext(comp),
     hash_sha256: "",
     situacao,
     dados,
