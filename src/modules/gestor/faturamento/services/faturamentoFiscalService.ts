@@ -24,6 +24,8 @@ export const faturamentoFiscalService = {
   emitters: () => rpc<FiscalEmitter[]>('listar_contextos_emissao_webiss'),
   list: (filters: FiscalHistoryFilters) => rpc<FiscalDraft[]>('listar_faturamento_nfse_webiss', {
     p_ambiente: filters.ambiente || null, p_status: filters.status || null, p_search: filters.search || '',
+    p_fiscal_config_id: filters.fiscalConfigId || null, p_cliente_id: filters.clienteId || null,
+    p_data_inicial: filters.dataInicial || null, p_data_final: filters.dataFinal || null,
   }),
   save: (input: FiscalDraftInput) => rpc<FiscalDraft>('salvar_rascunho_nfse_webiss', { p_payload: input }),
   review: (id: string) => rpc<FiscalReview>('revisar_rascunho_nfse_webiss', { p_rascunho_id: id }),

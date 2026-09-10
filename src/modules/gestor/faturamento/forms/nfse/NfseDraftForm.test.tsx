@@ -23,10 +23,14 @@ function mount(ui = <NfseDraftForm onClose={() => {}} />) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
+function selectPartner(name: string) {
+  fireEvent.change(screen.getByRole('combobox', { name: 'Parceiro / tomador' }), { target: { value: name } });
+  fireEvent.click(screen.getByRole('option', { name: new RegExp(name) }));
+}
 async function selectContext() {
   await screen.findByRole('option', { name: /Emitente H/ });
   fireEvent.change(screen.getByLabelText('Emitente / configuração fiscal'), { target: { value: 'config-h' } });
-  fireEvent.change(screen.getByLabelText('Parceiro / tomador'), { target: { value: 'client-a' } });
+  selectPartner('Parceiro A');
 }
 beforeEach(() => {
   vi.resetAllMocks();
@@ -70,7 +74,7 @@ describe('Preparação NFS-e independente', () => {
     mount(); await screen.findByRole('option', { name: /Emitente H/ });
     fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
     fireEvent.change(screen.getByLabelText('Emitente / configuração fiscal'), { target: { value: 'config-p' } });
-    fireEvent.change(screen.getByLabelText('Parceiro / tomador'), { target: { value: 'client-a' } });
+    selectPartner('Parceiro A');
     fireEvent.click(screen.getByRole('button', { name: 'Salvar e revisar' }));
     await screen.findByText('Revisão do rascunho salvo');
     expect(mocks.save.mock.calls[0][0].ambiente).toBe('producao');
@@ -86,7 +90,7 @@ describe('Preparação NFS-e independente', () => {
     fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
     expect(screen.getByRole('option', { name: /Emitente H/ })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Emitente / configuração fiscal'), { target: { value: 'config-h' } });
-    fireEvent.change(screen.getByLabelText('Parceiro / tomador'), { target: { value: 'client-a' } });
+    selectPartner('Parceiro A');
     expect(screen.getByText(/Ambiente desta operação: producao/)).toBeTruthy();
     expect(screen.getByText(/Contexto inativo para emissão; consulta de notas disponível/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Atualizar do WebISS' }));
@@ -106,7 +110,7 @@ describe('Preparação NFS-e independente', () => {
     fireEvent.change(screen.getByLabelText('Competência'), { target: { value: '2026-09' } });
     fireEvent.click(screen.getAllByRole('button', { name: 'Copiar dados' })[0]);
     await waitFor(() => expect(mocks.copy).toHaveBeenCalled());
-    fireEvent.change(screen.getByLabelText('Parceiro / tomador'), { target: { value: 'client-b' } });
+    selectPartner('Parceiro B');
     resolveCopy({ ...draft(), dados: { ...blankFiscalData(), descricao: 'Dado antigo não pode voltar' } });
     await waitFor(() => expect(mocks.previous).toHaveBeenLastCalledWith(expect.objectContaining({ clienteId: 'client-b', fiscalConfigId: 'config-h', ambiente: 'homologacao' })));
     expect(screen.queryByText('Nota anterior 0')).toBeNull();

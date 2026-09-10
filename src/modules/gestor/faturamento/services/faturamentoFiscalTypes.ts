@@ -29,7 +29,10 @@ export interface FiscalReview {
 export interface FiscalDocument {
   xml: string; ambiente: FiscalAmbiente; numero: string; codigoVerificacao: string; empresaId: string;
 }
-export interface FiscalHistoryFilters { ambiente?: FiscalAmbiente; status?: string; search?: string }
+export interface FiscalHistoryFilters {
+  ambiente?: FiscalAmbiente; status?: string; search?: string; fiscalConfigId?: string;
+  clienteId?: string; dataInicial?: string; dataFinal?: string;
+}
 export interface FiscalPartnerScope { fiscalConfigId: string; clienteId: string; ambiente: FiscalAmbiente; dataInicial: string; dataFinal: string }
 export interface FiscalPreviousNote {
   id: string; origem: 'consultada' | 'rascunho' | 'cobranca'; numero: string; emissao: string;

@@ -15,7 +15,7 @@ Data: 10/09/2026. Escopo autorizado: adaptar o Arkhen, consultar/importar notas 
 1. **Somente NFS-e** abre um rascunho fiscal; não chama o Banco Inter nem cria cobrança bancária.
 2. **NFS-e + cobrança** cria a cobrança solicitada e depois abre a preparação fiscal. A nota não é transmitida automaticamente.
 3. O usuário escolhe emitente, ambiente e parceiro/tomador. A configuração fiscal salva define o contexto; o ambiente desta operação é explícito.
-4. O histórico local mostra até cinco notas confirmadas, filtradas por empresa, emitente, parceiro, ambiente e período antes do limite.
+4. O formulário mostra as últimas cinco notas confirmadas do parceiro. O Histórico NFS-e lista as notas importadas e rascunhos, com filtros por emitente, parceiro, ambiente, situação e período aplicados no servidor.
 5. **Atualizar do WebISS** chama somente `ConsultarNfseServicoPrestado` com A1 no servidor. Até cinco páginas/250 documentos, intervalo máximo de 366 dias; paginação incompleta é informada como consulta parcial.
 6. **Copiar dados** cria outro rascunho, preserva valor dos serviços e descrição, exige competência escolhida e não reutiliza número da NFS-e, verificação, RPS, assinatura ou protocolo. A descrição não tem seus meses substituídos silenciosamente.
 7. **Salvar e revisar** não reserva RPS nem transmite. Competência, data do RPS, municípios de prestação/incidência, classificação e NBS são campos separados.
@@ -44,3 +44,11 @@ As três skills ficam em `.agents/skills/arkhen-webiss-{envio,cancelamento,revis
 As três migrations foram aplicadas no projeto Arkhen `dgklhykjwzmeqxejlicz`. Edge fiscal publicada na versão 7, mantendo verificação de JWT. A publicação da interface e a consulta autenticada real são conferidas separadamente; publicar o código não prova autorização fiscal municipal nem homologação concluída.
 
 Primeiro caso de consulta: parceiro UNILASE já cadastrado, em 20/08/2026, comparando o retorno com o PDF fornecido pelo usuário. Usar a sessão normal do aplicativo e o certificado armazenado no servidor. Importação só é considerada concluída após resposta do provedor e confirmação do histórico local.
+
+## Correção de interface e consulta no Histórico
+
+A segunda revisão corrigiu o portal do formulário: cores independentes de `document.body`, rótulos escuros, controles com aparência e altura definidas no Safari e cabeçalho/rodapé sem a margem duplicada do card. Os campos foram agrupados em serviço, atividade/local, ISS e complemento do tomador. O seletor de parceiro reutiliza o componente pesquisável do Faturamento.
+
+A aba Histórico agora oferece **Consultar WebISS**, com emitente, parceiro, ambiente e intervalo explícitos. A resposta invalida a lista e aparece no próprio histórico. Datas são apresentadas em português; o intervalo usa a data fiscal no horário municipal, sem presumir emissão em registros sem data. Intervalos invertidos são indicados na interface.
+
+Migration adicional aplicada: `20260910032827_webiss_historico_filtros.sql`. A assinatura anterior de três argumentos continua atendida pelos valores padrão da nova assinatura de sete argumentos. Revisão independente sem bloqueadores; 19 testes React passaram e a suite SQL isolada cobriu escopo, filtros, fuso, permissões e compatibilidade.

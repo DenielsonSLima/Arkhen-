@@ -23,7 +23,7 @@ try {
   const cpfStart=cpfSource.indexOf('CREATE OR REPLACE FUNCTION public.cpf_valido(');
   await db.exec(cpfSource.slice(cpfStart,cpfSource.indexOf('$$;',cpfStart)+3));
   for(const migration of ['20260907135151_webiss_emissao_segura.sql','20260907135202_webiss_parametros_diagnostico.sql',
-    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql']) {
+    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql','20260910032827_webiss_historico_filtros.sql']) {
     await db.exec(await read('../migrations/'+migration));
     console.log('PASS migration '+migration);
   }
@@ -100,6 +100,24 @@ try {
   await assert.rejects(scalar('select registrar_notas_consultadas_webiss($1,$2,$3,$4,$5)',[ids.tenant,ids.config,ids.client,'homologacao',[{...cacheNotes[0],hash_sha256:'0'.repeat(64)}]]),/Hash/);
   assert.deepEqual(await scalar('select listar_ultimas_nfse_parceiro_webiss($1,$2,$3)',[ids.config,ids.client,'producao']),[]);
   console.log('PASS cache hash, cancellation precedence, last five ordering, period-before-limit, unsupported copy and environment isolation');
+  const filtered=await scalar('select listar_faturamento_nfse_webiss($1,$2,$3,$4,$5,$6,$7)',
+    ['homologacao','confirmada','',ids.config,ids.client,'2026-09-01','2026-09-03']);
+  assert.deepEqual(filtered.map(x=>x.numeroNfse),['103','102','101']);
+  for(const [configId,clientId] of [[ids.other,ids.client],[ids.config,ids.other]]) {
+    assert.deepEqual(await scalar('select listar_faturamento_nfse_webiss($1,$2,$3,$4,$5)',
+      ['homologacao',null,'',configId,clientId]),[]);
+  }
+  const oldCall=await scalar('select listar_faturamento_nfse_webiss($1,$2,$3)',['homologacao','confirmada','106']);
+  assert.equal(oldCall.length,1);assert.equal(oldCall[0].numeroNfse,'106');
+  assert.equal(await scalar("select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='listar_faturamento_nfse_webiss'"),1);
+  await assert.rejects(scalar('select listar_faturamento_nfse_webiss(p_data_inicial=>$1,p_data_final=>$2)',['2026-09-10','2026-09-01']),/Periodo fiscal invalido/);
+  const beforeMidnight={...await makeNote(108,8),data_emissao:'2026-09-09T01:30:00Z'};
+  const midnight={...await makeNote(109,9),data_emissao:'2026-09-09T03:00:00Z'};
+  await scalar('select registrar_notas_consultadas_webiss($1,$2,$3,$4,$5)',[ids.tenant,ids.config,ids.client,'homologacao',[beforeMidnight,midnight]]);
+  const localDay=await scalar('select listar_faturamento_nfse_webiss(p_data_inicial=>$1,p_data_final=>$2)',['2026-09-09','2026-09-09']);
+  assert.deepEqual(localDay.map(x=>x.numeroNfse),['109']);
+  console.log('PASS history exact emitter/partner/status/period filters, municipal timezone, legacy calls and no RPC overload');
+
   await db.query("update configuracoes_integracao_fiscal set ativo=false where id=$1",[ids.config]);
   const consultInactive=await scalar('select preparar_consulta_parceiro_webiss($1,$2,$3,$4)',[ids.tenant,ids.config,ids.client,'producao']);
   assert.equal(consultInactive.ambiente,'producao');

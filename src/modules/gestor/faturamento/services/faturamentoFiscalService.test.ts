@@ -8,6 +8,13 @@ import { faturamentoFiscalService as service } from './faturamentoFiscalService'
 const scope = { fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao' as const, dataInicial: '2026-01-01', dataFinal: '2026-09-10' };
 beforeEach(() => { vi.resetAllMocks(); mocks.rpc.mockResolvedValue({ data: {}, error: null }); mocks.invoke.mockResolvedValue({ data: { ok: true }, error: null }); });
 describe('Contrato fiscal Faturamento', () => {
+  it('filtra histórico por emitente, parceiro e período no servidor', async () => {
+    await service.list({ fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao', dataInicial: '2026-08-01', dataFinal: '2026-09-10', status: 'confirmada', search: '292' });
+    expect(mocks.rpc).toHaveBeenCalledWith('listar_faturamento_nfse_webiss', {
+      p_fiscal_config_id: 'emitter', p_cliente_id: 'partner', p_ambiente: 'producao',
+      p_data_inicial: '2026-08-01', p_data_final: '2026-09-10', p_status: 'confirmada', p_search: '292',
+    });
+  });
   it('bloqueia transmissão de produção antes de chamar a Edge Function', () => {
     expect(() => service.emit({ ambiente: 'producao' } as Parameters<typeof service.emit>[0])).toThrow('produção não está liberada');
     expect(mocks.invoke).not.toHaveBeenCalled();

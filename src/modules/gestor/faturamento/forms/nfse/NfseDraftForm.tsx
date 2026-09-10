@@ -8,6 +8,7 @@ import { blankFiscalData, editableFiscalData } from './fiscalFormData';
 import { FiscalDataFields } from './FiscalDataFields';
 import { FiscalReviewPanel } from './FiscalReviewPanel';
 import { PreviousFiscalNotes } from './PreviousFiscalNotes';
+import { BillingClientSelect } from '../../components/billingFormUtils';
 import './NfseDraft.css';
 
 interface Props { onClose: () => void; onBack?: () => void; initial?: FiscalDraft; cobrancaId?: string; clienteId?: string; valor?: number; descricao?: string }
@@ -59,7 +60,7 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
       setReview(undefined); setConfirmed(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Emissão não confirmada. Consulte o mesmo RPS no histórico.'); setReview(undefined); }
   };
-  return createPortal(<div className="faturamento-modal-backdrop"><div className="faturamento-card nfse-draft-modal" role="dialog" aria-modal="true" aria-label="Preparar NFS-e">
+  return createPortal(<div className="faturamento-modal-backdrop nfse-draft-backdrop"><div className="faturamento-card nfse-draft-modal" role="dialog" aria-modal="true" aria-label="Preparar NFS-e">
     <header className="faturamento-modal-header"><div><h2>Preparar NFS-e</h2><p>{cobrancaId ? 'Cobrança criada. Prepare e revise a nota vinculada.' : 'Rascunho fiscal independente, sem geração de boleto ou Pix.'}</p></div>
       <button type="button" className="faturamento-modal-close" aria-label="Fechar" disabled={busy} onClick={onClose}><X size={20} /></button></header>
     <div className="nfse-draft-body">
@@ -70,8 +71,10 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
         <label className="faturamento-form-group"><span>Emitente / configuração fiscal</span><select value={fiscalConfigId} onChange={e => { setConfigId(e.target.value); changeContext(); }}>
           <option value="">Selecione um emitente cadastrado</option>{(emitters.data || []).map(item => <option value={item.id} key={item.id}>
             {item.prestadorNome} · {item.prestadorCnpj}{item.ativo ? '' : ' (inativo)'}</option>)}</select></label>
-        <label className="faturamento-form-group nfse-full"><span>Parceiro / tomador</span><select value={clienteId} disabled={!!cobrancaId} onChange={e => { setClient(e.target.value); changeContext(); }}>
-          <option value="">Selecione o tomador</option>{(clients.data || []).map(client => <option value={client.id} key={client.id}>{client.razaoSocial || client.nome} · {client.cnpj}</option>)}</select></label>
+        <div className="faturamento-form-group nfse-full"><span>Parceiro / tomador</span>
+          <BillingClientSelect clientes={clients.data || []} value={clienteId} isLoading={clients.isLoading}
+            ariaLabel="Parceiro / tomador" disabled={!!cobrancaId || busy || !!immutable}
+            onChange={value => { setClient(value); changeContext(); }} /></div>
         {emitter && <p className="nfse-full">CNPJ do emitente: {emitter.prestadorCnpj} · IM: {emitter.inscricaoMunicipal || 'não informada'} · Itabaiana / SE · Ambiente desta operação: {ambiente}. Padrão salvo: {emitter.ambiente}.{!emitter.ativo && ' Contexto inativo para emissão; consulta de notas disponível.'}</p>}
       </fieldset>
       {!emitters.isLoading && !emitters.isError && tenant.data && !emitters.data?.length && <p role="alert">Nenhum emitente WebISS configurado. Cadastre a integração fiscal em Configurações.</p>}
@@ -89,7 +92,7 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
       {review && ambiente === 'homologacao' && review.ready && !review.blockers.length && <label className="nfse-confirm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />Conferi os dados e quero transmitir esta nota em homologação.</label>}
       {ambiente === 'producao' && <p>Transmissão de produção não liberada nesta etapa.</p>}
     </div>
-    <footer className="faturamento-modal-actions">{onBack && <button type="button" className="faturamento-btn-secondary" disabled={busy} onClick={onBack}>Voltar</button>}
+    <footer className="faturamento-modal-actions">{onBack && <button type="button" className="faturamento-btn-secondary nfse-draft-back" disabled={busy} onClick={onBack}>Voltar</button>}
       {!immutable && <><button type="button" className="faturamento-btn-secondary" disabled={busy || previousBusy} onClick={() => void save(false)}>Salvar rascunho</button>
         <button type="button" className="faturamento-btn-primary" disabled={busy || previousBusy} onClick={() => void save(true)}>{busy ? 'Processando...' : 'Salvar e revisar'}</button></>}
       {review && <button type="button" className="faturamento-btn-primary" disabled={busy || previousBusy || !confirmed || !review.ready || !!review.blockers.length || ambiente !== 'homologacao'} onClick={() => void emit()}>Transmitir em homologação</button>}

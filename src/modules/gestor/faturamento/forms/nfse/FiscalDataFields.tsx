@@ -6,13 +6,22 @@ const selects: Partial<Record<keyof FiscalDraftData, [string, string][]>> = {
   responsavelRetencao: [['1', 'Tomador'], ['2', 'Intermediário']],
   regimeEspecial: [['1', 'Microempresa municipal'], ['2', 'Estimativa'], ['3', 'Sociedade de profissionais'], ['4', 'Cooperativa'], ['5', 'MEI'], ['6', 'ME/EPP']],
 };
+const sections: { title: string; hint?: string; fields: (keyof FiscalDraftData)[] }[] = [
+  { title: 'Serviço e competência', hint: 'Informe o mês da prestação e confira o período na descrição do serviço.',
+    fields: ['competencia', 'dataEmissao', 'descricao', 'valor'] },
+  { title: 'Atividade e local da prestação',
+    fields: ['itemListaServico', 'codigoCnae', 'codigoTributacaoMunicipio', 'codigoNbs', 'codigoMunicipio', 'municipioIncidencia'] },
+  { title: 'ISS e enquadramento fiscal',
+    fields: ['exigibilidadeIss', 'issRetido', 'responsavelRetencao', 'aliquotaIss', 'optanteSimplesNacional', 'regimeEspecial', 'incentivoFiscal'] },
+  { title: 'Complemento do tomador', fields: ['tomadorNumero', 'tomadorCodigoMunicipio'] },
+];
 export function FiscalDataFields({ data, onChange, disabled }: {
   data: FiscalDraftData; onChange: (data: FiscalDraftData) => void; disabled?: boolean;
 }) {
-  return <fieldset disabled={disabled} className="nfse-fields">
-    <legend>Dados fiscais da nova nota</legend>
-    <p className="nfse-full">Competência, data do RPS e período descrito no serviço são independentes. Confira os três antes de revisar.</p>
-    {(Object.keys(fiscalFieldLabels) as (keyof FiscalDraftData)[]).map(key => {
+  return <>{sections.map(section => <fieldset disabled={disabled} className="nfse-fields" key={section.title}>
+    <legend>{section.title}</legend>
+    {section.hint && <p className="nfse-full">{section.hint}</p>}
+    {section.fields.map(key => {
       const label = fiscalFieldLabels[key]; const value = data[key] ?? '';
       const options = selects[key];
       const update = (next: string) => onChange({ ...data, [key]: key === 'competencia' && next ? `${next}-01` : next });
@@ -26,5 +35,5 @@ export function FiscalDataFields({ data, onChange, disabled }: {
             value={key === 'competencia' ? String(value).slice(0, 7) : value} onChange={e => update(e.target.value)} />}
       </label>;
     })}
-  </fieldset>;
+  </fieldset>)}</>;
 }

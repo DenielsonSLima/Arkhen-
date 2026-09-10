@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMemo, useState, useRef, type ChangeEvent, type FocusEvent, type ReactNode } from 'react';
+import { useId, useMemo, useState, useRef, type ChangeEvent, type FocusEvent, type ReactNode } from 'react';
 import { Building2, Check, Landmark, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCpfOrCnpj } from '../../../../lib/cnpj';
 import type { Company } from '../../gestao-empresarial/services/gestaoEmpresarialService';
@@ -40,8 +40,9 @@ export const getBillingInitials = (name: string) => {
 export const getBillingClientName = (cliente: Company) => cliente.razaoSocial || cliente.nome || 'Parceiro sem nome';
 
 export const getBillingClientMeta = (cliente: Company) => {
+  const documentLabel = /^\d{11}$/.test((cliente.cnpj || '').replace(/[.\-/\s]/g, '')) ? 'CPF' : 'CNPJ';
   const tags = [
-    cliente.cnpj ? `CNPJ ${formatBillingDocument(cliente.cnpj)}` : 'CNPJ nao informado',
+    cliente.cnpj ? `${documentLabel} ${formatBillingDocument(cliente.cnpj)}` : 'CPF/CNPJ não informado',
     cliente.tipoEstabelecimento || 'Unidade nao informada',
     getEffectiveTaxRegime(cliente.tipo) || 'Regime nao informado',
     cliente.categoriaCliente || '',
@@ -115,9 +116,12 @@ interface BillingClientSelectProps {
   value: string;
   onChange: (value: string) => void;
   isLoading?: boolean;
+  disabled?: boolean;
+  ariaLabel?: string;
 }
 
-export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: BillingClientSelectProps) => {
+export const BillingClientSelect = ({ clientes, value, onChange, isLoading, disabled = false, ariaLabel = 'Parceiro / cliente' }: BillingClientSelectProps) => {
+  const listId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,6 +166,7 @@ export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: Bi
   };
 
   const handleTriggerClick = () => {
+    if (disabled) return;
     inputRef.current?.focus();
     setIsOpen(true);
   };
@@ -185,21 +190,23 @@ export const BillingClientSelect = ({ clientes, value, onChange, isLoading }: Bi
               setSearch(selectedCliente ? getBillingClientName(selectedCliente) : search);
               setIsOpen(true);
             }}
-            placeholder="Pesquisar parceiro por nome ou CNPJ..."
+            placeholder="Pesquisar parceiro por nome ou CPF/CNPJ..."
             role="combobox"
+            disabled={disabled}
+            aria-label={ariaLabel}
             aria-expanded={isOpen}
-            aria-controls="billing-client-options"
+            aria-controls={listId}
             autoComplete="off"
           />
-          <small>{selectedCliente ? getBillingClientMeta(selectedCliente) : 'Nome, CNPJ, unidade e regime tributario'}</small>
+          <small>{selectedCliente ? getBillingClientMeta(selectedCliente) : 'Nome, CPF/CNPJ, unidade e regime tributário'}</small>
         </span>
         <span className="faturamento-client-select-arrow">
           {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </span>
       </div>
 
-      {isOpen && (
-        <div id="billing-client-options" className="faturamento-client-options" role="listbox" tabIndex={-1}>
+      {isOpen && !disabled && (
+        <div id={listId} className="faturamento-client-options" role="listbox" tabIndex={-1}>
           {isLoading && <div className="faturamento-client-option muted">Carregando parceiros...</div>}
           {!isLoading && filteredClientes.length === 0 && <div className="faturamento-client-option muted">Nenhum parceiro encontrado.</div>}
           {!isLoading && filteredClientes.map((cliente) => (
