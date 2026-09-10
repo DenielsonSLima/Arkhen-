@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeMunicipio } from '../../services/fiscalIntegrationHelpers';
 import type { FiscalPrefeituraProfile } from '../../services/fiscalIntegrationService';
 import type { Company } from '../../../../gestao-empresarial/services/gestaoEmpresarialService';
 
@@ -31,6 +32,11 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
   onSelectMunicipio,
   onOpenIntegration,
 }) => {
+  const municipioOption = availableMunicipios.find(
+    (municipio) => normalizeMunicipio(municipio) === normalizeMunicipio(selectedMunicipio),
+  ) || selectedMunicipio;
+  const municipioOptions = municipioOption && !availableMunicipios.includes(municipioOption)
+    ? [municipioOption, ...availableMunicipios] : availableMunicipios;
   const selectedCompany = companies.find((item) => item.id === selectedCompanyId);
   const empresaCidade = selectedCompany?.cidade || selectedMunicipio || 'Cidade não informada';
   const operations = Array.isArray(selectedProfile?.operacoes) ? selectedProfile.operacoes : [];
@@ -92,12 +98,14 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
         </div>
 
         <div className="form-item-group">
-          <label>Município de emissão</label>
+          <label htmlFor="fiscal-municipio-emissao">Município de emissão</label>
           <select
-            value={selectedMunicipio}
+            id="fiscal-municipio-emissao"
+            value={municipioOption}
             onChange={(e) => onSelectMunicipio(e.target.value)}
           >
-            {availableMunicipios.map((municipio) => (
+            <option value="" disabled>Selecione o município</option>
+            {municipioOptions.map((municipio) => (
               <option key={municipio} value={municipio}>{municipio}</option>
             ))}
           </select>
@@ -127,7 +135,7 @@ export const FiscalLocationForm: React.FC<FiscalLocationFormProps> = ({
       )}
 
       <p className="input-helper-text" style={{ margin: '2px 0 0' }}>
-        Se não houver contexto para este escritório + município, um novo registro será criado.
+        Abrir um contexto prepara a configuração. O cadastro é gravado ao salvar ou enviar o certificado.
       </p>
       {selectedProfile ? (
         <>

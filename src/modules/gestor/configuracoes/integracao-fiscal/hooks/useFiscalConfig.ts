@@ -70,13 +70,8 @@ export function useFiscalConfig() {
   const locationTree = useMemo(() => {
     const companyId = selectedCompanyId || 'office';
     const known = contexts.map(item => item.context).filter(item => item.companyId === companyId);
-    const items = fiscalIntegrationService.getAvailablePrefeituraProfiles().map(profile => {
-      const key = makeContextKey({ companyId, uf: profile.uf, municipio: profile.municipio });
-      return known.find(item => item.key === key) ?? { key, companyId, companyName: resolveCompanyName(companyId, companies),
-        uf: profile.uf, municipio: profile.municipio, isActive: false };
-    });
-    return groupContextsByLocation([...items, ...known.filter(item => !items.some(candidate => candidate.key === item.key))]);
-  }, [contexts, companies, selectedCompanyId]);
+    return groupContextsByLocation(known);
+  }, [contexts, selectedCompanyId]);
 
   const handleSelectCompany = (companyId: string) => {
     const company = companies.find(item => item.id === companyId);
