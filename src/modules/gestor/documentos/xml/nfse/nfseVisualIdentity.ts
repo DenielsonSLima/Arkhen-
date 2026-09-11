@@ -6,7 +6,6 @@ export interface NfseVisualIdentityOptions {
   emitidaPeloSistema?: boolean;
   empresaLogoUrl?: string;
   empresaNome?: string;
-  marcaDaguaTexto?: string;
 }
 
 export interface NfseVisualIdentity {
@@ -15,7 +14,6 @@ export interface NfseVisualIdentity {
   prefeituraNome?: string;
   empresaLogoUrl?: string;
   empresaNome?: string;
-  marcaDaguaTexto?: string;
 }
 
 export const resolveNfseVisualIdentity = (
@@ -37,6 +35,5 @@ export const resolveNfseVisualIdentity = (
     prefeituraNome: profile?.identidadeVisual?.prefeituraNome,
     empresaLogoUrl: options.empresaLogoUrl,
     empresaNome,
-    marcaDaguaTexto: options.marcaDaguaTexto || empresaNome,
   };
 };

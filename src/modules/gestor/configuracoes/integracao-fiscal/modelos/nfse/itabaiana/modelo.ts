@@ -1,6 +1,5 @@
 import type { NfseFiscalData } from '../../../../../documentos/xml/shared/xmlFiscalTypes';
 import type { NfseFontes } from './fontes';
-import type { NfseMarcaDagua } from './marcaDagua';
 
 export type NfseAmbiente = 'homologacao' | 'producao' | 'nao_identificado';
 export interface NfseModeloOptions {
@@ -8,7 +7,6 @@ export interface NfseModeloOptions {
   ambiente: NfseAmbiente;
   empresaNome?: string;
   empresaId?: string;
-  marcaDagua?: NfseMarcaDagua;
   brasaoImagem?: string | Uint8Array;
   cancelada?: boolean;
   substituida?: boolean;

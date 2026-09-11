@@ -1,6 +1,6 @@
 # Layout próprio da NFS-e de Itabaiana/SE
 
-Modelo A4 inspirado na organização do PDF fornecido pelo usuário, com ornamento próprio e identificadores da nota representada. O quadro de validação recebe destaque no canto superior direito, com número, código de verificação, QR Code vetorial de 27 mm e código de barras quando há chave nacional compatível. O WebISS autoriza a NFS-e; o aplicativo apresenta o XML confirmado neste layout, com texto selecionável, brasão e marca d'água do prestador. Não é uma nova autorização fiscal nem o PDF oficial do portal.
+Modelo A4 inspirado na organização do PDF fornecido pelo usuário, com ornamento próprio e identificadores da nota representada. O quadro de validação recebe destaque no canto superior direito, com número, código de verificação, QR Code vetorial de 27 mm e código de barras quando há chave nacional compatível. O WebISS autoriza a NFS-e; o aplicativo apresenta o XML confirmado neste layout, com texto selecionável e brasão, sem marca d’água decorativa. Não é uma nova autorização fiscal nem o PDF oficial do portal.
 
 ## Arquivos e uso
 
@@ -11,8 +11,7 @@ Modelo A4 inspirado na organização do PDF fornecido pelo usuário, com ornamen
 - `codigoBarras.ts`: extração conferida do código numérico da chave nacional e desenho ITF vetorial, preservando zeros iniciais.
 - `carregarModelo.ts`: imagens locais e download; jsPDF é carregado sob demanda.
 - `NfseItabaianaDocument.tsx`: prévia do mesmo PDF que será baixado.
-- `assets/`: brasão SVG vetorial e PNG derivado em 1500 × 1840. A marca da empresa é carregada do cadastro, não deste diretório.
-- `marcaDagua.ts`: carregamento do modo retrato e geometria equivalente à prévia cadastrada.
+- `assets/`: brasão SVG vetorial e PNG derivado em 1500 × 1840. A marca da empresa não é aplicada à NFS-e.
 - `exemplo.test-fixture.ts`: XML artificial para testes, não transmitir ao WebISS.
 
 ```ts
@@ -24,11 +23,11 @@ await baixarNfsePdf(summary.nfse!, {
 
 `homologacao` recebe aviso de ausência de valor fiscal em todas as páginas. `producao` utiliza o link municipal. XML importado sem contexto usa `nao_identificado`, sem inferir o ambiente pelo número, data, CNPJ ou presença de um código de verificação. O município gerador tem precedência sobre o endereço do prestador. Não usar este modelo para Itabaiana/PB.
 
-A marca d’água vem exclusivamente de **Configurações > Marca d’água**, no modo **Retrato**. O gerador consulta `configuracoes_marca_dagua` com filtro explícito de `empresa_id`; no Financeiro usa a empresa da cobrança, e no visualizador usa a empresa da sessão. Reutiliza o mesmo resolvedor de posição/tamanho da prévia das Configurações, preservando a proporção da imagem (`contain`) e a opacidade salva, sem multiplicar por uma segunda transparência.
+Desde 10/09/2026, o PDF e a prévia da NFS-e não aplicam marca d’água decorativa, texto de fundo ou papel timbrado da empresa. O carregamento não consulta a configuração de marca nem baixa sua imagem. A configuração global continua disponível para os demais documentos.
 
-Desabilitada: nenhum fundo é impresso. Habilitada sem imagem ou com falha no download: a geração informa o erro, sem trocar pelo nome da empresa ou por imagem fixa. Não existe exceção por CNPJ, logo local B&M ou substituição por `empresaLogoUrl`. A prévia acompanha a query das Configurações, inclusive sua invalidação ao salvar.
+As margens do modelo municipal ficam em 4 mm, sem reserva para faixa decorativa. Brasão, quadro de validação, QR, código de barras e avisos de ambiente, demonstração, cancelamento e substituição são preservados.
 
-A imagem completa, incluindo a faixa lateral, é desenhada no fundo de todas as páginas. Com marca cadastrada, a margem esquerda do conteúdo é 12 mm, reservando espaço para a faixa; textos, linhas, cabeçalho e rodapé acompanham essa margem. O quadro cinza do QR permanece à direita.
+A decisão e suas fontes estão registradas em `docs/integrations/webiss/reuniao-marca-dagua-nfse-2026-09-10.md`. A retirada da personalização não transforma este espelho WebISS em DANFSe nacional nem certifica a adequação integral à NT 008.
 
 ## Integração implementada
 
@@ -57,7 +56,7 @@ O QR do PDF de referência foi decodificado localmente e contém um token opaco 
 - [Brasão vetorial por BrCaLeTo, Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Bras%C3%A3o_de_Itabaiana_-_SE.svg), sob [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). SVG original preservado sem alterações; PNG rasterizado com CairoSVG 2.8.2. Trata-se da representação vetorial publicada pelo autor, não de um SVG certificado pela prefeitura. A imagem já era vetorial, dispensando vetorização de bitmap.
 - [Documentação do jsPDF](https://github.com/parallax/jsPDF), biblioteca já instalada no projeto.
 
-Não foi localizada, no material consultado, uma regra específica do WebISS aprovando a personalização com marca d'água. Ela é uma opção de apresentação do espelho local, sem afirmar homologação desse layout pelo município. O XML original e a consulta de autenticidade continuam sendo preservados.
+Não foi localizada, no material consultado, autorização específica do WebISS para marca d’água decorativa nem vedação municipal expressa. A personalização do espelho local foi removida na revisão de 10/09/2026. O XML original e a consulta de autenticidade continuam preservados.
 
 ## Verificação
 
@@ -75,7 +74,7 @@ A imagem institucional encontrada no [site da prefeitura](https://itabaiana.se.g
 
 Validação desta revisão: 25 testes em 5 suítes, TypeScript/Vite, leitura independente do QR do PDF com jsQR, inspeção colorida e em tons de cinza e amostra de quatro páginas com 180 linhas, conferindo continuidade e avisos de cancelamento/ambiente em todas as páginas. Nenhuma emissão ou publicação remota.
 
-## Conferência da marca cadastrada
+## Histórico: conferência da marca cadastrada (comportamento removido)
 
 Em 09/09/2026, a configuração consultada estava habilitada, centralizada, com tamanho e opacidade em 100%. A imagem já continha o logo suave e a faixa dourada esquerda. A prévia foi regenerada com esse arquivo real, mantendo os identificadores fiscais fictícios da fixture. Conferidas a página inteira, a continuidade em três páginas, a leitura do QR e a margem dos textos fora da faixa lateral. Consulta por empresa, RLS e permissão de leitura verificadas sem alteração remota.
 

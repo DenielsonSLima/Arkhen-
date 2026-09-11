@@ -1,7 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { NfseModeloOptions } from './modelo';
 import { registrarFontes } from './fontes';
-import { geometriaMarcaDagua } from './marcaDagua';
 
 export type Cell = { label: string; value?: string; weight?: number; emphasis?: boolean; italic?: boolean };
 export const statusLabels = (options: NfseModeloOptions) => [
@@ -15,20 +14,11 @@ export const statusLabels = (options: NfseModeloOptions) => [
 export function createPdfLayout(options: NfseModeloOptions, numero: string) {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true });
   registrarFontes(pdf, options.fontes);
-  // Reserva espaço à faixa esquerda do papel timbrado cadastrado.
-  const left = options.marcaDagua ? 12 : 4, width = 206 - left, bottom = 278;
+  // A NFS-e não utiliza o papel timbrado nem a marca decorativa da empresa.
+  const left = 4, width = 206 - left, bottom = 278;
   let y = 5;
   const status = statusLabels(options).join(' | ');
-  const imageProperties = options.marcaDagua ? pdf.getImageProperties(options.marcaDagua.imagem) : undefined;
   const paintBackground = () => {
-    if (options.marcaDagua && imageProperties) {
-      const geometry = geometriaMarcaDagua(options.marcaDagua, imageProperties.width, imageProperties.height);
-      pdf.saveGraphicsState();
-      pdf.setGState(pdf.GState({ opacity: geometry.opacity }));
-      pdf.addImage(options.marcaDagua.imagem, imageProperties.fileType, geometry.x, geometry.y,
-        geometry.width, geometry.height, 'marca-empresa', 'FAST');
-      pdf.restoreGraphicsState();
-    }
     pdf.setTextColor('#000000').setFont('helvetica', 'normal');
     if (status) {
       pdf.setDrawColor('#777777').setLineWidth(0.2).rect(left, y - 2, width, 6);

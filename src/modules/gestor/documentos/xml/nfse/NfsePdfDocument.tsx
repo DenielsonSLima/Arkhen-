@@ -62,7 +62,6 @@ export const NfsePdfDocument: React.FC<NfsePdfDocumentProps> = ({
   emitidaPeloSistema,
   empresaLogoUrl,
   empresaNome,
-  marcaDaguaTexto,
   ambiente = 'nao_identificado',
 }) => {
   const nfse = summary.nfse;
@@ -92,16 +91,11 @@ export const NfsePdfDocument: React.FC<NfsePdfDocumentProps> = ({
     emitidaPeloSistema,
     empresaLogoUrl,
     empresaNome,
-    marcaDaguaTexto,
   });
 
   return (
     <div className="nfse-viewer">
       <article className="nfse-page">
-        {identity.marcaDaguaTexto ? (
-          <div className="nfse-watermark">{identity.marcaDaguaTexto}</div>
-        ) : null}
-
         <header className="nfse-header">
           <div className="nfse-city">
             {identity.prefeituraLogoUrl ? (

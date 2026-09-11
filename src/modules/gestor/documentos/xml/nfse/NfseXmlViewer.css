@@ -21,19 +21,6 @@
   overflow: hidden;
 }
 
-.nfse-watermark {
-  position: absolute;
-  inset: 36% auto auto 14%;
-  transform: rotate(-34deg);
-  font-size: 5.2rem;
-  font-weight: 900;
-  color: rgba(15, 23, 42, 0.055);
-  letter-spacing: 0;
-  pointer-events: none;
-  user-select: none;
-  white-space: nowrap;
-}
-
 .nfse-header {
   position: relative;
   display: grid;
@@ -361,8 +348,4 @@
     grid-column: auto;
   }
 
-  .nfse-watermark {
-    font-size: 2.8rem;
-    left: 3%;
-  }
 }

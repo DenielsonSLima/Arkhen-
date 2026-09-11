@@ -2,8 +2,6 @@ import brasaoUrl from './assets/brasao-itabaiana.png';
 import type { NfseFiscalData } from '../../../../../documentos/xml/shared/xmlFiscalTypes';
 import { type NfseModeloOptions } from './modelo';
 import { carregarFontes } from './fontes';
-import { marcaDaguaService, type MarcaDaguaDados } from '../../../../marca-dagua/services/marcaDaguaService';
-import { carregarMarcaDagua } from './marcaDagua';
 
 const loadImage = async (url: string): Promise<Uint8Array> => {
   const response = await fetch(url);
@@ -11,14 +9,11 @@ const loadImage = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(await response.arrayBuffer());
 };
 
-export async function carregarModelo(_nfse: NfseFiscalData, options: NfseModeloOptions, config?: MarcaDaguaDados) {
-  const cadastro = config ?? await (options.empresaId
-    ? marcaDaguaService.getMarcaDaguaConfigDaEmpresa(options.empresaId)
-    : marcaDaguaService.getMarcaDaguaConfig());
-  const [brasaoImagem, marcaDagua, fontes] = await Promise.all([
-    options.brasaoImagem || loadImage(brasaoUrl), carregarMarcaDagua(cadastro), options.fontes || carregarFontes(),
+export async function carregarModelo(_nfse: NfseFiscalData, options: NfseModeloOptions) {
+  const [brasaoImagem, fontes] = await Promise.all([
+    options.brasaoImagem || loadImage(brasaoUrl), options.fontes || carregarFontes(),
   ]);
-  return { ...options, brasaoImagem, marcaDagua, fontes };
+  return { ...options, brasaoImagem, fontes };
 }
 
 export async function baixarNfsePdf(nfse: NfseFiscalData, options: NfseModeloOptions) {
