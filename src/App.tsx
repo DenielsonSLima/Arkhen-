@@ -47,7 +47,7 @@ function App() {
   const [passwordRecoveryError, setPasswordRecoveryError] = useState<string | null>(
     initialPasswordRecovery.current.errorMessage,
   );
-  const [mandatoryPasswordCpf, setMandatoryPasswordCpf] = useState('');
+  const [mandatoryAccess, setMandatoryAccess] = useState({ cpf: '', identifier: '' });
   const viewRef = useRef(view);
   const authenticatedUserIdRef = useRef<string | null>(null);
   const passwordRecoveryContextRef = useRef(initialPasswordRecovery.current.isRecovery);
@@ -79,7 +79,7 @@ function App() {
       clearLocalAuthentication();
       passwordRecoveryContextRef.current = false;
       passwordRecoverySessionRef.current = null;
-      setMandatoryPasswordCpf('');
+      setMandatoryAccess({ cpf: '', identifier: '' });
       setPasswordRecoveryStatus('error');
       setPasswordRecoveryError(null);
       viewRef.current = 'login';
@@ -134,7 +134,9 @@ function App() {
       if (authorization.requiresPasswordChange) {
         clearLocalAuthentication();
         authenticatedUserIdRef.current = user.id;
-        setMandatoryPasswordCpf(authorization.onboarding?.cpf || '');
+        setMandatoryAccess({ cpf: authorization.onboarding?.cpf || '', identifier:
+          authorization.onboarding?.auth_method === 'email'
+            ? authorization.onboarding.email || '' : authorization.onboarding?.cpf || '' });
         setAuthError(null);
         viewRef.current = 'password-change';
         setView('password-change');
@@ -252,7 +254,7 @@ function App() {
         passwordRecoverySessionRef.current = null;
         setPasswordRecoveryStatus('error');
         setAuthError(null);
-        setMandatoryPasswordCpf('');
+        setMandatoryAccess({ cpf: '', identifier: '' });
         sessionStorage.removeItem('contabil_config_active_subtab');
         if (isPasswordRecoveryPath(window.location.pathname)) navigate('/login');
         viewRef.current = 'login';
@@ -284,7 +286,8 @@ function App() {
     if (response.requiresPasswordChange) {
       persistedStorage.removeItem('contabil_auth');
       persistedStorage.removeItem('gestor_user_profile');
-      setMandatoryPasswordCpf(response.user?.cpf || '');
+      setMandatoryAccess({ cpf: response.user?.cpf || '', identifier:
+        response.user?.authMethod === 'email' ? response.user.email || '' : response.user?.cpf || '' });
       setAuthError(null);
       viewRef.current = 'password-change';
       setView('password-change');
@@ -368,7 +371,7 @@ function App() {
       } finally {
         queryClient.clear();
         authenticatedUserIdRef.current = null;
-        setMandatoryPasswordCpf('');
+        setMandatoryAccess({ cpf: '', identifier: '' });
         try {
           persistedStorage.removeItem('contabil_auth');
           persistedStorage.removeItem('gestor_user_profile');
@@ -390,7 +393,7 @@ function App() {
       completionError = error;
     }
     const login = await loginService.autenticar({
-      usuario: mandatoryPasswordCpf,
+      usuario: mandatoryAccess.identifier,
       senha: password,
       role: 'funcionario',
     });
@@ -453,7 +456,7 @@ function App() {
   if (view === 'password-change') {
     return (
       <MandatoryPasswordChangePage
-        cpf={mandatoryPasswordCpf}
+        cpf={mandatoryAccess.cpf}
         onSubmitPassword={handleMandatoryPasswordChange}
         onLogout={handleLogout}
       />

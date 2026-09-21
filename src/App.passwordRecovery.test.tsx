@@ -300,14 +300,14 @@ describe('App password recovery isolation', () => {
     expect(mocks.getInitialRecoverySession).not.toHaveBeenCalled();
   });
 
-  it('não monta o painel antes da troca obrigatória e libera somente após novo login', async () => {
+  it.each(['cpf', 'email'] as const)('exige troca antes do painel e reautentica pelo identificador %s', async (method) => {
     window.history.replaceState({}, '', '/');
     mocks.authorizeAuthenticatedUser
       .mockResolvedValueOnce({
         allowed: true,
         message: '',
         requiresPasswordChange: true,
-        onboarding: { cpf: '52998224725' },
+        onboarding: { cpf: '52998224725', email: 'pessoa@example.com', auth_method: method },
       });
     render(<App />);
 
@@ -320,7 +320,8 @@ describe('App password recovery isolation', () => {
     expect(await screen.findByTestId('gestor-layout')).toBeDefined();
     expect(mocks.completeFirstAccess).toHaveBeenCalledWith('SenhaForte#2026');
     expect(mocks.reauthenticate).toHaveBeenCalledWith({
-      usuario: '52998224725', senha: 'SenhaForte#2026', role: 'funcionario',
+      usuario: method === 'email' ? 'pessoa@example.com' : '52998224725',
+      senha: 'SenhaForte#2026', role: 'funcionario',
     });
     expect(mocks.authorizeAuthenticatedUser).toHaveBeenCalledOnce();
     expect(mocks.setPersistedItem).toHaveBeenCalledWith('contabil_auth', 'gestor');
