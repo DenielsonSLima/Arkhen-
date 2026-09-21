@@ -42,7 +42,7 @@ try {
     'preparar_primeiro_acesso_usuario_gerenciado');
   await loadFunction('../migrations/20260904033321_credenciais_usuarios_gerenciados.sql',
     'current_user_access_allowed');
-  await db.exec(await read('../migrations/20260921120000_primeiro_acesso_email_senha_temporaria.sql'));
+  await db.exec(await read('../migrations/20260921163326_primeiro_acesso_email_senha_temporaria.sql'));
   await db.query(`INSERT INTO auth.users (id,email,email_confirmed_at,invited_at,raw_app_meta_data)
     VALUES ($1,'temporary@example.com',now(),now(),$2)`, [authId, JSON.stringify({
     account_type: 'employee_email', login_method: 'email', credential_version: version,
