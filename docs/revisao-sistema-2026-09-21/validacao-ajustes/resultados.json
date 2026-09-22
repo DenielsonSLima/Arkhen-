@@ -21,6 +21,6 @@
   ],
   "visual": "CSS declarations and existing JSX styles preserved; no browser tests",
   "source_files": 85,
-  "remote_mutations_applied": false,
-  "deployment": "Awaiting explicit approval for production database; automatic approval review rejected first migration before execution."
+  "remote_mutations_applied": true,
+  "deployment": "9 migrations and delete-documents v1 applied after explicit approval; frontend merge and additional TRUNCATE permission fix pending"
 }

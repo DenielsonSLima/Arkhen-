@@ -31,7 +31,7 @@ await db.exec(`
  INSERT INTO storage.objects VALUES ('documentos','${tenant}/clientes/cliente/file','${actor}');
  INSERT INTO documentos_solicitacoes VALUES ('${doc}');
 `);
-for (const name of ['20260922001515_documentos_exclusao_reconciliavel.sql','20260922001525_auditoria_logs_imutaveis.sql']) {
+for (const name of ['20260922010633_documentos_exclusao_reconciliavel.sql','20260922010653_auditoria_logs_imutaveis.sql']) {
  await db.exec(await readFile(new URL(`../migrations/${name}`,import.meta.url),'utf8'));
 }
 await db.exec('SET ROLE authenticated');

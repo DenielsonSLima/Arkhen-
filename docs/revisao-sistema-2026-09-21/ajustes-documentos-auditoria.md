@@ -35,7 +35,7 @@ Consulta remota somente de definições identificou seis rotinas legítimas que 
 
 ## Ordem de publicação a coordenar
 
-1. Aplicar `20260922001515_documentos_exclusao_reconciliavel.sql` e `20260922001525_auditoria_logs_imutaveis.sql`.
+1. Aplicar `20260922010633_documentos_exclusao_reconciliavel.sql` e `20260922010653_auditoria_logs_imutaveis.sql`.
 2. Publicar `delete-documents` com suas dependências compartilhadas e autenticação manual. O código de `get-shared-document-url` foi sincronizado do endpoint já publicado, sem alterar a implementação remota.
 3. Publicar o frontend somente após as dependências estarem disponíveis.
 

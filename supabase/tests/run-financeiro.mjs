@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 const { PGlite } = await import(process.env.PGLITE_MODULE ?? '@electric-sql/pglite');
 const db = new PGlite();
 await db.exec(await readFile(new URL('./fixtures/financeiro_schema.sql', import.meta.url),'utf8'));
-for (const name of ['20260922001430_financeiro_controle_escrita','20260922001435_financeiro_baixa_e_lancamentos','20260922001441_financeiro_resumos']) {
+for (const name of ['20260922010556_financeiro_controle_escrita','20260922010616_financeiro_baixa_e_lancamentos','20260922010624_financeiro_resumos']) {
   await db.exec(await readFile(new URL(`../migrations/${name}.sql`,import.meta.url),'utf8'));
 }
 const uid='00000000-0000-4000-8000-000000000001',tenant='00000000-0000-4000-8000-000000000002',foreign='00000000-0000-4000-8000-000000000003';

@@ -27,7 +27,7 @@ INSERT INTO atividades_instancias SELECT gen_random_uuid(),empresa_id,ativo,stat
 INSERT INTO atividades_instancias SELECT gen_random_uuid(),'30000000-0000-4000-8000-000000000001',ativo,status,cliente_id,'Outro tenant',modelo_id,modelo_codigo,competencia,checklists,checklist_dates,checklist_users,valores FROM atividades_instancias LIMIT 1;
 SELECT set_config('test.user','50000000-0000-4000-8000-000000000000',false),set_config('test.tenant','30000000-0000-4000-8000-000000000000',false),set_config('test.manage','true',false);
 `);
-for(const f of ['20260922002422_fechamentos_leitura_compativel.sql','20260922002751_fechamento_valores_tarefa_auditaveis.sql']) await db.exec(readFileSync('supabase/migrations/'+f,'utf8'));
+for(const f of ['20260922010723_fechamentos_leitura_compativel.sql','20260922010733_fechamento_valores_tarefa_auditaveis.sql']) await db.exec(readFileSync('supabase/migrations/'+f,'utf8'));
 await db.exec('SET ROLE authenticated');
 const rows=(await db.query('SELECT listar_fechamentos_operacionais_compativeis() AS rows')).rows[0].rows;
 assert.equal(rows.length,2); assert.equal(rows[0].checklist_indices['Z passo'],0); assert.equal(rows[0].checklist_indices['A passo'],1);

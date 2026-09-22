@@ -27,7 +27,7 @@ INSERT INTO atividades_instancias(competencia,status,modelo_id) VALUES
 INSERT INTO atividades_tarefas(empresa_id,status) VALUES ('55555555-5555-4555-8555-555555555555','Concluída');
 INSERT INTO atividades_tarefas(cliente_id,status) VALUES ('66666666-6666-4666-8666-666666666666','Concluída');
 `);
-await db.exec(await readFile(new URL('../migrations/20260922002336_relatorio_conformidade_prazos_reais.sql',import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../migrations/20260922010708_relatorio_conformidade_prazos_reais.sql',import.meta.url),'utf8'));
 await db.exec('SET ROLE authenticated');
 const report=async()=> (await db.query('select public.get_relatorio_conformidade_json() data')).rows[0].data;
 let r=await report();

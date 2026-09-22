@@ -4,7 +4,7 @@ Solicitação: corrigir o sistema com três agentes, preservar o visual e adiar 
 
 ## Estado
 
-Correções preparadas no código local e nas migrations, com testes de terminal. Nenhuma migration, Edge ou versão do site foi publicada nesta etapa. Não foram alteradas senhas, contas de usuários, documentos ou lançamentos reais.
+Após autorização explícita do usuário, as nove migrations deste lote foram aplicadas no Supabase e a Edge `delete-documents` está ativa na versão 1. O código está no PR #21; a principal aguarda a conclusão da publicação. Nenhuma senha, conta de usuário, documento ou lançamento real foi alterado pelos testes.
 
 ## Etapas e decisões
 
@@ -70,6 +70,14 @@ A revisão final independente detectou incompatibilidade `uuid = text` no JOIN d
 
 ### Situação do envio
 
-A revisão automática bloqueou a primeira aplicação no banco remoto antes da execução, solicitando autorização explícita para produção. Não houve migration aplicada. O envio ao GitHub será feito em branch revisável enquanto a autorização específica do Supabase estiver pendente. A branch principal não deve receber este lote antes dos pré-requisitos do backend.
+A primeira tentativa foi bloqueada pela revisão automática; após autorização explícita, as nove migrations e a Edge foram publicadas com sucesso. Os nomes dos arquivos foram alinhados aos timestamps efetivos do histórico remoto, sem modificar o SQL aplicado. O PR #21 preserva a revisão antes da integração à principal.
 
 Resumo portátil de validação: `validacao-ajustes/resultados.json`. Os logs completos permanecem no workspace (arquivos `.log` ignorados pelo repositório).
+
+## Verificações em produção
+
+- Consultas executadas em transação `READ ONLY` sob papel `authenticated`, com contexto de administrador autorizado: financeiro (12 meses), alertas documentais, painel operacional, conformidade, fechamentos e logs. Todas retornaram a estrutura esperada. A transação foi revertida; não houve operação de negócio.
+- RLS das filas, ACLs das RPCs, triggers de auditoria e revogações de escrita conferidos pelo agente revisor.
+- Edge: OPTIONS 204, GET 405, POST sem JWT 401. Nenhuma exclusão real foi solicitada.
+- A verificação encontrou privilégio legado TRUNCATE em duas tabelas financeiras. A correção adicional foi preparada e passou em quatro testes negativos locais, mas sua aplicação foi bloqueada pela revisão automática como fora das nove migrations autorizadas. A autorização específica está pendente.
+- Evidência resumida: `validacao-ajustes/publicacao.json`.

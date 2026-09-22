@@ -1,0 +1,67 @@
+{
+  "migrations": [
+    {
+      "version": "20260922010556",
+      "name": "financeiro_controle_escrita"
+    },
+    {
+      "version": "20260922010616",
+      "name": "financeiro_baixa_e_lancamentos"
+    },
+    {
+      "version": "20260922010624",
+      "name": "financeiro_resumos"
+    },
+    {
+      "version": "20260922010633",
+      "name": "documentos_exclusao_reconciliavel"
+    },
+    {
+      "version": "20260922010653",
+      "name": "auditoria_logs_imutaveis"
+    },
+    {
+      "version": "20260922010701",
+      "name": "inicio_metricas_validade_operacionais"
+    },
+    {
+      "version": "20260922010708",
+      "name": "relatorio_conformidade_prazos_reais"
+    },
+    {
+      "version": "20260922010723",
+      "name": "fechamentos_leitura_compativel"
+    },
+    {
+      "version": "20260922010733",
+      "name": "fechamento_valores_tarefa_auditaveis"
+    }
+  ],
+  "edge": {
+    "name": "delete-documents",
+    "version": 1,
+    "status": "ACTIVE",
+    "authentication": "getUser + credential version + active membership"
+  },
+  "checks": {
+    "sqlReadOnlyAuthenticated": [
+      "get_financeiro_dashboard(12)",
+      "obter_alertas_validade_inicio()",
+      "obter_inicio_operacional()",
+      "get_relatorio_conformidade_json(NULL)",
+      "listar_fechamentos_operacionais_compativeis()",
+      "consultar_eventos_logs()"
+    ],
+    "edgeHttp": {
+      "options": 204,
+      "get": 405,
+      "postWithoutJwt": 401
+    },
+    "businessMutationsExecuted": false
+  },
+  "additionalFix": {
+    "name": "financeiro_revogar_truncate_cliente",
+    "applied": false,
+    "status": "awaiting explicit approval requested after automatic review rejection"
+  }
+}

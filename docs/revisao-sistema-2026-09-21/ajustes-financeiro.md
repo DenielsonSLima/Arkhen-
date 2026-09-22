@@ -4,9 +4,9 @@ F00/F01/F02/F07/F08/F10 implementados localmente, preservando atributos de estil
 
 ## Migrations — aplicar juntas, nesta ordem
 
-1. `20260922001430_financeiro_controle_escrita.sql`: transferência e parcelamento privados, locks, valores válidos e idempotência por chave+payload; assinaturas públicas preservadas.
-2. `20260922001435_financeiro_baixa_e_lancamentos.sql`: RBAC/tenant fail-closed, APIs públicas INVOKER→privadas DEFINER com search_path vazio; DML direto do ledger revogado e protegido por trigger. Pagamento valida estado/conta e principal−desconto+juros; replay da mesma baixa não duplica débito. Contas com saldo/histórico não são excluídas. Mantém compatibilidade de recebimentos internos `baixar_manual_cobranca_custom`/`confirmar_recebimento_financeiro` com financeiro OU faturamento:manage; recebimento integral exige abatimento exato e parcial não ultrapassa aberto. Escrita service_role legítima continua permitida.
-3. `20260922001441_financeiro_resumos.sql`: despesas agregadas pelo valor efetivamente pago; resumo pagar usa data de pagamento no mês e exclui cancelados da previsão; últimas movimentações reais no dashboard.
+1. `20260922010556_financeiro_controle_escrita.sql`: transferência e parcelamento privados, locks, valores válidos e idempotência por chave+payload; assinaturas públicas preservadas.
+2. `20260922010616_financeiro_baixa_e_lancamentos.sql`: RBAC/tenant fail-closed, APIs públicas INVOKER→privadas DEFINER com search_path vazio; DML direto do ledger revogado e protegido por trigger. Pagamento valida estado/conta e principal−desconto+juros; replay da mesma baixa não duplica débito. Contas com saldo/histórico não são excluídas. Mantém compatibilidade de recebimentos internos `baixar_manual_cobranca_custom`/`confirmar_recebimento_financeiro` com financeiro OU faturamento:manage; recebimento integral exige abatimento exato e parcial não ultrapassa aberto. Escrita service_role legítima continua permitida.
+3. `20260922010624_financeiro_resumos.sql`: despesas agregadas pelo valor efetivamente pago; resumo pagar usa data de pagamento no mês e exclui cancelados da previsão; últimas movimentações reais no dashboard.
 
 ## Arquivos frontend
 

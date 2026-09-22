@@ -26,7 +26,7 @@ INSERT INTO documentos VALUES(gen_random_uuid(),'30000000-0000-4000-8000-0000000
 INSERT INTO documentos VALUES(gen_random_uuid(),'30000000-0000-4000-8000-000000000001',null,'Outro tenant',current_date);
 SET ROLE authenticated; SELECT set_config('test.user','50000000-0000-4000-8000-000000000000',false); SELECT set_config('test.tenant','30000000-0000-4000-8000-000000000000',false); RESET ROLE;
 `);
-await db.exec(readFileSync('supabase/migrations/20260922002133_inicio_metricas_validade_operacionais.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20260922010701_inicio_metricas_validade_operacionais.sql','utf8'));
 await db.exec('SET ROLE authenticated');
 const stats=(await db.query('SELECT obter_inicio_operacional() AS stats')).rows[0].stats;
 assert.equal(stats.empresasAtivas,1);assert.equal(stats.total,20);assert.equal(stats.pendentes,21);assert.equal(stats.agendaHoje,20);assert.equal(stats.agendaSemana,20);assert.equal(stats.usuarios[0].periodos.diaria.total,20);

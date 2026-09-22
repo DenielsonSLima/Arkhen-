@@ -14,9 +14,9 @@ Código congelado para QA conjunta. Nenhuma mutação remota, deploy, browser ou
 - Ajuste necessário de integração: abas de atividades usam instanciaId como identidade, preservam modeloId para ícone e rótulo, evitando renderizar múltiplas tarefas de mesmo modelo na mesma aba.
 
 ## Migrations (ordem após base operacional existente)
-1. 20260922002133_inicio_metricas_validade_operacionais.sql
-2. 20260922002422_fechamentos_leitura_compativel.sql
-3. 20260922002751_fechamento_valores_tarefa_auditaveis.sql
+1. 20260922010701_inicio_metricas_validade_operacionais.sql
+2. 20260922010723_fechamentos_leitura_compativel.sql
+3. 20260922010733_fechamento_valores_tarefa_auditaveis.sql
 
 Criadas via supabase migration new após help; a primeira foi regenerada para evitar colisão de timestamp financeiro. Security invoker nas leituras correntes, definer somente histórico manage/client e escrita mínima validada; guards sessão, tenant, cliente, permission. Grants legacy não reabertos. Valores usa coluna existente de produção.
 
