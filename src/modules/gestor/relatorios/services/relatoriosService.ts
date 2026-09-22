@@ -15,7 +15,7 @@ export interface ConformidadeReportData {
   pendentes: number;
   atrasadas: number;
   taxaConformidade: number;
-  distribuicaoObrigacoes: { nome: string; total: number; concluidas: number }[];
+  distribuicaoObrigacoes: { nome: string; total: number; concluidas: number; percentualConcluido?: number }[];
 }
 
 export interface PessoalReportData {

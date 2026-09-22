@@ -12,7 +12,10 @@ const resultObject = (value: unknown) => (value && typeof value === 'object' ? v
 export const SplitPaymentForm = ({ clienteId }: { clienteId: string }) => {
   const [values, setValues] = useState(initialValues);
   const mutation = useSplitSimulationMutation();
-  const set = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+  const set = (key: string, value: string) => {
+    mutation.reset();
+    setValues((current) => ({ ...current, [key]: value }));
+  };
   const result = resultObject(mutation.data?.resultado);
 
   return (

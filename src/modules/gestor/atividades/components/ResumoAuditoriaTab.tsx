@@ -1,3 +1,4 @@
+import { FechamentoConfirmationModal } from './FechamentoConfirmationModal';
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, CheckCircle2, Clock, User } from 'lucide-react';
 import type { CompanyActivityGroup } from '../hooks/useAtividades';
@@ -6,7 +7,7 @@ interface ResumoAuditoriaTabProps {
   selectedGroup: CompanyActivityGroup;
   competencia: string;
   fechamentoMeta: { finalizado: boolean; dataHora: string; usuario: string } | null;
-  handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string }) => Promise<void>;
+  handleSaveFechamentoMeta: (meta: { finalizado: boolean; dataHora: string; usuario: string; justificativa?: string }) => Promise<void>;
   getActivityIcon: (modeloId: string, status: string, size?: number) => React.ReactNode;
   onSelectTab: (modeloId: string) => void;
 }
@@ -19,6 +20,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
   getActivityIcon,
   onSelectTab,
 }) => {
+  const [showConfirmation, setShowConfirmation] = useState(false);
   // Audit form states
   const [auditFinalizado, setAuditFinalizado] = useState(false);
   const [auditDataHora, setAuditDataHora] = useState('');
@@ -29,18 +31,18 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
   useEffect(() => {
     if (fechamentoMeta) {
       setAuditFinalizado(fechamentoMeta.finalizado || false);
-      setAuditDataHora(fechamentoMeta.dataHora || new Date().toISOString().slice(0, 16));
+      setAuditDataHora(fechamentoMeta.dataHora ? new Date(new Date(fechamentoMeta.dataHora).getTime() - new Date(fechamentoMeta.dataHora).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '');
       setAuditUsuario(fechamentoMeta.usuario || '');
     }
   }, [fechamentoMeta, selectedGroup]);
 
   const handleSaveAudit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSaveFechamentoMeta({
-      finalizado: auditFinalizado,
-      dataHora: auditDataHora,
-      usuario: auditUsuario,
-    });
+    setShowConfirmation(true);
+  };
+  const confirmSaveAudit = async (justificativa: string) => {
+    await handleSaveFechamentoMeta({ finalizado: auditFinalizado, dataHora: '', usuario: '', justificativa });
+    setShowConfirmation(false);
     setAuditSuccessMsg(true);
     setTimeout(() => setAuditSuccessMsg(false), 3000);
   };
@@ -59,6 +61,8 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
   };
 
   return (
+    <>
+    <FechamentoConfirmationModal isOpen={showConfirmation} reopening={!!fechamentoMeta?.finalizado && !auditFinalizado} onClose={() => setShowConfirmation(false)} onConfirm={confirmSaveAudit} />
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
@@ -73,7 +77,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
           {selectedGroup.atividades.map((atv) => (
             <div
               key={atv.instanciaId}
-              onClick={() => onSelectTab(atv.modeloId)}
+              onClick={() => onSelectTab(atv.instanciaId)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#f1f5f9';
                 e.currentTarget.style.borderColor = 'var(--color-gold-primary)';
@@ -147,9 +151,8 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
               </label>
               <input
                 type="datetime-local"
-                required
+                readOnly
                 value={auditDataHora}
-                onChange={(e) => setAuditDataHora(e.target.value)}
                 style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem' }}
               />
             </div>
@@ -163,7 +166,7 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
               <input
                 type="text"
                 value={auditUsuario}
-                onChange={(e) => setAuditUsuario(e.target.value)}
+                readOnly
                 placeholder="Responsável pelo fechamento"
                 style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '0.82rem' }}
               />
@@ -186,5 +189,6 @@ export const ResumoAuditoriaTab: React.FC<ResumoAuditoriaTabProps> = ({
         )}
       </div>
     </div>
+    </>
   );
 };

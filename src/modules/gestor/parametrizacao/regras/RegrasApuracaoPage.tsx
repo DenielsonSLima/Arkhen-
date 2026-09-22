@@ -7,6 +7,7 @@ import { EditRegraImpostoForm } from './forms/EditRegraImpostoForm';
 import { AddRegraCnabForm } from './forms/AddRegraCnabForm';
 import { EditRegraCnabForm } from './forms/EditRegraCnabForm';
 import type { RegraImposto, RegraCnab } from '../services/parametrizacaoService';
+import { SystemErrorToast } from '../../components/SystemErrorToast';
 
 export const RegrasApuracaoPage: React.FC = () => {
   const {
@@ -18,6 +19,7 @@ export const RegrasApuracaoPage: React.FC = () => {
     isLoading,
     isSaving,
     successMsg,
+    errorMsg,
     showModalImposto,
     setShowModalImposto,
     showModalCnab,
@@ -57,6 +59,7 @@ export const RegrasApuracaoPage: React.FC = () => {
 
   return (
     <div className="submodule-content-card animate-fade-in">
+      <SystemErrorToast error={errorMsg} />
       {/* Header */}
       <div className="submodule-card-header flex-header">
         <div>

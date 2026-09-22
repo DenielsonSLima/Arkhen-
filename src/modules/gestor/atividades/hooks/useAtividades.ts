@@ -1,3 +1,6 @@
+import { tarefasOperacionaisService } from '../services/tarefasOperacionaisService';
+import { useQueryClient } from '@tanstack/react-query';
+import { atividadesKeys } from './useAtividadesWorkspace';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { atividadesService } from '../services/atividadesService';
 import type { ClienteEmpresa, ModeloAtividade, AtividadeInstancia, ValoresCompetenciaAtividade } from '../services/atividadesService';
@@ -6,7 +9,7 @@ export interface CompanyActivity {
   instanciaId: string;
   modeloId: string;
   modeloNome: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída';
+  status: AtividadeInstancia['status'];
   progresso: number;
   checklists: { [etapa: string]: boolean };
   checklistDates?: { [etapa: string]: string };
@@ -36,40 +39,9 @@ const getPreviousMonthCompetencia = () => {
   return formatCompetencia(new Date(today.getFullYear(), today.getMonth() - 1, 1));
 };
 
-const addCompetenciaMonth = (competencia: string) => {
-  const [month, year] = competencia.split('/').map(Number);
-  return formatCompetencia(new Date(year, month, 1));
-};
-
 const parseCompetenciaDate = (competencia: string) => {
   const [month, year] = competencia.split('/').map(Number);
   return new Date(year, month - 1, 1).getTime();
-};
-
-const getInstanceProgress = (instancia: AtividadeInstancia) => {
-  const steps = Object.keys(instancia.checklists);
-  if (steps.length === 0) return 0;
-  const completed = steps.filter((step) => instancia.checklists[step]).length;
-  return Math.round((completed / steps.length) * 100);
-};
-
-const isClientCompetenciaComplete = (
-  cliente: ClienteEmpresa,
-  modelos: ModeloAtividade[],
-  instancias: AtividadeInstancia[]
-) => {
-  const activeModelos = cliente.modelosAtivos.filter((modeloId) => (
-    modelos.some((modelo) => modelo.id === modeloId || modelo.codigo === modeloId)
-  ));
-  if (activeModelos.length === 0) return false;
-  return activeModelos.every((modeloId) => {
-    const modelo = modelos.find((item) => item.id === modeloId || item.codigo === modeloId);
-    const instancia = instancias.find((item) => (
-      item.clienteId === cliente.id &&
-      (item.modeloId === modeloId || item.modeloId === modelo?.id || item.modeloId === modelo?.codigo)
-    ));
-    return !!instancia && getInstanceProgress(instancia) === 100;
-  });
 };
 
 export interface UseAtividadesOptions {
@@ -88,6 +60,8 @@ const normalizeCompetencia = (value?: string) => {
 };
 
 export const useAtividades = (options: UseAtividadesOptions = {}) => {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<Error | null>(null);
   const [competencia] = useState(getPreviousMonthCompetencia);
   const [globalFilter, setGlobalFilter] = useState<'todas' | 'pendentes' | 'andamento' | 'concluidas'>('todas');
   
@@ -114,60 +88,38 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       if (!cancelled) setFechamentoMeta(meta);
     };
     void loadFechamentoMeta().catch((error) => {
-      console.error('Erro ao carregar metadados do fechamento:', error);
+      setError(error instanceof Error ? error : new Error(String(error?.message || error)));
     });
     return () => {
       cancelled = true;
     };
   }, [selectedGroup]);
 
-  const handleSaveFechamentoMeta = async (meta: { finalizado: boolean; dataHora: string; usuario: string }) => {
+  const handleSaveFechamentoMeta = async (meta: { finalizado: boolean; dataHora: string; usuario: string; justificativa?: string }) => {
     if (!selectedGroup) return;
-    await atividadesService.saveFechamentoMeta(selectedGroup.clienteId, selectedGroup.competencia, meta);
-    setFechamentoMeta(meta);
+    try {
+      const saved = await atividadesService.saveFechamentoMeta(selectedGroup.clienteId, selectedGroup.competencia, meta);
+      setFechamentoMeta(saved);
+      await queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
+    } catch (cause) {
+      const failure = cause instanceof Error ? cause : new Error(String((cause as { message?: string })?.message || cause));
+      setError(failure);
+      throw failure;
+    }
   };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const mod = await atividadesService.getModelos();
-      const cli = await atividadesService.getClientes();
-      const visibleById = new Map<string, AtividadeInstancia>();
-      const instanciasByCompetencia = new Map<string, AtividadeInstancia[]>();
-      const baseCompetencia = getPreviousMonthCompetencia();
-      const getInstanciasForCompetencia = async (targetCompetencia: string) => {
-        const cached = instanciasByCompetencia.get(targetCompetencia);
-        if (cached) return cached;
-
-        await atividadesService.ensureInstancias(targetCompetencia);
-        const competenciaInstancias = await atividadesService.getInstancias(targetCompetencia);
-        instanciasByCompetencia.set(targetCompetencia, competenciaInstancias);
-        return competenciaInstancias;
-      };
-
-      for (const cliente of cli) {
-        let activeCompetencia = baseCompetencia;
-        let safety = 0;
-
-        while (safety < 12) {
-          const competenciaInstancias = await getInstanciasForCompetencia(activeCompetencia);
-          const clientInstancias = competenciaInstancias.filter((instancia) => instancia.clienteId === cliente.id);
-          clientInstancias.forEach((instancia) => visibleById.set(instancia.id, instancia));
-
-          if (!isClientCompetenciaComplete(cliente, mod, clientInstancias)) {
-            break;
-          }
-
-        activeCompetencia = addCompetenciaMonth(activeCompetencia);
-        safety += 1;
-      }
-      }
-      
+      const [mod, cli, instances] = await Promise.all([
+        atividadesService.getModelos(), atividadesService.getClientes(), atividadesService.getInstancias(),
+      ]);
       setClientes(cli);
       setModelos(mod);
-      setInstancias(Array.from(visibleById.values()));
+      setInstancias(instances);
+      setError(null);
     } catch (err) {
-      console.error('Erro ao carregar dados de atividades:', err);
+      setError(err instanceof Error ? err : new Error(String((err as { message?: string })?.message || err)));
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +158,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
         return {
           instanciaId: inst.id,
           modeloId: inst.modeloId,
-          modeloNome: model?.nome || inst.modeloId,
+          modeloNome: inst.modeloNome || model?.nome || inst.modeloId,
           status: inst.status,
           progresso: subProgress,
           checklists: inst.checklists,
@@ -219,7 +171,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
       const overallProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
       
       let overallStatus: CompanyActivityGroup['statusGeral'] = 'Pendente';
-      if (overallProgress === 100) {
+      if (mappedAtividades.length > 0 && mappedAtividades.every((atividade) => atividade.status === 'Concluída')) {
         overallStatus = 'Concluída';
       } else if (overallProgress > 0) {
         overallStatus = 'Em andamento';
@@ -249,8 +201,8 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   // Filter groups
   const filteredGroups = allGroups.filter((group) => {
     if (globalFilter === 'pendentes') return group.progressoGeral === 0;
-    if (globalFilter === 'andamento') return group.progressoGeral > 0 && group.progressoGeral < 100;
-    if (globalFilter === 'concluidas') return group.progressoGeral === 100;
+    if (globalFilter === 'andamento') return group.statusGeral === 'Em andamento';
+    if (globalFilter === 'concluidas') return group.statusGeral === 'Concluída';
     return true;
   });
 
@@ -278,81 +230,22 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     const target = instancias.find((i) => i.id === instanciaId);
     if (!target) return;
 
-    const usuarioLogado = 'Sistema';
-
-    const newChecklists = { ...target.checklists, [etapa]: value };
-    const steps = Object.keys(newChecklists);
-    const completed = steps.filter((s) => newChecklists[s]).length;
-    const progress = steps.length > 0 ? (completed / steps.length) * 100 : 0;
-
-    let newStatus: AtividadeInstancia['status'] = 'Pendente';
-    if (progress === 100) {
-      newStatus = 'Concluída';
-    } else if (progress > 0) {
-      newStatus = 'Em andamento';
-    }
-
-    // Update checklist dates
-    const newChecklistDates = { ...(target.checklistDates || {}) };
-    const newChecklistUsers = { ...(target.checklistUsers || {}) };
-    if (value) {
-      if (!newChecklistDates[etapa]) {
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const localNow = new Date(now.getTime() - offset * 60 * 1000);
-        newChecklistDates[etapa] = localNow.toISOString().slice(0, 16);
+    if (target.fonte === 'tarefa') {
+      try {
+        await tarefasOperacionaisService.updateChecklist(instanciaId, target.checklistIndices?.[etapa] ?? -1, value);
+        await queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
+        await loadData();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause : new Error(String((cause as { message?: string })?.message || cause)));
       }
-      // Registra o usuário que marcou (somente se ainda não houver um)
-      if (!newChecklistUsers[etapa]) {
-        newChecklistUsers[etapa] = usuarioLogado;
-      }
-    } else {
-      delete newChecklistDates[etapa];
-      delete newChecklistUsers[etapa];
+      return;
     }
-
-    const updatedInstancia: AtividadeInstancia = {
-      ...target,
-      checklists: newChecklists,
-      checklistDates: newChecklistDates,
-      checklistUsers: newChecklistUsers,
-      status: newStatus,
-    };
-
-    // Update locally immediately
-    const updatedInstancias = instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i));
-    setInstancias(updatedInstancias);
-
-    try {
-      await atividadesService.saveInstancia(updatedInstancia);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-    }
+    setError(new Error('Esta atividade pertence ao histórico antigo. A migração para edição está pendente de definição; nenhum dado foi alterado.'));
   };
 
   // Save checklist step custom completion date/time
-  const handleSaveStepDate = async (instanciaId: string, etapa: string, dateStr: string) => {
-    const target = instancias.find((i) => i.id === instanciaId);
-    if (!target) return;
-
-    const newChecklistDates = {
-      ...(target.checklistDates || {}),
-      [etapa]: dateStr,
-    };
-
-    const updatedInstancia: AtividadeInstancia = {
-      ...target,
-      checklistDates: newChecklistDates,
-    };
-
-    setInstancias(instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i)));
-
-    try {
-      await atividadesService.saveInstancia(updatedInstancia);
-    } catch (err) {
-      console.error(err);
-    }
+  const handleSaveStepDate = async (_instanciaId: string, _etapa: string, _dateStr: string) => {
+    setError(new Error('A data de execução é registrada automaticamente pelo servidor e não pode ser alterada.'));
   };
 
   // Save values (specifically for DCTFWeb)
@@ -363,20 +256,20 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
     const target = instancias.find((i) => i.id === instanciaId);
     if (!target) return;
 
-    const updatedInstancia: AtividadeInstancia = {
-      ...target,
-      valores: {
-        ...target.valores,
-        ...valores,
-      },
-    };
-
-    setInstancias(instancias.map((i) => (i.id === instanciaId ? updatedInstancia : i)));
+    if (target.fonte !== 'tarefa') {
+      const failure = new Error('Esta atividade pertence ao histórico antigo. A migração para edição está pendente de definição; nenhum dado foi alterado.');
+      setError(failure);
+      throw failure;
+    }
 
     try {
-      await atividadesService.saveInstancia(updatedInstancia);
+      await atividadesService.saveValoresTarefa(instanciaId, valores);
+      await queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
+      await loadData();
     } catch (err) {
-      console.error(err);
+      const failure = err instanceof Error ? err : new Error(String((err as { message?: string })?.message || err));
+      setError(failure);
+      throw failure;
     }
   };
 
@@ -387,6 +280,7 @@ export const useAtividades = (options: UseAtividadesOptions = {}) => {
   const pendingCount = allGroups.filter((g) => g.statusGeral === 'Pendente').length;
 
   return {
+    error,
     competencia,
     globalFilter,
     setGlobalFilter,

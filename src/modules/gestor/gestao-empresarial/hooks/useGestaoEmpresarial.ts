@@ -100,7 +100,7 @@ export const useGestaoEmpresarial = (options: UseGestaoEmpresarialOptions = {}) 
   });
 
   const deleteMutation = useMutation({
-    mutationFn: gestaoEmpresarialService.deleteCompany,
+    mutationFn: (id: string) => gestaoEmpresarialService.deleteCompany(id),
     onSuccess: invalidatePartnersAndRoutines,
   });
 

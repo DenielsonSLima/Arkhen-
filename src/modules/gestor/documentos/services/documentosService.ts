@@ -1,3 +1,4 @@
+import { deleteDocumentsSafely } from './documentDeletionService';
 import { supabase } from '../../../../lib/supabase';
 import type { Company, CompanyDocument } from '../../gestao-empresarial/services/gestaoEmpresarialService';
 import { planosContratacaoService } from '../../configuracoes/armazenamento/services/planosContratacaoService';
@@ -379,24 +380,7 @@ export const documentosService = {
 
   async deleteDocuments(documentIds: string[]): Promise<void> {
     if (documentIds.length === 0) return;
-
-    const { data, error } = await supabase
-      .from(DOCUMENT_TABLE)
-      .select('storage_bucket, storage_path')
-      .in('id', documentIds);
-    if (error) throw new Error(`Erro ao localizar documento: ${error.message}`);
-
-    const storagePaths = ((data || []) as { storage_bucket?: string; storage_path?: string }[])
-      .filter((item) => item.storage_bucket === STORAGE_BUCKET && item.storage_path)
-      .map((item) => item.storage_path as string);
-
-    if (storagePaths.length > 0) {
-      const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
-      if (storageError) throw new Error(`Erro ao remover arquivo do storage: ${storageError.message}`);
-    }
-
-    const { error: deleteError } = await supabase.from(DOCUMENT_TABLE).delete().in('id', documentIds);
-    if (deleteError) throw new Error(`Erro ao excluir documento: ${deleteError.message}`);
+    await deleteDocumentsSafely(documentIds);
   },
 
   async downloadDocument(doc: CompanyDocument): Promise<void> {

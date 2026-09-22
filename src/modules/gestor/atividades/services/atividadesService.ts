@@ -29,8 +29,11 @@ export interface AtividadeInstancia {
   clienteId: string;
   clienteNome: string;
   modeloId: string;
+  modeloNome?: string;
   competencia: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída';
+  status: 'Pendente' | 'Em andamento' | 'Concluída' | 'Aguardando revisão';
+  fonte?: 'tarefa' | 'historico';
+  checklistIndices?: Record<string, number>;
   checklists: { [etapa: string]: boolean };
   checklistDates?: { [etapa: string]: string };
   checklistUsers?: { [etapa: string]: string };
@@ -78,8 +81,11 @@ interface InstanciaRow {
   cliente_nome: string;
   modelo_id: string | null;
   modelo_codigo: string | null;
+  modelo_nome?: string;
   competencia: string;
-  status: 'Pendente' | 'Em andamento' | 'Concluída' | 'Cancelada';
+  status: 'Pendente' | 'Em andamento' | 'Concluída' | 'Cancelada' | 'Aguardando revisão';
+  fonte?: 'tarefa' | 'historico';
+  checklist_indices?: Record<string, number>;
   checklists: Record<string, boolean> | null;
   checklist_dates: Record<string, string> | null;
   checklist_users: Record<string, string> | null;
@@ -137,8 +143,11 @@ const toInstancia = (row: InstanciaRow): AtividadeInstancia => ({
   clienteId: row.cliente_id || row.cliente_nome,
   clienteNome: row.cliente_nome,
   modeloId: row.modelo_id || row.modelo_codigo || '',
+  modeloNome: row.modelo_nome,
   competencia: row.competencia,
   status: row.status === 'Cancelada' ? 'Pendente' : row.status,
+  fonte: row.fonte,
+  checklistIndices: row.checklist_indices || {},
   checklists: row.checklists || {},
   checklistDates: row.checklist_dates || {},
   checklistUsers: row.checklist_users || {},
@@ -254,16 +263,16 @@ export const atividadesService = {
     return toModelo(data as ModeloRow);
   },
 
-  async getInstancias(competencia: string): Promise<AtividadeInstancia[]> {
-    const { data, error } = await supabase
-      .from('atividades_instancias')
-      .select('id,cliente_id,cliente_nome,modelo_id,modelo_codigo,competencia,status,checklists,checklist_dates,checklist_users,valores')
-      .eq('competencia', competencia)
-      .eq('ativo', true)
-      .order('cliente_nome', { ascending: true });
-
+  async getInstancias(): Promise<AtividadeInstancia[]> {
+    const { data, error } = await supabase.rpc('listar_fechamentos_operacionais_compativeis');
     if (error) throw error;
-    return ((data || []) as InstanciaRow[]).map(toInstancia);
+    if (!Array.isArray(data)) throw new Error('Resposta inválida ao consultar fechamentos.');
+    return (data as InstanciaRow[]).map(toInstancia);
+  },
+
+  async saveValoresTarefa(id: string, valores: ValoresCompetenciaAtividade) {
+    const { error } = await supabase.rpc('salvar_valores_tarefa_operacional', { p_tarefa_id: id, p_valores: valores });
+    if (error) throw error;
   },
 
   async saveInstancia(instancia: AtividadeInstancia): Promise<AtividadeInstancia> {
@@ -309,20 +318,15 @@ export const atividadesService = {
     };
   },
 
-  async saveFechamentoMeta(clienteId: string, competencia: string, meta: { finalizado: boolean; dataHora: string; usuario: string }) {
-    const empresaId = await getCurrentEmpresaId();
-    const { error } = await supabase
-      .from('atividades_fechamentos')
-      .upsert({
-        empresa_id: empresaId,
-        cliente_id: isUuid(clienteId) ? clienteId : null,
-        cliente_ref: clienteId,
-        competencia,
-        finalizado: meta.finalizado,
-        data_hora: meta.dataHora || null,
-        usuario: meta.usuario || '',
-      }, { onConflict: 'empresa_id,cliente_ref,competencia' });
-
+  async saveFechamentoMeta(clienteId: string, competencia: string, meta: { finalizado: boolean; justificativa?: string }) {
+    const { data, error } = await supabase.rpc('salvar_fechamento_operacional', {
+      p_cliente_id: clienteId,
+      p_competencia: competencia,
+      p_finalizado: meta.finalizado,
+      p_justificativa: meta.justificativa?.trim() || null,
+    });
     if (error) throw error;
+    const row = data as FechamentoRow;
+    return { finalizado: row.finalizado, dataHora: row.data_hora || '', usuario: row.usuario || '' };
   },
 };

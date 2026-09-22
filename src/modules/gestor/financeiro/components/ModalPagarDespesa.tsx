@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { contasPagarService } from '../services/contasPagarService';
 import { createPortal } from 'react-dom';
 import { X, DollarSign, Info } from 'lucide-react';
 import type { LancamentoFinanceiro } from '../services/financeiroService';
 import type { ContaBancaria } from '../../configuracoes/contas-bancarias/services/contasBancariasService';
+
+const parseNumber = (value: string): number => {
+  const clean = value.replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(clean);
+  return isNaN(num) ? 0 : num;
+};
 
 type ModalPagarDespesaProps = {
   isOpen: boolean;
@@ -29,7 +37,7 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
   contasBancarias,
   isLoading = false,
 }) => {
-  const getTodayString = () => new Date().toISOString().slice(0, 10);
+  const getTodayString = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Maceio' }).format(new Date());
 
   const [dataPagamento, setDataPagamento] = useState(getTodayString());
   const [contaBancariaId, setContaBancariaId] = useState('');
@@ -58,13 +66,19 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
     }
   }, [isOpen, despesa, contasBancarias]);
 
+  const preview = useQuery({
+    queryKey: ['financeiro', 'pagamento-preview', despesa?.id, descontoInput, jurosInput],
+    queryFn: ({ signal }) => contasPagarService.preverPagamento(despesa!.id, parseNumber(descontoInput), parseNumber(jurosInput), signal),
+    enabled: isOpen && Boolean(despesa) && descontoInput !== '' && jurosInput !== '',
+    retry: false,
+  });
+  useEffect(() => {
+    if (preview.data !== undefined) {
+      setValorPagoInput(preview.data.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
+  }, [preview.data, descontoInput, jurosInput]);
+  const displayError = errorMsg || (preview.error instanceof Error ? preview.error.message : null);
   if (!isOpen || !despesa) return null;
-
-  const parseNumber = (value: string): number => {
-    const clean = value.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(clean);
-    return isNaN(num) ? 0 : num;
-  };
 
   const formatCurrencyInput = (val: string) => {
     const clean = val.replace(/\D/g, '');
@@ -73,27 +87,12 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
     return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Handle changes and recalculate valorPago
-  const handleDescontoChange = (val: string) => {
-    const formatted = formatCurrencyInput(val);
-    setDescontoInput(formatted);
-    const desc = parseNumber(formatted);
-    const juros = parseNumber(jurosInput);
-    const finalVal = Math.max(0, despesa.valor - desc + juros);
-    setValorPagoInput(finalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-  };
-
-  const handleJurosChange = (val: string) => {
-    const formatted = formatCurrencyInput(val);
-    setJurosInput(formatted);
-    const juros = parseNumber(formatted);
-    const desc = parseNumber(descontoInput);
-    const finalVal = Math.max(0, despesa.valor - desc + juros);
-    setValorPagoInput(finalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-  };
+  const handleDescontoChange = (val: string) => setDescontoInput(formatCurrencyInput(val));
+  const handleJurosChange = (val: string) => setJurosInput(formatCurrencyInput(val));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (preview.isFetching || preview.isError || preview.data === undefined) return;
     if (!contaBancariaId) {
       setErrorMsg('Favor selecionar a conta bancária de origem.');
       return;
@@ -147,10 +146,10 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
 
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="faturamento-modal-body">
-          {errorMsg && (
+          {displayError && (
             <div className="faturamento-error-alert" style={{ marginBottom: '16px' }}>
               <Info size={16} />
-              <span>{errorMsg}</span>
+              <span>{displayError}</span>
             </div>
           )}
 
@@ -326,7 +325,7 @@ export const ModalPagarDespesa: React.FC<ModalPagarDespesaProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || preview.isFetching || preview.isError || preview.data === undefined}
               style={{
                 height: '40px',
                 padding: '0 20px',

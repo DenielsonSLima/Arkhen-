@@ -10,7 +10,7 @@ export interface AuditLog {
   horario: string;
 }
 
-interface AuditLogRow {
+export interface AuditLogRow {
   id: string;
   usuario_id: string | null;
   acao: string;
@@ -45,15 +45,21 @@ const fromRow = (row: AuditLogRow): AuditLog => ({
   horario: formatHorario(row.created_at),
 });
 
+export interface LogFilters { search: string; modulo: string; tipo: string }
+export interface LogCursor { createdAt: string; id: string }
 export const logsEventosService = {
-  async getLogs(): Promise<AuditLog[]> {
-    const { data, error } = await supabase
-      .from('configuracoes_eventos_logs')
-      .select('id,usuario_id,acao,modulo,tipo,ip_address,detalhes,created_at')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
+  async getLogsPage(filters: LogFilters, cursor: LogCursor | null = null) {
+    const { data, error } = await supabase.rpc('consultar_eventos_logs', {
+      p_busca: filters.search.trim(), p_modulo: filters.modulo === 'Todos' ? '' : filters.modulo,
+      p_tipo: filters.tipo === 'Todos' ? '' : filters.tipo,
+      p_antes_em: cursor?.createdAt || null, p_antes_id: cursor?.id || null,
+    });
     if (error) throw new Error(`Erro ao carregar logs de auditoria: ${error.message}`);
-    return ((data || []) as AuditLogRow[]).map(fromRow);
+    const rows = (data?.rows || []) as AuditLogRow[];
+    const last = rows.at(-1);
+    return {
+      logs: rows.map(fromRow), total: Number(data?.total || 0), modulos: (data?.modulos || []) as string[],
+      next: rows.length === 100 && last ? { createdAt: last.created_at, id: last.id } : null,
+    };
   },
 };

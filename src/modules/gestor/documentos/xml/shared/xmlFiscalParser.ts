@@ -59,8 +59,11 @@ const fields = (items: XmlFiscalField[]) => items.filter((field) => field.value)
 
 const classify = (xml: Document): XmlFiscalKind => {
   const tpEvento = firstText(xml, ['tpEvento']);
-  const descEvento = firstText(xml, ['descEvento']).toLowerCase();
-  if (tpEvento === '110111' || descEvento.includes('cancelamento') || getElements(xml, 'procEventoNFe').length > 0) {
+  const response = firstElement(xml, ['retEvento', 'retCancNFe', 'retCancCTe', 'retCancMDFe']);
+  const responseStatus = firstTextInside(response, ['cStat']);
+  const confirmedEvent = ['135', '155'].includes(responseStatus);
+  const confirmedLegacy = responseStatus === '101' && Boolean(response);
+  if ((tpEvento === '110111' && confirmedEvent) || confirmedLegacy) {
     return 'cancelado';
   }
 

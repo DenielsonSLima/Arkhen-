@@ -75,7 +75,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [inlineCategoryError, setInlineCategoryError] = useState('');
   const [formError, setFormError] = useState('');
-  const [idempotencyKey] = useState(() => createRuntimeId('installments'));
+  const [idempotencyKey, setIdempotencyKey] = useState(() => createRuntimeId('installments'));
 
   // Auto-select first matching category when list or type changes
   const filteredCategories = useMemo(
@@ -94,6 +94,7 @@ export const AddContasAPagarModal: React.FC<AddContasAPagarModalProps> = ({
   // Clean form when opening
   useEffect(() => {
     if (isOpen) {
+      setIdempotencyKey(createRuntimeId('installments'));
       setTipoDespesa('fixa');
       setDescricao('');
       setValorTotal(0);

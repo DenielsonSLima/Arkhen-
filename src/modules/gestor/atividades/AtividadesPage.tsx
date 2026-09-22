@@ -1,3 +1,4 @@
+import { SystemErrorToast } from '../components/SystemErrorToast';
 import React from 'react';
 import { MinhaFilaAtividades, type MinhaFilaFiltro } from './components/MinhaFilaAtividades';
 import { AbaGerirEquipe } from './components/AbaGerirEquipe';
@@ -59,6 +60,7 @@ const LegacyAtividadesView: React.FC<LegacyAtividadesViewProps> = ({
   initialCompetencia,
 }) => {
   const {
+    error,
     globalFilter,
     setGlobalFilter,
     companyGroups,
@@ -79,6 +81,7 @@ const LegacyAtividadesView: React.FC<LegacyAtividadesViewProps> = ({
   if (activeView === 'fechamentos' && selectedGroup) {
     return (
       <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
+        <SystemErrorToast error={error} />
         <AtividadeDetailView
           selectedGroup={selectedGroup}
           onBack={() => setSelectedGroup(null)}
@@ -95,6 +98,7 @@ const LegacyAtividadesView: React.FC<LegacyAtividadesViewProps> = ({
 
   return (
     <div className="atividades-layout-container animate-fade-in" style={{ padding: '0px' }}>
+        <SystemErrorToast error={error} />
       {activeView === 'equipe' && (
         <div style={headerStyle}>
           <div>

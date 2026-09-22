@@ -1,3 +1,4 @@
+import { SystemErrorToast } from '../../components/SystemErrorToast';
 import React, { useMemo, useState } from 'react';
 import { CheckCircle2, Plus, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAtividadesWorkspace } from '../hooks/useAtividadesWorkspace';
@@ -66,6 +67,7 @@ const getPeriodLabel = (filtro: MinhaFilaFiltro, refDate: string) => {
 export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> = ({ initialFilter = 'hoje' }) => {
   const {
     tarefas,
+    workspaceError,
     usuarioAtual,
     updateTarefaAsync,
     saveTarefaAsync,
@@ -166,6 +168,8 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
   };
 
   return (
+    <>
+    <SystemErrorToast error={workspaceError} />
     <div style={pageStyle}>
       <section style={toolbarStyle}>
         <div style={filterGroupStyle}>
@@ -307,6 +311,7 @@ export const MinhaFilaAtividades: React.FC<{ initialFilter?: MinhaFilaFiltro }> 
         usuarioNome={usuarioLogado}
       />
     </div>
+    </>
   );
 };
 

@@ -1,34 +1,23 @@
 import React, { useState } from 'react';
 import { useLogsEventos } from './hooks/useLogsEventos';
 import { Search, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { SystemErrorToast } from '../../components/SystemErrorToast';
 
 export const LogsEventosConfig: React.FC = () => {
-  const { logs, isLoading } = useLogsEventos();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedModulo, setSelectedModulo] = useState('Todos');
   const [selectedTipo, setSelectedTipo] = useState('Todos');
 
-  if (isLoading) {
-    return <div className="sub-loading">Carregando logs de eventos...</div>;
-  }
-
-  // Get unique modules for filters
-  const modulos = ['Todos', ...Array.from(new Set(logs.map(log => log.modulo)))];
-
-  // Filter logs
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.usuario.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.acao.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesModulo = selectedModulo === 'Todos' || log.modulo === selectedModulo;
-    const matchesTipo = selectedTipo === 'Todos' || log.tipo === selectedTipo;
-
-    return matchesSearch && matchesModulo && matchesTipo;
+  const { logs, isLoading, error, total, modulos: availableModules, observeLastRow } = useLogsEventos({
+    search: searchTerm, modulo: selectedModulo, tipo: selectedTipo,
   });
+  if (isLoading) return <div className="sub-loading">Carregando logs de eventos...</div>;
+  const modulos = ['Todos', ...availableModules];
+  const filteredLogs = logs;
 
   return (
     <div className="submodule-content-card animate-fade-in">
+      <SystemErrorToast error={error} />
       <div className="submodule-card-header" style={{ marginBottom: '20px' }}>
         <h2>Logs de Auditoria e Eventos</h2>
         <p>Acompanhe o registro de auditoria completo de ações realizadas por usuários e processos automatizados do sistema.</p>
@@ -135,7 +124,7 @@ export const LogsEventosConfig: React.FC = () => {
 
       {/* Results summary */}
       <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        Exibindo {filteredLogs.length} de {logs.length} registros de auditoria
+        Exibindo {filteredLogs.length} de {total} registros de auditoria
       </div>
 
       <div className="table-responsive">
@@ -152,7 +141,7 @@ export const LogsEventosConfig: React.FC = () => {
           </thead>
           <tbody>
             {filteredLogs.length > 0 ? (
-              filteredLogs.map((log) => {
+              filteredLogs.map((log, index) => {
                 let badgeStyle = { backgroundColor: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe' }; // Info default
                 let icon = <Info size={12} />;
 
@@ -165,7 +154,7 @@ export const LogsEventosConfig: React.FC = () => {
                 }
 
                 return (
-                  <tr key={log.id} style={{ transition: 'background-color 0.1s' }} className="hover:bg-slate-50/50">
+                  <tr key={log.id} ref={index === filteredLogs.length - 1 ? observeLastRow : undefined} style={{ transition: 'background-color 0.1s' }} className="hover:bg-slate-50/50">
                     <td>
                       <span style={{
                         display: 'inline-flex',
@@ -204,7 +193,7 @@ export const LogsEventosConfig: React.FC = () => {
             ) : (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b', fontSize: '0.85rem' }}>
-                  Nenhum registro encontrado para os filtros selecionados.
+                  {error ? 'Não foi possível consultar os registros de auditoria.' : 'Nenhum registro encontrado para os filtros selecionados.'}
                 </td>
               </tr>
             )}

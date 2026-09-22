@@ -1,3 +1,4 @@
+import { resumePendingDocumentDeletions } from '../services/documentDeletionService';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { documentosService, type UploadCompanyDocumentInput, type UploadDocumentInput } from '../services/documentosService';
@@ -18,6 +19,11 @@ const EMPTY_SETTINGS: MeusDocumentosData = { pastas: [], categorias: [], documen
 
 export const useDocumentos = (options: UseDocumentosOptions = {}) => {
   const queryClient = useQueryClient();
+  useEffect(() => {
+    void resumePendingDocumentDeletions().catch((error) => {
+      console.error('Limpeza documental pendente; será retomada na próxima abertura.', error);
+    });
+  }, []);
   const [activeTab, setActiveTab] = useState<DocumentosTab>(() => options.initialActiveTab || 'meus');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

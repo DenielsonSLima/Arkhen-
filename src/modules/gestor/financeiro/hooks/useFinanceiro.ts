@@ -22,6 +22,7 @@ import {
   useDeleteContratoFinanceiroMutation,
   useEmitirNfseFinanceiraMutation,
   useFinanceiroDashboardQuery,
+  useContasPagarResumoQuery,
   useLancamentosFinanceirosQuery,
   useSaveLancamentoFinanceiroMutation,
   useSaveContratoFinanceiroMutation,
@@ -52,7 +53,7 @@ const emptyCompanies: Company[] = [];
 
 export type FinanceiroView = 'caixa' | 'receber' | 'pagar' | 'lancamentos';
 
-export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
+export const useFinanceiro = (activeView: FinanceiroView = 'caixa', meses = 6) => {
   // A página permanece montada quando é usada como aba interna. Carregar todos
   // os conjuntos de dados a cada ativação gerava cinco requests concorrentes e
   // reabria observers que nem eram usados pela subaba visível.
@@ -62,7 +63,8 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   const contratosQuery = useContratosFinanceirosQuery({ enabled: false });
   const cobrancasQuery = useCobrancasFinanceirasQuery({ enabled: needsCobrancas });
   const lancamentosQuery = useLancamentosFinanceirosQuery({ enabled: needsLancamentos });
-  const statsQuery = useFinanceiroDashboardQuery(6, { enabled: needsDashboard });
+  const statsQuery = useFinanceiroDashboardQuery(meses, { enabled: needsDashboard });
+  const contasPagarResumoQuery = useContasPagarResumoQuery({ enabled: activeView === 'pagar' });
   const companiesQuery = useQuery({
     queryKey: ['gestao-empresarial', 'companies'],
     queryFn: gestaoEmpresarialService.getCompanies,
@@ -89,7 +91,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
   const activeQueries = needsCobrancas
     ? [cobrancasQuery, companiesQuery]
     : needsLancamentos
-      ? [lancamentosQuery]
+      ? (activeView === 'pagar' ? [lancamentosQuery, contasPagarResumoQuery] : [lancamentosQuery])
       : [statsQuery];
   const loadError = activeQueries
     .map((query) => query.error)
@@ -335,7 +337,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
       return;
     }
     if (needsLancamentos) {
-      await lancamentosQuery.refetch();
+      await Promise.all([lancamentosQuery.refetch(), ...(activeView === 'pagar' ? [contasPagarResumoQuery.refetch()] : [])]);
       return;
     }
     await statsQuery.refetch();
@@ -346,6 +348,7 @@ export const useFinanceiro = (activeView: FinanceiroView = 'caixa') => {
     cobranças,
     lancamentos,
     contasPagar,
+    contasPagarResumo: contasPagarResumoQuery.data,
     transferencias,
     outrosCreditos,
     outrosDebitos,

@@ -1,0 +1,18 @@
+{
+  "baseline": "/private/tmp/arkhen-published-visual-baseline/index-CtXfKz15.css",
+  "build": "dist/assets/index-BjdSW4gX.css",
+  "bytes": [
+    459174,
+    459174
+  ],
+  "sha256": [
+    "d9743aa69fb1a860e0408bd6a06b662bf53c2282703947c81e90609ceeae45e5",
+    "cda94ac3454205e5197a7233e81d8f37c639d80a06d3015acc2b0b59cfe22882"
+  ],
+  "identical_css_rule_multiset": true,
+  "rules": [
+    4009,
+    4009
+  ],
+  "note": "Only existing SystemToast block moved in bundle ordering; no CSS declarations changed. JSX style/className compared via TypeScript AST, only activity tab active key changed from model id to instance id."
+}

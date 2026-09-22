@@ -13,6 +13,7 @@ import { FaturamentoRelatorio } from './faturamento/FaturamentoRelatorio';
 import { AtividadesRelatorio } from './atividades/AtividadesRelatorio';
 import { PessoalRelatorio } from './pessoal/PessoalRelatorio';
 import { TributarioRelatorio } from './tributario/TributarioRelatorio';
+import { SystemErrorToast } from '../components/SystemErrorToast';
 
 import './Relatorios.css';
 
@@ -32,6 +33,7 @@ export const RelatoriosPage: React.FC = () => {
     custoFolhaAnual,
     setCustoFolhaAnual,
     isLoading,
+    error,
     isGenerated,
     faturamentoData,
     conformidadeData,
@@ -56,6 +58,7 @@ export const RelatoriosPage: React.FC = () => {
 
   return (
     <div className="relatorios-container animate-fade-in">
+      <SystemErrorToast error={error} />
       {/* Title Header */}
       <div className="relatorios-header-row">
         <div className="relatorios-title">
