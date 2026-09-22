@@ -4,7 +4,7 @@ Solicitação: corrigir o sistema com três agentes, preservar o visual e adiar 
 
 ## Estado
 
-Após autorização explícita do usuário, as nove migrations deste lote foram aplicadas no Supabase e a Edge `delete-documents` está ativa na versão 1. O código está no PR #21; a principal aguarda a conclusão da publicação. Nenhuma senha, conta de usuário, documento ou lançamento real foi alterado pelos testes.
+Após autorização explícita do usuário, as nove migrations deste lote foram aplicadas no Supabase e a Edge `delete-documents` está ativa na versão 1. O PR #21 foi integrado à principal e a publicação do site foi confirmada. A correção adicional TRUNCATE também foi aplicada após autorização específica. Nenhuma senha, conta de usuário, documento ou lançamento real foi alterado pelos testes.
 
 ## Etapas e decisões
 
@@ -59,7 +59,7 @@ A coordenação revisou compatibilidade de recebimentos, isolamento de arquivos 
 - `npm run lint`: aprovado, 15 avisos de manutenção existentes no conjunto.
 - PostgreSQL isolado: financeiro (72 asserções), documentos/auditoria, indicadores, fechamentos e relatório de prazos aprovados. Sem escrita no banco remoto.
 - Duas Edges verificadas com Deno pelo agente de documentos.
-- `git diff --check`: aprovado. Os 85 arquivos de implementação alterados/adicionados estão listados em `validacao-ajustes/arquivos-implementacao.txt`; nenhum arquivo de código modificado atinge 500 linhas.
+- `git diff --check`: aprovado. Os 87 arquivos de implementação alterados/adicionados estão listados em `validacao-ajustes/arquivos-implementacao.txt`; nenhum arquivo de código modificado atinge 500 linhas.
 - Logs preservados em `validacao-ajustes/`. O manifesto não inclui documentos/fontes de trabalhos anteriores, nem a alteração preexistente em `supabase/.temp/cli-latest`.
 
 ## Integração com GitHub
@@ -79,5 +79,9 @@ Resumo portátil de validação: `validacao-ajustes/resultados.json`. Os logs co
 - Consultas executadas em transação `READ ONLY` sob papel `authenticated`, com contexto de administrador autorizado: financeiro (12 meses), alertas documentais, painel operacional, conformidade, fechamentos e logs. Todas retornaram a estrutura esperada. A transação foi revertida; não houve operação de negócio.
 - RLS das filas, ACLs das RPCs, triggers de auditoria e revogações de escrita conferidos pelo agente revisor.
 - Edge: OPTIONS 204, GET 405, POST sem JWT 401. Nenhuma exclusão real foi solicitada.
-- A verificação encontrou privilégio legado TRUNCATE em duas tabelas financeiras. A correção adicional foi preparada e passou em quatro testes negativos locais, mas sua aplicação foi bloqueada pela revisão automática como fora das nove migrations autorizadas. A autorização específica está pendente.
+- A verificação encontrou privilégio legado TRUNCATE em duas tabelas financeiras. Após autorização específica do usuário, a migration adicional foi aplicada. Quatro testes negativos locais passaram, e a ACL em produção confirmou que anon/authenticated não possuem TRUNCATE em nenhuma das duas tabelas; permissões do servidor preservadas.
 - Evidência resumida: `validacao-ajustes/publicacao.json`.
+
+## Publicação concluída
+
+PR #21 integrado em `0dc1190`; Vercel confirmou publicação bem-sucedida. O site entregou o novo JavaScript e o CSS idêntico ao build validado. A correção adicional de TRUNCATE foi aplicada como `20260922011811_financeiro_revogar_truncate_cliente`, com conferência de permissões em produção. Nenhum registro foi apagado ou alterado nesta correção. Não há autorização pendente para este lote; os itens de etapas posteriores continuam fora do escopo publicado.

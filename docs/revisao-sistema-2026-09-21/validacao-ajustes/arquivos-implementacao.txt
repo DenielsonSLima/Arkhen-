@@ -77,7 +77,9 @@ supabase/migrations/20260922010701_inicio_metricas_validade_operacionais.sql
 supabase/migrations/20260922010708_relatorio_conformidade_prazos_reais.sql
 supabase/migrations/20260922010723_fechamentos_leitura_compativel.sql
 supabase/migrations/20260922010733_fechamento_valores_tarefa_auditaveis.sql
+supabase/migrations/20260922011811_financeiro_revogar_truncate_cliente.sql
 supabase/tests/documentos_auditoria_safety.mjs
+supabase/tests/financeiro_truncate_safety.mjs
 supabase/tests/fixtures/financeiro_schema.sql
 supabase/tests/operacao/fechamentos.mjs
 supabase/tests/operacao/inicio.mjs

@@ -35,6 +35,10 @@
     {
       "version": "20260922010733",
       "name": "fechamento_valores_tarefa_auditaveis"
+    },
+    {
+      "name": "financeiro_revogar_truncate_cliente",
+      "version": "20260922011811"
     }
   ],
   "edge": {
@@ -61,7 +65,29 @@
   },
   "additionalFix": {
     "name": "financeiro_revogar_truncate_cliente",
-    "applied": false,
-    "status": "awaiting explicit approval requested after automatic review rejection"
+    "version": "20260922011811",
+    "applied": true,
+    "status": "applied after explicit approval; anon/authenticated TRUNCATE revoked; service_role preserved",
+    "permissions": [
+      {
+        "table": "financeiro_lancamentos",
+        "anon_truncate": false,
+        "server_truncate": true,
+        "authenticated_truncate": false
+      },
+      {
+        "table": "configuracoes_contas_bancarias",
+        "anon_truncate": false,
+        "server_truncate": true,
+        "authenticated_truncate": false
+      }
+    ]
+  },
+  "frontend": {
+    "status": "published",
+    "pullRequest": 21,
+    "commit": "0dc1190a81658896caf6480fa9bc84f68cce753c",
+    "site": "https://arkhen.vercel.app",
+    "cssMatchesValidatedBuild": true
   }
 }

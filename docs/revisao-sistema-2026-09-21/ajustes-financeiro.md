@@ -38,3 +38,7 @@ Consulta somente leitura confirmou UUIDs, campos monetários numeric(15,2), data
 Foi reproduzida e corrigida uma incompatibilidade: exclusão autorizada de cliente por gestor sem financeiro:manage dispara FK ON DELETE SET NULL no ledger. O guard agora permite exclusivamente a cascata aninhada que limpa cliente_empresa_id, mantém todos os demais campos e tenant intactos, verifica membro interno e inexistência do cliente removido. DML direto permanece negado mesmo com grant acidental; três asserções adicionais cobrem referência nula, valor preservado e tentativa direta bloqueada.
 
 Ordem de publicação: aplicar e validar as três migrations financeiras antes de publicar o frontend, que depende das novas RPCs de prévia e resumo. Não houve aplicação remota nesta revisão.
+
+## Proteção adicional publicada
+
+Após autorização específica, `20260922011811_financeiro_revogar_truncate_cliente.sql` removeu TRUNCATE de PUBLIC, anon e authenticated em lançamentos e contas. Quatro tentativas negativas em PostgreSQL isolado passaram; consulta de ACL em produção confirmou a revogação para anon/authenticated e preservação de service_role. Nenhum TRUNCATE foi executado em produção.

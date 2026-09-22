@@ -20,7 +20,8 @@
     "email_primeiro_acesso"
   ],
   "visual": "CSS declarations and existing JSX styles preserved; no browser tests",
-  "source_files": 85,
+  "source_files": 87,
   "remote_mutations_applied": true,
-  "deployment": "9 migrations and delete-documents v1 applied after explicit approval; frontend merge and additional TRUNCATE permission fix pending"
+  "deployment": "Production published: 9 original migrations, approved additional TRUNCATE revocation, delete-documents v1 and frontend PR21; verification passed",
+  "sql_truncate_negative_cases": 4
 }
