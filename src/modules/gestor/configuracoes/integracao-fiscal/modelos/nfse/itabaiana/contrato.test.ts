@@ -43,7 +43,12 @@ describe('Contrato de apresentação WebISS Itabaiana', () => {
     ]);
   });
   it('destaca a substituição sem apresentar a nota como ativa', () => {
-    expect(statusLabels({ ambiente: 'producao', substituida: true })).toContain('NFS-e SUBSTITUÍDA');
+    for (const ambiente of ['producao', 'homologacao', 'nao_identificado'] as const) {
+      const labels = statusLabels({ ambiente, cancelada: true, substituida: true });
+      expect(labels).toContain('NFS-e SUBSTITUÍDA');
+      expect(labels).not.toContain('NFS-e CANCELADA');
+      if (ambiente === 'homologacao') expect(labels).toContain('HOMOLOGAÇÃO - SEM VALOR FISCAL');
+    }
   });
   it('usa o item explícito para o enquadramento e preserva descrição recebida', () => {
     expect(descricaoEnquadramento(parse())).toContain('Planejamento, coordenação');

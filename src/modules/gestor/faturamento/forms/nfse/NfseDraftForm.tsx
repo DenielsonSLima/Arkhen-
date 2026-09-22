@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useFaturamentoClientesQuery } from '../../queries/useFaturamentoQueries';
-import { useFiscalBillingTenant, useFiscalDraftMutations, useFiscalEmitters } from '../../queries/useFaturamentoFiscalQueries';
+import { useFiscalBillingTenant, useFiscalChargeDraftLookup, useFiscalDraftMutations, useFiscalEmitters } from '../../queries/useFaturamentoFiscalQueries';
 import type { FiscalAmbiente, FiscalDraft, FiscalDraftData, FiscalReview } from '../../services/faturamentoFiscalTypes';
 import { blankFiscalData, editableFiscalData } from './fiscalFormData';
 import { FiscalDataFields } from './FiscalDataFields';
 import { FiscalReviewPanel } from './FiscalReviewPanel';
 import { PreviousFiscalNotes } from './PreviousFiscalNotes';
 import { BillingClientSelect } from '../../components/billingFormUtils';
-import './NfseDraft.css';
 
 interface Props { onClose: () => void; onBack?: () => void; initial?: FiscalDraft; cobrancaId?: string; clienteId?: string; valor?: number; descricao?: string }
 export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId: initialClient, valor, descricao }: Props) {
@@ -17,6 +16,9 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
   const emitters = useFiscalEmitters(tenant.data || '');
   const clients = useFaturamentoClientesQuery(true);
   const mutations = useFiscalDraftMutations();
+  const lookup = useFiscalChargeDraftLookup();
+  const linkedChargeId = initial?.cobrancaId || cobrancaId;
+  const [selectedDraft, setSelectedDraft] = useState(initial);
   const [fiscalConfigId, setConfigId] = useState(initial?.fiscalConfigId || '');
   const [ambiente, setAmbiente] = useState<FiscalAmbiente>(initial?.ambiente || 'homologacao');
   const [clienteId, setClient] = useState(initial?.clienteId || initialClient || '');
@@ -32,19 +34,30 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
     const today = new Date(); const year = today.getFullYear();
     return { inicio: `${year}-01-01`, fim: `${year}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}` };
   });
-  const busy = mutations.save.isPending || mutations.review.isPending || mutations.emit.isPending;
-  const immutable = transmitted || (initial && (!['rascunho', 'falha_pre_envio'].includes(initial.status)
-    || Boolean(initial.origem && initial.origem !== 'rascunho')));
+  const busy = lookup.isPending || mutations.save.isPending || mutations.review.isPending || mutations.emit.isPending;
+  const immutable = transmitted || (selectedDraft && (!['rascunho', 'falha_pre_envio'].includes(selectedDraft.status)
+    || Boolean(selectedDraft.origem && selectedDraft.origem !== 'rascunho')));
   const emitter = (emitters.data || []).find(item => item.id === fiscalConfigId);
   const scope = { fiscalConfigId, clienteId, ambiente, dataInicial: period.inicio, dataFinal: period.fim };
   const clearReview = () => { setReview(undefined); setConfirmed(false); setMessage(''); setError(''); };
-  const changeContext = () => { setDraftId(undefined); setData({ ...blankFiscalData(), valor: valor ?? '', descricao: descricao || '' }); clearReview(); };
+  const changeContext = () => { if (!linkedChargeId) setDraftId(undefined); setData({ ...blankFiscalData(), valor: valor ?? '', descricao: descricao || '' }); clearReview(); };
+  const changeEnvironment = async (next: FiscalAmbiente) => {
+    clearReview();
+    if (!linkedChargeId) { setAmbiente(next); setConfigId(''); changeContext(); return; }
+    try {
+      const existing = await lookup.mutateAsync({ cobrancaId: linkedChargeId, ambiente: next });
+      setSelectedDraft(existing || undefined); setAmbiente(next); setDraftId(existing?.id); setConfigId(existing?.fiscalConfigId || '');
+      setClient(existing?.clienteId || initialClient || initial?.clienteId || clienteId);
+      setData(existing ? editableFiscalData(existing.dados) : { ...blankFiscalData(), valor: valor ?? '', descricao: descricao || '' });
+      setTransmitted(false);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível carregar o rascunho deste ambiente.'); }
+  };
   const save = async (withReview: boolean) => {
     clearReview();
     if (!fiscalConfigId || !clienteId) { setError('Selecione o emitente e o parceiro/tomador.'); return; }
     try {
       const saved = await mutations.save.mutateAsync({ id: draftId, fiscalConfigId, clienteId,
-        cobrancaId: initial?.cobrancaId || cobrancaId, ambiente, dados: data });
+        cobrancaId: linkedChargeId, ambiente, dados: data });
       setDraftId(saved.id);
       if (withReview) setReview(await mutations.review.mutateAsync(saved.id));
       setMessage(withReview ? 'Rascunho salvo e revisado. Nenhuma nota foi transmitida.' : 'Rascunho salvo. Nenhuma nota foi transmitida.');
@@ -66,14 +79,14 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
     <div className="nfse-draft-body">
       {(tenant.isError || emitters.isError || clients.isError) && <p role="alert">Não foi possível carregar empresa, emitentes ou parceiros. Tente abrir novamente.</p>}
       <fieldset disabled={busy || !!immutable} className="nfse-fields"><legend>Emitente, ambiente e tomador</legend>
-        <label className="faturamento-form-group"><span>Ambiente</span><select value={ambiente} onChange={e => { setAmbiente(e.target.value as FiscalAmbiente); setConfigId(''); changeContext(); }}>
+        <label className="faturamento-form-group"><span>Ambiente</span><select value={ambiente} onChange={e => { void changeEnvironment(e.target.value as FiscalAmbiente); }}>
           <option value="homologacao">Homologação (teste sem valor fiscal)</option><option value="producao">Produção (somente preparação)</option></select></label>
         <label className="faturamento-form-group"><span>Emitente / configuração fiscal</span><select value={fiscalConfigId} onChange={e => { setConfigId(e.target.value); changeContext(); }}>
           <option value="">Selecione um emitente cadastrado</option>{(emitters.data || []).map(item => <option value={item.id} key={item.id}>
             {item.prestadorNome} · {item.prestadorCnpj}{item.ativo ? '' : ' (inativo)'}</option>)}</select></label>
         <div className="faturamento-form-group nfse-full"><span>Parceiro / tomador</span>
           <BillingClientSelect clientes={clients.data || []} value={clienteId} isLoading={clients.isLoading}
-            ariaLabel="Parceiro / tomador" disabled={!!cobrancaId || busy || !!immutable}
+            ariaLabel="Parceiro / tomador" disabled={!!linkedChargeId || busy || !!immutable}
             onChange={value => { setClient(value); changeContext(); }} /></div>
         {emitter && <p className="nfse-full">CNPJ do emitente: {emitter.prestadorCnpj} · IM: {emitter.inscricaoMunicipal || 'não informada'} · Itabaiana / SE · Ambiente desta operação: {ambiente}. Padrão salvo: {emitter.ambiente}.{!emitter.ativo && ' Contexto inativo para emissão; consulta de notas disponível.'}</p>}
       </fieldset>
@@ -82,7 +95,8 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
         <div className="nfse-fields"><label className="faturamento-form-group"><span>Histórico de emissão — início</span><input type="date" value={period.inicio} onChange={e => setPeriod({ ...period, inicio: e.target.value })} /></label>
           <label className="faturamento-form-group"><span>Histórico de emissão — fim</span><input type="date" value={period.fim} onChange={e => setPeriod({ ...period, fim: e.target.value })} /></label></div>
         <PreviousFiscalNotes key={JSON.stringify(scope)} tenant={tenant.data || ''} scope={scope} competencia={data.competencia} disabled={busy} onBusyChange={setPreviousBusy} onCopy={copied => {
-          setDraftId(copied.id); setData(editableFiscalData(copied.dados)); clearReview(); setMessage('Dados copiados para outro rascunho. Revise competência, valor e descrição.');
+          if (!linkedChargeId) setDraftId(copied.id);
+          setData(editableFiscalData(copied.dados)); clearReview(); setMessage('Dados copiados para o rascunho. Revise competência, valor e descrição.');
         }} />
       </>}
       <FiscalDataFields data={data} disabled={busy || !!immutable} onChange={next => { setData(next); clearReview(); }} />

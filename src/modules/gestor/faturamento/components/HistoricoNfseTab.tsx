@@ -6,6 +6,8 @@ import { useFaturamentoClientesQuery } from '../queries/useFaturamentoQueries';
 import { faturamentoFiscalService } from '../services/faturamentoFiscalService';
 import type { FiscalDraft, FiscalHistoryFilters } from '../services/faturamentoFiscalTypes';
 import { NfseDraftForm } from '../forms/nfse/NfseDraftForm';
+// Register shared draft styles here to preserve their original application cascade order.
+import '../forms/nfse/NfseDraft.css';
 import { NfsePdfPreviewModal } from './NfsePdfPreviewModal';
 import { NfseHistoryFilters } from './NfseHistoryFilters';
 import { formatNfseCompetencia, formatNfseDate, nfseStatusLabels } from '../utils/nfseHistoryPresentation';

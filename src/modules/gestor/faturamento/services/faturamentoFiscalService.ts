@@ -1,7 +1,7 @@
 import { supabase } from '../../../../lib/supabase';
 import { parseFiscalXml } from '../../documentos/xml/shared/xmlFiscalParser';
 import { baixarNfsePdf, prepararNfsePdf } from '../../configuracoes/integracao-fiscal/modelos/nfse/itabaiana/carregarModelo';
-import type { FiscalDocument, FiscalDraft, FiscalDraftInput, FiscalEmitter, FiscalHistoryFilters, FiscalReview, FiscalPartnerScope, FiscalSyncResult, FiscalPreviousNote } from './faturamentoFiscalTypes';
+import type { FiscalAmbiente, FiscalDocument, FiscalDraft, FiscalDraftInput, FiscalEmitter, FiscalHistoryFilters, FiscalReview, FiscalPartnerScope, FiscalSyncResult, FiscalPreviousNote } from './faturamentoFiscalTypes';
 
 async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.rpc(name, args);
@@ -30,6 +30,17 @@ function validateDocument(document: FiscalDocument, note: Pick<FiscalDraft, 'amb
 export const faturamentoFiscalService = {
   tenant: () => rpc<string>('current_empresa_id'),
   emitters: () => rpc<FiscalEmitter[]>('listar_contextos_emissao_webiss'),
+  async chargeDraft(cobrancaId: string, ambiente?: FiscalAmbiente): Promise<FiscalDraft | null> {
+    const { data, error } = await supabase.rpc('obter_rascunho_cobranca_webiss', {
+      p_cobranca_id: cobrancaId, p_ambiente: ambiente || null,
+    });
+    if (error) throw new Error(error.message);
+    if (data != null && (data.cobrancaId !== cobrancaId || (ambiente && data.ambiente !== ambiente)
+      || !['homologacao', 'producao'].includes(data.ambiente))) {
+      throw new Error('O rascunho fiscal não corresponde à cobrança e ao ambiente selecionados.');
+    }
+    return data as FiscalDraft | null;
+  },
   list: (filters: FiscalHistoryFilters) => rpc<FiscalDraft[]>('listar_faturamento_nfse_webiss', {
     p_ambiente: filters.ambiente || null, p_status: filters.status || null, p_search: filters.search || '',
     p_fiscal_config_id: filters.fiscalConfigId || null, p_cliente_id: filters.clienteId || null,

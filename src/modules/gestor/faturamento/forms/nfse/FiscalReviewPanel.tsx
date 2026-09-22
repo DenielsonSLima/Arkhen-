@@ -1,5 +1,10 @@
 import type { FiscalReview } from '../../services/faturamentoFiscalTypes';
 import { fiscalFieldLabels } from './fiscalFormData';
+const customerFieldLabels = {
+  endereco: 'Endereço do tomador', numero: 'Número do tomador', bairro: 'Bairro do tomador',
+  codigoMunicipio: 'Município IBGE do tomador', uf: 'UF do tomador', cep: 'CEP do tomador',
+  email: 'E-mail do tomador', telefone: 'Telefone do tomador',
+};
 export function FiscalReviewPanel({ review }: { review: FiscalReview }) {
   return <section className="nfse-review" aria-label="Revisão fiscal salva">
     <h3>Revisão do rascunho salvo</h3>
@@ -9,6 +14,8 @@ export function FiscalReviewPanel({ review }: { review: FiscalReview }) {
     <p>Destino: {review.endpoint || 'Não definido'}</p>
     <dl className="nfse-review-values">{Object.entries(fiscalFieldLabels).map(([key, label]) => <div key={key}>
       <dt>{label}</dt><dd>{String(review.rascunho.dados[key as keyof typeof review.rascunho.dados] ?? '') || 'Não informado'}</dd>
+    </div>)}{Object.entries(customerFieldLabels).map(([key, label]) => <div key={`tomador-${key}`}>
+      <dt>{label}</dt><dd>{String(review.tomador[key] ?? '').trim() || 'Não informado'}</dd>
     </div>)}</dl>
     {review.blockers.length ? <div role="alert"><strong>Pendências antes do envio</strong><ul>{review.blockers.map(item => <li key={item}>{item}</li>)}</ul></div>
       : <p>Dados revisados pelo serviço. A autorização de emissão depende do ambiente e do credenciamento.</p>}

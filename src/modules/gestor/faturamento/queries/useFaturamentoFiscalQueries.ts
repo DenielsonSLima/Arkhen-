@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { faturamentoFiscalService as service } from '../services/faturamentoFiscalService';
-import type { FiscalDraft, FiscalDraftInput, FiscalHistoryFilters, FiscalPartnerScope, FiscalPreviousNote } from '../services/faturamentoFiscalTypes';
+import type { FiscalAmbiente, FiscalDraft, FiscalDraftInput, FiscalHistoryFilters, FiscalPartnerScope, FiscalPreviousNote } from '../services/faturamentoFiscalTypes';
+import { financeiroKeys } from '../../financeiro/queries/financeiroKeys';
+import { inicioKeys } from '../../inicio/queries/inicioKeys';
 
 export const fiscalBillingKeys = {
   all: ['faturamento', 'webiss'] as const,
@@ -20,14 +22,22 @@ export function usePreviousFiscalNotes(tenant: string, scope: FiscalPartnerScope
   return useQuery({ queryKey: fiscalBillingKeys.previous(tenant, scope), queryFn: () => service.previous(scope),
     enabled: !!tenant && !!scope.fiscalConfigId && !!scope.clienteId && !!scope.dataInicial && !!scope.dataFinal, staleTime: 15_000 });
 }
+export function useFiscalChargeDraftLookup() {
+  return useMutation({ mutationFn: ({ cobrancaId, ambiente }: { cobrancaId: string; ambiente?: FiscalAmbiente }) =>
+    service.chargeDraft(cobrancaId, ambiente), retry: false });
+}
 export function useFiscalDraftMutations() {
   const queryClient = useQueryClient();
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ['faturamento'] }); };
+  const invalidateFiscalResult = async () => { await Promise.all([
+    invalidate(), queryClient.invalidateQueries({ queryKey: financeiroKeys.all }),
+    queryClient.invalidateQueries({ queryKey: inicioKeys.all }),
+  ]); };
   return {
     save: useMutation({ mutationFn: (draft: FiscalDraftInput) => service.save(draft), onSettled: invalidate }),
     review: useMutation({ mutationFn: service.review }),
-    emit: useMutation({ mutationFn: (draft: FiscalDraft) => service.emit(draft), onSettled: invalidate }),
-    consult: useMutation({ mutationFn: (note: Pick<FiscalDraft, 'id' | 'origem'>) => service.consult(note), onSettled: invalidate }),
+    emit: useMutation({ mutationFn: (draft: FiscalDraft) => service.emit(draft), retry: false, onSettled: invalidateFiscalResult }),
+    consult: useMutation({ mutationFn: (note: Pick<FiscalDraft, 'id' | 'origem'>) => service.consult(note), retry: false, onSettled: invalidateFiscalResult }),
     copy: useMutation({ mutationFn: ({ scope, note, competencia }: { scope: FiscalPartnerScope; note: FiscalPreviousNote; competencia: string }) =>
       service.copy(scope, note, competencia), onSettled: invalidate }),
     sync: useMutation({ mutationFn: ({ scope, inicio, fim }: { scope: FiscalPartnerScope; inicio: string; fim: string }) =>

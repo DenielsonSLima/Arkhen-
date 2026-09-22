@@ -33,5 +33,7 @@ export async function getNfseDocumentXml(empresaId: string, cobrancaId: string, 
 
 export async function downloadNfseDocument(empresaId: string, cobrancaId: string, result: NfseEmissionResult) {
   const summary = await getNfseDocumentXml(empresaId, cobrancaId, result);
-  await baixarNfsePdf(summary.nfse!, { empresaId, ambiente: result.ambiente, cancelada: summary.isCanceled });
+  await baixarNfsePdf(summary.nfse!, { empresaId, ambiente: result.ambiente,
+    cancelada: summary.isCanceled || result.situacao === 'cancelada',
+    substituida: summary.isSubstituted || result.situacao === 'substituida' });
 }

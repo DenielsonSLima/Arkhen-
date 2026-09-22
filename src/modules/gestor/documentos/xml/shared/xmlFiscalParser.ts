@@ -97,6 +97,7 @@ const buildSummary = (xml: Document, rawXml: string): XmlFiscalSummary => {
     subtitle: key || firstText(xml, ['CodigoVerificacao', 'Id']) || 'Arquivo XML fiscal',
     status,
     isCanceled: kind === 'cancelado' || getElements(xml, 'NfseCancelamento').length > 0,
+    isSubstituted: kind === 'nfse' && getElements(xml, 'NfseSubstituicao').length > 0,
     nfse,
     rawXml,
     sections: [
@@ -153,6 +154,7 @@ export const parseFiscalXml = (rawXml: string): XmlFiscalSummary => {
       subtitle: 'Não foi possível interpretar este arquivo.',
       status: parserError.textContent?.trim() || 'Erro de leitura',
       isCanceled: false,
+      isSubstituted: false,
       sections: [],
       rawXml,
     };

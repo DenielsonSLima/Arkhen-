@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { testWebissReview } from './webiss-review-cases.mjs';
+import { testLegacyEmissionGuard } from './webiss-legacy-guard-cases.mjs';
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 const db = new PGlite();
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
@@ -23,7 +25,8 @@ try {
   const cpfStart=cpfSource.indexOf('CREATE OR REPLACE FUNCTION public.cpf_valido(');
   await db.exec(cpfSource.slice(cpfStart,cpfSource.indexOf('$$;',cpfStart)+3));
   for(const migration of ['20260907135151_webiss_emissao_segura.sql','20260907135202_webiss_parametros_diagnostico.sql',
-    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql','20260910032827_webiss_historico_filtros.sql','20260910150700_webiss_retorno_fiscal_completo.sql']) {
+    '20260910030106_webiss_rascunhos_fiscais.sql','20260910030107_webiss_rascunhos_emissao.sql','20260910030109_webiss_notas_consultadas_historico.sql','20260910032827_webiss_historico_filtros.sql','20260910150700_webiss_retorno_fiscal_completo.sql',
+    '20260922022810_webiss_revisao_dados_xml.sql','20260922022843_webiss_desativar_emissao_legada.sql']) {
     await db.exec(await read('../migrations/'+migration));
     console.log('PASS migration '+migration);
   }
@@ -40,6 +43,7 @@ try {
     itemListaServico:'17.03',codigoCnae:'6920601',codigoTributacaoMunicipio:'1703',codigoMunicipio:'2802908',municipioIncidencia:'2800308',
     exigibilidadeIss:'1',issRetido:'2',optanteSimplesNacional:'1',incentivoFiscal:'2',aliquotaIss:'3.51',tomadorNumero:'10',tomadorCodigoMunicipio:'2802908'};
   const input={fiscalConfigId:ids.config,clienteId:ids.client,ambiente:'homologacao',dados};
+  await testWebissReview({ db, scalar, ids, input });
   let draft=await scalar('select salvar_rascunho_nfse_webiss($1)',[input]);
   assert.equal(await scalar('select count(*)::int from financeiro_cobrancas'),0);
   let review=await scalar('select revisar_rascunho_nfse_webiss($1)',[draft.id]);
@@ -120,6 +124,7 @@ try {
 
   const { testFiscalReturn } = await import('./webiss-return-cases.mjs');
   await testFiscalReturn({ db, scalar, ids, input });
+  await testLegacyEmissionGuard({ db, scalar, ids });
   await db.query("update configuracoes_integracao_fiscal set ativo=false where id=$1",[ids.config]);
   const consultInactive=await scalar('select preparar_consulta_parceiro_webiss($1,$2,$3,$4)',[ids.tenant,ids.config,ids.client,'producao']);
   assert.equal(consultInactive.ambiente,'producao');

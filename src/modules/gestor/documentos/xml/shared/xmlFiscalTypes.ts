@@ -76,6 +76,7 @@ export interface XmlFiscalSummary {
   subtitle: string;
   status: string;
   isCanceled: boolean;
+  isSubstituted: boolean;
   sections: XmlFiscalSection[];
   rawXml: string;
   nfse?: NfseFiscalData;

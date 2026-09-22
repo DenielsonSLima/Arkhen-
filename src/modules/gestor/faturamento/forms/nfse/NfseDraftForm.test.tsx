@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { blankFiscalData } from './fiscalFormData';
 const mocks = vi.hoisted(() => ({
   tenant: vi.fn(), emitters: vi.fn(), list: vi.fn(), save: vi.fn(), review: vi.fn(), emit: vi.fn(), consult: vi.fn(),
-  previous: vi.fn(), copy: vi.fn(), sync: vi.fn(), document: vi.fn(), bank: vi.fn(), oldEmit: vi.fn(),
+  previous: vi.fn(), copy: vi.fn(), sync: vi.fn(), document: vi.fn(), bank: vi.fn(), oldEmit: vi.fn(), chargeDraft: vi.fn(),
 }));
 vi.mock('../../services/faturamentoFiscalService', () => ({ faturamentoFiscalService: mocks }));
 vi.mock('../../queries/useFaturamentoQueries', () => ({ useFaturamentoClientesQuery: () => ({ data: [
@@ -40,12 +40,73 @@ beforeEach(() => {
     { id: 'config-p', empresaId: 'tenant-a', prestadorNome: 'Emitente P', prestadorCnpj: '123', ambiente: 'producao', ativo: true },
   ]);
   mocks.previous.mockResolvedValue([]);
+  mocks.chargeDraft.mockResolvedValue(null);
   mocks.save.mockImplementation(async input => ({ ...draft(input.dados), ...input, id: input.id || 'draft-new' }));
   mocks.review.mockImplementation(async () => ({ rascunho: draft(mocks.save.mock.calls.at(-1)?.[0].dados), ready: true, blockers: [],
     prestador: { cnpj: '123', razaoSocial: 'Emitente H', inscricaoMunicipal: '10' }, tomador: { documento: '111', razaoSocial: 'Parceiro A' }, endpoint: 'https://homologacao.webiss.com.br/ws/nfse.asmx' }));
 });
 afterEach(cleanup);
 describe('Preparação NFS-e independente', () => {
+  it('bloqueia edição e transmissão ao retomar tentativa processada em outro ambiente', async () => {
+    mocks.chargeDraft.mockResolvedValue({ ...draft(), id: 'already-sent', ambiente: 'producao', status: 'incerta', cobrancaId: 'charge-1' });
+    mount(<NfseDraftForm onClose={() => {}} initial={{ ...draft(), ambiente: 'homologacao', cobrancaId: 'charge-1' }} />);
+    await screen.findByRole('option', { name: /Emitente H/ });
+    fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
+    await screen.findByText(/Esta tentativa já possui processamento fiscal/);
+    expect(screen.queryByRole('button', { name: 'Salvar rascunho' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Transmitir em homologação' })).toBeNull();
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.emit).not.toHaveBeenCalled();
+  });
+  it('não troca ambiente quando falha a consulta do rascunho vinculado', async () => {
+    mocks.chargeDraft.mockRejectedValue(new Error('Consulta indisponível'));
+    mount(<NfseDraftForm onClose={() => {}} initial={{ ...draft(), ambiente: 'homologacao', cobrancaId: 'charge-1' }} />);
+    await screen.findByRole('option', { name: /Emitente H/ });
+    fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
+    expect((await screen.findByRole('alert')).textContent).toContain('Consulta indisponível');
+    expect((screen.getByLabelText('Ambiente') as HTMLSelectElement).value).toBe('homologacao');
+    expect(mocks.save).not.toHaveBeenCalled(); expect(mocks.emit).not.toHaveBeenCalled();
+  });
+  it('retoma o rascunho vinculado do outro ambiente sem reutilizar ou duplicar sua identidade', async () => {
+    const saved = { ...draft(), cobrancaId: 'charge-1', ambiente: 'homologacao' as const };
+    const production = { ...saved, id: 'draft-production', ambiente: 'producao', fiscalConfigId: 'config-p',
+      dados: { ...blankFiscalData(), competencia: '2026-07-01', descricao: 'Produção salva' } };
+    mocks.chargeDraft.mockResolvedValue(production);
+    mount(<NfseDraftForm onClose={() => {}} initial={saved} />);
+    await screen.findByRole('option', { name: /Emitente H/ });
+    fireEvent.change(screen.getByLabelText('Ambiente'), { target: { value: 'producao' } });
+    await waitFor(() => expect((screen.getByLabelText('Competência') as HTMLInputElement).value).toBe('2026-07'));
+    expect(mocks.chargeDraft).toHaveBeenCalledWith('charge-1', 'producao');
+    expect((screen.getByRole('combobox', { name: 'Parceiro / tomador' }) as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await screen.findByText('Rascunho salvo. Nenhuma nota foi transmitida.');
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'draft-production', cobrancaId: 'charge-1', ambiente: 'producao' }));
+    expect(mocks.emit).not.toHaveBeenCalled();
+  });
+  it('mantém o id vinculado ao trocar emitente, sem criar rascunho concorrente da cobrança', async () => {
+    mount(<NfseDraftForm onClose={() => {}} initial={{ ...draft(), ambiente: 'homologacao', cobrancaId: 'charge-1' }} />);
+    await screen.findByRole('option', { name: /Emitente H/ });
+    fireEvent.change(screen.getByLabelText('Emitente / configuração fiscal'), { target: { value: 'config-p' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await screen.findByText('Rascunho salvo. Nenhuma nota foi transmitida.');
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'draft-new', cobrancaId: 'charge-1', fiscalConfigId: 'config-p' }));
+  });
+  it('salva o vínculo da cobrança e mantém competência e data vazias até preenchimento explícito', async () => {
+    mount(<NfseDraftForm onClose={() => {}} cobrancaId="charge-1" clienteId="client-a"
+      valor={405} descricao="Serviços de agosto" />);
+    await screen.findByRole('option', { name: /Emitente H/ });
+    fireEvent.change(screen.getByLabelText('Emitente / configuração fiscal'), { target: { value: 'config-h' } });
+    expect((screen.getByRole('combobox', { name: 'Parceiro / tomador' }) as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Competência') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('Data de emissão do RPS') as HTMLInputElement).value).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
+    await screen.findByText('Rascunho salvo. Nenhuma nota foi transmitida.');
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({
+      cobrancaId: 'charge-1', clienteId: 'client-a', dados: expect.objectContaining({
+        valor: 405, descricao: 'Serviços de agosto', competencia: '', dataEmissao: '',
+      }),
+    }));
+    expect(mocks.bank).not.toHaveBeenCalled(); expect(mocks.emit).not.toHaveBeenCalled(); expect(mocks.oldEmit).not.toHaveBeenCalled();
+  });
   it('Somente NFS-e abre formulário fiscal e salva sem chamar cobrança Inter nem emissão', async () => {
     mount(<ModalNovoLancamentoAvulso isOpen onClose={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /Somente NFS-e/ }));

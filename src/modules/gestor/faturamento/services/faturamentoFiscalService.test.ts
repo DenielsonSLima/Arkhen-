@@ -10,6 +10,24 @@ import { faturamentoFiscalService as service } from './faturamentoFiscalService'
 const scope = { fiscalConfigId: 'emitter', clienteId: 'partner', ambiente: 'producao' as const, dataInicial: '2026-01-01', dataFinal: '2026-09-10' };
 beforeEach(() => { vi.resetAllMocks(); mocks.rpc.mockResolvedValue({ data: {}, error: null }); mocks.invoke.mockResolvedValue({ data: { ok: true }, error: null }); });
 describe('Contrato fiscal Faturamento', () => {
+  it('carrega rascunho da cobrança por RPC somente de leitura e aceita vínculo ausente', async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+    await expect(service.chargeDraft('charge')).resolves.toBeNull();
+    expect(mocks.rpc).toHaveBeenCalledWith('obter_rascunho_cobranca_webiss', { p_cobranca_id: 'charge', p_ambiente: null });
+    const existing = { id: 'draft', cobrancaId: 'charge', ambiente: 'producao' };
+    mocks.rpc.mockResolvedValue({ data: existing, error: null });
+    await expect(service.chargeDraft('charge', 'producao')).resolves.toEqual(existing);
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
+  it.each([
+    { cobrancaId: 'other', ambiente: 'producao' },
+    { cobrancaId: 'charge', ambiente: 'homologacao' },
+    { cobrancaId: 'charge', ambiente: 'invalido' },
+  ])('bloqueia retomada de contexto incompatível %j', async data => {
+    mocks.rpc.mockResolvedValue({ data, error: null });
+    await expect(service.chargeDraft('charge', 'producao')).rejects.toThrow('não corresponde à cobrança');
+    expect(mocks.invoke).not.toHaveBeenCalled();
+  });
   it('prepara a nota importada com empresa, ambiente e cancelamento sem disparar download', async () => {
     const nfse = { numero: '292' };
     const blob = new Blob(['pdf'], { type: 'application/pdf' });

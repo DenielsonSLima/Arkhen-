@@ -1,49 +1,62 @@
-import { useRef, useState } from 'react';
-import { useConsultarNfseFinanceiraMutation, useEmitirNfseFinanceiraMutation } from '../queries/useFinanceiroQueries';
+import { useEffect, useRef, useState } from 'react';
+import { useConsultarNfseFinanceiraMutation } from '../queries/useFinanceiroQueries';
 import type { CobrancaFinanceira } from '../services/financeiroService';
-import type { NfseEmissionResult } from '../services/nfseService';
+import { nfseResultMessage, type NfseEmissionResult } from '../services/nfseService';
 
 type Feedback = { success: boolean; message: string };
+type Scoped<T> = { scope: string; value: T };
 
 export function useNfseChargeActions(charge: CobrancaFinanceira) {
-  const emission = useEmitirNfseFinanceiraMutation();
   const consultation = useConsultarNfseFinanceiraMutation();
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const [confirmed, setConfirmed] = useState<NfseEmissionResult | null>(null);
+  const scope = JSON.stringify([charge.empresaId, charge.id, charge.nfseId, charge.nfseStatus]);
+  const scopeRef = useRef({ scope });
+  if (scopeRef.current.scope !== scope) scopeRef.current = { scope };
+  const [feedbackState, setFeedback] = useState<Scoped<Feedback> | null>(null);
+  const [confirmedState, setConfirmed] = useState<Scoped<NfseEmissionResult> | null>(null);
+  const feedback = feedbackState?.scope === scope ? feedbackState.value : null;
+  const confirmed = confirmedState?.scope === scope ? confirmedState.value : null;
+  useEffect(() => { setFeedback(null); setConfirmed(null); }, [scope]);
   const [downloading, setDownloading] = useState(false);
   const running = useRef(false);
-  const canEmit = charge.status !== 'Cancelado' && !charge.nfseId;
-  const canConsult = Boolean(charge.nfseRpsNumero || charge.nfseId || charge.nfseStatus === 'processando' || charge.nfseStatus === 'pendente');
-  const isPending = emission.isPending || consultation.isPending || downloading;
+  const hasFiscalAttempt = ['processando', 'pendente', 'incerta', 'rejeitada', 'falha_pre_envio', 'emitida', 'cancelada', 'substituida']
+    .includes(charge.nfseStatus || '');
+  const canConsult = Boolean(charge.nfseRpsNumero || charge.nfseId || hasFiscalAttempt);
+  const canPrepareDraft = charge.status !== 'Cancelado' && !canConsult;
+  const isPending = consultation.isPending || downloading;
 
-  const run = async (action: 'emit' | 'consult') => {
-    if (running.current || (action === 'emit' ? !canEmit : !canConsult)) return;
+  const consult = async () => {
+    if (running.current || !canConsult) return;
     running.current = true;
+    const requestScope = scopeRef.current;
     setFeedback(null);
     try {
-      const result = action === 'emit'
-        ? await emission.mutateAsync(charge.id)
-        : await consultation.mutateAsync(charge.id);
-      setConfirmed(result);
-      setFeedback({ success: true, message: result.ambiente === 'homologacao'
-        ? `NFS-e ${result.nfseId} em homologação — sem valor fiscal.`
-        : `NFS-e ${result.nfseId} registrada em produção.` });
+      const result = await consultation.mutateAsync(charge.id);
+      if (scopeRef.current !== requestScope) return;
+      setConfirmed({ scope: requestScope.scope, value: result });
+      setFeedback({ scope: requestScope.scope, value: { success: true, message: nfseResultMessage(result) } });
     } catch (error) {
-      setFeedback({ success: false, message: error instanceof Error ? error.message : 'Não foi possível concluir a operação fiscal.' });
+      if (scopeRef.current === requestScope) setFeedback({ scope: requestScope.scope, value: {
+        success: false, message: error instanceof Error ? error.message : 'Não foi possível concluir a operação fiscal.',
+      } });
     } finally { running.current = false; }
   };
 
-  const documentResult = confirmed || (charge.nfseId ? { nfseId: charge.nfseId, ambiente: 'producao' as const } : null);
+  const documentResult: NfseEmissionResult | null = confirmed || (charge.nfseId ? {
+    nfseId: charge.nfseId, ambiente: 'producao',
+    situacao: charge.nfseStatus === 'cancelada' || charge.nfseStatus === 'substituida' ? charge.nfseStatus : undefined,
+  } : null);
   const download = async () => {
     if (!documentResult || running.current || isPending) return;
+    const requestScope = scopeRef.current;
     running.current = true; setDownloading(true); setFeedback(null);
     try {
       const { downloadNfseDocument } = await import('../services/nfseDocumentService');
       await downloadNfseDocument(charge.empresaId, charge.id, documentResult);
     } catch (error) {
-      setFeedback({ success: false, message: error instanceof Error ? error.message : 'Não foi possível gerar o PDF da NFS-e.' });
+      if (scopeRef.current === requestScope) setFeedback({ scope: requestScope.scope, value: {
+        success: false, message: error instanceof Error ? error.message : 'Não foi possível gerar o PDF da NFS-e.',
+      } });
     } finally { running.current = false; setDownloading(false); }
   };
-  return { feedback, isPending, canEmit, canConsult, canDownload: Boolean(documentResult), download,
-    emit: () => run('emit'), consult: () => run('consult') };
+  return { feedback, isPending, canPrepareDraft, canConsult, canDownload: Boolean(documentResult), download, consult };
 }

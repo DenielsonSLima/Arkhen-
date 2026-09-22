@@ -1,5 +1,7 @@
 # Revisão do fluxo de NFS-e WebISS — 21/09/2026
 
+Atualização: os problemas abaixo foram corrigidos após autorização do usuário. Consulte a [entrega das correções e validações](correcao-fluxo-emissao-2026-09-21.md). O restante deste documento preserva o diagnóstico anterior às correções.
+
 O fluxo de rascunhos tem separação correta entre preparação, revisão, transmissão e reconciliação. Entretanto, foram encontrados três problemas no caminho antigo das cobranças e na validação anterior ao envio. A revisão não permite declarar o fluxo inteiro concluído para uso operacional em produção.
 
 Nenhuma nota foi emitida, nenhum SOAP foi enviado, nenhum RPS real foi reservado e nenhuma configuração, certificado ou dado operacional foi alterado. Não houve consulta ao WebISS, cancelamento, substituição, publicação ou alteração visual. O único arquivo acrescentado ao projeto nesta revisão é este relatório.

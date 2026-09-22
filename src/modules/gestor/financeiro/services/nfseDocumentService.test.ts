@@ -21,6 +21,25 @@ describe('XML para o PDF da cobrança', () => {
     await downloadNfseDocument('empresa-a', 'cobranca', { nfseId: '2026000000001', ambiente: 'producao' });
     expect(baixarNfsePdf).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ empresaId: 'empresa-a' }));
   });
+  it.each([
+    ['', false, false],
+    ['<NfseCancelamento/>', true, false],
+    ['<NfseSubstituicao/>', false, true],
+    ['<NfseCancelamento/><NfseSubstituicao/>', true, true],
+  ])('preserva situação do XML no PDF: %s', async (eventos, cancelada, substituida) => {
+    const xml = exemploXml.replace('</CompNfse>', `${eventos}</CompNfse>`);
+    for (const ambiente of ['producao', 'homologacao'] as const) {
+      mock.query.single.mockResolvedValue({ data: { nfse_payload: { xml } }, error: null });
+      mock.query.maybeSingle.mockResolvedValue({ data: { detalhes: { xml } }, error: null });
+      await downloadNfseDocument('empresa-a', 'cobranca', { nfseId: '2026000000001', ambiente });
+      expect(baixarNfsePdf).toHaveBeenLastCalledWith(expect.anything(), { empresaId: 'empresa-a', ambiente, cancelada, substituida });
+    }
+  });
+  it.each(['cancelada', 'substituida'] as const)('preserva retorno %s quando XML armazenado não contém o evento', async (situacao) => {
+    mock.query.single.mockResolvedValue({ data: { nfse_payload: { xml: exemploXml } }, error: null });
+    await downloadNfseDocument('empresa-a', 'cobranca', { nfseId: '2026000000001', ambiente: 'producao', situacao });
+    expect(baixarNfsePdf).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ [situacao]: true }));
+  });
   it('busca produção pela empresa, cobrança e número, sem usar logs de homologação', async () => {
     mock.query.single.mockResolvedValue({ data: { nfse_payload: { xml: exemploXml } }, error: null });
     await expect(getNfseDocumentXml('empresa', 'cobranca', { nfseId: '2026000000001', ambiente: 'producao' })).resolves.toHaveProperty('kind', 'nfse');
