@@ -1,3 +1,4 @@
+import { downloadFinanceiroPdf } from './services/financeiroPdfService';
 import React, { useCallback, useState, useEffect } from 'react';
 import {
   AlertCircle,
@@ -53,6 +54,8 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
   // Resolver a subaba antes dos hooks de dados evita montar Caixa, iniciar seu
   // dashboard e logo em seguida descartá-lo ao abrir uma aba interna específica.
   const [activeTab, setActiveTab] = useState<FinanceiroTab>(() => resolveFinanceiroTab(initialTab));
+  const [meses, setMeses] = useState(6);
+  const [pdfError, setPdfError] = useState('');
   const onViewContextChangeRef = React.useRef(onViewContextChange);
   useFinanceiroRealtime();
   const {
@@ -66,6 +69,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
     retryLoad,
     lancamentos,
     contasPagar,
+    contasPagarResumo,
     handleCreateLancamento,
     handleTransferirEntreContas,
     handleCriarContasPagarParceladas,
@@ -75,7 +79,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
     setSettlementCobranca,
     handleBaixarManualCobrancaCustom,
     isCustomSettlementLoading,
-  } = useFinanceiro(activeTab);
+  } = useFinanceiro(activeTab, meses);
 
   useEffect(() => {
     setActiveTab(resolveFinanceiroTab(initialTab));
@@ -147,6 +151,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
       return (
         <ContasAPagarTab
           dados={contasPagar}
+          resumo={contasPagarResumo}
           onFormatCurrency={formatCurrency}
           onFormatDate={formatDate}
           onCreateContasAPagar={handleCreateLancamento}
@@ -174,7 +179,11 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
       );
     }
 
-    return <CaixaTab stats={stats} onFormatCurrency={formatCurrency} />;
+    return <CaixaTab stats={stats} onFormatCurrency={formatCurrency} periodo={meses} onPeriodoChange={setMeses}
+      onExportPdf={() => {
+        setPdfError('');
+        void downloadFinanceiroPdf(stats, meses).catch(() => setPdfError('Não foi possível gerar o relatório PDF. Tente novamente.'));
+      }} />;
   };
 
   return (
@@ -193,7 +202,7 @@ export const FinanceiroPage: React.FC<FinanceiroPageProps> = ({ initialTab, onVi
       </div>
 
       {successMsg && <div className="financeiro-feedback success" role="status">{successMsg}</div>}
-      {errorMsg && <div className="financeiro-feedback error" role="alert">{errorMsg}</div>}
+      {(errorMsg || pdfError) && <div className="financeiro-feedback error" role="alert">{errorMsg || pdfError}</div>}
 
       {renderContent()}
 

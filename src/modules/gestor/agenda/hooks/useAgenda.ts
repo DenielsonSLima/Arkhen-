@@ -1,3 +1,4 @@
+import { todayKey } from '../../atividades/services/rotinasAtividadesService';
 import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -71,7 +72,7 @@ export function useAgenda() {
   const [funcionarioFiltro, setFuncionarioFiltro] = useState('todos');
   const [empresaFiltro, setEmpresaFiltro] = useState('todas');
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(
-    hoje.toISOString().split('T')[0],
+    todayKey(),
   );
   const [modalAberto, setModalAberto] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
@@ -230,7 +231,7 @@ export function useAgenda() {
   }, [eventosFiltrados, diaSelecionado]);
 
   const proximosEventos = useMemo(() => {
-    const hojeKey = new Date().toISOString().split('T')[0];
+    const hojeKey = todayKey();
     return eventosFiltrados
       .filter((e) => e.data >= hojeKey)
       .sort((a, b) => a.data.localeCompare(b.data))
@@ -331,6 +332,12 @@ export function useAgenda() {
   }, [salvarPadroesMutation]);
 
   return {
+    error: eventosQuery.error || eventosTrimestreQuery.error || tiposQuery.error
+      || categoriasQuery.error || responsaveisQuery.error || usuarioAtualQuery.error
+      || empresasQuery.error || permissoesQuery.error || padroesQuery.error
+      || salvarEventoMutation.error || concluirEventoMutation.error
+      || salvarTiposMutation.error || salvarCategoriasMutation.error
+      || salvarResponsaveisMutation.error || salvarPadroesMutation.error,
     status,
     anoAtual,
     mesAtual,

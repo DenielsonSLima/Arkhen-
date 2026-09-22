@@ -34,8 +34,12 @@ export const VisualizadoresXmlConfig: React.FC = () => {
   };
 
   const handleSave = async () => {
-    await saveMutation.mutateAsync(modelos);
-    setNotice('Modelos de XML salvos.');
+    try {
+      await saveMutation.mutateAsync(modelos);
+      setNotice('Modelos de XML salvos.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Não foi possível salvar os modelos.');
+    }
     window.setTimeout(() => setNotice(''), 2500);
   };
 

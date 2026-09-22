@@ -1,3 +1,4 @@
+import { EMPTY_CONTAS_PAGAR_RESUMO, type ContasPagarResumo } from '../services/contasPagarService';
 import React, { useMemo, useState, useEffect } from 'react';
 import { Search, Calendar, CheckCircle2, ShieldAlert, CheckCircle, Clock, AlertTriangle, XCircle, Plus, Wallet } from 'lucide-react';
 import type { ContasPagarParceladasInput, LancamentoFinanceiro } from '../services/financeiroService';
@@ -9,6 +10,7 @@ import { usePagarDespesaManualMutation } from '../queries/useFinanceiroQueries';
 type FiltroStatus = 'todos' | 'aberto' | 'hoje' | 'atrasado' | 'pago' | 'cancelado';
 type ContasAPagarTabProps = {
   dados: LancamentoFinanceiro[];
+  resumo?: ContasPagarResumo;
   onFormatCurrency: (value: number) => string;
   onFormatDate: (value: string) => string;
   onCreateContasAPagar?: (dados: any) => Promise<void>;
@@ -22,6 +24,7 @@ const toDate = (value: string) => {
 
 export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
   dados,
+  resumo = EMPTY_CONTAS_PAGAR_RESUMO,
   onFormatCurrency,
   onFormatDate,
   onCreateContasAPagar,
@@ -79,9 +82,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
     setCurrentPage(1);
   }, [search, startDate, endDate, selectedCategory, activeFilterPill]);
 
-  const hoje = new Date().toISOString().slice(0, 10);
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
+  const hoje = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Maceio' }).format(new Date());
 
   const getCategory = (item: LancamentoFinanceiro) => {
     return item.categoria?.trim() || 'Despesas diversas';
@@ -92,37 +93,7 @@ export const ContasAPagarTab: React.FC<ContasAPagarTabProps> = ({
     return ['Todas as categorias', ...Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'))];
   }, [dados]);
 
-  const kpis = useMemo(() => {
-    const pagarHoje = dados.filter(i => i.status === 'Pendente' && i.dataCompetencia === hoje);
-    const pagarHojeVal = pagarHoje.reduce((acc, i) => acc + i.valor, 0);
-
-    const emAtraso = dados.filter(i => i.status === 'Pendente' && i.dataCompetencia < hoje);
-    const emAtrasoVal = emAtraso.reduce((acc, i) => acc + i.valor, 0);
-
-    const mesStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
-    const pagoNoMes = dados.filter(i => i.status === 'Pago' && i.dataCompetencia.startsWith(mesStr));
-    const pagoNoMesVal = pagoNoMes.reduce((acc, i) => acc + i.valor, 0);
-
-    const previstoNoMes = dados.filter(i => i.dataCompetencia.startsWith(mesStr));
-    const previstoNoMesVal = previstoNoMes.reduce((acc, i) => acc + i.valor, 0);
-
-    const pendente = dados.filter(i => i.status === 'Pendente');
-    const pendenteVal = pendente.reduce((acc, i) => acc + i.valor, 0);
-
-    return {
-      pagarHojeVal,
-      pagarHojeQty: pagarHoje.length,
-      emAtrasoVal,
-      emAtrasoQty: emAtraso.length,
-      pagoNoMesVal,
-      pagoNoMesQty: pagoNoMes.length,
-      previstoNoMesVal,
-      previstoNoMesQty: previstoNoMes.length,
-      pendenteVal,
-      pendenteQty: pendente.length,
-    };
-  }, [dados, hoje, currentMonth, currentYear]);
-
+  const kpis = resumo;
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();

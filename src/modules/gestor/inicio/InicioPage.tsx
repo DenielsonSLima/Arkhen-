@@ -1,3 +1,4 @@
+import { SystemErrorToast } from '../components/SystemErrorToast';
 import React, { useMemo } from 'react';
 import {
   MessageSquareQuote,
@@ -18,7 +19,6 @@ import { getEventoOrigemConfig } from '../agenda/services/agenda.service';
 import {
   formatDateBR,
   todayKey,
-  type FrequenciaAtividade,
   type TarefaGestor,
 } from '../atividades/services/rotinasAtividadesService';
 import { useInicio } from './hooks/useInicio';
@@ -32,13 +32,12 @@ const alertasPadrao: VencimentoAlerta[] = [];
 
 type PeriodoChave = 'diaria' | 'semanal' | 'mensal';
 
-const periodoConfig: Array<{ key: PeriodoChave; label: string; frequencias: FrequenciaAtividade[] }> = [
-  { key: 'diaria', label: 'Diaria', frequencias: ['Diária'] },
-  { key: 'semanal', label: 'Semanal', frequencias: ['Semanal', 'Quinzenal'] },
-  { key: 'mensal', label: 'Mensal', frequencias: ['Mensal'] },
+const periodoConfig: Array<{ key: PeriodoChave; label: string }> = [
+  { key: 'diaria', label: 'Diaria' },
+  { key: 'semanal', label: 'Semanal' },
+  { key: 'mensal', label: 'Mensal' },
 ];
 
-const getPct = (done: number, total: number) => (total > 0 ? Math.round((done / total) * 100) : 0);
 
 const addDays = (dateKey: string, amount: number) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -66,7 +65,7 @@ type InicioPageProps = {
 
 export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   useInicioRealtime(true);
-  const { stats, vencimentosProximos, isLoading } = useInicio();
+  const { stats, vencimentosProximos, isLoading, error } = useInicio();
   const { openTab } = useInternalTabs();
 
   const hoje = todayKey();
@@ -78,6 +77,7 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
     [hoje],
   );
   const {
+    error: bootstrapError,
     tarefasWorkspace,
     eventosAgenda,
     showConfigNotice,
@@ -102,7 +102,7 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   }, [eventosAgenda, fimSemana, hoje]);
 
   const tarefasResumo = useMemo(() => {
-    const tarefas = tarefasWorkspace;
+    const tarefas = tarefasWorkspace.filter((tarefa) => tarefa.status !== 'Cancelada');
     const pendentes = tarefas
       .filter((tarefa) => !isDone(tarefa))
       .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
@@ -113,40 +113,7 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
       .sort((a, b) => Number(isDone(a)) - Number(isDone(b)))
       .slice(0, 5);
 
-    const responsaveis = Array.from(new Set(tarefas.map((tarefa) => tarefa.responsavel).filter(Boolean)));
-    const usuarios = responsaveis.map((usuario) => {
-      const userTasks = tarefas.filter((tarefa) => tarefa.responsavel === usuario);
-      const periodos = Object.fromEntries(periodoConfig.map((periodo) => {
-        const items = userTasks.filter((tarefa) => periodo.frequencias.includes(tarefa.frequencia as FrequenciaAtividade));
-        const done = items.filter(isDone).length;
-        return [periodo.key, { total: items.length, done, pct: getPct(done, items.length) }];
-      })) as Record<PeriodoChave, { total: number; done: number; pct: number }>;
-
-      const doneTotal = userTasks.filter(isDone).length;
-      const atrasadas = userTasks.filter((tarefa) => !isDone(tarefa) && tarefa.vencimento < hoje).length;
-      return {
-        usuario,
-        total: userTasks.length,
-        done: doneTotal,
-        atrasadas,
-        pct: getPct(doneTotal, userTasks.length),
-        periodos,
-      };
-    });
-
-    const total = tarefas.length;
-    const done = tarefas.filter(isDone).length;
-    const atrasadas = tarefas.filter((tarefa) => !isDone(tarefa) && tarefa.vencimento < hoje).length;
-
-    return {
-      total,
-      done,
-      atrasadas,
-      pct: getPct(done, total),
-      pendentes,
-      atividadesHoje,
-      usuarios,
-    };
+    return { pendentes, atividadesHoje };
   }, [hoje, tarefasWorkspace]);
 
   if (isLoading) {
@@ -154,11 +121,12 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
   }
 
   if (!stats) {
-    return <div className="inicio-loading">Não foi possível carregar o painel contábil.</div>;
+    return <><SystemErrorToast error={error || bootstrapError} /><div className="inicio-loading">Não foi possível carregar o painel contábil.</div></>;
   }
 
   return (
     <div className="inicio-page">
+      <SystemErrorToast error={error || bootstrapError} />
       {showConfigNotice && noticeType && (
         <div className="company-config-warning-banner animate-fade-in">
           <div className="warning-banner-content">
@@ -208,25 +176,25 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon gold"><ListChecks size={22} /></div>
           <span>Atividades gerais</span>
-          <strong>{tarefasResumo.pct}%</strong>
-          <small>{tarefasResumo.done}/{tarefasResumo.total} concluidas</small>
+          <strong>{stats.pct}%</strong>
+          <small>{stats.done}/{stats.total} concluidas</small>
         </article>
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon orange"><AlertTriangle size={22} /></div>
           <span>Prazos pendentes</span>
-          <strong>{tarefasResumo.pendentes.length + alertasCriticos.length}</strong>
-          <small>{tarefasResumo.atrasadas} atividades atrasadas</small>
+          <strong>{stats.pendentes}</strong>
+          <small>{stats.atrasadas} atividades atrasadas</small>
         </article>
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon blue"><CalendarRange size={22} /></div>
           <span>Agenda da semana</span>
-          <strong>{agendaResumo.hoje.length + agendaResumo.semana.length}</strong>
-          <small>{agendaResumo.hoje.length} item hoje</small>
+          <strong>{stats.agendaSemana}</strong>
+          <small>{stats.agendaHoje} item hoje</small>
         </article>
         <article className="inicio-metric-card">
           <div className="inicio-metric-icon green"><Users size={22} /></div>
           <span>Equipe monitorada</span>
-          <strong>{tarefasResumo.usuarios.length}</strong>
+          <strong>{stats.usuarios.length}</strong>
           <small>{stats.empresasAtivas} empresas no radar</small>
         </article>
       </section>
@@ -357,8 +325,8 @@ export const InicioPage: React.FC<InicioPageProps> = ({ onInitialReady }) => {
         </div>
 
         <div className="inicio-user-grid">
-          {tarefasResumo.usuarios.map((usuario) => (
-            <article className="inicio-user-card" key={usuario.usuario}>
+          {stats.usuarios.map((usuario) => (
+            <article className="inicio-user-card" key={usuario.id}>
               <div className="inicio-user-head">
                 <div className="inicio-avatar">{usuario.usuario.slice(0, 2).toUpperCase()}</div>
                 <div>

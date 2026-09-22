@@ -27,6 +27,8 @@ export const useInicioRealtime = (enabled = true) => {
 
     const channel = subscribeRealtimeChannel('inicio-realtime', (ch) =>
       ch
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'documentos' }, invalidate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_rotinas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'atividades_tarefas' }, invalidate)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'agenda_eventos' }, invalidate)

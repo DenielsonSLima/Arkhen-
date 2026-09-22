@@ -138,13 +138,15 @@ export const ChecklistTab: React.FC<ChecklistTabProps> = ({
     setIsEditingTax(true);
   };
 
-  const handleSaveTax = (e: React.FormEvent) => {
+  const handleSaveTax = async (e: React.FormEvent) => {
     e.preventDefault();
     const valores = Object.fromEntries(
       camposValores.map((campo) => [campo.key, parseFloat(valoresDraft[campo.key] || '0') || 0])
     ) as ValoresCompetenciaAtividade;
-    handleSaveTaxValores(atv.instanciaId, valores);
-    setIsEditingTax(false);
+    try {
+      await handleSaveTaxValores(atv.instanciaId, valores);
+      setIsEditingTax(false);
+    } catch { /* O hook mantém os dados anteriores e exibe o erro padrão. */ }
   };
 
   const formatCurrency = (val?: number) => {

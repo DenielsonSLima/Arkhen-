@@ -42,6 +42,7 @@ export const useRegras = () => {
   const invalidateRegras = () => queryClient.invalidateQueries({ queryKey: regrasQueryKey });
 
   const saveRegraImpostoMutation = useMutation({
+    onMutate: () => setErrorMsg(null),
     mutationFn: (data: RegraImposto) => parametrizacaoService.saveRegraImposto(data),
     onSuccess: (_, data) => {
       invalidateRegras();
@@ -53,6 +54,7 @@ export const useRegras = () => {
   });
 
   const deleteRegraImpostoMutation = useMutation({
+    onMutate: () => setErrorMsg(null),
     mutationFn: (id: string) => parametrizacaoService.deleteRegraImposto(id),
     onSuccess: () => {
       invalidateRegras();
@@ -62,6 +64,7 @@ export const useRegras = () => {
   });
 
   const saveRegraCnabMutation = useMutation({
+    onMutate: () => setErrorMsg(null),
     mutationFn: (data: RegraCnab) => parametrizacaoService.saveRegraCnab(data),
     onSuccess: (_, data) => {
       invalidateRegras();
@@ -73,6 +76,7 @@ export const useRegras = () => {
   });
 
   const deleteRegraCnabMutation = useMutation({
+    onMutate: () => setErrorMsg(null),
     mutationFn: (id: string) => parametrizacaoService.deleteRegraCnab(id),
     onSuccess: () => {
       invalidateRegras();

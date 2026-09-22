@@ -132,6 +132,7 @@ export const useDocumentosMutations = (
   });
 
   const saveSettingsMutation = useMutation({
+    onError: () => invalidateDocumentosQueries(queryClient, { includeSettings: true }),
     mutationFn: async (updatedData: MeusDocumentosData) => {
       await documentosService.saveMeusDocumentos(updatedData);
       const reconciliation = await reconcileDocumentChanges(currentSettings.documentos || [], updatedData.documentos || []);
@@ -192,6 +193,7 @@ export const useDocumentosMutations = (
     onError: async () => {
       // A configuração usa CAS e pode ter sido confirmada antes de uma falha
       // posterior na reconciliação dos arquivos. Recarrega o updatedAt real.
+      invalidateDocumentosQueries(queryClient);
       await queryClient.invalidateQueries({ queryKey: documentosKeys.companies() });
     },
   });

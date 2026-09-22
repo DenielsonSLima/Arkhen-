@@ -245,8 +245,13 @@ export const normalizeFinanceiroStats = (data: Partial<DashboardStats> | null): 
       : []
   );
 
+  const normalizeRecentes = (items: DashboardStats['entradasRecentes']) => Array.isArray(items)
+    ? items.map(item => ({ id: safeText(item.id), data: safeText(item.data),
+      descricao: safeText(item.descricao), valor: finiteNumber(item.valor) })) : [];
   return {
     ...emptyStats,
+    entradasRecentes: normalizeRecentes(data?.entradasRecentes),
+    saidasRecentes: normalizeRecentes(data?.saidasRecentes),
     totalFaturado: finiteNumber(data?.totalFaturado),
     totalRecebido: finiteNumber(data?.totalRecebido),
     totalPendente: finiteNumber(data?.totalPendente),

@@ -37,12 +37,13 @@ export const AddTransferenciaModal: React.FC<AddTransferenciaModalProps> = ({
   const [contaOrigemId, setContaOrigemId] = useState('');
   const [contaDestinoId, setContaDestinoId] = useState('');
   const [descricao, setDescricao] = useState('Transferência entre contas');
-  const [idempotencyKey] = useState(() => createRuntimeId('transfer'));
+  const [idempotencyKey, setIdempotencyKey] = useState(() => createRuntimeId('transfer'));
   const [formError, setFormError] = useState('');
 
   // Clean form when opening
   useEffect(() => {
     if (isOpen) {
+      setIdempotencyKey(createRuntimeId('transfer'));
       setData(new Date().toISOString().slice(0, 10));
       setValor(0);
       setValorStr('R$ 0,00');

@@ -206,8 +206,8 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
           {selectedGroup.atividades.map((atv) => (
             <button
               key={atv.instanciaId}
-              className={`atividades-tab-btn ${activeDetailTab === atv.modeloId ? 'active' : ''}`}
-              onClick={() => setActiveDetailTab(atv.modeloId)}
+              className={`atividades-tab-btn ${activeDetailTab === atv.instanciaId ? 'active' : ''}`}
+              onClick={() => setActiveDetailTab(atv.instanciaId)}
             >
               {getActivityIcon(atv.modeloId, atv.status)}
               {atv.modeloNome}
@@ -227,7 +227,7 @@ export const AtividadeDetailView: React.FC<AtividadeDetailViewProps> = ({
           />
         ) : (
           selectedGroup.atividades.map((atv) => {
-            if (activeDetailTab !== atv.modeloId) return null;
+            if (activeDetailTab !== atv.instanciaId) return null;
             return (
               <ChecklistTab
                 key={atv.instanciaId}

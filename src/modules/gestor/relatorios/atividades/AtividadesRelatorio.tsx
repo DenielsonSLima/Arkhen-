@@ -46,7 +46,7 @@ export const AtividadesRelatorio: React.FC<AtividadesRelatorioProps> = ({ data }
         ) : (
           <div className="relatorio-bar-chart">
             {data.distribuicaoObrigacoes.map((item) => {
-              const complianceRate = item.total > 0 ? (item.concluidas / item.total) * 100 : 0;
+              const complianceRate = item.percentualConcluido ?? 0;
               return (
                 <div key={item.nome} className="relatorio-bar-row">
                   <span className="relatorio-bar-label">{item.nome}</span>

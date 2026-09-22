@@ -33,11 +33,12 @@ export const useInicioBootstrap = ({
   const companyConfigQuery = useQuery({
     queryKey: inicioKeys.companyNotice(),
     queryFn: async () => {
-      const { data: companyData } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('configuracoes_empresa')
         .select('endereco, cep')
         .maybeSingle();
 
+      if (companyError) throw companyError;
       const lowerEndereco = (companyData?.endereco || '').toLowerCase();
       const addressIncomplete = !companyData?.endereco
         || lowerEndereco.includes('ficticia')
@@ -49,11 +50,12 @@ export const useInicioBootstrap = ({
         return { showConfigNotice: true, noticeType: 'address' as ConfigNoticeType };
       }
 
-      const { data: watermarkData } = await supabase
+      const { data: watermarkData, error: watermarkError } = await supabase
         .from('configuracoes_marca_dagua')
         .select('file_url_paisagem, file_url_retrato')
         .maybeSingle();
 
+      if (watermarkError) throw watermarkError;
       const watermarksIncomplete = !watermarkData?.file_url_paisagem || !watermarkData?.file_url_retrato;
       return {
         showConfigNotice: watermarksIncomplete,
@@ -124,6 +126,7 @@ export const useInicioBootstrap = ({
   }, [isReady, onReady]);
 
   return {
+    error: companyConfigQuery.error || messageQuery.error || workspaceQuery.error || agendaQuery.error,
     tarefasWorkspace: workspaceQuery.data?.tarefas ?? [],
     eventosAgenda: agendaQuery.data ?? [],
     showConfigNotice: companyConfigQuery.data?.showConfigNotice ?? false,

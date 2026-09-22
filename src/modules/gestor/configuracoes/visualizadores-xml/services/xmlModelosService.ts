@@ -112,13 +112,12 @@ export const xmlModelosService = {
   },
 
   async save(modelos: XmlModelo[]): Promise<XmlModelo[]> {
-    persistedStorage.setItem(localKey, JSON.stringify(modelos));
-
     const { error } = await supabase
       .from('configuracoes_xml_modelos')
       .upsert(modelos.map(modeloToPayload), { onConflict: 'empresa_id,tipo,estado' });
 
-    if (error) return modelos;
+    if (error) throw new Error(`Não foi possível salvar os modelos de XML: ${error.message}`);
+    persistedStorage.setItem(localKey, JSON.stringify(modelos));
     return this.list();
   },
 };

@@ -1,7 +1,8 @@
+import { useInicioValidades } from '../inicio/hooks/useInicio';
+import { todayKey } from '../atividades/services/rotinasAtividadesService';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useInternalTabs } from '../../../hooks/useInternalTabs';
-import { inicioService } from '../inicio/services/inicioService';
 import type { NavigationContext } from '../shared/operationalTypes';
 import { AgendaConfigListModal } from './components/AgendaConfigListModal';
 import { AgendaDeleteEventModal } from './components/AgendaDeleteEventModal';
@@ -26,7 +27,8 @@ export const AgendaPage: React.FC = () => {
   useAgendaRealtime(true);
   const { openTab } = useInternalTabs();
   const agenda = useAgenda();
-  const vencimentos = useMemo(() => inicioService.getVencimentosProximos(), []);
+  const vencimentosQuery = useInicioValidades();
+  const vencimentos = vencimentosQuery.data || [];
 
   const [abaAgenda, setAbaAgenda] = useState<AgendaAba>('calendario');
   const [filtroTipoAberto, setFiltroTipoAberto] = useState(false);
@@ -42,6 +44,13 @@ export const AgendaPage: React.FC = () => {
     () => agenda.categoriasEvento.filter((item) => item.ativo),
     [agenda.categoriasEvento],
   );
+
+  useEffect(() => {
+    const error = agenda.error || vencimentosQuery.error;
+    if (!error) return;
+    setAgendaToast({ type: 'error', message: typeof error === 'object' && 'message' in error
+      ? String(error.message) : 'Não foi possível carregar ou salvar a agenda.' });
+  }, [agenda.error, vencimentosQuery.error]);
 
   useEffect(() => {
     if (!agendaToast) return;
@@ -86,7 +95,7 @@ export const AgendaPage: React.FC = () => {
   );
 
   const eventosPorOrigem = useMemo(() => {
-    const hojeIso = new Date().toISOString().split('T')[0];
+    const hojeIso = todayKey();
     const futurosOrdenados = agenda.eventosFiltrados
       .filter((evento) => evento.data >= hojeIso)
       .sort((a, b) => a.data.localeCompare(b.data));

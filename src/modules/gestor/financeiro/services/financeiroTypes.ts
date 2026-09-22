@@ -84,7 +84,11 @@ export interface FinanceiroBreakdown {
   percentual: number;
 }
 
+export interface FinanceiroMovimentoRecente { id: string; data: string; descricao: string; valor: number }
+
 export interface DashboardStats {
+  entradasRecentes?: FinanceiroMovimentoRecente[];
+  saidasRecentes?: FinanceiroMovimentoRecente[];
   totalFaturado: number;
   totalRecebido: number;
   totalPendente: number;

@@ -1,3 +1,4 @@
+import { contasPagarService } from '../services/contasPagarService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fiscalKeys } from '../../configuracoes/integracao-fiscal/queries/useFiscalQueries';
 import { configuracoesKeys } from '../../configuracoes/queries/configuracoesKeys';
@@ -212,3 +213,8 @@ export const usePagarDespesaManualMutation = () => {
     onSuccess: () => invalidateFinanceiro(queryClient),
   });
 };
+
+export const useContasPagarResumoQuery = ({ enabled = true }: FinanceiroQueryOptions = {}) => useQuery({
+  queryKey: [...financeiroKeys.lancamentos(), 'resumo-contas-pagar'],
+  queryFn: ({ signal }) => contasPagarService.getResumo(signal), enabled, staleTime: FINANCEIRO_STALE_TIME_MS,
+});

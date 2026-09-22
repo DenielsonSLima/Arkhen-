@@ -1,3 +1,4 @@
+import { todayKey } from '../../atividades/services/rotinasAtividadesService';
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, UserRoundCheck } from 'lucide-react';
 import {
@@ -119,7 +120,7 @@ export const EventoModal: React.FC<EventoModalProps> = ({
       setTitulo('');
       setTipo(tipoPadrao);
       setCategoriaId(categoriaPadrao as CategoriaEvento);
-      setData(dataInicial || new Date().toISOString().split('T')[0]);
+      setData(dataInicial || todayKey());
       setHora('');
       setEmpresaId('');
       setDescricao('');

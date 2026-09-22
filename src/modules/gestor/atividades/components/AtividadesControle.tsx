@@ -1,3 +1,4 @@
+import { SystemErrorToast } from '../../components/SystemErrorToast';
 import React, { useState } from 'react';
 import {
   AlertCircle,
@@ -82,6 +83,7 @@ export const AtividadesControle: React.FC<AtividadesControleProps> = ({
 
   return (
     <div className="painel-operacional">
+      <SystemErrorToast error={painelQuery.error} />
       <div className="painel-operacional__toolbar">
         <div className="painel-operacional__periods" aria-label="Período do painel">
           {(Object.keys(PERIOD_LABELS) as PainelPeriodo[]).map((periodo) => (

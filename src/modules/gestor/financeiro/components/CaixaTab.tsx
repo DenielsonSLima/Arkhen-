@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { AlertTriangle, ArrowUpCircle, ArrowDownCircle, Receipt, Building2, FileText, Wallet, TrendingUp, CreditCard, Filter } from 'lucide-react';
 import type { DashboardStats } from '../services/financeiroService';
 import './CaixaTab.css';
@@ -15,17 +15,19 @@ import {
 
 type CaixaTabProps = {
   stats: DashboardStats;
+  periodo: number;
+  onPeriodoChange: (meses: number) => void;
+  onExportPdf: () => void;
   onFormatCurrency: (value: number) => string;
 };
 
-export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) => {
-  const [periodo, setPeriodo] = useState('6');
+export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency, periodo, onPeriodoChange, onExportPdf }) => {
   const chartData = stats.desempenho.slice(-Number(periodo));
   const contas = stats.contas;
   const receitasPorParceiro = stats.receitasPorParceiro;
   const despesasPorCategoria = stats.despesasPorCategoria;
-  const entradasRecentes: { id: string; data: string; descricao: string; valor: number }[] = [];
-  const saidasRecentes: { id: string; data: string; descricao: string; valor: number }[] = [];
+  const entradasRecentes = stats.entradasRecentes ?? [];
+  const saidasRecentes = stats.saidasRecentes ?? [];
 
   const KpiCard = ({ title, value, icon, variant = 'white' }: any) => {
     const isColored = variant !== 'white';
@@ -102,7 +104,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
             <Filter size={16} color="#64748b" style={{ marginLeft: '10px', marginRight: '4px' }} />
             <select 
               value={periodo} 
-              onChange={(e) => setPeriodo(e.target.value)}
+              onChange={(e) => onPeriodoChange(Number(e.target.value))}
               style={{ border: 'none', background: 'transparent', outline: 'none', color: '#111827', fontSize: '0.85rem', padding: '8px 12px', cursor: 'pointer', fontWeight: 600 }}
             >
               <option value="1">Mês Atual</option>
@@ -111,7 +113,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
               <option value="12">Últimos 12 Meses</option>
             </select>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+          <button type="button" onClick={onExportPdf} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}>
             <FileText size={16} />
             Relatório PDF
           </button>
@@ -251,7 +253,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
                     </div>
                     <div>
                       <strong style={{ display: 'block', color: '#1e293b', fontSize: '0.85rem', fontWeight: 700 }}>{mov.descricao}</strong>
-                      <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
+                      <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(`${mov.data}T12:00:00`).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
                   <strong style={{ color: '#10b981', fontSize: '0.9rem', fontWeight: 700 }}>
@@ -287,7 +289,7 @@ export const CaixaTab: React.FC<CaixaTabProps> = ({ stats, onFormatCurrency }) =
                     </div>
                     <div>
                       <strong style={{ display: 'block', color: '#1e293b', fontSize: '0.85rem', fontWeight: 700 }}>{mov.descricao}</strong>
-                      <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(mov.data).toLocaleDateString('pt-BR')}</span>
+                      <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 500 }}>{new Date(`${mov.data}T12:00:00`).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
                   <strong style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 700 }}>

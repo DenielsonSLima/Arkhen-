@@ -1,0 +1,26 @@
+{
+  "base_commit": "280d7e2",
+  "vitest": {
+    "files": 126,
+    "tests": 689,
+    "passed": true
+  },
+  "build": "passed",
+  "lint": {
+    "passed": true,
+    "warnings": 15
+  },
+  "sql_financeiro_assertions": 72,
+  "sql_suites": [
+    "financeiro",
+    "documentos_auditoria",
+    "inicio",
+    "fechamentos",
+    "relatorio_conformidade",
+    "email_primeiro_acesso"
+  ],
+  "visual": "CSS declarations and existing JSX styles preserved; no browser tests",
+  "source_files": 85,
+  "remote_mutations_applied": true,
+  "deployment": "9 migrations and delete-documents v1 applied after explicit approval; frontend merge and additional TRUNCATE permission fix pending"
+}
