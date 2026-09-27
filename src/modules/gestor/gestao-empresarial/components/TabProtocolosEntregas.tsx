@@ -41,8 +41,11 @@ const categoryIcon = {
   Fiscal: <Landmark size={16} />,
   Contábil: <ClipboardCheck size={16} />,
   Trabalhista: <FileCheck2 size={16} />,
+  'Departamento Pessoal': <FileCheck2 size={16} />,
   Financeiro: <WalletCards size={16} />,
   Documentos: <ReceiptText size={16} />,
+  'Obrigações Acessórias': <ClipboardCheck size={16} />,
+  Tributos: <Landmark size={16} />,
   'NF-e': <FileCode2 size={16} />,
   'NFC-e': <FileCode2 size={16} />,
 };

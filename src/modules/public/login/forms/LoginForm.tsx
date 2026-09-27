@@ -87,7 +87,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ loginState, onLoginSuccess
             }}
           >
             <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontSize: '1.18rem', fontWeight: 850 }}>
-              Acesso fora do período permitido
+              Acesso não autorizado
             </h3>
             <p style={{ margin: 0, color: '#64748b', lineHeight: 1.6, fontSize: '0.92rem' }}>
               {accessBlockMessage}

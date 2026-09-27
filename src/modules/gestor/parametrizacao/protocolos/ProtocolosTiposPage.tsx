@@ -9,6 +9,7 @@ import {
 } from '../../protocolos/services/protocolosCatalogoService';
 import { prazosEntregaService, type RegimeEmpresa, type TipoFechamentoEntrega } from '../prazos-entrega/services/prazosEntregaService';
 import {
+  OBRIGACAO_CATEGORIAS,
   OBRIGACAO_PERIODICIDADE_LABELS,
   OBRIGACAO_PERIODICIDADES,
 } from '../obrigacoes/obrigacoes.types';
@@ -24,7 +25,7 @@ const periodos: Array<{ value: TipoFechamentoEntrega; label: string }> = (
   }))
 );
 
-const categorias: Array<ProtocoloTipoConfig['categoria']> = ['Fiscal', 'Contábil', 'Trabalhista', 'Financeiro', 'Documentos', 'NF-e', 'NFC-e'];
+const categorias: Array<ProtocoloTipoConfig['categoria']> = [...OBRIGACAO_CATEGORIAS];
 const origens: Array<ProtocoloTipoConfig['origemPadrao']> = ['Cliente envia', 'Escritório envia', 'Ambos'];
 
 export const ProtocolosTiposPage: React.FC = () => {

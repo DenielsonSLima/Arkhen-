@@ -42,6 +42,7 @@ export const useLogin = () => {
   const handleLogin = async (e: FormEvent): Promise<LoginResponse | null> => {
     e.preventDefault();
     setError(null);
+    setAccessBlockMessage(null);
     setSuccessMessage(null);
     setIsLoading(true);
 

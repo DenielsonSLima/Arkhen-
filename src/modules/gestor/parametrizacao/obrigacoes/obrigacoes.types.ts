@@ -24,6 +24,19 @@ export const OBRIGACAO_ORIGENS = [
   'Ambos',
 ] as const;
 
+export const OBRIGACAO_CATEGORIAS = [
+  'Fiscal',
+  'Contábil',
+  'Trabalhista',
+  'Departamento Pessoal',
+  'Financeiro',
+  'Documentos',
+  'Obrigações Acessórias',
+  'Tributos',
+  'NF-e',
+  'NFC-e',
+] as const;
+
 export type ObrigacaoRegime = typeof OBRIGACAO_REGIMES[number];
 export type ObrigacaoPeriodicidade = typeof OBRIGACAO_PERIODICIDADES[number];
 export type ObrigacaoOrigem = typeof OBRIGACAO_ORIGENS[number];
