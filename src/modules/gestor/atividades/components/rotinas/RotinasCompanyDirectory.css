@@ -1,0 +1,151 @@
+.rotinas-company-directory {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rotinas-company-filters {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.5fr) minmax(190px, 0.8fr) minmax(190px, 0.8fr) auto;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dbe3ed;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.rotinas-company-search {
+  position: relative;
+}
+
+.rotinas-company-search svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.rotinas-company-search input,
+.rotinas-company-filters select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #d6e0eb;
+  border-radius: 9px;
+  padding: 9px 11px;
+  color: #1e293b;
+  background: #fff;
+  font: inherit;
+  font-size: 0.77rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.rotinas-company-search input {
+  padding-left: 38px;
+}
+
+.rotinas-company-search input:focus,
+.rotinas-company-filters select:focus {
+  border-color: rgba(197, 146, 53, 0.75);
+  box-shadow: 0 0 0 3px rgba(197, 146, 53, 0.12);
+}
+
+.rotinas-company-clear,
+.rotinas-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px solid #d6e0eb;
+  border-radius: 9px;
+  padding: 8px 12px;
+  color: #475569;
+  background: #fff;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rotinas-company-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.rotinas-company-results span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-gold-dark);
+  text-transform: uppercase;
+}
+
+.rotinas-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.rotinas-pagination__pages {
+  display: flex;
+  gap: 5px;
+}
+
+.rotinas-pagination__pages button {
+  width: 40px;
+  padding: 8px;
+}
+
+.rotinas-pagination button:hover:not(:disabled),
+.rotinas-pagination button.is-active {
+  border-color: var(--color-gold-primary);
+  color: #fff;
+  background: var(--color-gold-primary);
+}
+
+.rotinas-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 1100px) {
+  .rotinas-company-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .rotinas-company-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .rotinas-company-results {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rotinas-pagination {
+    flex-wrap: wrap;
+  }
+
+  .rotinas-pagination > button {
+    flex: 1 1 120px;
+  }
+
+  .rotinas-pagination__pages {
+    order: -1;
+    justify-content: center;
+    width: 100%;
+  }
+}

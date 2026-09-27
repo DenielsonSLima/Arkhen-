@@ -39,6 +39,9 @@ const cliente = {
   nome: 'Empresa Alfa',
   cnpj: '12.345.678/0001-90',
   regime: 'Simples Nacional',
+  tipoParceiroId: 'cliente-contabil',
+  tipoParceiroNome: 'Cliente Contábil',
+  isClienteContabil: true,
   tipoEstabelecimento: 'Matriz',
   modelosAtivos: ['33333333-3333-4333-8333-333333333333'],
 };
@@ -141,10 +144,59 @@ describe('AbaRotinas', () => {
 
     render(<AbaRotinas />);
 
-    expect(screen.getByRole('status').textContent).toContain('1 rotina não está vinculada');
+    expect(screen.getByText(/1 rotina não está vinculada/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Ver na Consulta' }));
 
     expect(screen.getByRole('tab', { name: /consulta/i }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText('Extrato Bancário')).toBeTruthy();
+  });
+
+  it('filtra parceiros por tipo e impede criar rotina fora de Cliente Contábil', () => {
+    const fornecedor = {
+      ...cliente,
+      id: '66666666-6666-4666-8666-666666666666',
+      nome: 'Fornecedor Beta',
+      cnpj: '98.765.432/0001-10',
+      regime: 'Lucro Real',
+      tipoParceiroId: 'fornecedor',
+      tipoParceiroNome: 'Fornecedor',
+      isClienteContabil: false,
+    };
+    workspaceHook.mockReturnValue({
+      ...makeWorkspace(),
+      clientes: [cliente, fornecedor],
+    });
+
+    render(<AbaRotinas />);
+    fireEvent.change(screen.getByLabelText('Filtrar por tipo de parceiro'), {
+      target: { value: 'fornecedor' },
+    });
+
+    expect(screen.queryByRole('button', { name: /Empresa Alfa/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Fornecedor Beta/ }));
+    expect(screen.queryByRole('button', { name: /Nova rotina|Criar primeira rotina/ })).toBeNull();
+    expect(screen.getByText(/somente para parceiros do tipo Cliente Contábil/)).toBeTruthy();
+  });
+
+  it('preserva filtros e página ao abrir uma empresa e voltar', () => {
+    const clientes = Array.from({ length: 13 }, (_, index) => ({
+      ...cliente,
+      id: `cliente-${String(index + 1).padStart(2, '0')}`,
+      nome: `Empresa ${String(index + 1).padStart(2, '0')}`,
+      cnpj: `12.345.678/00${String(index + 1).padStart(2, '0')}-90`,
+    }));
+    workspaceHook.mockReturnValue({
+      ...makeWorkspace(),
+      rotinas: [],
+      clientes,
+    });
+
+    render(<AbaRotinas />);
+    fireEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
+    fireEvent.click(screen.getByRole('button', { name: /Empresa 13/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar para empresas' }));
+
+    expect(screen.getByRole('button', { name: /Empresa 13/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Página 2' }).getAttribute('aria-current')).toBe('page');
   });
 });

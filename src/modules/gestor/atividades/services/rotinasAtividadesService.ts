@@ -226,7 +226,7 @@ export const rotinasAtividadesService = {
         .eq('ativo', true)
         .order('vencimento', { ascending: true }),
       supabase.rpc('listar_responsaveis_atividades'),
-      atividadesService.getClientes(),
+      atividadesService.getParceirosAtivos(),
       atividadesService.getModelos(),
       tarefasProgressoService.getAll(),
     ]);

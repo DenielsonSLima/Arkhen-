@@ -95,7 +95,7 @@
 
 .rotinas-company-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -453,8 +453,18 @@
 }
 
 @media (max-width: 1050px) {
+  .rotinas-company-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .rotinas-consulta__filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1051px) and (max-width: 1360px) {
+  .rotinas-company-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

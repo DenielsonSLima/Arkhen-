@@ -6,6 +6,7 @@ interface CompanyCardIdentityProps {
   cnpj: string;
   regime: string;
   tipoEstabelecimento: string;
+  partnerType?: string;
   logo?: string;
 }
 
@@ -45,6 +46,7 @@ export const CompanyCardIdentity: React.FC<CompanyCardIdentityProps> = ({
   cnpj,
   regime,
   tipoEstabelecimento,
+  partnerType,
   logo,
 }) => {
   const regimeClass = getRegimeClass(regime);
@@ -66,6 +68,7 @@ export const CompanyCardIdentity: React.FC<CompanyCardIdentityProps> = ({
           <span className={`company-card-establishment-badge ${estabelecimentoClass}`}>
             {tipoEstabelecimento || 'Matriz'}
           </span>
+          {partnerType ? <span className="company-card-partner-badge">{partnerType}</span> : null}
         </div>
       </div>
     </div>

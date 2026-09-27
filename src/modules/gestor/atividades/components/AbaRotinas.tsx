@@ -16,8 +16,12 @@ import {
   type RotinasFilterState,
   type RotinaWorkspaceItem,
 } from '../utils/rotinasWorkspace';
+import {
+  EMPTY_ROTINAS_COMPANY_FILTERS,
+  type RotinasCompanyFilters,
+} from '../utils/rotinasCompanyDirectory';
 import { RotinasCompanyDetail } from './rotinas/RotinasCompanyDetail';
-import { RotinasCompanyGrid } from './rotinas/RotinasCompanyGrid';
+import { RotinasCompanyDirectory } from './rotinas/RotinasCompanyDirectory';
 import { RotinasConsulta } from './rotinas/RotinasConsulta';
 import './rotinas/RotinasWorkspace.css';
 
@@ -66,6 +70,8 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
   const [activeView, setActiveView] = useState<RotinasView>('empresas');
   const [selectedCompanyId, setSelectedCompanyId] = useState(initialCompanyId || '');
   const [filters, setFilters] = useState<RotinasFilterState>({});
+  const [companyFilters, setCompanyFilters] = useState<RotinasCompanyFilters>(EMPTY_ROTINAS_COMPANY_FILTERS);
+  const [companyPage, setCompanyPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchResponsibleId, setBatchResponsibleId] = useState('');
   const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
@@ -291,6 +297,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
         selectedGroup ? (
           <RotinasCompanyDetail
             group={selectedGroup}
+            canCreateRoutine={selectedGroup.cliente.isClienteContabil === true}
             usuarios={usuarios}
             activeModelIds={selectedCompanyModelIds}
             isSaving={isSaving}
@@ -311,7 +318,14 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
                 <button type="button" onClick={() => setActiveView('consulta')}>Ver na Consulta</button>
               </div>
             ) : null}
-            <RotinasCompanyGrid groups={groups} onOpenCompany={setSelectedCompanyId} />
+            <RotinasCompanyDirectory
+              groups={groups}
+              filters={companyFilters}
+              page={companyPage}
+              onOpenCompany={setSelectedCompanyId}
+              onFiltersChange={setCompanyFilters}
+              onPageChange={setCompanyPage}
+            />
           </>
         )
       ) : (

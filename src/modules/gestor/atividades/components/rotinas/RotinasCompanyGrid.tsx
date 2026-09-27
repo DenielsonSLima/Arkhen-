@@ -46,6 +46,7 @@ export const RotinasCompanyGrid: React.FC<RotinasCompanyGridProps> = ({ groups, 
             cnpj={group.cliente.cnpj}
             regime={group.cliente.regime}
             tipoEstabelecimento={group.cliente.tipoEstabelecimento}
+            partnerType={group.cliente.tipoParceiroNome}
             logo={group.cliente.logo}
           />
 

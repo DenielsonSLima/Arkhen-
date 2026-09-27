@@ -11,6 +11,7 @@ import { CompanyCardIdentity } from '../../por-empresa/CompanyCardIdentity';
 
 interface RotinasCompanyDetailProps {
   group: RotinaCompanyGroup<ClienteEmpresa>;
+  canCreateRoutine: boolean;
   usuarios: UsuarioAtividade[];
   activeModelIds: Set<string>;
   isSaving: boolean;
@@ -28,6 +29,7 @@ const formatDate = (value?: string) => {
 
 export const RotinasCompanyDetail: React.FC<RotinasCompanyDetailProps> = ({
   group,
+  canCreateRoutine,
   usuarios,
   activeModelIds,
   isSaving,
@@ -61,11 +63,12 @@ export const RotinasCompanyDetail: React.FC<RotinasCompanyDetailProps> = ({
             cnpj={group.cliente.cnpj}
             regime={group.cliente.regime}
             tipoEstabelecimento={group.cliente.tipoEstabelecimento}
+            partnerType={group.cliente.tipoParceiroNome}
             logo={group.cliente.logo}
           />
         </div>
 
-        <div className="rotinas-detail__actions">
+        {canCreateRoutine ? <div className="rotinas-detail__actions">
           <button
             type="button"
             className="rotinas-button rotinas-button--primary"
@@ -75,7 +78,7 @@ export const RotinasCompanyDetail: React.FC<RotinasCompanyDetailProps> = ({
           >
             <Plus size={16} /> Nova rotina
           </button>
-        </div>
+        </div> : null}
       </header>
 
       {group.rotinas.length === 0 ? (
@@ -83,11 +86,13 @@ export const RotinasCompanyDetail: React.FC<RotinasCompanyDetailProps> = ({
           <Repeat2 size={34} />
           <h3>Esta empresa ainda não possui rotinas</h3>
           <p>
-            Configure as obrigações no cadastro do parceiro ou crie uma rotina recorrente manual.
+            {canCreateRoutine
+              ? 'Configure as obrigações no cadastro do parceiro ou crie uma rotina recorrente manual.'
+              : 'Rotinas contábeis ficam disponíveis somente para parceiros do tipo Cliente Contábil.'}
           </p>
-          <button type="button" className="rotinas-button rotinas-button--primary" onClick={onCreate}>
+          {canCreateRoutine ? <button type="button" className="rotinas-button rotinas-button--primary" onClick={onCreate}>
             <Plus size={15} /> Criar primeira rotina
-          </button>
+          </button> : null}
         </div>
       ) : (
         <div className="rotinas-list">

@@ -10,6 +10,9 @@ export interface ClienteEmpresa {
   nome: string;
   cnpj: string;
   regime: 'PF' | 'MEI' | 'Isento' | 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real' | string;
+  tipoParceiroId?: string;
+  tipoParceiroNome?: string;
+  isClienteContabil?: boolean;
   tipoEstabelecimento: 'Matriz' | 'Filial' | string;
   logo?: string;
   modelosAtivos: string[];
@@ -61,6 +64,7 @@ interface ClienteRow {
   nome: string | null;
   cnpj: string | null;
   tipo: string | null;
+  tipo_parceiro_id?: string | null;
   tipo_estabelecimento: string | null;
   logo: string | null;
   modelos_ativos: string[] | null;
@@ -109,11 +113,18 @@ const getCurrentEmpresaId = async () => {
   return data as string;
 };
 
-const toCliente = (row: ClienteRow): ClienteEmpresa => ({
+const toCliente = (row: ClienteRow, clienteContabilPartnerTypeId?: string | null): ClienteEmpresa => ({
   id: row.id,
   nome: row.nome || 'Cliente sem nome',
   cnpj: row.cnpj || '',
   regime: row.tipo || 'Simples Nacional',
+  tipoParceiroId: row.tipo_parceiro_id || undefined,
+  tipoParceiroNome: row.tipo_parceiro_id && row.tipo_parceiro_id === clienteContabilPartnerTypeId
+    ? 'Cliente Contábil'
+    : undefined,
+  isClienteContabil: row.tipo_parceiro_id
+    ? row.tipo_parceiro_id === clienteContabilPartnerTypeId
+    : undefined,
   tipoEstabelecimento: row.tipo_estabelecimento || 'Matriz',
   logo: row.logo || '',
   modelosAtivos: Array.isArray(row.modelos_ativos) ? row.modelos_ativos : [],
@@ -160,28 +171,80 @@ export const atividadesService = {
     const request = partnerTypeId
       ? supabase
         .from('clientes')
-        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .select('id,nome,cnpj,tipo,tipo_parceiro_id,tipo_estabelecimento,logo,modelos_ativos')
         .eq('status', 'Ativa')
         .eq('tipo_parceiro_id', partnerTypeId)
         .order('nome', { ascending: true })
       : supabase
         .from('clientes')
-        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .select('id,nome,cnpj,tipo,tipo_parceiro_id,tipo_estabelecimento,logo,modelos_ativos')
         .eq('status', 'Ativa')
         .order('nome', { ascending: true });
 
     const { data, error } = await request;
-    if (error && partnerTypeId && isPartnerClassificationSchemaError(error.message)) {
+    if (error && isPartnerClassificationSchemaError(error.message)) {
       const { data: legacyData, error: legacyError } = await supabase
         .from('clientes')
         .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
         .eq('status', 'Ativa')
         .order('nome', { ascending: true });
       if (legacyError) throw legacyError;
-      return ((legacyData || []) as ClienteRow[]).map(toCliente);
+      return ((legacyData || []) as ClienteRow[]).map((row) => toCliente(row));
     }
     if (error) throw error;
-    return ((data || []) as ClienteRow[]).map(toCliente);
+    return ((data || []) as ClienteRow[]).map((row) => toCliente(row, partnerTypeId));
+  },
+
+  async getParceirosAtivos(): Promise<ClienteEmpresa[]> {
+    const clienteContabilPartnerTypeId = await getClienteContabilPartnerTypeId();
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('id,nome,cnpj,tipo,tipo_parceiro_id,tipo_estabelecimento,logo,modelos_ativos')
+      .eq('status', 'Ativa')
+      .order('nome', { ascending: true });
+
+    if (error && isPartnerClassificationSchemaError(error.message)) {
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('clientes')
+        .select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos')
+        .eq('status', 'Ativa')
+        .order('nome', { ascending: true });
+      if (legacyError) throw legacyError;
+      return ((legacyData || []) as ClienteRow[]).map((row) => ({
+        ...toCliente(row),
+        tipoParceiroNome: 'Cliente Contábil',
+        isClienteContabil: true,
+      }));
+    }
+    if (error) throw error;
+
+    const rows = (data || []) as ClienteRow[];
+    const partnerTypeIds = [...new Set(rows
+      .map((row) => row.tipo_parceiro_id)
+      .filter((id): id is string => Boolean(id)))];
+    let partnerTypeNames = new Map<string, string>();
+
+    if (partnerTypeIds.length > 0) {
+      const { data: partnerTypesData, error: partnerTypesError } = await supabase
+        .from('parametrizacao_catalogos')
+        .select('id,nome')
+        .eq('tipo', 'tipos_parceiros')
+        .in('id', partnerTypeIds);
+      if (partnerTypesError) throw partnerTypesError;
+      partnerTypeNames = new Map(
+        (partnerTypesData || []).map((item) => [String(item.id), String(item.nome || '')]),
+      );
+    }
+
+    return rows.map((row) => {
+      const cliente = toCliente(row, clienteContabilPartnerTypeId);
+      return {
+        ...cliente,
+        tipoParceiroNome: row.tipo_parceiro_id
+          ? partnerTypeNames.get(row.tipo_parceiro_id) || cliente.tipoParceiroNome
+          : undefined,
+      };
+    });
   },
 
   async saveCliente(cliente: ClienteEmpresa): Promise<ClienteEmpresa> {
@@ -207,19 +270,26 @@ export const atividadesService = {
       ? { ...basePayload, tipo_parceiro_id: partnerTypeId }
       : basePayload;
 
-    const save = async (data: typeof basePayload | typeof payload) => (
+    const save = async (data: typeof payload) => (
       isUpdating
-        ? supabase.from('clientes').update(data).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
-        : supabase.from('clientes').insert(data).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
+        ? supabase.from('clientes').update(data).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_parceiro_id,tipo_estabelecimento,logo,modelos_ativos').single()
+        : supabase.from('clientes').insert(data).select('id,nome,cnpj,tipo,tipo_parceiro_id,tipo_estabelecimento,logo,modelos_ativos').single()
+    );
+    const saveLegacy = async () => (
+      isUpdating
+        ? supabase.from('clientes').update(basePayload).eq('id', cliente.id).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
+        : supabase.from('clientes').insert(basePayload).select('id,nome,cnpj,tipo,tipo_estabelecimento,logo,modelos_ativos').single()
     );
 
-    let { data, error } = await save(payload);
-    if (error && partnerTypeId && isPartnerClassificationSchemaError(error.message)) {
-      ({ data, error } = await save(basePayload));
+    const { data, error } = await save(payload);
+    if (error && isPartnerClassificationSchemaError(error.message)) {
+      const { data: legacyData, error: legacyError } = await saveLegacy();
+      if (legacyError) throw legacyError;
+      return toCliente(legacyData as ClienteRow);
     }
 
     if (error) throw error;
-    return toCliente(data as ClienteRow);
+    return toCliente(data as ClienteRow, partnerTypeId);
   },
 
   async getModelos(): Promise<ModeloAtividade[]> {

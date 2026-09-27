@@ -8,6 +8,7 @@ const supabaseMock = vi.hoisted(() => ({
 
 const atividadesServiceMock = vi.hoisted(() => ({
   getClientes: vi.fn(),
+  getParceirosAtivos: vi.fn(),
   getModelos: vi.fn(),
 }));
 
@@ -70,6 +71,7 @@ beforeEach(() => {
   supabaseMock.rpc.mockResolvedValue({ data: {}, error: null });
   supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null }, error: null });
   atividadesServiceMock.getClientes.mockResolvedValue([]);
+  atividadesServiceMock.getParceirosAtivos.mockResolvedValue([]);
   atividadesServiceMock.getModelos.mockResolvedValue([]);
 });
 
