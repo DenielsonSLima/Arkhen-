@@ -50,14 +50,25 @@ interface PrazoEntregaRow {
 
 const TABLE = 'parametrizacao_prazos_entrega';
 const REGIMES: RegimeEmpresa[] = ['PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+const SEM_VENCIMENTO_PADRAO = new Set([
+  'caixa-postal-rfb', 'caixa-postal-sefaz', 'nfs', 'dirbi', 'mit',
+  'pis-cofins', 'iss-iss-retido', 'fecoep-saidas', 'fecoep-entradas',
+  'icms-difal', 'icms-normal', 'icms-antecipado',
+]);
 
 const getDefaultEntregasByRegime = (regime: RegimeEmpresa) => {
   const base = ['xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas', 'decred-semestral'];
+  const lucroNormal = [
+    'irpj-csll-trimestral', 'pis-cofins', 'iss-iss-retido', 'fecoep-saidas',
+    'fecoep-entradas', 'icms-difal', 'icms-normal', 'icms-antecipado',
+    'sped-fiscal', 'sped-contribuicoes', 'mit', 'dirbi', 'caixa-postal-rfb',
+    'caixa-postal-sefaz', 'nfs',
+  ];
   if (regime === 'PF') return ['notas-fiscais', 'extrato-bancario', 'guias-pagas'];
   if (regime === 'MEI') return ['pgdas', ...base.filter((id) => id !== 'folha-pagamento' && id !== 'decred-semestral')];
   if (regime === 'Simples Nacional') return ['pgdas', 'dctfweb', 'esocial', 'reinf', ...base.filter((id) => id !== 'decred-semestral')];
   if (regime === 'Isenta') return ['dctfweb', 'reinf', 'esocial', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas'];
-  return ['irpj-csll-trimestral', 'sped-fiscal', 'sped-contribuicoes', 'dctfweb', 'esocial', 'reinf', 'xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'decred-semestral', 'guias-pagas'];
+  return [...lucroNormal, 'dctfweb', 'esocial', 'reinf', ...base];
 };
 
 const clampDay = (value: number) => Math.min(Math.max(Math.round(value || 1), 1), 31);
@@ -78,7 +89,7 @@ const makeDefaultConfig = (): PrazoEntregaConfig[] => REGIMES.flatMap((regime) =
       : ['xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario'].includes(entrega.id) ? 'quinzenal' : 'mensal',
     diaVencimentoPrimeiraQuinzena: 20,
     diaVencimentoSegundaQuinzena: entrega.diaLimite,
-    ativo: true,
+    ativo: !SEM_VENCIMENTO_PADRAO.has(entrega.id),
   }))
 ));
 

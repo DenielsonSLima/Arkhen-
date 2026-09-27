@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   OBRIGACAO_PERIODICIDADE_LABELS,
   OBRIGACAO_PERIODICIDADES,
+  OBRIGACAO_CATEGORIAS,
   createEmptyObrigacao,
 } from '../obrigacoes.types';
 import {
@@ -11,6 +12,13 @@ import {
 } from './obrigacoesService';
 
 describe('normalizeObrigacao', () => {
+  it('oferece as categorias operacionais usadas no catálogo por empresa', () => {
+    expect(OBRIGACAO_CATEGORIAS).toEqual(expect.arrayContaining([
+      'Departamento Pessoal',
+      'Obrigações Acessórias',
+      'Tributos',
+    ]));
+  });
   it('oferece as periodicidades antigas e as quatro novas no formulário', () => {
     expect(OBRIGACAO_PERIODICIDADES.map((value) => OBRIGACAO_PERIODICIDADE_LABELS[value]))
       .toEqual([

@@ -35,19 +35,31 @@ interface ProtocoloTipoRow {
   regimes: unknown;
   periodicidade_padrao: TipoFechamentoEntrega | null;
   origem_padrao: ProtocoloOrigemPadrao | null;
+  tem_vencimento: boolean | null;
   ativo: boolean | null;
 }
 
 const TABLE = 'parametrizacao_protocolos_tipos';
 const REGIMES: RegimeEmpresa[] = ['PF', 'MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Isenta'];
+const SEM_VENCIMENTO_PADRAO = new Set([
+  'caixa-postal-rfb', 'caixa-postal-sefaz', 'nfs', 'dirbi', 'mit',
+  'pis-cofins', 'iss-iss-retido', 'fecoep-saidas', 'fecoep-entradas',
+  'icms-difal', 'icms-normal', 'icms-antecipado',
+]);
 
 const getDefaultEntregasByRegime = (regime: RegimeEmpresa) => {
   const base = ['xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas', 'decred-semestral'];
+  const lucroNormal = [
+    'irpj-csll-trimestral', 'pis-cofins', 'iss-iss-retido', 'fecoep-saidas',
+    'fecoep-entradas', 'icms-difal', 'icms-normal', 'icms-antecipado',
+    'sped-fiscal', 'sped-contribuicoes', 'mit', 'dirbi', 'caixa-postal-rfb',
+    'caixa-postal-sefaz', 'nfs',
+  ];
   if (regime === 'PF') return ['notas-fiscais', 'extrato-bancario', 'guias-pagas'];
   if (regime === 'MEI') return ['pgdas', ...base.filter((id) => id !== 'folha-pagamento' && id !== 'decred-semestral')];
   if (regime === 'Simples Nacional') return ['pgdas', 'dctfweb', 'esocial', 'reinf', ...base.filter((id) => id !== 'decred-semestral')];
   if (regime === 'Isenta') return ['dctfweb', 'reinf', 'esocial', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas'];
-  return ['irpj-csll-trimestral', 'sped-fiscal', 'sped-contribuicoes', 'dctfweb', 'esocial', 'reinf', 'xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'decred-semestral', 'guias-pagas'];
+  return [...lucroNormal, 'dctfweb', 'esocial', 'reinf', ...base];
 };
 
 const getDefaultRegimesForEntrega = (entregaId: string): RegimeEmpresa[] => (
@@ -65,11 +77,16 @@ const getDefaultPeriodicidade = (entregaId: string): TipoFechamentoEntrega => (
 );
 
 const getDefaultOrigemPadrao = (entregaId: string): ProtocoloOrigemPadrao => {
-  if (['xml-nfe', 'xml-nfce', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas'].includes(entregaId)) {
+  if (['xml-nfe', 'xml-nfce', 'nfs', 'notas-fiscais', 'extrato-bancario', 'folha-pagamento', 'guias-pagas'].includes(entregaId)) {
     return 'Cliente envia';
   }
 
-  if (['irpj-csll-trimestral', 'sped-fiscal', 'sped-contribuicoes', 'decred-semestral'].includes(entregaId)) {
+  if ([
+    'irpj-csll-trimestral', 'pis-cofins', 'iss-iss-retido', 'fecoep-saidas',
+    'fecoep-entradas', 'icms-difal', 'icms-normal', 'icms-antecipado',
+    'sped-fiscal', 'sped-contribuicoes', 'mit', 'dirbi', 'caixa-postal-rfb',
+    'caixa-postal-sefaz', 'decred-semestral',
+  ].includes(entregaId)) {
     return 'Escritório envia';
   }
 
@@ -79,7 +96,7 @@ const getDefaultOrigemPadrao = (entregaId: string): ProtocoloOrigemPadrao => {
 const makeDefaultCatalog = (): ProtocoloTipoConfig[] => (
   ENTREGA_CATALOGO.map((item) => ({
     ...item,
-    temVencimento: true,
+    temVencimento: !SEM_VENCIMENTO_PADRAO.has(item.id),
     etapas: [],
     descricao: `Obrigação padrão do escritório para ${item.nome.toLowerCase()}.`,
     status: 'Ativo',
@@ -140,7 +157,7 @@ const fromRow = (row: ProtocoloTipoRow): ProtocoloTipoConfig => ({
   diaSemana: row.dia_semana_iso ?? undefined,
   dataVencimento: row.data_vencimento ?? undefined,
   mesVencimento: row.mes_vencimento ?? undefined,
-  temVencimento: true,
+  temVencimento: row.tem_vencimento !== false,
   etapas: [],
   descricao: row.descricao || '',
   status: row.ativo === false ? 'Inativo' : 'Ativo',
@@ -163,6 +180,7 @@ const toPayload = (empresaId: string, item: ProtocoloTipoConfig) => ({
   regimes: item.regimes,
   periodicidade_padrao: item.periodicidadePadrao,
   origem_padrao: item.origemPadrao,
+  tem_vencimento: item.temVencimento,
   sistema: true,
   ativo: item.status === 'Ativo',
 });
@@ -224,7 +242,7 @@ export const protocolosCatalogoService = {
 
     const { data, error } = await supabase
       .from(TABLE)
-      .select('codigo,nome,categoria,orgao,dia_limite,dia_semana_iso,data_vencimento,mes_vencimento,descricao,regimes,periodicidade_padrao,origem_padrao,ativo')
+      .select('codigo,nome,categoria,orgao,dia_limite,dia_semana_iso,data_vencimento,mes_vencimento,descricao,regimes,periodicidade_padrao,origem_padrao,tem_vencimento,ativo')
       .order('categoria', { ascending: true })
       .order('nome', { ascending: true });
 

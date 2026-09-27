@@ -1,6 +1,7 @@
 import { CalendarClock, ClipboardList, Settings2 } from 'lucide-react';
 import {
   OBRIGACAO_ORIGENS,
+  OBRIGACAO_CATEGORIAS,
   OBRIGACAO_PERIODICIDADE_LABELS,
   OBRIGACAO_PERIODICIDADES,
   OBRIGACAO_REGIMES,
@@ -10,16 +11,6 @@ import {
 } from '../obrigacoes.types';
 import { EtapasEditor } from './EtapasEditor';
 import { ObrigacaoPrazoFields } from './ObrigacaoPrazoFields';
-
-const CATEGORIAS = [
-  'Fiscal',
-  'Contábil',
-  'Trabalhista',
-  'Financeiro',
-  'Documentos',
-  'NF-e',
-  'NFC-e',
-];
 
 interface ObrigacaoEditorSectionsProps {
   draft: ObrigacaoModeloDraft;
@@ -38,9 +29,9 @@ export const ObrigacaoEditorSections = ({
   onToggleRegime,
   onEtapasChange,
 }: ObrigacaoEditorSectionsProps) => {
-  const categoryOptions = CATEGORIAS.includes(draft.categoria)
-    ? CATEGORIAS
-    : [draft.categoria, ...CATEGORIAS];
+  const categoryOptions = OBRIGACAO_CATEGORIAS.includes(
+    draft.categoria as (typeof OBRIGACAO_CATEGORIAS)[number],
+  ) ? OBRIGACAO_CATEGORIAS : [draft.categoria, ...OBRIGACAO_CATEGORIAS];
 
   return (
     <>
