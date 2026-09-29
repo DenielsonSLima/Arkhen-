@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createEmptyObrigacao, type ObrigacaoModelo } from '../obrigacoes.types';
 import { ObrigacaoCard } from './ObrigacaoCard';
@@ -24,6 +24,7 @@ const renderCard = (updates: Partial<ObrigacaoModelo>) => render(
     onEdit={vi.fn()}
     onDuplicate={vi.fn()}
     onToggleStatus={vi.fn()}
+    onDelete={vi.fn()}
   />,
 );
 
@@ -47,5 +48,22 @@ describe('ObrigacaoCard agenda', () => {
   it('preserva a ocorrência única no card mesmo sem prazo fiscal', () => {
     renderCard({ periodicidade: 'unica', dataVencimento: '2026-09-15', temVencimento: false });
     expect(screen.getByText('Único · ocorrência em 15/09/2026 · sem prazo fiscal')).toBeTruthy();
+  });
+
+  it('oferece a exclusão da obrigação como ação explícita', () => {
+    const onDelete = vi.fn();
+    const obrigacao = makeObrigacao({ nome: 'DCTFWeb' });
+    render(
+      <ObrigacaoCard
+        obrigacao={obrigacao}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onToggleStatus={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir DCTFWeb' }));
+    expect(onDelete).toHaveBeenCalledWith(obrigacao);
   });
 });

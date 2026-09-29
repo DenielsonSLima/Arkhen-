@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const serviceMock = vi.hoisted(() => ({
   getWorkspace: vi.fn(),
   getPodeGerenciar: vi.fn(),
+  atribuirResponsavelRotina: vi.fn(),
+  atribuirResponsavelRotinasEmLote: vi.fn(),
   updateTarefaProgress: vi.fn(),
   updateTarefaChecklist: vi.fn(),
 }));
@@ -17,6 +19,7 @@ vi.mock('../services/rotinasAtividadesService', () => ({
 }));
 
 import { useAtividadesWorkspace } from './useAtividadesWorkspace';
+import type { RotinaAtividade } from '../services/rotinasAtividadesService';
 import { tarefaChecklistAuditKeys } from '../queries/tarefaChecklistAuditQueries';
 import { protocolosKeys } from '../../protocolos/queries/protocolosQueries';
 
@@ -58,6 +61,12 @@ beforeEach(() => {
   });
   serviceMock.updateTarefaProgress.mockResolvedValue({});
   serviceMock.updateTarefaChecklist.mockResolvedValue({});
+  serviceMock.atribuirResponsavelRotina.mockResolvedValue({});
+  serviceMock.atribuirResponsavelRotinasEmLote.mockResolvedValue({
+    total: 0,
+    atualizadas: [],
+    falhas: [],
+  });
 });
 
 afterEach(cleanup);
@@ -159,5 +168,54 @@ describe('useAtividadesWorkspace task mutations', () => {
       queryKey: ['atividades'],
     });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: protocolosKeys.all });
+  });
+});
+
+describe('useAtividadesWorkspace responsibility mutations', () => {
+  it('atualiza imediatamente a rotina e apenas tarefas abertas, preservando concluídas', async () => {
+    const rotina: RotinaAtividade = {
+      id: '11111111-1111-4111-8111-111111111111',
+      nome: 'DCTFWeb',
+      categoria: 'Fiscal',
+      frequencia: 'Mensal',
+      intervaloDias: 30,
+      responsavel: 'Ana',
+      cliente: 'Empresa Alfa',
+      proximaExecucao: '2026-10-15',
+      prioridade: 'Média',
+      ativa: true,
+      checklist: [],
+      observacoes: '',
+    };
+    let finishAssignment: (() => void) | undefined;
+    serviceMock.getWorkspace.mockResolvedValueOnce({
+      rotinas: [rotina],
+      tarefas: [
+        { id: 'aberta', rotinaId: rotina.id, status: 'Pendente', responsavel: 'Ana' },
+        { id: 'concluida', rotinaId: rotina.id, status: 'Concluída', responsavel: 'Ana' },
+      ],
+      usuarios: [{ configUsuarioId: 'config-bruno', userId: 'auth-bruno', nome: 'Bruno' }],
+      usuarioAtual: null,
+      clientes: [],
+      modelos: [],
+    });
+    serviceMock.atribuirResponsavelRotina.mockImplementationOnce(() => (
+      new Promise<void>((resolve) => { finishAssignment = resolve; })
+    ));
+    const queryClient = makeQueryClient();
+    const { result } = renderHook(() => useAtividadesWorkspace(), {
+      wrapper: makeWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => {
+      void result.current.assignResponsibleAsync({ rotina, responsibleId: 'config-bruno' });
+    });
+
+    await waitFor(() => expect(result.current.rotinas[0].responsavel).toBe('Bruno'));
+    expect(result.current.tarefas.find((item) => item.id === 'aberta')?.responsavel).toBe('Bruno');
+    expect(result.current.tarefas.find((item) => item.id === 'concluida')?.responsavel).toBe('Ana');
+
+    await act(async () => { finishAssignment?.(); });
   });
 });

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarCheck2, ListChecks, Plus, Search, ShieldCheck, Workflow } from 'lucide-react';
 import { SystemToast, type SystemToastData } from '../../components/SystemToast';
+import { SystemQuickModal } from '../../components/SystemQuickModal';
 import { ObrigacaoCard } from './components/ObrigacaoCard';
 import { ObrigacaoEditorDrawer } from './components/ObrigacaoEditorDrawer';
 import { ObrigacoesPagination } from './components/ObrigacoesPagination';
@@ -15,7 +16,11 @@ import {
   type ObrigacaoRegime,
 } from './obrigacoes.types';
 import { obrigacoesKeys, obrigacoesService } from './services/obrigacoesService';
-import { paginateObrigacoes } from './obrigacoesPagination';
+import {
+  groupObrigacoesByCategory,
+  paginateObrigacoes,
+  sortObrigacoesByCategory,
+} from './obrigacoesPagination';
 import './ObrigacoesPage.css';
 
 type StatusFilter = 'todos' | 'ativos' | 'inativos';
@@ -50,6 +55,7 @@ export const ObrigacoesPage: React.FC = () => {
   const [toast, setToast] = useState<SystemToastData | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [statusConfirmation, setStatusConfirmation] = useState<ObrigacaoModelo | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ObrigacaoModelo | null>(null);
 
   const invalidateDependentData = async () => {
     await Promise.all([
@@ -85,6 +91,23 @@ export const ObrigacoesPage: React.FC = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: obrigacoesService.delete,
+    onSuccess: async () => {
+      const deletedName = pendingDelete?.nome || 'A obrigação';
+      await invalidateDependentData();
+      setToast(notify(
+        'success',
+        'Obrigação excluída',
+        `${deletedName} saiu do catálogo. Registros operacionais anteriores foram preservados.`,
+      ));
+    },
+    onError: (error: Error) => {
+      setToast(notify('error', 'Não foi possível excluir', error.message));
+    },
+    onSettled: () => setPendingDelete(null),
+  });
+
   const obrigacoes = obrigacoesQuery.data ?? EMPTY_OBRIGACOES;
   const categorias = useMemo(() => (
     Array.from(new Set(obrigacoes.map((item) => item.categoria))).sort((a, b) => (
@@ -113,9 +136,14 @@ export const ObrigacoesPage: React.FC = () => {
   const isLoading = obrigacoesQuery.isLoading || resumoQuery.isLoading;
   const queryError = obrigacoesQuery.error ?? resumoQuery.error;
 
+  const orderedFiltered = useMemo(() => sortObrigacoesByCategory(filtered), [filtered]);
   const page = useMemo(
-    () => paginateObrigacoes(filtered, currentPage),
-    [currentPage, filtered],
+    () => paginateObrigacoes(orderedFiltered, currentPage),
+    [currentPage, orderedFiltered],
+  );
+  const pageGroups = useMemo(
+    () => groupObrigacoesByCategory(page.items),
+    [page.items],
   );
 
   const handleSave = async (draft: ObrigacaoModeloDraft) => {
@@ -265,16 +293,30 @@ export const ObrigacoesPage: React.FC = () => {
       )}
 
       {!isLoading && !queryError && !!filtered.length && (
-        <section className="obrigacoes-page__grid" aria-label="Catálogo de obrigações">
-          {page.items.map((item) => (
-            <ObrigacaoCard
-              key={item.id}
-              obrigacao={item}
-              onEdit={() => { setEditorError(''); setEditing(item); }}
-              onDuplicate={() => { setEditorError(''); setEditing(duplicateObrigacao(item)); }}
-              onToggleStatus={() => handleToggleStatus(item)}
-              isUpdating={saveMutation.isPending}
-            />
+        <section className="obrigacoes-page__groups" aria-label="Catálogo de obrigações agrupado por área">
+          {pageGroups.map((group) => (
+            <section className="obrigacoes-page__group" key={group.category}>
+              <header className="obrigacoes-page__group-header">
+                <div>
+                  <Workflow size={16} />
+                  <h3>{group.category}</h3>
+                </div>
+                <span>{group.items.length} nesta página</span>
+              </header>
+              <div className="obrigacoes-page__grid">
+                {group.items.map((item) => (
+                  <ObrigacaoCard
+                    key={item.id}
+                    obrigacao={item}
+                    onEdit={() => { setEditorError(''); setEditing(item); }}
+                    onDuplicate={() => { setEditorError(''); setEditing(duplicateObrigacao(item)); }}
+                    onToggleStatus={() => handleToggleStatus(item)}
+                    onDelete={() => setPendingDelete(item)}
+                    isUpdating={saveMutation.isPending || deleteMutation.isPending}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </section>
       )}
@@ -310,6 +352,18 @@ export const ObrigacoesPage: React.FC = () => {
           onConfirm={() => executeToggleStatus(statusConfirmation)}
         />
       )}
+
+      <SystemQuickModal
+        isOpen={Boolean(pendingDelete)}
+        title="Excluir obrigação?"
+        message={`“${pendingDelete?.nome || ''}” será removida do catálogo e das configurações futuras. Tarefas concluídas e o histórico operacional serão preservados.`}
+        confirmLabel="Excluir obrigação"
+        onConfirm={async () => {
+          if (pendingDelete) await deleteMutation.mutateAsync(pendingDelete.id);
+        }}
+        onClose={() => { if (!deleteMutation.isPending) setPendingDelete(null); }}
+        danger
+      />
     </div>
   );
 };

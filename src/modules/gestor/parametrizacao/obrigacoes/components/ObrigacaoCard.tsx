@@ -8,6 +8,7 @@ import {
   Layers3,
   ToggleLeft,
   ToggleRight,
+  Trash2,
 } from 'lucide-react';
 import type { ObrigacaoModelo } from '../obrigacoes.types';
 import { formatObrigacaoSchedule, hasMonthlyCompetenceReference } from '../obrigacoesSchedule';
@@ -17,6 +18,7 @@ export interface ObrigacaoCardProps {
   onEdit: (obrigacao: ObrigacaoModelo) => void;
   onDuplicate: (obrigacao: ObrigacaoModelo) => void;
   onToggleStatus: (obrigacao: ObrigacaoModelo) => void;
+  onDelete: (obrigacao: ObrigacaoModelo) => void;
   isUpdating?: boolean;
 }
 
@@ -25,6 +27,7 @@ export const ObrigacaoCard = ({
   onEdit,
   onDuplicate,
   onToggleStatus,
+  onDelete,
   isUpdating = false,
 }: ObrigacaoCardProps) => (
   <article className={`obrigacao-card ${obrigacao.ativo ? '' : 'is-inactive'}`}>
@@ -88,6 +91,16 @@ export const ObrigacaoCard = ({
           aria-label={`${obrigacao.ativo ? 'Desativar' : 'Ativar'} ${obrigacao.nome}`}
         >
           {obrigacao.ativo ? <ToggleRight size={17} /> : <ToggleLeft size={17} />}
+        </button>
+        <button
+          type="button"
+          className="danger"
+          onClick={() => onDelete(obrigacao)}
+          disabled={isUpdating}
+          title="Excluir obrigação"
+          aria-label={`Excluir ${obrigacao.nome}`}
+        >
+          <Trash2 size={15} />
         </button>
         <button
           type="button"

@@ -39,6 +39,12 @@ export interface RotinaCompanyGroup<
   rotinas: RotinaWorkspaceItem[];
 }
 
+export interface RotinaCategoryGroup {
+  category: string;
+  label: string;
+  rotinas: RotinaWorkspaceItem[];
+}
+
 export interface RotinasFilterState {
   search?: string;
   companyId?: string;
@@ -147,6 +153,54 @@ export const groupRotinasByCompany = <TCompany extends RotinaWorkspaceCompany>(
       ...getRotinaCompanyMetrics(companyRotinas),
     }];
   });
+};
+
+const ROTINA_CATEGORY_ORDER = [
+  'Fiscal',
+  'Contábil',
+  'Folha',
+  'Departamento Pessoal',
+  'Trabalhista',
+  'Financeiro',
+  'Cliente',
+  'Documentos',
+  'Obrigações Acessórias',
+  'Tributos',
+  'Controle',
+  'Interna',
+];
+
+const getCategoryPosition = (category: string) => {
+  const position = ROTINA_CATEGORY_ORDER.indexOf(category);
+  return position === -1 ? ROTINA_CATEGORY_ORDER.length : position;
+};
+
+const getCategoryLabel = (category: string) => (
+  category === 'Folha' ? 'Folha / Departamento Pessoal' : category
+);
+
+export const groupRotinasByCategory = (
+  rotinas: readonly RotinaWorkspaceItem[],
+): RotinaCategoryGroup[] => {
+  const grouped = new Map<string, RotinaWorkspaceItem[]>();
+
+  rotinas.forEach((rotina) => {
+    const category = rotina.categoria?.trim() || 'Sem categoria';
+    const current = grouped.get(category);
+    if (current) current.push(rotina);
+    else grouped.set(category, [rotina]);
+  });
+
+  return [...grouped.entries()]
+    .sort(([left], [right]) => (
+      getCategoryPosition(left) - getCategoryPosition(right)
+      || left.localeCompare(right, 'pt-BR')
+    ))
+    .map(([category, categoryRotinas]) => ({
+      category,
+      label: getCategoryLabel(category),
+      rotinas: categoryRotinas,
+    }));
 };
 
 const matchesSearch = (rotina: RotinaWorkspaceItem, search: string) => {

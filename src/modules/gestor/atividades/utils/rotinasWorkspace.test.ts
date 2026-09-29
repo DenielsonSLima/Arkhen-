@@ -6,6 +6,7 @@ import {
   getRotinaEditableExecutionDate,
   getRotinaEditableModelId,
   getRotinaFrequenciaLabel,
+  groupRotinasByCategory,
   groupRotinasByCompany,
 } from './rotinasWorkspace';
 
@@ -26,6 +27,24 @@ const makeRotina = (
   checklist: ['Conferir documentos'],
   observacoes: '',
   ...overrides,
+});
+
+describe('groupRotinasByCategory', () => {
+  it('agrupa áreas na ordem operacional e preserva a ordem das rotinas', () => {
+    const groups = groupRotinasByCategory([
+      makeRotina({ id: 'financeiro', categoria: 'Financeiro' }),
+      makeRotina({ id: 'fiscal-1', categoria: 'Fiscal' }),
+      makeRotina({ id: 'contabil', categoria: 'Contábil' }),
+      makeRotina({ id: 'fiscal-2', categoria: 'Fiscal' }),
+      makeRotina({ id: 'folha', categoria: 'Folha' }),
+    ]);
+
+    expect(groups.map((group) => group.category)).toEqual([
+      'Fiscal', 'Contábil', 'Folha', 'Financeiro',
+    ]);
+    expect(groups[0].rotinas.map((item) => item.id)).toEqual(['fiscal-1', 'fiscal-2']);
+    expect(groups[2].label).toBe('Folha / Departamento Pessoal');
+  });
 });
 
 describe('getRotinaFrequenciaLabel', () => {

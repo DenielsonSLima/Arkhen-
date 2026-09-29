@@ -15,6 +15,7 @@ type JsonRecord = Record<string, unknown>;
 const LIST_RPC = 'listar_obrigacoes_unificadas';
 const SUMMARY_RPC = 'obter_resumo_obrigacoes_unificadas';
 const SAVE_RPC = 'salvar_obrigacao_unificada';
+const DELETE_RPC = 'excluir_obrigacao_unificada';
 
 export interface ObrigacoesResumo {
   total: number;
@@ -30,6 +31,10 @@ const asRecord = (value: unknown): JsonRecord | null => (
 );
 
 const asString = (value: unknown) => typeof value === 'string' ? value : '';
+
+const isUuid = (value: string) => (
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+);
 
 const asInteger = (value: unknown, fallback: number) => (
   typeof value === 'number' && Number.isInteger(value) ? value : fallback
@@ -201,6 +206,16 @@ const mapSaveError = (error: { code?: string; message?: string }) => {
   return new Error(error.message || 'Não foi possível salvar a obrigação.');
 };
 
+const mapDeleteError = (error: { code?: string; message?: string }) => {
+  if (error.code === '42501') {
+    return new Error('Seu perfil não tem permissão para excluir obrigações.');
+  }
+  if (error.code === '23503') {
+    return new Error('Essa obrigação possui um vínculo que impede a exclusão. Desative-a e tente novamente.');
+  }
+  return new Error(error.message || 'Não foi possível excluir a obrigação.');
+};
+
 export const obrigacoesKeys = {
   all: ['parametrizacao', 'obrigacoes-unificadas'] as const,
   list: () => [...obrigacoesKeys.all, 'list'] as const,
@@ -227,5 +242,11 @@ export const obrigacoesService = {
     });
     if (error) throw mapSaveError(error);
     return normalizeObrigacao(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    if (!isUuid(id)) throw new Error('Obrigação inválida para exclusão.');
+    const { error } = await supabase.rpc(DELETE_RPC, { p_obrigacao_id: id });
+    if (error) throw mapDeleteError(error);
   },
 };

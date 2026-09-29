@@ -136,6 +136,44 @@ describe('AbaRotinas', () => {
     });
   });
 
+  it('seleciona todas as áreas da empresa e define um responsável em lote', async () => {
+    const rotinaFiscal = {
+      ...rotina,
+      id: '77777777-7777-4777-8777-777777777777',
+      nome: 'DCTFWeb',
+      categoria: 'Fiscal',
+    };
+    workspaceHook.mockReturnValue({
+      ...makeWorkspace(),
+      rotinas: [rotina, rotinaFiscal],
+    });
+    assignResponsibleBatchAsync.mockResolvedValueOnce({
+      successIds: [rotina.id, rotinaFiscal.id],
+      failed: [],
+    });
+    render(<AbaRotinas />);
+
+    fireEvent.click(screen.getByRole('button', { name: /empresa alfa/i }));
+    expect(screen.getByRole('heading', { name: 'Fiscal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Documentos' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Selecionar todas' }));
+    fireEvent.change(screen.getByLabelText('Novo responsável das rotinas selecionadas da empresa'), {
+      target: { value: usuario.configUsuarioId },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Definir responsável' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Aplicar alteração' }));
+
+    await waitFor(() => {
+      expect(assignResponsibleBatchAsync).toHaveBeenCalledWith({
+        rotinas: expect.arrayContaining([
+          expect.objectContaining({ id: rotina.id }),
+          expect.objectContaining({ id: rotinaFiscal.id }),
+        ]),
+        responsibleId: usuario.configUsuarioId,
+      });
+    });
+  });
+
   it('avisa sobre rotinas sem empresa ativa e oferece acesso pela Consulta', () => {
     workspaceHook.mockReturnValue({
       ...makeWorkspace(),

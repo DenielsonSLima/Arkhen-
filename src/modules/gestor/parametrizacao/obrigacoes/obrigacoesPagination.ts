@@ -1,4 +1,58 @@
-export const OBRIGACOES_PAGE_SIZE = 6;
+export const OBRIGACOES_PAGE_SIZE = 20;
+
+const OBRIGACOES_CATEGORY_ORDER = [
+  'Fiscal',
+  'Contábil',
+  'Departamento Pessoal',
+  'Trabalhista',
+  'Financeiro',
+  'Documentos',
+  'Obrigações Acessórias',
+  'Tributos',
+  'NF-e',
+  'NFC-e',
+];
+
+export interface ObrigacoesCategoryGroup<T> {
+  category: string;
+  items: T[];
+}
+
+const categoryPosition = (category: string) => {
+  const position = OBRIGACOES_CATEGORY_ORDER.indexOf(category);
+  return position === -1 ? OBRIGACOES_CATEGORY_ORDER.length : position;
+};
+
+export const sortObrigacoesByCategory = <T extends {
+  categoria: string;
+  nome: string;
+  ativo?: boolean;
+  ordem?: number;
+}>(
+  items: readonly T[],
+): T[] => [...items].sort((left, right) => (
+  categoryPosition(left.categoria) - categoryPosition(right.categoria)
+  || left.categoria.localeCompare(right.categoria, 'pt-BR')
+  || Number(right.ativo ?? true) - Number(left.ativo ?? true)
+  || (left.ordem ?? 0) - (right.ordem ?? 0)
+  || left.nome.localeCompare(right.nome, 'pt-BR')
+));
+
+export const groupObrigacoesByCategory = <T extends { categoria: string }>(
+  items: readonly T[],
+): ObrigacoesCategoryGroup<T>[] => {
+  const grouped = new Map<string, T[]>();
+  items.forEach((item) => {
+    const category = item.categoria.trim() || 'Sem categoria';
+    const current = grouped.get(category);
+    if (current) current.push(item);
+    else grouped.set(category, [item]);
+  });
+  return [...grouped.entries()].map(([category, categoryItems]) => ({
+    category,
+    items: categoryItems,
+  }));
+};
 
 export interface ObrigacoesPageSlice<T> {
   items: T[];

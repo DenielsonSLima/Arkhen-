@@ -191,7 +191,21 @@
 .obrigacoes-page__state--error { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
 .obrigacoes-page__state--error strong { color: #9a3412; }
 
-.obrigacoes-page__grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.obrigacoes-page__groups,
+.obrigacoes-page__group { display: flex; flex-direction: column; gap: 14px; }
+.obrigacoes-page__group { gap: 11px; }
+.obrigacoes-page__group-header {
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px 9px;
+}
+.obrigacoes-page__group-header > div { align-items: center; display: flex; gap: 7px; }
+.obrigacoes-page__group-header svg { color: #a66f16; }
+.obrigacoes-page__group-header h3 { color: #1e293b; font-size: .88rem; margin: 0; }
+.obrigacoes-page__group-header span { color: #64748b; font-size: .68rem; font-weight: 600; }
+.obrigacoes-page__grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .obrigacoes-pagination {
   align-items: center;
   background: #fff;
@@ -321,6 +335,7 @@
   padding: 0 8px;
 }
 .obrigacao-card__actions button.primary { border-color: rgba(197, 146, 53, .5); color: #9a681a; gap: 5px; }
+.obrigacao-card__actions button.danger { color: #b91c1c; }
 .obrigacao-card__actions button:disabled { cursor: not-allowed; opacity: .45; }
 
 .obrigacao-confirm-backdrop {

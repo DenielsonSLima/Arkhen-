@@ -83,6 +83,9 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
     if (initialCompanyId) {
       setSelectedCompanyId(initialCompanyId);
       setActiveView('empresas');
+      setSelectedIds(new Set());
+      setBatchResponsibleId('');
+      setIsBatchConfirmOpen(false);
     }
   }, [initialCompanyId]);
 
@@ -135,8 +138,10 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
       ].some((value) => normalizeSearch(String(value || '')).includes(search));
     });
   }, [clientes, filters, rotinas]);
-  const selectedRotinas = filteredRotinas.filter((rotina) => selectedIds.has(rotina.id));
-  const visibleSelectedIds = new Set(selectedRotinas.map((rotina) => rotina.id));
+  const selectedRotinas = rotinas.filter((rotina) => selectedIds.has(rotina.id));
+  const visibleSelectedIds = new Set(
+    filteredRotinas.filter((rotina) => selectedIds.has(rotina.id)).map((rotina) => rotina.id),
+  );
   const selectedCompanyModelIds = selectedGroup
     ? getActiveModelIds(selectedGroup.cliente, modelos)
     : new Set<string>();
@@ -200,13 +205,29 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
     });
   };
 
-  const handleSelectVisible = (ids: string[]) => {
-    const remaining = Math.max(0, ROTINAS_BATCH_LIMIT - selectedIds.size);
+  const handleSetSelected = (ids: string[], selected: boolean) => {
+    if (!selected) {
+      const idsToRemove = new Set(ids);
+      setSelectedIds((current) => new Set([...current].filter((id) => !idsToRemove.has(id))));
+      return;
+    }
+
     const newIds = ids.filter((id) => !selectedIds.has(id));
+    const remaining = Math.max(0, ROTINAS_BATCH_LIMIT - selectedIds.size);
     if (newIds.length > remaining) {
       showToast('info', 'Limite do lote', `Foram selecionadas as primeiras ${ROTINAS_BATCH_LIMIT} rotinas.`);
     }
     setSelectedIds((current) => new Set([...current, ...newIds.slice(0, remaining)]));
+  };
+
+  const handleSelectVisible = (ids: string[]) => {
+    handleSetSelected(ids, true);
+  };
+
+  const resetBatchSelection = () => {
+    setSelectedIds(new Set());
+    setBatchResponsibleId('');
+    setIsBatchConfirmOpen(false);
   };
 
   const handleFiltersChange = (nextFilters: RotinasFilterState) => {
@@ -217,6 +238,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
 
   const handleBatchAssign = async () => {
     if (!batchResponsibleId || selectedRotinas.length === 0) return;
+    setIsBatchConfirmOpen(false);
     try {
       const result = await assignResponsibleBatchAsync({
         rotinas: selectedRotinas,
@@ -278,7 +300,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
           role="tab"
           aria-selected={activeView === 'empresas'}
           className={`rotinas-tab ${activeView === 'empresas' ? 'is-active' : ''}`}
-          onClick={() => setActiveView('empresas')}
+          onClick={() => { setActiveView('empresas'); resetBatchSelection(); }}
         >
           <Building2 size={14} /> Empresas
         </button>
@@ -287,7 +309,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
           role="tab"
           aria-selected={activeView === 'consulta'}
           className={`rotinas-tab ${activeView === 'consulta' ? 'is-active' : ''}`}
-          onClick={() => setActiveView('consulta')}
+          onClick={() => { setActiveView('consulta'); resetBatchSelection(); }}
         >
           <Search size={14} /> Consulta
         </button>
@@ -300,12 +322,19 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
             canCreateRoutine={selectedGroup.cliente.isClienteContabil === true}
             usuarios={usuarios}
             activeModelIds={selectedCompanyModelIds}
+            selectedIds={selectedIds}
+            batchResponsibleId={batchResponsibleId}
             isSaving={isSaving}
-            onBack={() => setSelectedCompanyId('')}
+            onBack={() => { setSelectedCompanyId(''); resetBatchSelection(); }}
             onCreate={() => setDrawer({ company: selectedGroup.cliente })}
             onEdit={(rotina) => setDrawer({ company: selectedGroup.cliente, rotina })}
             onDelete={setPendingDelete}
             onAssign={handleAssign}
+            onToggleSelected={handleToggleSelected}
+            onSetSelected={handleSetSelected}
+            onClearSelected={() => setSelectedIds(new Set())}
+            onBatchResponsibleChange={setBatchResponsibleId}
+            onApplyBatch={() => setIsBatchConfirmOpen(true)}
           />
         ) : (
           <>
@@ -322,7 +351,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
               groups={groups}
               filters={companyFilters}
               page={companyPage}
-              onOpenCompany={setSelectedCompanyId}
+              onOpenCompany={(companyId) => { setSelectedCompanyId(companyId); resetBatchSelection(); }}
               onFiltersChange={setCompanyFilters}
               onPageChange={setCompanyPage}
             />
@@ -373,7 +402,7 @@ export const AbaRotinas: React.FC<AbaRotinasProps> = ({ initialCompanyId }) => {
       <SystemQuickModal
         isOpen={isBatchConfirmOpen}
         title="Alterar responsável em lote?"
-        message={`O responsável padrão de ${selectedRotinas.length} rotinas será alterado para ${batchUser?.nome || 'o usuário selecionado'}. O histórico concluído não será modificado.`}
+        message={`O responsável padrão de ${selectedRotinas.length} rotinas será alterado para ${batchUser?.nome || 'o usuário selecionado'}. As tarefas em aberto passam para o novo responsável; concluídas e seu histórico não serão modificados.`}
         confirmLabel="Aplicar alteração"
         onConfirm={() => { void handleBatchAssign(); }}
         onClose={() => setIsBatchConfirmOpen(false)}

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   rotinasAtividadesService,
+  type AtividadesWorkspace,
   type RotinaAtividade,
   type TarefaGestor,
   type TarefaProgressoPatch,
@@ -13,6 +14,42 @@ export const atividadesKeys = {
   all: ['atividades'] as const,
   workspace: () => [...atividadesKeys.all, 'workspace'] as const,
   permissoes: () => [...atividadesKeys.all, 'permissoes'] as const,
+};
+
+const assignWorkspaceResponsible = (
+  workspace: AtividadesWorkspace,
+  rotinaIds: ReadonlySet<string>,
+  responsibleId: string,
+): AtividadesWorkspace => {
+  const user = workspace.usuarios.find((item) => item.configUsuarioId === responsibleId);
+  if (!user) return workspace;
+
+  return {
+    ...workspace,
+    rotinas: workspace.rotinas.map((rotina) => (
+      rotinaIds.has(rotina.id)
+        ? {
+          ...rotina,
+          responsavel: user.nome,
+          responsavelUserId: user.userId,
+          responsavelConfigUsuarioId: user.configUsuarioId,
+        }
+        : rotina
+    )),
+    tarefas: workspace.tarefas.map((tarefa) => (
+      tarefa.rotinaId
+      && rotinaIds.has(tarefa.rotinaId)
+      && tarefa.status !== 'Concluída'
+      && tarefa.status !== 'Cancelada'
+        ? {
+          ...tarefa,
+          responsavel: user.nome,
+          responsavelUserId: user.userId,
+          responsavelConfigUsuarioId: user.configUsuarioId,
+        }
+        : tarefa
+    )),
+  };
 };
 
 export const useAtividadesPodeGerenciar = () => useQuery({
@@ -30,9 +67,7 @@ export const useAtividadesWorkspace = () => {
   });
   const permissoesQuery = useAtividadesPodeGerenciar();
 
-  const invalidateWorkspace = () => {
-    void queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
-  };
+  const invalidateWorkspace = () => queryClient.invalidateQueries({ queryKey: atividadesKeys.all });
 
   const saveRotinaMutation = useMutation({
     mutationFn: (rotina: RotinaAtividade) => rotinasAtividadesService.saveRotina(rotina),
@@ -48,7 +83,23 @@ export const useAtividadesWorkspace = () => {
     mutationFn: ({ rotina, responsibleId }: { rotina: RotinaAtividade; responsibleId: string }) => (
       rotinasAtividadesService.atribuirResponsavelRotina(rotina, responsibleId)
     ),
-    onSuccess: invalidateWorkspace,
+    onMutate: async ({ rotina, responsibleId }) => {
+      await queryClient.cancelQueries({ queryKey: atividadesKeys.workspace(), exact: true });
+      const previousWorkspace = queryClient.getQueryData<AtividadesWorkspace>(atividadesKeys.workspace());
+      if (previousWorkspace) {
+        queryClient.setQueryData(
+          atividadesKeys.workspace(),
+          assignWorkspaceResponsible(previousWorkspace, new Set([rotina.id]), responsibleId),
+        );
+      }
+      return { previousWorkspace };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousWorkspace) {
+        queryClient.setQueryData(atividadesKeys.workspace(), context.previousWorkspace);
+      }
+    },
+    onSettled: invalidateWorkspace,
   });
 
   const assignResponsibleBatchMutation = useMutation({
@@ -59,7 +110,27 @@ export const useAtividadesWorkspace = () => {
         failed: result.falhas.map((item) => ({ id: item.rotinaId, error: item.mensagem })),
       };
     },
-    onSuccess: invalidateWorkspace,
+    onMutate: async ({ rotinas, responsibleId }) => {
+      await queryClient.cancelQueries({ queryKey: atividadesKeys.workspace(), exact: true });
+      const previousWorkspace = queryClient.getQueryData<AtividadesWorkspace>(atividadesKeys.workspace());
+      if (previousWorkspace) {
+        queryClient.setQueryData(
+          atividadesKeys.workspace(),
+          assignWorkspaceResponsible(
+            previousWorkspace,
+            new Set(rotinas.map((rotina) => rotina.id)),
+            responsibleId,
+          ),
+        );
+      }
+      return { previousWorkspace };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousWorkspace) {
+        queryClient.setQueryData(atividadesKeys.workspace(), context.previousWorkspace);
+      }
+    },
+    onSettled: invalidateWorkspace,
   });
 
   const saveTarefaMutation = useMutation({
