@@ -19,12 +19,12 @@
     width: 36px;
   }
 
-  .sidebar-menu { gap: 5px; }
+  .sidebar-menu { gap: 2px; }
 
   .menu-action-row,
   .submenu-action-row { gap: 2px; }
 
-  .menu-collapsible-container { gap: 4px; }
+  .menu-collapsible-container { gap: 2px; }
 
   .menu-btn {
     font-size: 14px;
@@ -32,8 +32,8 @@
     gap: 10px;
     letter-spacing: 0;
     line-height: 20px;
-    min-height: 42px;
-    padding: 9px 8px;
+    min-height: 34px;
+    padding: 6px 8px;
   }
 
   .menu-btn > svg { height: 20px; width: 20px; }
@@ -43,12 +43,12 @@
     font-weight: 400;
     letter-spacing: 0;
     line-height: 18px;
-    min-height: 38px;
-    padding-bottom: 9px;
-    padding-top: 9px;
+    min-height: 30px;
+    padding-bottom: 6px;
+    padding-top: 6px;
   }
 
-  .sidebar-submenu-list { gap: 4px; margin-bottom: 6px; margin-top: 4px; }
+  .sidebar-submenu-list { gap: 2px; margin-bottom: 4px; margin-top: 2px; }
 
   .sidebar-brand-text h3 {
     font-size: 18px;
