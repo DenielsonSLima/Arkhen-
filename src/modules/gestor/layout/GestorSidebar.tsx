@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2, Calculator, CalendarDays, ChevronDown, ChevronRight,
   ClipboardList, Database, FileCheck, FolderOpen, GripVertical,
-  Landmark, LayoutDashboard, LogOut, Plus, Receipt, Scale, Settings,
+  Landmark, LayoutDashboard, LogOut, Plus, Receipt, Settings,
 } from 'lucide-react';
 import { persistedStorage } from '../../../lib/persistedStorage';
 import { TAB_DRAG_MIME, type TabDragPayload } from '../../../components/tabs/tabDragData';
@@ -13,7 +13,7 @@ import systemLogoImg from '../../../assets/camada-o.png';
 
 const DEFAULT_MENU_ORDER = [
   'inicio', 'clientes', 'atividades', 'protocolos',
-  'simulacoes-calculos', 'reforma-tributaria', 'faturamento', 'financeiro',
+  'simulacoes-calculos', 'faturamento', 'financeiro',
   'documentos', 'agenda', 'parametrizacao', 'configuracoes',
 ];
 
@@ -49,7 +49,6 @@ const MENU_ITEMS = {
   parametrizacao: { id: 'parametrizacao', label: 'Parametrização', icon: Database },
   atividades: { id: 'atividades', label: 'Atividades', icon: ClipboardList },
   'simulacoes-calculos': { id: 'simulacoes-calculos', label: 'Simulações', icon: Calculator },
-  'reforma-tributaria': { id: 'reforma-tributaria', label: 'Reforma Tributária', icon: Scale },
   documentos: { id: 'documentos', label: 'Documentos', icon: FolderOpen },
   protocolos: { id: 'protocolos', label: 'Acompanhamento', icon: FileCheck },
   faturamento: { id: 'faturamento', label: 'Faturamento', icon: Receipt },

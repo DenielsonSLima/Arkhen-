@@ -24,7 +24,6 @@ import { FaturamentoPage, type FaturamentoTab, type FaturamentoViewMode } from '
 import { AgendaPage } from '../agenda/AgendaPage';
 import { RelatoriosPage } from '../relatorios/RelatoriosPage';
 import { ConfiguracoesPage } from '../configuracoes/ConfiguracoesPage';
-import { ReformaTributariaPage } from '../reforma-tributaria/ReformaTributariaPage';
 import { resolveFinanceiroInitialTab } from './gestorModuleContext';
 
 const DocumentosPage = React.lazy(() => import('../documentos/DocumentosPage')
@@ -130,7 +129,6 @@ export const GestorModuleContent: React.FC<GestorModuleContentProps> = ({
       );
     case 'gestao-empresarial': return <GestaoEmpresarialPage />;
     case 'simulacoes-calculos': return <SimulacoesCalculosPage />;
-    case 'reforma-tributaria': return <ReformaTributariaPage />;
     case 'agenda': return <AgendaPage />;
     case 'protocolos': return <ProtocolosPage />;
     case 'documentos':

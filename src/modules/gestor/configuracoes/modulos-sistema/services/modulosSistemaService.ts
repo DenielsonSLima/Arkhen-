@@ -6,7 +6,6 @@ export type SystemModuleId =
   | 'atividades'
   | 'protocolos'
   | 'simulacoes-calculos'
-  | 'reforma-tributaria'
   | 'faturamento'
   | 'financeiro'
   | 'documentos'
@@ -43,6 +42,7 @@ const normalizeResponse = (value: unknown): SystemModulesResponse => {
     modulos: Array.isArray(response.modulos)
       ? response.modulos.filter((modulo) => (
         (modulo.id as string) !== 'conformidade'
+        && (modulo.id as string) !== 'reforma-tributaria'
       )).map((modulo) => (
         modulo.id === 'protocolos'
           ? {
@@ -69,7 +69,6 @@ const fallbackModules: SystemModuleConfig[] = [
   ['atividades', 'Atividades', 'Filas, rotinas e acompanhamento operacional.', 'Operação', false],
   ['protocolos', 'Acompanhamento', 'Histórico mensal, evidências e entregas por empresa.', 'Operação', false],
   ['simulacoes-calculos', 'Simulações', 'Calculadora de Rescisão.', 'Trabalhista', false],
-  ['reforma-tributaria', 'Reforma Tributária', 'Adequação IBS/CBS e split payment.', 'Tributário', false],
   ['faturamento', 'Faturamento', 'Contratos, cobranças e notas de serviço.', 'Financeiro', false],
   ['financeiro', 'Financeiro', 'Contas, fluxo de caixa e conciliação.', 'Financeiro', false],
   ['documentos', 'Documentos', 'Arquivos e compartilhamentos.', 'Operação', false],

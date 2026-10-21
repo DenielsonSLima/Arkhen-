@@ -3,7 +3,7 @@ import { OPERACAO_GUIDE } from './operacaoGuide';
 import { GESTAO_GUIDE } from './gestaoGuide';
 
 const MODULE_ORDER = ['inicio', 'parceiros', 'parametrizacao', 'atividades', 'acompanhamento',
-  'simulacoes', 'reforma-tributaria', 'faturamento', 'financeiro', 'documentos', 'agenda', 'configuracoes', 'relatorios'];
+  'simulacoes', 'faturamento', 'financeiro', 'documentos', 'agenda', 'configuracoes', 'relatorios'];
 
 export const HELP_DATA = [...CADASTROS_GUIDE, ...OPERACAO_GUIDE, ...GESTAO_GUIDE]
   .sort((a, b) => MODULE_ORDER.indexOf(a.id) - MODULE_ORDER.indexOf(b.id));

@@ -62,7 +62,7 @@ describe('Manual por módulos', () => {
   it('mantém todos os roteiros completos e relacionados resolvidos no catálogo', () => {
     const ids = GUIDE_ARTICLES.map(({ article }) => article.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(new Set(HELP_DATA.map((module) => module.id)).size).toBe(13);
+    expect(new Set(HELP_DATA.map((module) => module.id)).size).toBe(12);
     for (const { article } of GUIDE_ARTICLES) {
       expect(article.prerequisites.length, article.id).toBeGreaterThan(0);
       expect(article.steps.length, article.id).toBeGreaterThanOrEqual(4);

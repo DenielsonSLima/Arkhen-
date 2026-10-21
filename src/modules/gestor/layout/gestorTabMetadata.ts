@@ -31,7 +31,6 @@ export const TAB_INFOS: Record<string, { title: string; iconName: string }> = {
   'atividades-controle': { title: 'Painel Operacional', iconName: 'Layers' },
   'gestao-empresarial': { title: 'Gestão Empresarial', iconName: 'Briefcase' },
   'simulacoes-calculos': { title: 'Calculadora de Rescisão', iconName: 'Calculator' },
-  'reforma-tributaria': { title: 'Reforma Tributária', iconName: 'Scale' },
   agenda: { title: 'Agenda', iconName: 'CalendarDays' },
   protocolos: { title: 'Acompanhamento', iconName: 'FileCheck' },
   documentos: { title: 'Documentos', iconName: 'FolderOpen' },

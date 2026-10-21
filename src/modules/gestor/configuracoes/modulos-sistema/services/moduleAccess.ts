@@ -8,7 +8,6 @@ const ROUTE_PARENT: Record<string, SystemModuleId> = {
   conformidade: 'atividades',
   protocolos: 'protocolos',
   'simulacoes-calculos': 'simulacoes-calculos',
-  'reforma-tributaria': 'reforma-tributaria',
   faturamento: 'faturamento',
   financeiro: 'financeiro',
   documentos: 'documentos',
@@ -29,6 +28,8 @@ export const getEnabledModuleIds = (modules: SystemModuleConfig[]) => (
 );
 
 export const isRouteEnabled = (routeId: string, enabled: Set<SystemModuleId>) => {
+  // Abas persistidas de um módulo removido não devem ser reabertas.
+  if (routeId === 'reforma-tributaria' || routeId.startsWith('reforma-tributaria__')) return false;
   const moduleId = getSystemModuleId(routeId);
   return moduleId === null || enabled.has(moduleId);
 };
