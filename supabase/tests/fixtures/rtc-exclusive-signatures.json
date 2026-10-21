@@ -1,0 +1,16 @@
+[
+  "aplicar_permissoes_reforma_perfil_padrao()",
+  "atualizar_reforma_tributaria_checklist(uuid,text,boolean)",
+  "listar_reforma_tributaria_historico(uuid)",
+  "listar_reforma_tributaria_painel()",
+  "reforma_tributaria_cliente_autorizado(uuid)",
+  "reforma_tributaria_numero(jsonb,text,numeric)",
+  "reforma_tributaria_status_checklist(jsonb)",
+  "reforma_tributaria_tem_permissao(text)",
+  "reforma_tributaria_xml_text(xml,text)",
+  "salvar_reforma_simulacao_ibs_cbs(uuid,jsonb)",
+  "salvar_reforma_simulacao_split_payment(uuid,jsonb)",
+  "salvar_reforma_tributaria_adequacao(uuid,jsonb)",
+  "salvar_reforma_tributaria_decisao(uuid,jsonb)",
+  "validar_reforma_tributaria_xml(uuid,jsonb)"
+]
