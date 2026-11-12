@@ -50,24 +50,23 @@ export const DashboardMesTab = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="faturamento-dashboard">
       <form
-        className="faturamento-card"
-        style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', padding: '16px' }}
+        className="faturamento-card faturamento-dashboard-filters"
         onSubmit={(event) => {
           event.preventDefault();
           setAppliedFilters({ dataInicial, dataFinal, status, clienteEmpresaId: clienteEmpresaId || null });
         }}
       >
-          <div className="faturamento-form-group" style={{ flex: '1', minWidth: '150px' }}>
-            <label>Data Inicial</label>
-            <input type="date" value={dataInicial} onChange={(event) => setDataInicial(event.target.value)} />
+          <div className="faturamento-form-group">
+            <label htmlFor="billing-start">Data Inicial</label>
+            <input id="billing-start" type="date" value={dataInicial} onChange={(event) => setDataInicial(event.target.value)} />
           </div>
-          <div className="faturamento-form-group" style={{ flex: '1', minWidth: '150px' }}>
-            <label>Data Final</label>
-            <input type="date" value={dataFinal} onChange={(event) => setDataFinal(event.target.value)} />
+          <div className="faturamento-form-group">
+            <label htmlFor="billing-end">Data Final</label>
+            <input id="billing-end" type="date" value={dataFinal} onChange={(event) => setDataFinal(event.target.value)} />
           </div>
-          <div className="faturamento-form-group" style={{ flex: '2', minWidth: '200px' }}>
+          <div className="faturamento-form-group faturamento-filter-partner">
             <label>Parceiro/Empresa</label>
             <BillingClientSelect
               clientes={clientesQuery.data || []}
@@ -76,9 +75,9 @@ export const DashboardMesTab = () => {
               isLoading={clientesQuery.isLoading}
             />
           </div>
-          <div className="faturamento-form-group" style={{ width: '150px' }}>
-            <label>Status Pagamento</label>
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+          <div className="faturamento-form-group">
+            <label htmlFor="billing-payment">Status Pagamento</label>
+            <select id="billing-payment" value={status} onChange={(event) => setStatus(event.target.value)}>
               <option>Todos</option>
               <option value="Pago">Pagos</option>
               <option value="Pendente">Em Aberto</option>
@@ -103,13 +102,13 @@ export const DashboardMesTab = () => {
       <div className="faturamento-stats-grid">
         {stats.map((stat, idx) => (
           <div key={idx} className="faturamento-stat-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-              <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: stat.bg }}>
-                <stat.icon size={20} color={stat.color} />
+            <div className="faturamento-stat-heading">
+              <div className="faturamento-stat-icon">
+                <stat.icon size={16} aria-hidden="true" />
               </div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>{stat.label}</span>
+              <span className="faturamento-stat-label">{stat.label}</span>
             </div>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a' }}>{stat.value}</span>
+            <span className="faturamento-stat-value">{stat.value}</span>
           </div>
         ))}
       </div>

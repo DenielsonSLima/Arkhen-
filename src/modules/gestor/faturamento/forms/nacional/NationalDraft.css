@@ -1,0 +1,7 @@
+.national-draft .faturamento-modal-header { padding: 14px 18px; }
+.national-draft .nfse-draft-body { padding: 16px; gap: 12px; }
+.national-draft .nfse-fields { padding: 12px; gap: 12px; }
+.national-draft .faturamento-form-group { gap: 5px; }
+.national-draft .faturamento-form-group > :is(input, select, textarea) { padding: 8px 10px; min-height: 38px; }
+.national-draft .faturamento-form-group > textarea { min-height: 78px; }
+.national-draft .national-unavailable { padding: 10px 12px; border: 1px solid #ead6a5; border-radius: 8px; background: #fff9eb; color: #714e12; }

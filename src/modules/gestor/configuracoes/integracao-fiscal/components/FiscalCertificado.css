@@ -1,0 +1,16 @@
+.fiscal-certificate-form .cert-uploader-container { gap: 12px; }
+.fiscal-certificate-form .file-uploader-box { padding: 16px; min-height: 0; }
+.fiscal-certificate-form .input-helper-text { line-height: 1.5; }
+.fiscal-certificate-password { position: relative; }
+.fiscal-certificate-password input { width: 100%; padding-right: 46px; }
+.fiscal-certificate-visibility {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center; width: 36px; height: 36px;
+  border: 0; border-radius: 6px; background: transparent;
+  color: var(--color-text-dark); cursor: pointer;
+}
+.fiscal-certificate-visibility:hover { background: rgba(197, 146, 53, 0.1); }
+.fiscal-certificate-visibility:focus-visible { outline: 2px solid var(--color-gold-primary); outline-offset: 1px; }
+@media (max-width: 680px) {
+  .fiscal-certificate-form .cert-uploader-container { grid-template-columns: 1fr; }
+}
