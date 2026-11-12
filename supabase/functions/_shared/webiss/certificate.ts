@@ -102,7 +102,10 @@ export const parseFiscalPkcs12 = (base64: string, password: string): FiscalCerti
     ...(p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag] || []),
   ];
   const certBags = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag] || [];
-  const key = keyBags.find((bag) => bag.key)?.key;
+  const rawKey = keyBags.find((bag) => bag.key)?.key;
+  // This parser supports RSA A1 only; narrow before accessing RSA components.
+  const key = rawKey && typeof rawKey === "object" && "n" in rawKey && "e" in rawKey
+    ? rawKey as forge.pki.rsa.PrivateKey : undefined;
   // A PFX can store the issuing chain before the leaf. Select the certificate
   // whose RSA public key matches the private key, never the first certificate.
   const certificate = certBags.find((bag: { cert?: ForgeCertificate & { publicKey: unknown } }) => {

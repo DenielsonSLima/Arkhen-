@@ -1,5 +1,6 @@
-import React from 'react';
-import { Upload } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, EyeOff, Upload } from 'lucide-react';
+import './FiscalCertificado.css';
 import { formatCpfOrCnpj } from '../../../../../lib/cnpj';
 import type { FiscalConfigData } from '../services/fiscalIntegrationService';
 
@@ -28,19 +29,20 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
   onFileChange,
   getCertBadge,
 }) => {
+  const [showPassword, setShowPassword] = useState(false);
   const hasCertificate = Boolean(config.certificadoArquivoConfigured || config.certificadoNome);
   const validity = config.certificadoValidade?.replace(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/, '$3/$2/$1');
   const days = config.certificadoDiasRestantes;
 
   return (
-    <div className="config-form">
+    <div className="config-form fiscal-certificate-form">
       
       <div className="form-divider-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Certificado Digital A1</span>
         {hasCertificate && days != null ? getCertBadge(days) : null}
       </div>
 
-      <p className="input-helper-text">O teste de assinatura usa o certificado armazenado no servidor. Salve mudanças de senha antes de testar.</p>
+      <p className="input-helper-text">Para cadastrar ou substituir: digite a senha e selecione o arquivo. O envio valida o A1 e mostra a validade abaixo. O teste de assinatura usa o certificado já salvo.</p>
       <div className="cert-uploader-container">
         
         {/* Drag and Drop Zone */}
@@ -79,21 +81,32 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
         {/* Password & Actions Column */}
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div className="form-item-group">
-            <label>Senha do Certificado</label>
+            <label htmlFor="fiscal-certificate-password">Senha do Certificado</label>
+            <div className="fiscal-certificate-password">
             <input
-              type="password"
+              id="fiscal-certificate-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              spellCheck={false}
+              aria-describedby="fiscal-certificate-password-help"
               value={config.certificadoSenha}
               onChange={(e) => setConfig(prev => ({ ...prev, certificadoSenha: e.target.value }))}
               placeholder="Senha do arquivo .pfx / .p12"
             />
-            <p className="input-helper-text">O arquivo e a senha são enviados pela Edge Function e ficam protegidos no Supabase Vault.</p>
+            <button type="button" className="fiscal-certificate-visibility"
+              aria-label={showPassword ? 'Ocultar senha do certificado' : 'Mostrar senha do certificado'}
+              aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>
+              {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            </button>
+            </div>
+            <p id="fiscal-certificate-password-help" className="input-helper-text">O arquivo e a senha são enviados pela Edge Function e ficam protegidos no Supabase Vault.</p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
             <button
               type="button"
               onClick={onTestCert}
-              disabled={testingCert}
+              disabled={testingCert || !hasCertificate}
               className="btn-save-settings"
               style={{ 
                 background: 'none', 
@@ -114,7 +127,7 @@ export const FiscalCertificado: React.FC<FiscalCertificadoProps> = ({
 
       {/* Success of Cert signature */}
       {certResult && (
-        <div className={`${certResult.success ? 'success-banner' : 'error-banner'} animate-fade-in`} style={{ marginTop: '16px' }}>
+        <div role="status" className={`${certResult.success ? 'success-banner' : 'error-banner'} animate-fade-in`} style={{ marginTop: '16px' }}>
           {certResult.message}
         </div>
       )}

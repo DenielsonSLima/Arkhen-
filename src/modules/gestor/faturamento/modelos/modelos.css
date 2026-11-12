@@ -1,0 +1,22 @@
+.fiscal-models { display: grid; gap: 12px; }
+.fiscal-model-toolbar, .fiscal-model-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fiscal-model-toolbar > label:first-child { flex: 1; min-width: 160px; }
+.fiscal-models label { display: grid; gap: 5px; font-size: .8rem; }
+.fiscal-models .fiscal-model-checkbox { display: flex; align-items: center; }
+.fiscal-models input:not([type=checkbox]), .fiscal-models select, .fiscal-models textarea { width: 100%; box-sizing: border-box; background: #ffffff; color: var(--color-text-dark, #1f1f1f); border: 1px solid #d8e2ee; border-radius: 6px; padding: 8px; font: inherit; }
+.fiscal-models :is(input,textarea,select,button):focus-visible { outline: 2px solid var(--color-gold-primary, #c59235); outline-offset: 2px; }
+.fiscal-model-editor, .fiscal-model-card { border: 1px solid #d8e2ee; border-radius: 8px; padding: 12px; }
+.fiscal-model-editor fieldset { border: 0; margin: 0; padding: 0; }
+.fiscal-model-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.fiscal-model-wide { grid-column: 1 / -1; }
+.fiscal-models h3 { font-size: .9rem; margin: 0 0 5px; }
+.fiscal-models p { font-size: .78rem; line-height: 1.5; margin: 6px 0; }
+.fiscal-model-list { display: grid; gap: 8px; }
+.fiscal-model-card { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.fiscal-model-card > div:first-child { min-width: 0; }
+.fiscal-model-description { white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media(max-width: 800px) { .fiscal-model-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .fiscal-model-card { align-items: stretch; flex-direction: column; } }
+@media(max-width: 480px) { .fiscal-model-grid { grid-template-columns: 1fr; } }
+
+.fiscal-model-editor, .fiscal-model-card { background: #ffffff; }
+.fiscal-model-actions .faturamento-btn-secondary { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; border-radius: var(--radius-md); }

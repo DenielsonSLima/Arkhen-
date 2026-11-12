@@ -1,0 +1,40 @@
+/* Compact billing shell; scoped to billing, preserving the established gold theme. */
+.faturamento-container { padding: 16px 20px; gap: 12px; }
+.faturamento-header h1 { font-size: 1.45rem; line-height: 1.25; margin: 0; }
+.faturamento-toolbar { display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0; }
+.faturamento-toolbar .faturamento-tabs-scroll { flex: 1; min-width: 0; margin: 0; padding-bottom: 2px; min-height: 38px; }
+.faturamento-toolbar .btn-tab { padding: 8px 10px; font-size: .82rem; flex-shrink: 0; }
+.faturamento-new-entry { flex-shrink: 0; white-space: nowrap; }
+.faturamento-container .faturamento-btn-primary { min-height: 38px; padding: 8px 13px; font-size: .82rem; }
+.faturamento-container .faturamento-card { padding: 14px; box-shadow: 0 1px 3px rgba(15, 23, 42, .04); }
+.faturamento-container .faturamento-table th { padding: 9px 12px; }
+.faturamento-container .faturamento-table td { padding: 10px 12px; }
+.faturamento-dashboard { display: grid; gap: 12px; }
+.faturamento-dashboard-filters { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) minmax(220px, 2fr) minmax(130px, 1fr) auto; align-items: end; gap: 10px; }
+.faturamento-dashboard-filters .faturamento-form-group { min-width: 0; margin: 0; }
+.faturamento-dashboard-filters label { font-size: .78rem; margin-bottom: 5px; }
+.faturamento-dashboard-filters input, .faturamento-dashboard-filters select { min-height: 38px; padding: 7px 9px; font-size: .82rem; }
+.faturamento-dashboard-filters .faturamento-client-select-trigger { min-height: 38px; grid-template-columns: 24px minmax(0, 1fr) 16px; padding: 5px 8px; gap: 6px; }
+.faturamento-dashboard-filters .faturamento-client-select-avatar { width: 24px; height: 24px; }
+.faturamento-dashboard-filters .faturamento-client-select-text input { min-height: 24px; height: 24px; padding: 0; }
+.faturamento-dashboard-filters .faturamento-client-select-text small { display: none; }
+.faturamento-dashboard .faturamento-stats-grid { margin: 0; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.faturamento-dashboard .faturamento-stat-card { padding: 12px; min-width: 0; box-shadow: none; }
+.faturamento-stat-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.faturamento-stat-icon { display: inline-flex; color: var(--color-gold-primary); }
+.faturamento-stat-label { color: #64748b; font-size: .78rem; font-weight: 600; }
+.faturamento-stat-value { display: block; color: #0f172a; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 1100px) {
+  .faturamento-dashboard-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .faturamento-filter-partner { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .faturamento-container { padding: 12px; }
+  .faturamento-header h1 { font-size: 1.25rem; }
+  .faturamento-toolbar { flex-wrap: wrap; gap: 8px; }
+  .faturamento-toolbar .faturamento-tabs-scroll { flex-basis: 100%; }
+  .faturamento-new-entry { margin-left: auto; }
+  .faturamento-dashboard-filters { grid-template-columns: minmax(0, 1fr); }
+  .faturamento-filter-partner { grid-column: auto; }
+  .faturamento-dashboard .faturamento-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { NationalDraftForm } from '../nacional/NationalDraftForm';
+import { ModelPresetSelect } from '../../modelos/forms/ModelPresetSelect';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useFaturamentoClientesQuery } from '../../queries/useFaturamentoQueries';
@@ -27,6 +29,7 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
     : { ...blankFiscalData(), valor: valor ?? '', descricao: descricao || '' });
   const [review, setReview] = useState<FiscalReview>();
   const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  const [nationalMode, setNationalMode] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [transmitted, setTransmitted] = useState(false);
   const [previousBusy, setPreviousBusy] = useState(false);
@@ -73,6 +76,9 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
       setReview(undefined); setConfirmed(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Emissão não confirmada. Consulte o mesmo RPS no histórico.'); setReview(undefined); }
   };
+  if (nationalMode && linkedChargeId && fiscalConfigId && tenant.data) return <NationalDraftForm
+    key={`${fiscalConfigId}-${linkedChargeId}`} configId={fiscalConfigId} chargeId={linkedChargeId} tenantId={tenant.data}
+    onClose={onClose} onBack={() => setNationalMode(false)} />;
   return createPortal(<div className="faturamento-modal-backdrop nfse-draft-backdrop"><div className="faturamento-card nfse-draft-modal" role="dialog" aria-modal="true" aria-label="Preparar NFS-e">
     <header className="faturamento-modal-header"><div><h2>Preparar NFS-e</h2><p>{cobrancaId ? 'Cobrança criada. Prepare e revise a nota vinculada.' : 'Rascunho fiscal independente, sem geração de boleto ou Pix.'}</p></div>
       <button type="button" className="faturamento-modal-close" aria-label="Fechar" disabled={busy} onClick={onClose}><X size={20} /></button></header>
@@ -99,6 +105,9 @@ export function NfseDraftForm({ onClose, onBack, initial, cobrancaId, clienteId:
           setData(editableFiscalData(copied.dados)); clearReview(); setMessage('Dados copiados para o rascunho. Revise competência, valor e descrição.');
         }} />
       </>}
+      {!immutable && fiscalConfigId && tenant.data && <ModelPresetSelect tenant={tenant.data} configId={fiscalConfigId}
+        disabled={busy || previousBusy} onApply={preset => { setData(current => ({ ...current, ...preset })); clearReview(); }} />}
+      {!immutable && linkedChargeId && fiscalConfigId && tenant.data && <div className="nfse-toolbar"><p>Padrão nacional: revisão separada, sem emissão habilitada.</p><button type="button" className="faturamento-btn-secondary" disabled={busy || previousBusy} onClick={() => setNationalMode(true)}>Revisar no padrão nacional</button></div>}
       <FiscalDataFields data={data} disabled={busy || !!immutable} onChange={next => { setData(next); clearReview(); }} />
       {immutable && <p>Esta tentativa já possui processamento fiscal. Consulte o mesmo RPS no histórico; não reenvie como outro rascunho.</p>}
       {review && <FiscalReviewPanel review={review} />}

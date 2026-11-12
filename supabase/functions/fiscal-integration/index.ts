@@ -1,3 +1,4 @@
+import { handleNationalAction } from './national-action.ts';
 import { handleDraftAction } from "./draft-action.ts";
 import { handleConsultationAction } from "./consultation-action.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.6";
@@ -122,6 +123,10 @@ const handleJsonAction = async (
   admin: AdminClient, userId: string, payload: Record<string, unknown>,
 ) => {
   const action = asString(payload.action);
+  if (['national-review-service', 'national-get-service-review', 'national-list-reviews', 'national-get-charge-review', 'national-review-draft', 'national-readiness', 'national-emit', 'national-cancel', 'national-consult'].includes(action)) {
+    const result = await handleNationalAction(admin, userId, payload);
+    return jsonResponse(result.body, result.status);
+  }
   if (action === "sync-consulted-nfse") return jsonResponse(await handleConsultationAction(admin, userId, payload));
   if (action === "emit-draft" || action === "consult-draft") {
     const draftId = asString(payload.rascunho_id);

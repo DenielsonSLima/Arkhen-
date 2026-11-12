@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "npm:xml-crypto@6.4.0": [
+        "./node_modules/xml-crypto/lib/index.d.ts"
+      ],
+      "npm:libxml2-wasm@0.7.2": [
+        "./node_modules/libxml2-wasm/lib/index.d.mts"
+      ]
+    },
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "supabase/functions/_shared/nfse-national/**/*.ts",
+    "supabase/functions/fiscal-integration/national-action*.ts",
+    "scripts/types/national-npm.d.ts"
+  ]
+}
